@@ -45,6 +45,17 @@ router.post('/admin/login', (req, res) => {
 });
 
 // --- PUBLIC ROUTES ---
+router.get('/pages', (req, res) => {
+  const pages = db.prepare('SELECT id, title, slug, created_at, updated_at FROM pages').all();
+  res.json(pages);
+});
+
+router.get('/pages/:slug', (req, res) => {
+  const page = db.prepare('SELECT * FROM pages WHERE slug = ?').get(req.params.slug);
+  if (!page) return res.status(404).json({ error: 'Page not found' });
+  res.json(page);
+});
+
 router.get('/settings', (req, res) => {
   const settings = db.prepare('SELECT * FROM settings').all();
   const settingsObj = settings.reduce((acc: any, setting: any) => {
@@ -52,6 +63,11 @@ router.get('/settings', (req, res) => {
     return acc;
   }, {});
   res.json(settingsObj);
+});
+
+router.get('/footer-links', (req, res) => {
+  const links = db.prepare('SELECT * FROM footer_links ORDER BY column_id ASC, order_index ASC').all();
+  res.json(links);
 });
 
 router.get('/slides', (req, res) => {
@@ -215,26 +231,134 @@ router.post('/orders', (req, res) => {
 
   try {
     const orderId = transaction();
+    
+    // Simulate sending email to admin
+    const adminEmailSetting = db.prepare("SELECT value FROM settings WHERE key = 'admin_email'").get() as any;
+    if (adminEmailSetting && adminEmailSetting.value) {
+      console.log(`[EMAIL SIMULATION] Nouvelle commande #${orderId} envoyée à l'administrateur : ${adminEmailSetting.value}`);
+    }
+    
     res.status(201).json({ id: orderId, message: 'Order created successfully' });
   } catch (err) {
     res.status(500).json({ error: 'Failed to create order' });
   }
 });
 
-// --- ADMIN ROUTES ---
-router.post('/admin/settings', authenticate, (req, res) => {
-  const { announcement_phone, announcement_text } = req.body;
-  const updateSetting = db.prepare('UPDATE settings SET value = ? WHERE key = ?');
+router.post('/contact', (req, res) => {
+  const { name, email, message } = req.body;
   
   try {
+    // Simulate sending email to admin
+    const adminEmailSetting = db.prepare("SELECT value FROM settings WHERE key = 'admin_email'").get() as any;
+    if (adminEmailSetting && adminEmailSetting.value) {
+      console.log(`[EMAIL SIMULATION] Nouveau message de contact de ${name} (${email}) envoyé à l'administrateur : ${adminEmailSetting.value}`);
+      console.log(`Message: ${message}`);
+    }
+    
+    res.status(200).json({ success: true, message: 'Message envoyé avec succès' });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to send message' });
+  }
+});
+
+// --- ADMIN ROUTES ---
+router.post('/admin/pages', authenticate, (req, res) => {
+  const { title, slug, content } = req.body;
+  try {
+    const result = db.prepare('INSERT INTO pages (title, slug, content) VALUES (?, ?, ?)').run(title, slug, content);
+    res.json({ id: result.lastInsertRowid, title, slug, content });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to create page' });
+  }
+});
+
+router.put('/admin/pages/:id', authenticate, (req, res) => {
+  const { title, slug, content } = req.body;
+  try {
+    db.prepare('UPDATE pages SET title = ?, slug = ?, content = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(title, slug, content, req.params.id);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to update page' });
+  }
+});
+
+router.delete('/admin/pages/:id', authenticate, (req, res) => {
+  try {
+    db.prepare('DELETE FROM pages WHERE id = ?').run(req.params.id);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to delete page' });
+  }
+});
+
+router.post('/admin/settings', authenticate, (req, res) => {
+  const settings = req.body;
+  
+  if (settings.admin_email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(settings.admin_email)) {
+    return res.status(400).json({ error: 'Format d\'email invalide' });
+  }
+  
+  try {
+    const updateSetting = db.prepare('INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value');
     const transaction = db.transaction(() => {
-      if (announcement_phone !== undefined) updateSetting.run(announcement_phone, 'announcement_phone');
-      if (announcement_text !== undefined) updateSetting.run(announcement_text, 'announcement_text');
+      for (const [key, value] of Object.entries(settings)) {
+        if (value !== undefined) {
+          updateSetting.run(key, value as string);
+        }
+      }
     });
     transaction();
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: 'Failed to update settings' });
+  }
+});
+
+// Footer Links
+router.post('/admin/footer-links', authenticate, (req, res) => {
+  const { name, url, column_id, order_index } = req.body;
+  try {
+    const insert = db.prepare('INSERT INTO footer_links (name, url, column_id, order_index) VALUES (?, ?, ?, ?)');
+    const info = insert.run(name, url, column_id, order_index || 0);
+    res.status(201).json({ id: info.lastInsertRowid, message: 'Link created' });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to create link' });
+  }
+});
+
+router.put('/admin/footer-links/reorder', authenticate, (req, res) => {
+  const { links } = req.body; // Expecting array of { id, order_index, column_id }
+  try {
+    const update = db.prepare('UPDATE footer_links SET order_index = ?, column_id = ? WHERE id = ?');
+    const transaction = db.transaction(() => {
+      links.forEach((link: any) => {
+        update.run(link.order_index, link.column_id, link.id);
+      });
+    });
+    transaction();
+    res.json({ message: 'Links reordered' });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to reorder links' });
+  }
+});
+
+router.put('/admin/footer-links/:id', authenticate, (req, res) => {
+  const { name, url, column_id, order_index } = req.body;
+  try {
+    const update = db.prepare('UPDATE footer_links SET name = ?, url = ?, column_id = ?, order_index = ? WHERE id = ?');
+    update.run(name, url, column_id, order_index, req.params.id);
+    res.json({ message: 'Link updated' });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to update link' });
+  }
+});
+
+router.delete('/admin/footer-links/:id', authenticate, (req, res) => {
+  try {
+    db.prepare('DELETE FROM footer_links WHERE id = ?').run(req.params.id);
+    res.json({ message: 'Link deleted' });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to delete link' });
   }
 });
 

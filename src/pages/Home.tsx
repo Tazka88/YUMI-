@@ -176,22 +176,33 @@ export default function Home() {
       {brands.length > 0 && (
         <div className="mb-8 bg-white p-6 rounded-lg shadow-sm">
           <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl font-bold text-gray-800">Marques Populaires</h2>
+            <h2 className="text-xl font-bold text-gray-800">Nos Marques</h2>
             <Link to="/brands" className="text-orange-500 hover:text-orange-600 font-medium text-sm flex items-center gap-1">
               Voir tout <ChevronRight size={16} />
             </Link>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4">
             {brands.map(brand => (
-              <Link key={brand.id} to={`/brands/${brand.slug}`} className="flex flex-col items-center justify-center p-4 border border-gray-100 rounded-lg hover:border-orange-500 hover:shadow-md transition-all group bg-gray-50">
+              <Link 
+                key={brand.id} 
+                to={`/brands/${brand.slug}`} 
+                className="relative aspect-square rounded-lg overflow-hidden shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300 border border-gray-100 group bg-white block"
+              >
                 {brand.image ? (
-                  <img src={brand.image} alt={brand.name} className="w-16 h-16 object-contain mb-2 group-hover:scale-110 transition-transform" />
+                  <img 
+                    src={brand.image} 
+                    alt={brand.name} 
+                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" 
+                    referrerPolicy="no-referrer"
+                  />
                 ) : (
-                  <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center text-gray-400 mb-2 shadow-sm">
-                    <span className="font-bold text-xl">{brand.name.charAt(0)}</span>
+                  <div className="w-full h-full bg-gray-50 flex items-center justify-center text-gray-400 group-hover:scale-110 transition-transform duration-500">
+                    <span className="font-bold text-4xl">{brand.name.charAt(0)}</span>
                   </div>
                 )}
-                <span className="text-sm font-medium text-gray-700 text-center group-hover:text-orange-600">{brand.name}</span>
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end justify-center pb-3">
+                  <span className="text-white font-bold text-sm text-center px-2">{brand.name}</span>
+                </div>
               </Link>
             ))}
           </div>

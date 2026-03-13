@@ -141,6 +141,23 @@ export function setupDb() {
       key TEXT NOT NULL UNIQUE,
       value TEXT
     );
+
+    CREATE TABLE IF NOT EXISTS pages (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      title TEXT NOT NULL,
+      slug TEXT UNIQUE NOT NULL,
+      content TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS footer_links (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      url TEXT NOT NULL,
+      column_id INTEGER NOT NULL,
+      order_index INTEGER DEFAULT 0
+    );
   `);
 
   // Check if subcategory_id exists in products, if not add it
@@ -176,6 +193,13 @@ export function setupDb() {
     const insertSetting = db.prepare('INSERT INTO settings (key, value) VALUES (?, ?)');
     insertSetting.run('announcement_phone', '+213 555 00 00 00');
     insertSetting.run('announcement_text', '🚚 Livraison gratuite à partir de 5 000 DA | Paiement à la livraison partout en Algérie');
+    insertSetting.run('whatsapp_number', '213555000000');
+  } else {
+    // Ensure whatsapp_number exists
+    const waExists = db.prepare('SELECT * FROM settings WHERE key = ?').get('whatsapp_number');
+    if (!waExists) {
+      db.prepare('INSERT INTO settings (key, value) VALUES (?, ?)').run('whatsapp_number', '213555000000');
+    }
   }
 
   // Seed slides if empty
@@ -229,6 +253,21 @@ export function setupDb() {
     ];
     const insertCat = db.prepare('INSERT INTO categories (name, slug, image) VALUES (?, ?, ?)');
     categories.forEach(c => insertCat.run(c.name, c.slug, c.image));
+  }
+
+  // Seed brands if empty
+  const brandCount = db.prepare('SELECT COUNT(*) as count FROM brands').get() as { count: number };
+  if (brandCount.count === 0) {
+    const brands = [
+      { name: 'Samsung', slug: 'samsung', image: 'https://picsum.photos/seed/samsung/400/400', description: 'Leader mondial en électronique' },
+      { name: 'Apple', slug: 'apple', image: 'https://picsum.photos/seed/apple/400/400', description: 'Think different' },
+      { name: 'Sony', slug: 'sony', image: 'https://picsum.photos/seed/sony/400/400', description: 'Make. Believe.' },
+      { name: 'LG', slug: 'lg', image: 'https://picsum.photos/seed/lg/400/400', description: 'Life is Good' },
+      { name: 'Bosch', slug: 'bosch', image: 'https://picsum.photos/seed/bosch/400/400', description: 'Des technologies pour la vie' },
+      { name: 'Nike', slug: 'nike', image: 'https://picsum.photos/seed/nike/400/400', description: 'Just do it' },
+    ];
+    const insertBrand = db.prepare('INSERT INTO brands (name, slug, image, description) VALUES (?, ?, ?, ?)');
+    brands.forEach(b => insertBrand.run(b.name, b.slug, b.image, b.description));
   }
 
   // Seed subcategories if empty
@@ -297,5 +336,69 @@ export function setupDb() {
         Math.random() > 0.5 ? 1 : 0
       );
     }
+  }
+
+  // Seed footer links if empty
+  const footerLinksCount = db.prepare('SELECT COUNT(*) as count FROM footer_links').get() as { count: number };
+  if (footerLinksCount.count === 0) {
+    const defaultLinks = [
+      { name: 'Discuter avec nous', url: 'https://wa.me/123456789', column_id: 1, order_index: 0 },
+      { name: 'Contactez-nous', url: '/contact', column_id: 1, order_index: 1 },
+      { name: 'Comment commander ?', url: '/comment-commander', column_id: 1, order_index: 2 },
+      { name: 'Modalités de Livraison', url: '/livraison', column_id: 1, order_index: 3 },
+      { name: 'Retour et Remboursement', url: '/retours', column_id: 1, order_index: 4 },
+      { name: 'Politique de confidentialité', url: '/confidentialite', column_id: 1, order_index: 5 },
+      
+      { name: 'Qui sommes-nous', url: '/a-propos', column_id: 2, order_index: 0 },
+      { name: 'Conditions Générales d\'Utilisation', url: '/cgu', column_id: 2, order_index: 1 },
+      { name: 'Politique de Retours et Remboursements', url: '/politique-retours', column_id: 2, order_index: 2 },
+      { name: 'Livraison gratuite dès 5 000 DA', url: '/livraison-gratuite', column_id: 2, order_index: 3 },
+      { name: 'Ventes Flash', url: '/ventes-flash', column_id: 2, order_index: 4 },
+    ];
+    
+    const insertLink = db.prepare('INSERT INTO footer_links (name, url, column_id, order_index) VALUES (?, ?, ?, ?)');
+    defaultLinks.forEach(l => insertLink.run(l.name, l.url, l.column_id, l.order_index));
+  }
+
+  // Seed pages if empty
+  const pagesCount = db.prepare('SELECT COUNT(*) as count FROM pages').get() as { count: number };
+  if (pagesCount.count === 0) {
+    const defaultPages = [
+      { title: 'Contactez-nous', slug: 'contact', content: '<h1>Contactez-nous</h1><p>Vous pouvez nous contacter à l\'adresse email contact@yumi.dz ou par téléphone au +213 555 00 00 00.</p>' },
+      { title: 'Comment commander ?', slug: 'comment-commander', content: '<h1>Comment commander ?</h1><p>Pour commander, ajoutez vos produits au panier, validez votre commande et payez à la livraison.</p>' },
+      { title: 'Modalités de Livraison', slug: 'livraison', content: '<h1>Modalités de Livraison</h1><p>Nous livrons sur les 58 wilayas d\'Algérie. Les frais de livraison varient selon la destination.</p>' },
+      { title: 'Retour et Remboursement', slug: 'retours', content: '<h1>Retour et Remboursement</h1><p>Vous disposez de 7 jours pour retourner un produit défectueux.</p>' },
+      { title: 'Politique de confidentialité', slug: 'confidentialite', content: '<h1>Politique de confidentialité</h1><p>Vos données personnelles sont protégées et ne seront jamais partagées avec des tiers.</p>' },
+      { title: 'Qui sommes-nous', slug: 'a-propos', content: '<h1>Qui sommes-nous</h1><p>Yumi est votre boutique en ligne de confiance en Algérie.</p>' },
+      { title: 'Conditions Générales d\'Utilisation', slug: 'cgu', content: '<h1>Conditions Générales d\'Utilisation</h1><p>En utilisant ce site, vous acceptez nos conditions générales.</p>' },
+      { title: 'Politique de Retours et Remboursements', slug: 'politique-retours', content: '<h1>Politique de Retours et Remboursements</h1><p>Détails sur notre politique de retours.</p>' },
+      { title: 'Livraison gratuite dès 5 000 DA', slug: 'livraison-gratuite', content: '<h1>Livraison gratuite</h1><p>Profitez de la livraison gratuite pour toute commande supérieure à 5 000 DA.</p>' },
+      { title: 'Ventes Flash', slug: 'ventes-flash', content: '<h1>Ventes Flash</h1><p>Découvrez nos offres exceptionnelles à durée limitée !</p>' }
+    ];
+    
+    const insertPage = db.prepare('INSERT INTO pages (title, slug, content) VALUES (?, ?, ?)');
+    defaultPages.forEach(p => insertPage.run(p.title, p.slug, p.content));
+  }
+
+  // Seed settings if empty
+  const settingsCount2 = db.prepare('SELECT COUNT(*) as count FROM settings').get() as { count: number };
+  if (settingsCount2.count === 0) {
+    const defaultSettings = [
+      { key: 'social_facebook', value: 'https://facebook.com' },
+      { key: 'social_instagram', value: 'https://instagram.com' },
+      { key: 'social_tiktok', value: 'https://tiktok.com' },
+      { key: 'social_youtube', value: 'https://youtube.com' },
+      { key: 'social_facebook_visible', value: '1' },
+      { key: 'social_instagram_visible', value: '1' },
+      { key: 'social_tiktok_visible', value: '1' },
+      { key: 'social_youtube_visible', value: '1' },
+      { key: 'copyright_text', value: '© 2026 Yumi Algérie. Tous droits réservés.' },
+      { key: 'contact_email', value: 'contact@yumi.dz' },
+      { key: 'contact_phone', value: '+213 555 00 00 00' },
+      { key: 'contact_address', value: 'Alger, Algérie' }
+    ];
+    
+    const insertSetting2 = db.prepare('INSERT INTO settings (key, value) VALUES (?, ?)');
+    defaultSettings.forEach(s => insertSetting2.run(s.key, s.value));
   }
 }

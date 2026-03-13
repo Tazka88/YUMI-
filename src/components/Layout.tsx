@@ -1,5 +1,5 @@
 import { Outlet, Link, useNavigate } from 'react-router-dom';
-import { ShoppingCart, Search, Menu, User, MessageCircle, X, Phone, LayoutDashboard } from 'lucide-react';
+import { ShoppingCart, Search, Menu, User, MessageCircle, X, Phone, LayoutDashboard, Facebook, Instagram, Youtube, Truck, MapPin } from 'lucide-react';
 import { useCartStore } from '../store/cartStore';
 import React, { useState, useEffect } from 'react';
 
@@ -12,6 +12,7 @@ export default function Layout() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showAnnouncement, setShowAnnouncement] = useState(true);
   const [settings, setSettings] = useState<any>({});
+  const [footerLinks, setFooterLinks] = useState<any[]>([]);
 
   useEffect(() => {
     fetch('/api/categories')
@@ -21,6 +22,10 @@ export default function Layout() {
     fetch('/api/settings')
       .then(res => res.json())
       .then(data => setSettings(data));
+
+    fetch('/api/footer-links')
+      .then(res => res.json())
+      .then(data => setFooterLinks(data));
   }, []);
 
   const handleSearch = (e: React.FormEvent) => {
@@ -196,48 +201,112 @@ export default function Layout() {
       </main>
 
       {/* Footer */}
-      <footer className="bg-gray-900 text-gray-300 py-8 mt-12">
-        <div className="container mx-auto px-4 grid grid-cols-1 md:grid-cols-3 gap-8">
+      <footer className="bg-gray-900 text-gray-300 pt-12 pb-6 mt-12">
+        <div className="container mx-auto px-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-8">
+          {/* Column 1 */}
           <div>
-            <div className="text-2xl font-bold text-white mb-4 flex items-center gap-2">
-              <span className="bg-orange-500 text-white px-2 py-1 rounded-md font-black italic">Y</span>
-              Yumi
+            <h4 className="text-white font-bold mb-4 uppercase text-sm tracking-wider">Besoin d'aide ?</h4>
+            <ul className="space-y-2 text-sm">
+              {footerLinks.filter(l => l.column_id === 1).map(link => (
+                <li key={link.id}>
+                  {link.url.startsWith('http') ? (
+                    <a href={link.url} target="_blank" rel="noopener noreferrer" className="hover:text-orange-500 transition-colors">{link.name}</a>
+                  ) : (
+                    <Link to={link.url} className="hover:text-orange-500 transition-colors">{link.name}</Link>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Column 2 */}
+          <div>
+            <h4 className="text-white font-bold mb-4 uppercase text-sm tracking-wider">À propos</h4>
+            <ul className="space-y-2 text-sm">
+              {footerLinks.filter(l => l.column_id === 2).map(link => (
+                <li key={link.id}>
+                  {link.url.startsWith('http') ? (
+                    <a href={link.url} target="_blank" rel="noopener noreferrer" className="hover:text-orange-500 transition-colors">{link.name}</a>
+                  ) : (
+                    <Link to={link.url} className="hover:text-orange-500 transition-colors">{link.name}</Link>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Column 3 */}
+          <div>
+            <h4 className="text-white font-bold mb-4 uppercase text-sm tracking-wider">Modes de paiement et livraison</h4>
+            <div className="space-y-4">
+              <div className="flex items-center gap-3 bg-gray-800 p-3 rounded-lg border border-gray-700">
+                <div className="bg-orange-500/20 p-2 rounded-full text-orange-500">
+                  <Truck size={20} />
+                </div>
+                <span className="text-sm font-medium text-white">Paiement à la livraison uniquement</span>
+              </div>
+              <div className="flex items-center gap-3 bg-gray-800 p-3 rounded-lg border border-gray-700">
+                <div className="bg-orange-500/20 p-2 rounded-full text-orange-500">
+                  <MapPin size={20} />
+                </div>
+                <span className="text-sm font-medium text-white">Livraison sur 58 wilayas</span>
+              </div>
             </div>
-            <p className="text-sm">
-              Votre boutique en ligne de confiance en Algérie. Les meilleurs produits aux meilleurs prix, avec paiement à la livraison.
-            </p>
           </div>
+
+          {/* Column 4 */}
           <div>
-            <h4 className="text-white font-bold mb-4">Liens utiles</h4>
-            <ul className="space-y-2 text-sm">
-              <li><Link to="/" className="hover:text-orange-500">Accueil</Link></li>
-              <li><Link to="/cart" className="hover:text-orange-500">Panier</Link></li>
-              <li><Link to="/admin/login" className="hover:text-orange-500">Espace Vendeur</Link></li>
-            </ul>
-          </div>
-          <div>
-            <h4 className="text-white font-bold mb-4">Contact</h4>
-            <ul className="space-y-2 text-sm">
-              <li>Email: contact@yumi.dz</li>
-              <li>Tél: +213 555 00 00 00</li>
-              <li>Alger, Algérie</li>
-            </ul>
+            <h4 className="text-white font-bold mb-4 uppercase text-sm tracking-wider">Retrouvez-nous sur</h4>
+            <div className="flex items-center gap-4">
+              {settings.social_facebook_visible === '1' && settings.social_facebook && (
+                <a href={settings.social_facebook} target="_blank" rel="noopener noreferrer" className="bg-gray-800 p-2 rounded-full hover:bg-[#1877F2] hover:text-white transition-colors">
+                  <Facebook size={20} />
+                </a>
+              )}
+              {settings.social_instagram_visible === '1' && settings.social_instagram && (
+                <a href={settings.social_instagram} target="_blank" rel="noopener noreferrer" className="bg-gray-800 p-2 rounded-full hover:bg-[#E4405F] hover:text-white transition-colors">
+                  <Instagram size={20} />
+                </a>
+              )}
+              {settings.social_tiktok_visible === '1' && settings.social_tiktok && (
+                <a href={settings.social_tiktok} target="_blank" rel="noopener noreferrer" className="bg-gray-800 p-2 rounded-full hover:bg-black hover:text-white transition-colors">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5"/></svg>
+                </a>
+              )}
+              {settings.social_youtube_visible === '1' && settings.social_youtube && (
+                <a href={settings.social_youtube} target="_blank" rel="noopener noreferrer" className="bg-gray-800 p-2 rounded-full hover:bg-[#FF0000] hover:text-white transition-colors">
+                  <Youtube size={20} />
+                </a>
+              )}
+            </div>
+            
+            <div className="mt-6">
+              <h4 className="text-white font-bold mb-3 uppercase text-sm tracking-wider">Contact</h4>
+              <ul className="space-y-2 text-sm text-gray-400">
+                {settings.contact_email && <li>{settings.contact_email}</li>}
+                {settings.contact_phone && <li>{settings.contact_phone}</li>}
+                {settings.contact_address && <li>{settings.contact_address}</li>}
+              </ul>
+            </div>
           </div>
         </div>
-        <div className="container mx-auto px-4 mt-8 pt-4 border-t border-gray-800 text-center text-sm">
-          &copy; {new Date().getFullYear()} Yumi Algérie. Tous droits réservés.
+        
+        <div className="container mx-auto px-4 mt-8 pt-6 border-t border-gray-800 text-center text-sm text-gray-500">
+          {settings.copyright_text || `© ${new Date().getFullYear()} Yumi Algérie. Tous droits réservés.`}
         </div>
       </footer>
 
       {/* Floating WhatsApp Button */}
-      <a 
-        href="https://wa.me/213555000000" 
-        target="_blank" 
-        rel="noopener noreferrer"
-        className="fixed bottom-6 right-6 bg-green-500 text-white p-4 rounded-full shadow-lg hover:bg-green-600 transition-colors z-50 flex items-center justify-center"
-      >
-        <MessageCircle size={28} />
-      </a>
+      {settings.whatsapp_number && (
+        <a 
+          href={`https://wa.me/${settings.whatsapp_number}?text=${encodeURIComponent("Bonjour, je vous contacte depuis votre site Yumi.")}`} 
+          target="_blank" 
+          rel="noopener noreferrer"
+          className="fixed bottom-6 right-6 bg-green-500 text-white p-4 rounded-full shadow-lg hover:bg-green-600 transition-colors z-50 flex items-center justify-center"
+        >
+          <MessageCircle size={28} />
+        </a>
+      )}
     </div>
   );
 }

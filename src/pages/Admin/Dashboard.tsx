@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LayoutDashboard, ShoppingBag, Users, Settings, LogOut, TrendingUp, AlertCircle, Package, Plus, Edit, Trash2, X, Image as ImageIcon, Upload } from 'lucide-react';
+import { LayoutDashboard, ShoppingBag, Users, Settings, LogOut, TrendingUp, AlertCircle, Package, Plus, Edit, Trash2, X, Image as ImageIcon, Upload, User } from 'lucide-react';
 import { formatPrice } from '../../utils/formatPrice';
+import FooterSettings from './FooterSettings';
+import PageSettings from './PageSettings';
+import { FileText } from 'lucide-react';
 
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState('overview');
@@ -48,7 +51,7 @@ export default function AdminDashboard() {
     title: '', description: '', image: '', link: '', button_text: '', order_index: 0
   });
   const [settingsForm, setSettingsForm] = useState({
-    announcement_phone: '', announcement_text: ''
+    announcement_phone: '', announcement_text: '', whatsapp_number: '', admin_email: ''
   });
   const [isSavingSettings, setIsSavingSettings] = useState(false);
   const navigate = useNavigate();
@@ -430,18 +433,57 @@ export default function AdminDashboard() {
 
   const handleSettingsSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
     setIsSavingSettings(true);
     const token = localStorage.getItem('adminToken');
     
     try {
-      await fetch('/api/admin/settings', {
+      const res = await fetch('/api/admin/settings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify(settingsForm)
       });
+      
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Erreur serveur');
+      }
+      
       alert('Paramètres enregistrés avec succès !');
-    } catch (err) {
-      alert('Erreur lors de la sauvegarde des paramètres.');
+    } catch (err: any) {
+      alert(err.message || 'Erreur lors de la sauvegarde des paramètres.');
+    } finally {
+      setIsSavingSettings(false);
+    }
+  };
+
+  const handleEmailSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // Validate email format
+    if (settingsForm.admin_email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(settingsForm.admin_email)) {
+      alert("Veuillez entrer une adresse email valide.");
+      return;
+    }
+    
+    setIsSavingSettings(true);
+    const token = localStorage.getItem('adminToken');
+    
+    try {
+      const res = await fetch('/api/admin/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ admin_email: settingsForm.admin_email })
+      });
+      
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Erreur serveur');
+      }
+      
+      alert('Email modifié avec succès');
+    } catch (err: any) {
+      alert(err.message || 'Erreur lors de la sauvegarde de l\'email.');
     } finally {
       setIsSavingSettings(false);
     }
@@ -510,6 +552,27 @@ export default function AdminDashboard() {
           >
             <Settings size={20} />
             Paramètres
+          </button>
+          <button 
+            onClick={() => setActiveTab('pages')}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-md transition-colors ${activeTab === 'pages' ? 'bg-orange-500 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white'}`}
+          >
+            <FileText size={20} />
+            Gestion des Pages
+          </button>
+          <button 
+            onClick={() => setActiveTab('footer')}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-md transition-colors ${activeTab === 'footer' ? 'bg-orange-500 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white'}`}
+          >
+            <LayoutDashboard size={20} />
+            Gestion du Footer
+          </button>
+          <button 
+            onClick={() => setActiveTab('account')}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-md transition-colors ${activeTab === 'account' ? 'bg-orange-500 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white'}`}
+          >
+            <User size={20} />
+            Compte administrateur
           </button>
         </nav>
 
@@ -1021,6 +1084,23 @@ export default function AdminDashboard() {
                 </div>
               </div>
               
+              <div>
+                <h3 className="text-md font-bold text-gray-800 mb-4 border-b pb-2">Bouton WhatsApp</h3>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Numéro WhatsApp (avec indicatif, ex: 213555000000)</label>
+                    <input 
+                      type="text" 
+                      className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500" 
+                      value={settingsForm.whatsapp_number || ''} 
+                      onChange={e => setSettingsForm({...settingsForm, whatsapp_number: e.target.value})} 
+                      placeholder="213555000000"
+                    />
+                    <p className="text-sm text-gray-500 mt-1">Ce numéro sera utilisé pour le bouton WhatsApp flottant sur le site.</p>
+                  </div>
+                </div>
+              </div>
+              
               <div className="pt-4 border-t border-gray-100">
                 <button 
                   type="submit" 
@@ -1032,6 +1112,50 @@ export default function AdminDashboard() {
               </div>
             </form>
           </div>
+        )}
+
+        {activeTab === 'account' && (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+            <div className="p-6 border-b border-gray-100">
+              <h2 className="text-lg font-bold text-gray-800">Compte administrateur</h2>
+            </div>
+            <form onSubmit={handleEmailSubmit} className="p-6 space-y-6 max-w-2xl">
+              <div>
+                <h3 className="text-md font-bold text-gray-800 mb-4 border-b pb-2">Notifications et Contact</h3>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Email administrateur</label>
+                    <input 
+                      type="email" 
+                      className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500" 
+                      value={settingsForm.admin_email || ''} 
+                      onChange={e => setSettingsForm({...settingsForm, admin_email: e.target.value})} 
+                      placeholder="nom@exemple.com"
+                    />
+                    <p className="text-sm text-gray-500 mt-1">Cet email sera utilisé pour recevoir les commandes des clients et les messages via le formulaire de contact.</p>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="pt-4 border-t border-gray-100">
+                <button 
+                  type="submit" 
+                  disabled={isSavingSettings}
+                  className="bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 px-6 rounded-md transition-colors disabled:opacity-50"
+                >
+                  {isSavingSettings ? 'Enregistrement...' : 'Sauvegarder'}
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
+
+        {activeTab === 'footer' && (
+          <FooterSettings />
+        )}
+
+        {activeTab === 'pages' && (
+          <PageSettings />
         )}
       </main>
 

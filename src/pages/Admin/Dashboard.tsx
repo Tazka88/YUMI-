@@ -33,10 +33,9 @@ export default function AdminDashboard() {
   });
   
   const [productForm, setProductForm] = useState({
-    name: '', slug: '', category_id: '', subcategory_id: '', brand_id: '', price: '', promo_price: '', stock: '', description: '', image: '',
+    name: '', slug: '', category_id: '', subcategory_id: '', brand_name: '', price: '', promo_price: '', stock: '', description: '', image: '',
     is_popular: false, is_best_seller: false, is_new: false, is_recommended: false, is_fast_delivery: false, images: [] as any[],
-    features: [] as { key: string, value: string }[],
-    key_points: [] as string[]
+    features: ''
   });
   const [subcategoryForm, setSubcategoryForm] = useState({
     name: '', slug: '', category_id: '', image: ''
@@ -51,9 +50,13 @@ export default function AdminDashboard() {
     title: '', description: '', image: '', link: '', button_text: '', order_index: 0
   });
   const [settingsForm, setSettingsForm] = useState({
-    announcement_phone: '', announcement_text: '', whatsapp_number: '', admin_email: ''
+    announcement_phone: '', announcement_text: '', whatsapp_number: '', admin_email: '', site_logo: ''
   });
   const [isSavingSettings, setIsSavingSettings] = useState(false);
+  const [credentialsForm, setCredentialsForm] = useState({
+    currentPassword: '', newUsername: '', newPassword: '', confirmPassword: ''
+  });
+  const [isSavingCredentials, setIsSavingCredentials] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -93,7 +96,7 @@ export default function AdminDashboard() {
       .then(res => res.json())
       .then(setSlides);
 
-    fetch('/api/settings')
+    fetch('/api/admin/settings', { headers })
       .then(res => res.json())
       .then(setSettingsForm);
   }, [navigate]);
@@ -155,21 +158,20 @@ export default function AdminDashboard() {
     if (product) {
       setEditingProduct(product);
       setProductForm({
-        name: product.name, slug: product.slug, category_id: product.category_id, subcategory_id: product.subcategory_id || '', brand_id: product.brand_id || '',
+        name: product.name, slug: product.slug, category_id: product.category_id, subcategory_id: product.subcategory_id || '', brand_name: product.brand_name || '',
         price: product.price, promo_price: product.promo_price || '', stock: product.stock, 
         description: product.description || '', image: product.image || '',
         is_popular: !!product.is_popular, is_best_seller: !!product.is_best_seller, 
         is_new: !!product.is_new, is_recommended: !!product.is_recommended,
         is_fast_delivery: !!product.is_fast_delivery,
         images: product.images || [],
-        features: product.features || [],
-        key_points: product.key_points || []
+        features: product.features ? product.features.map((f: any) => `${f.key}: ${f.value}`).join('\n') : ''
       });
     } else {
       setEditingProduct(null);
       setProductForm({
-        name: '', slug: '', category_id: categories[0]?.id || '', subcategory_id: '', brand_id: '', price: '', promo_price: '', stock: '', description: '', image: '',
-        is_popular: false, is_best_seller: false, is_new: false, is_recommended: false, is_fast_delivery: false, images: [], features: [], key_points: []
+        name: '', slug: '', category_id: categories[0]?.id || '', subcategory_id: '', brand_name: '', price: '', promo_price: '', stock: '', description: '', image: '',
+        is_popular: false, is_best_seller: false, is_new: false, is_recommended: false, is_fast_delivery: false, images: [], features: ''
       });
     }
     setIsModalOpen(true);
@@ -247,6 +249,15 @@ export default function AdminDashboard() {
       price: parseFloat(productForm.price as string),
       promo_price: productForm.promo_price ? parseFloat(productForm.promo_price as string) : null,
       stock: parseInt(productForm.stock as string, 10),
+      features: typeof productForm.features === 'string'
+        ? productForm.features.split('\n').filter(f => f.trim()).map(f => {
+            const parts = f.split(':');
+            if (parts.length > 1) {
+              return { key: parts[0].trim(), value: parts.slice(1).join(':').trim() };
+            }
+            return { key: f.trim(), value: '' };
+          })
+        : productForm.features
     };
 
     await fetch(url, {
@@ -489,13 +500,61 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleCredentialsSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!credentialsForm.currentPassword) {
+      alert("Le mot de passe actuel est requis.");
+      return;
+    }
+    
+    if (credentialsForm.newPassword && credentialsForm.newPassword !== credentialsForm.confirmPassword) {
+      alert("Les nouveaux mots de passe ne correspondent pas.");
+      return;
+    }
+    
+    setIsSavingCredentials(true);
+    const token = localStorage.getItem('adminToken');
+    
+    try {
+      const res = await fetch('/api/admin/credentials', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({
+          currentPassword: credentialsForm.currentPassword,
+          newUsername: credentialsForm.newUsername || undefined,
+          newPassword: credentialsForm.newPassword || undefined
+        })
+      });
+      
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Erreur serveur');
+      }
+      
+      alert('Identifiants modifiés avec succès. Veuillez vous reconnecter.');
+      setCredentialsForm({ currentPassword: '', newUsername: '', newPassword: '', confirmPassword: '' });
+      handleLogout();
+    } catch (err: any) {
+      alert(err.message || 'Erreur lors de la sauvegarde des identifiants.');
+    } finally {
+      setIsSavingCredentials(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col md:flex-row">
       {/* Sidebar */}
       <aside className="w-full md:w-64 bg-gray-900 text-white flex flex-col">
         <div className="p-6 border-b border-gray-800 flex items-center gap-3">
-          <div className="bg-orange-500 text-white px-2 py-1 rounded-md font-black italic text-xl">Y</div>
-          <span className="text-xl font-bold tracking-tight">Yumi Admin</span>
+          {settingsForm.site_logo ? (
+            <img src={settingsForm.site_logo} alt="Yumi Logo" className="h-8 w-auto object-contain" />
+          ) : (
+            <>
+              <div className="bg-orange-500 text-white px-2 py-1 rounded-md font-black italic text-xl">Y</div>
+              <span className="text-xl font-bold tracking-tight">Yumi Admin</span>
+            </>
+          )}
         </div>
         
         <nav className="flex-1 p-4 space-y-2">
@@ -948,9 +1007,9 @@ export default function AdminDashboard() {
                     <tr key={brand.id} className="hover:bg-gray-50 transition-colors">
                       <td className="py-3 px-4 border-b border-gray-100">
                         {brand.image ? (
-                          <img src={brand.image} alt={brand.name} className="w-12 h-12 object-contain rounded-md border border-gray-200" />
+                          <img src={brand.image} alt={brand.name} className="w-12 h-12 object-contain p-[15px] rounded-md border border-gray-200" />
                         ) : (
-                          <div className="w-12 h-12 bg-gray-100 rounded-md flex items-center justify-center text-gray-400">
+                          <div className="w-12 h-12 bg-gray-100 rounded-md flex items-center justify-center text-gray-400 p-[15px]">
                             <ImageIcon size={20} />
                           </div>
                         )}
@@ -1059,6 +1118,55 @@ export default function AdminDashboard() {
             </div>
             <form onSubmit={handleSettingsSubmit} className="p-6 space-y-6 max-w-2xl">
               <div>
+                <h3 className="text-md font-bold text-gray-800 mb-4 border-b pb-2">Logo du site</h3>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Logo actuel</label>
+                    <div className="flex items-center gap-4">
+                      <div className="w-32 h-16 bg-gray-100 rounded-md flex items-center justify-center overflow-hidden border border-gray-200">
+                        {settingsForm.site_logo ? (
+                          <img src={settingsForm.site_logo} alt="Logo preview" className="max-w-full max-h-full object-contain" />
+                        ) : (
+                          <span className="text-sm text-gray-400">Par défaut</span>
+                        )}
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        <label className="cursor-pointer bg-white border border-gray-300 text-gray-700 px-3 py-1.5 rounded-md text-sm font-medium hover:bg-gray-50 transition-colors text-center">
+                          <Upload size={16} className="inline mr-2" />
+                          Changer le logo
+                          <input 
+                            type="file" 
+                            className="hidden" 
+                            accept="image/png, image/jpeg, image/svg+xml"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                const reader = new FileReader();
+                                reader.onloadend = () => {
+                                  setSettingsForm({...settingsForm, site_logo: reader.result as string});
+                                };
+                                reader.readAsDataURL(file);
+                              }
+                            }}
+                          />
+                        </label>
+                        {settingsForm.site_logo && (
+                          <button 
+                            type="button"
+                            onClick={() => setSettingsForm({...settingsForm, site_logo: ''})}
+                            className="text-red-600 text-sm hover:underline text-left"
+                          >
+                            Réinitialiser par défaut
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-2">Formats acceptés : PNG, JPG, SVG. Le logo sera appliqué instantanément après sauvegarde.</p>
+                  </div>
+                </div>
+              </div>
+
+              <div>
                 <h3 className="text-md font-bold text-gray-800 mb-4 border-b pb-2">Barre d'annonce (Haut de page)</h3>
                 <div className="space-y-4">
                   <div>
@@ -1147,6 +1255,61 @@ export default function AdminDashboard() {
                 </button>
               </div>
             </form>
+
+            <form onSubmit={handleCredentialsSubmit} className="p-6 space-y-6 max-w-2xl border-t border-gray-100">
+              <div>
+                <h3 className="text-md font-bold text-gray-800 mb-4 border-b pb-2">Modifier les identifiants</h3>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Mot de passe actuel (requis)</label>
+                    <input 
+                      type="password" 
+                      required
+                      className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500" 
+                      value={credentialsForm.currentPassword} 
+                      onChange={e => setCredentialsForm({...credentialsForm, currentPassword: e.target.value})} 
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Nouveau nom d'utilisateur (optionnel)</label>
+                    <input 
+                      type="text" 
+                      className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500" 
+                      value={credentialsForm.newUsername} 
+                      onChange={e => setCredentialsForm({...credentialsForm, newUsername: e.target.value})} 
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Nouveau mot de passe (optionnel)</label>
+                    <input 
+                      type="password" 
+                      className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500" 
+                      value={credentialsForm.newPassword} 
+                      onChange={e => setCredentialsForm({...credentialsForm, newPassword: e.target.value})} 
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Confirmer le nouveau mot de passe</label>
+                    <input 
+                      type="password" 
+                      className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500" 
+                      value={credentialsForm.confirmPassword} 
+                      onChange={e => setCredentialsForm({...credentialsForm, confirmPassword: e.target.value})} 
+                    />
+                  </div>
+                </div>
+              </div>
+              
+              <div className="pt-4 border-t border-gray-100">
+                <button 
+                  type="submit" 
+                  disabled={isSavingCredentials}
+                  className="bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 px-6 rounded-md transition-colors disabled:opacity-50"
+                >
+                  {isSavingCredentials ? 'Enregistrement...' : 'Modifier les identifiants'}
+                </button>
+              </div>
+            </form>
           </div>
         )}
 
@@ -1201,16 +1364,13 @@ export default function AdminDashboard() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Marque</label>
-                  <select 
+                  <input 
+                    type="text"
                     className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500"
-                    value={productForm.brand_id}
-                    onChange={e => setProductForm({...productForm, brand_id: e.target.value})}
-                  >
-                    <option value="">Sélectionner une marque</option>
-                    {brands.map(b => (
-                      <option key={b.id} value={b.id}>{b.name}</option>
-                    ))}
-                  </select>
+                    placeholder="Saisissez la marque"
+                    value={productForm.brand_name}
+                    onChange={e => setProductForm({...productForm, brand_name: e.target.value})}
+                  />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Prix (DA) *</label>
@@ -1263,41 +1423,13 @@ export default function AdminDashboard() {
                 </div>
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-2">Points clés (Bullet points)</label>
-                  <div className="space-y-2 mb-2">
-                    {productForm.key_points.map((point, idx) => (
-                      <div key={idx} className="flex gap-2 items-center">
-                        <input 
-                          type="text" 
-                          placeholder="Ex: Produit neuf et original" 
-                          className="flex-1 px-3 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500 text-sm"
-                          value={point}
-                          onChange={(e) => {
-                            const newPoints = [...productForm.key_points];
-                            newPoints[idx] = e.target.value;
-                            setProductForm({...productForm, key_points: newPoints});
-                          }}
-                        />
-                        <button 
-                          type="button" 
-                          onClick={() => {
-                            const newPoints = [...productForm.key_points];
-                            newPoints.splice(idx, 1);
-                            setProductForm({...productForm, key_points: newPoints});
-                          }}
-                          className="p-2 text-red-500 hover:bg-red-50 rounded-md"
-                        >
-                          <X size={18} />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                  <button 
-                    type="button" 
-                    onClick={() => setProductForm({...productForm, key_points: [...productForm.key_points, '']})}
-                    className="text-sm text-orange-600 font-medium hover:text-orange-700 flex items-center gap-1"
-                  >
-                    + Ajouter un point clé
-                  </button>
+                  <textarea 
+                    rows={4} 
+                    className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500" 
+                    placeholder="Collez vos points clés ici... (un point par ligne)"
+                    value={productForm.key_points as string} 
+                    onChange={e => setProductForm({...productForm, key_points: e.target.value})}
+                  ></textarea>
                 </div>
 
                 <div className="md:col-span-2">
@@ -1307,52 +1439,13 @@ export default function AdminDashboard() {
 
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-2">Caractéristiques techniques</label>
-                  <div className="space-y-2 mb-2">
-                    {productForm.features.map((feature, idx) => (
-                      <div key={idx} className="flex gap-2 items-center">
-                        <input 
-                          type="text" 
-                          placeholder="Clé (ex: Marque)" 
-                          className="flex-1 px-3 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500 text-sm"
-                          value={feature.key}
-                          onChange={(e) => {
-                            const newFeatures = [...productForm.features];
-                            newFeatures[idx].key = e.target.value;
-                            setProductForm({...productForm, features: newFeatures});
-                          }}
-                        />
-                        <input 
-                          type="text" 
-                          placeholder="Valeur (ex: Samsung)" 
-                          className="flex-1 px-3 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500 text-sm"
-                          value={feature.value}
-                          onChange={(e) => {
-                            const newFeatures = [...productForm.features];
-                            newFeatures[idx].value = e.target.value;
-                            setProductForm({...productForm, features: newFeatures});
-                          }}
-                        />
-                        <button 
-                          type="button" 
-                          onClick={() => {
-                            const newFeatures = [...productForm.features];
-                            newFeatures.splice(idx, 1);
-                            setProductForm({...productForm, features: newFeatures});
-                          }}
-                          className="p-2 text-red-500 hover:bg-red-50 rounded-md"
-                        >
-                          <X size={18} />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                  <button 
-                    type="button" 
-                    onClick={() => setProductForm({...productForm, features: [...productForm.features, { key: '', value: '' }]})}
-                    className="text-sm text-orange-600 font-medium hover:text-orange-700 flex items-center gap-1"
-                  >
-                    + Ajouter une caractéristique
-                  </button>
+                  <textarea 
+                    rows={4} 
+                    className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500" 
+                    placeholder="Collez vos caractéristiques ici... (ex: Marque: Samsung)"
+                    value={productForm.features as string} 
+                    onChange={e => setProductForm({...productForm, features: e.target.value})}
+                  ></textarea>
                 </div>
               </div>
               

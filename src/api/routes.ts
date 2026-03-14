@@ -57,7 +57,7 @@ router.get('/pages/:slug', (req, res) => {
 });
 
 router.get('/settings', (req, res) => {
-  const settings = db.prepare('SELECT * FROM settings').all();
+  const settings = db.prepare("SELECT * FROM settings WHERE key != 'admin_email'").all();
   const settingsObj = settings.reduce((acc: any, setting: any) => {
     acc[setting.key] = setting.value;
     return acc;
@@ -291,6 +291,47 @@ router.delete('/admin/pages/:id', authenticate, (req, res) => {
   }
 });
 
+router.get('/admin/settings', authenticate, (req, res) => {
+  const settings = db.prepare('SELECT * FROM settings').all();
+  const settingsObj = settings.reduce((acc: any, setting: any) => {
+    acc[setting.key] = setting.value;
+    return acc;
+  }, {});
+  res.json(settingsObj);
+});
+
+router.put('/admin/credentials', authenticate, (req: any, res) => {
+  const { currentPassword, newUsername, newPassword } = req.body;
+  const userId = req.user.id;
+
+  if (!currentPassword) {
+    return res.status(400).json({ error: 'Mot de passe actuel requis' });
+  }
+
+  const user = db.prepare('SELECT * FROM users WHERE id = ?').get(userId) as any;
+  if (!user || !bcrypt.compareSync(currentPassword, user.password_hash)) {
+    return res.status(401).json({ error: 'Mot de passe actuel incorrect' });
+  }
+
+  try {
+    if (newUsername && newPassword) {
+      const hash = bcrypt.hashSync(newPassword, 10);
+      db.prepare('UPDATE users SET username = ?, password_hash = ? WHERE id = ?').run(newUsername, hash, userId);
+    } else if (newUsername) {
+      db.prepare('UPDATE users SET username = ? WHERE id = ?').run(newUsername, userId);
+    } else if (newPassword) {
+      const hash = bcrypt.hashSync(newPassword, 10);
+      db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(hash, userId);
+    }
+    res.json({ success: true, message: 'Identifiants mis à jour avec succès' });
+  } catch (err: any) {
+    if (err.code === 'SQLITE_CONSTRAINT_UNIQUE') {
+      return res.status(400).json({ error: 'Ce nom d\'utilisateur existe déjà' });
+    }
+    res.status(500).json({ error: 'Erreur lors de la mise à jour des identifiants' });
+  }
+});
+
 router.post('/admin/settings', authenticate, (req, res) => {
   const settings = req.body;
   
@@ -472,14 +513,27 @@ router.get('/admin/products', authenticate, (req, res) => {
 });
 
 router.post('/admin/products', authenticate, (req, res) => {
-  const { category_id, subcategory_id, brand_id, name, slug, description, price, promo_price, stock, image, is_popular, is_best_seller, is_new, is_recommended, is_fast_delivery, images, features, key_points } = req.body;
+  const { category_id, subcategory_id, brand_name, name, slug, description, price, promo_price, stock, image, is_popular, is_best_seller, is_new, is_recommended, is_fast_delivery, images, features, key_points } = req.body;
   
   const transaction = db.transaction(() => {
+    let final_brand_id = null;
+    if (brand_name) {
+      const existingBrand = db.prepare('SELECT id FROM brands WHERE name = ?').get(brand_name) as any;
+      if (existingBrand) {
+        final_brand_id = existingBrand.id;
+      } else {
+        const brandSlug = brand_name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+        const insertBrand = db.prepare('INSERT INTO brands (name, slug) VALUES (?, ?)');
+        const info = insertBrand.run(brand_name, brandSlug);
+        final_brand_id = info.lastInsertRowid;
+      }
+    }
+
     const insert = db.prepare(`
       INSERT INTO products (category_id, subcategory_id, brand_id, name, slug, description, price, promo_price, stock, image, is_popular, is_best_seller, is_new, is_recommended, is_fast_delivery, features, key_points)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
-    const info = insert.run(category_id, subcategory_id || null, brand_id || null, name, slug, description, price, promo_price, stock, image, is_popular ? 1 : 0, is_best_seller ? 1 : 0, is_new ? 1 : 0, is_recommended ? 1 : 0, is_fast_delivery ? 1 : 0, features ? JSON.stringify(features) : null, key_points ? JSON.stringify(key_points) : null);
+    const info = insert.run(category_id, subcategory_id || null, final_brand_id, name, slug, description, price, promo_price, stock, image, is_popular ? 1 : 0, is_best_seller ? 1 : 0, is_new ? 1 : 0, is_recommended ? 1 : 0, is_fast_delivery ? 1 : 0, features ? JSON.stringify(features) : null, key_points ? JSON.stringify(key_points) : null);
     const productId = info.lastInsertRowid;
 
     if (images && Array.isArray(images)) {
@@ -500,15 +554,28 @@ router.post('/admin/products', authenticate, (req, res) => {
 });
 
 router.put('/admin/products/:id', authenticate, (req, res) => {
-  const { category_id, subcategory_id, brand_id, name, slug, description, price, promo_price, stock, image, is_popular, is_best_seller, is_new, is_recommended, is_fast_delivery, images, features, key_points } = req.body;
+  const { category_id, subcategory_id, brand_name, name, slug, description, price, promo_price, stock, image, is_popular, is_best_seller, is_new, is_recommended, is_fast_delivery, images, features, key_points } = req.body;
   
   const transaction = db.transaction(() => {
+    let final_brand_id = null;
+    if (brand_name) {
+      const existingBrand = db.prepare('SELECT id FROM brands WHERE name = ?').get(brand_name) as any;
+      if (existingBrand) {
+        final_brand_id = existingBrand.id;
+      } else {
+        const brandSlug = brand_name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+        const insertBrand = db.prepare('INSERT INTO brands (name, slug) VALUES (?, ?)');
+        const info = insertBrand.run(brand_name, brandSlug);
+        final_brand_id = info.lastInsertRowid;
+      }
+    }
+
     const update = db.prepare(`
       UPDATE products 
       SET category_id = ?, subcategory_id = ?, brand_id = ?, name = ?, slug = ?, description = ?, price = ?, promo_price = ?, stock = ?, image = ?, is_popular = ?, is_best_seller = ?, is_new = ?, is_recommended = ?, is_fast_delivery = ?, features = ?, key_points = ?
       WHERE id = ?
     `);
-    update.run(category_id, subcategory_id || null, brand_id || null, name, slug, description, price, promo_price, stock, image, is_popular ? 1 : 0, is_best_seller ? 1 : 0, is_new ? 1 : 0, is_recommended ? 1 : 0, is_fast_delivery ? 1 : 0, features ? JSON.stringify(features) : null, key_points ? JSON.stringify(key_points) : null, req.params.id);
+    update.run(category_id, subcategory_id || null, final_brand_id, name, slug, description, price, promo_price, stock, image, is_popular ? 1 : 0, is_best_seller ? 1 : 0, is_new ? 1 : 0, is_recommended ? 1 : 0, is_fast_delivery ? 1 : 0, features ? JSON.stringify(features) : null, key_points ? JSON.stringify(key_points) : null, req.params.id);
 
     if (images && Array.isArray(images)) {
       db.prepare('DELETE FROM product_images WHERE product_id = ?').run(req.params.id);

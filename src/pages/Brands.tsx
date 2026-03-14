@@ -40,21 +40,21 @@ export default function Brands() {
         <p className="text-gray-600 mb-8">Découvrez les produits de vos marques préférées.</p>
 
         {brands.length > 0 ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6">
+          <div className="flex flex-wrap justify-center gap-6">
             {brands.map(brand => (
               <Link 
                 key={brand.id} 
                 to={`/brands/${brand.slug}`} 
-                className="flex flex-col items-center justify-center p-6 border border-gray-100 rounded-xl hover:border-orange-500 hover:shadow-md transition-all group bg-gray-50"
+                className="flex flex-col items-center justify-center w-[200px] h-[180px] rounded-[12px] bg-white shadow-[0_2px_12px_rgba(0,0,0,0.08)] hover:shadow-[0_8px_24px_rgba(0,0,0,0.12)] hover:scale-[1.03] transition-all duration-300 group"
               >
                 {brand.image ? (
-                  <img src={brand.image} alt={brand.name} className="w-20 h-20 object-contain mb-4 group-hover:scale-110 transition-transform" />
+                  <img src={brand.image} alt={brand.name} className="w-[80%] h-[120px] object-contain p-[20px]" />
                 ) : (
-                  <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center text-gray-400 mb-4 shadow-sm">
-                    <span className="font-bold text-2xl">{brand.name.charAt(0)}</span>
+                  <div className="w-[80%] h-[120px] flex items-center justify-center text-gray-400 p-[20px]">
+                    <span className="font-bold text-4xl">{brand.name.charAt(0)}</span>
                   </div>
                 )}
-                <span className="font-bold text-gray-800 text-center group-hover:text-orange-600">{brand.name}</span>
+                <span className="font-bold text-gray-800 text-center group-hover:text-orange-600 px-4 truncate w-full">{brand.name}</span>
               </Link>
             ))}
           </div>

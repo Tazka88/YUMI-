@@ -20,7 +20,7 @@ export default function Home() {
   useEffect(() => {
     fetch('/api/slides').then(res => res.json()).then(setSlides);
     fetch('/api/categories').then(res => res.json()).then(setCategories);
-    fetch('/api/brands').then(res => res.json()).then(data => setBrands(data.slice(0, 6)));
+    fetch('/api/brands').then(res => res.json()).then(data => setBrands(data));
     fetch('/api/products?popular=true').then(res => res.json()).then(setPopularProducts);
     fetch('/api/products?best_seller=true').then(res => res.json()).then(setBestSellers);
     fetch('/api/products?new=true').then(res => res.json()).then(setNewProducts);
@@ -156,7 +156,7 @@ export default function Home() {
         <div className="grid grid-cols-3 md:grid-cols-6 gap-4">
           {categories.slice(0, 12).map(cat => (
             <Link key={cat.id} to={`/category/${cat.slug}`} className="flex flex-col items-center group">
-              <div className="w-16 h-16 md:w-24 md:h-24 rounded-full overflow-hidden mb-2 border-2 border-transparent group-hover:border-orange-500 transition-colors">
+              <div className="w-full aspect-square max-w-[160px] rounded-2xl overflow-hidden mb-3 shadow-sm group-hover:shadow-md group-hover:scale-105 transition-all duration-300 border border-gray-100">
                 <img 
                   src={cat.image || `https://picsum.photos/seed/${cat.slug}/200/200`} 
                   alt={cat.name}
@@ -164,7 +164,7 @@ export default function Home() {
                   referrerPolicy="no-referrer"
                 />
               </div>
-              <span className="text-xs md:text-sm text-center text-gray-700 group-hover:text-orange-500 font-medium">
+              <span className="text-[14px] text-center text-gray-700 group-hover:text-orange-500 font-medium">
                 {cat.name}
               </span>
             </Link>
@@ -181,30 +181,37 @@ export default function Home() {
               Voir tout <ChevronRight size={16} />
             </Link>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4">
-            {brands.map(brand => (
-              <Link 
-                key={brand.id} 
-                to={`/brands/${brand.slug}`} 
-                className="relative aspect-square rounded-lg overflow-hidden shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300 border border-gray-100 group bg-white block"
-              >
-                {brand.image ? (
-                  <img 
-                    src={brand.image} 
-                    alt={brand.name} 
-                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" 
-                    referrerPolicy="no-referrer"
-                  />
-                ) : (
-                  <div className="w-full h-full bg-gray-50 flex items-center justify-center text-gray-400 group-hover:scale-110 transition-transform duration-500">
-                    <span className="font-bold text-4xl">{brand.name.charAt(0)}</span>
-                  </div>
-                )}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end justify-center pb-3">
-                  <span className="text-white font-bold text-sm text-center px-2">{brand.name}</span>
+          <div className="overflow-hidden relative w-full py-2">
+            <div className="flex w-max animate-marquee hover:[animation-play-state:paused]">
+              {[...Array(4)].map((_, i) => (
+                <div key={i} className="flex gap-4 pr-4" aria-hidden={i > 0 ? "true" : "false"}>
+                  {brands.map(brand => (
+                    <Link 
+                      key={`${i}-${brand.id}`} 
+                      to={`/brands/${brand.slug}`} 
+                      className="relative w-32 h-32 sm:w-40 sm:h-40 shrink-0 rounded-lg overflow-hidden shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300 border border-gray-100 group bg-white block"
+                      tabIndex={i > 0 ? -1 : 0}
+                    >
+                      {brand.image ? (
+                        <img 
+                          src={brand.image} 
+                          alt={brand.name} 
+                          className="w-full h-full object-contain p-[15px] group-hover:scale-110 transition-transform duration-500" 
+                          referrerPolicy="no-referrer"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-gray-50 flex items-center justify-center text-gray-400 group-hover:scale-110 transition-transform duration-500 p-[15px]">
+                          <span className="font-bold text-4xl">{brand.name.charAt(0)}</span>
+                        </div>
+                      )}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end justify-center pb-3">
+                        <span className="text-white font-bold text-sm text-center px-2">{brand.name}</span>
+                      </div>
+                    </Link>
+                  ))}
                 </div>
-              </Link>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
       )}

@@ -71,9 +71,20 @@ export default function Layout() {
               >
                 <Menu size={24} />
               </button>
-              <Link to="/" className="text-2xl font-bold tracking-tight flex items-center gap-2">
-                <span className="bg-white text-orange-500 px-2 py-1 rounded-md font-black italic">Y</span>
-                Yumi
+              <Link to="/" className="flex items-center hover:opacity-90 transition-opacity" aria-label="Yumi Accueil">
+                {settings.site_logo ? (
+                  <img src={settings.site_logo} alt="Yumi Logo" className="h-8 md:h-10 w-auto object-contain" />
+                ) : (
+                  <svg width="130" height="36" viewBox="0 0 130 36" fill="none" xmlns="http://www.w3.org/2000/svg" className="h-8 w-auto">
+                    <g transform="translate(2, 2)">
+                      <path d="M10 10V6C10 3.79086 11.7909 2 14 2C16.2091 2 18 3.79086 18 6V10" stroke="white" strokeWidth="2.5" strokeLinecap="round"/>
+                      <rect x="2" y="10" width="24" height="20" rx="4" fill="white" fillOpacity="0.15" stroke="white" strokeWidth="2.5" strokeLinejoin="round"/>
+                      <path d="M9 15L14 20M19 15L14 20M14 20V25" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+                      <path d="M26 4L27 1L28 4L31 5L28 6L27 9L26 6L23 5L26 4Z" fill="#FFD8A8"/>
+                    </g>
+                    <text x="38" y="27" fontFamily="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" fontSize="26" fontWeight="900" fill="white" letterSpacing="-0.04em">Yumi<tspan fill="#FFD8A8">.</tspan></text>
+                  </svg>
+                )}
               </Link>
             </div>
 

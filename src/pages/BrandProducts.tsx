@@ -66,11 +66,11 @@ export default function BrandProducts() {
       {/* Brand Header */}
       <div className="bg-white rounded-xl shadow-sm p-6 md:p-8 mb-8 flex flex-col md:flex-row items-center gap-6">
         {brand.image ? (
-          <div className="w-32 h-32 bg-gray-50 rounded-xl border border-gray-100 p-4 flex items-center justify-center shrink-0">
-            <img src={brand.image} alt={brand.name} className="w-full h-full object-contain" />
+          <div className="w-32 h-32 bg-gray-50 rounded-xl border border-gray-100 flex items-center justify-center shrink-0">
+            <img src={brand.image} alt={brand.name} className="w-full h-full object-contain p-[15px]" />
           </div>
         ) : (
-          <div className="w-32 h-32 bg-gray-100 rounded-xl border border-gray-200 flex items-center justify-center text-gray-400 shrink-0">
+          <div className="w-32 h-32 bg-gray-100 rounded-xl border border-gray-200 flex items-center justify-center text-gray-400 shrink-0 p-[15px]">
             <span className="text-4xl font-bold text-gray-400">{brand.name.charAt(0)}</span>
           </div>
         )}

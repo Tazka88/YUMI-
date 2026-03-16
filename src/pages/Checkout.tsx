@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useCartStore } from '../store/cartStore';
 import { CheckCircle, Truck, MapPin, Phone, User as UserIcon } from 'lucide-react';
 import { formatPrice } from '../utils/formatPrice';
+import ReactGA from 'react-ga4';
+import ReactPixel from 'react-facebook-pixel';
 
 // Mock Wilayas data with delivery costs
 const WILAYAS = [
@@ -82,6 +84,19 @@ export default function Checkout() {
   const [deliveryTime, setDeliveryTime] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState(false);
+  const [trackingIds, setTrackingIds] = useState({ ga: '', fb: '' });
+
+  useEffect(() => {
+    fetch('/api/settings')
+      .then(res => res.json())
+      .then(data => {
+        setTrackingIds({
+          ga: data.ga_measurement_id || import.meta.env.VITE_GA_MEASUREMENT_ID || '',
+          fb: data.fb_pixel_id || import.meta.env.VITE_FB_PIXEL_ID || ''
+        });
+      })
+      .catch(console.error);
+  }, []);
 
   useEffect(() => {
     if (items.length === 0 && !orderSuccess) {
@@ -132,6 +147,33 @@ export default function Checkout() {
       if (res.ok) {
         setOrderSuccess(true);
         clearCart();
+        
+        // Track Purchase
+        const finalTotal = total() + deliveryCost;
+        if (trackingIds.ga) {
+          ReactGA.event("purchase", {
+            transaction_id: Date.now().toString(),
+            value: finalTotal,
+            currency: "DZD",
+            shipping: deliveryCost,
+            items: items.map(item => ({
+              item_id: item.id.toString(),
+              item_name: item.name,
+              price: item.promo_price || item.price,
+              quantity: item.quantity
+            }))
+          });
+        }
+        
+        if (trackingIds.fb) {
+          ReactPixel.track('Purchase', {
+            value: finalTotal,
+            currency: 'DZD',
+            content_ids: items.map(item => item.id.toString()),
+            content_type: 'product'
+          });
+        }
+
         // Mock notification
         console.log(`Notification envoyée à ${formData.phone} via WhatsApp`);
       } else {

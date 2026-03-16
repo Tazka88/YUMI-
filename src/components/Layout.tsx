@@ -1,4 +1,4 @@
-import { Outlet, Link, useNavigate } from 'react-router-dom';
+import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { ShoppingCart, Search, Menu, User, MessageCircle, X, Phone, LayoutDashboard, Facebook, Instagram, Youtube, Truck, MapPin } from 'lucide-react';
 import { useCartStore } from '../store/cartStore';
 import React, { useState, useEffect } from 'react';
@@ -7,30 +7,77 @@ export default function Layout() {
   const cartItems = useCartStore((state) => state.items);
   const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
   const [searchQuery, setSearchQuery] = useState('');
+  const [suggestions, setSuggestions] = useState<any[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const searchRef = React.useRef<HTMLDivElement>(null);
+  const mobileSearchRef = React.useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
+  const location = useLocation();
   const [categories, setCategories] = useState<any[]>([]);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showAnnouncement, setShowAnnouncement] = useState(true);
   const [settings, setSettings] = useState<any>({});
   const [footerLinks, setFooterLinks] = useState<any[]>([]);
 
+  // Scroll to top on route change
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [location.pathname]);
+
   useEffect(() => {
     fetch('/api/categories')
       .then(res => res.json())
-      .then(data => setCategories(data));
+      .then(data => setCategories(data))
+      .catch(console.error);
       
     fetch('/api/settings')
       .then(res => res.json())
-      .then(data => setSettings(data));
+      .then(data => setSettings(data))
+      .catch(console.error);
 
     fetch('/api/footer-links')
       .then(res => res.json())
-      .then(data => setFooterLinks(data));
+      .then(data => setFooterLinks(data))
+      .catch(console.error);
+  }, []);
+
+  useEffect(() => {
+    if (searchQuery.trim().length > 0) {
+      const fetchSuggestions = async () => {
+        try {
+          const res = await fetch(`/api/products?search=${encodeURIComponent(searchQuery)}`);
+          const data = await res.json();
+          setSuggestions(data.slice(0, 5));
+          setShowSuggestions(true);
+        } catch (error) {
+          console.error("Error fetching suggestions:", error);
+        }
+      };
+      
+      const timeoutId = setTimeout(fetchSuggestions, 300);
+      return () => clearTimeout(timeoutId);
+    } else {
+      setSuggestions([]);
+      setShowSuggestions(false);
+    }
+  }, [searchQuery]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (searchRef.current && !searchRef.current.contains(event.target as Node) &&
+          mobileSearchRef.current && !mobileSearchRef.current.contains(event.target as Node)) {
+        setShowSuggestions(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
+      setShowSuggestions(false);
       navigate(`/category/all?search=${encodeURIComponent(searchQuery)}`);
     }
   };
@@ -50,7 +97,7 @@ export default function Layout() {
             </div>
             <button 
               onClick={() => setShowAnnouncement(false)}
-              className="absolute right-2 top-1/2 -translate-y-1/2 sm:static sm:translate-y-0 text-gray-400 hover:text-white"
+              className="absolute right-0 top-0 bottom-0 px-4 sm:static sm:p-0 flex items-center justify-center text-gray-400 hover:text-white"
               aria-label="Fermer"
             >
               <X size={16} />
@@ -89,18 +136,46 @@ export default function Layout() {
             </div>
 
             {/* Search Bar (Desktop) */}
-            <form onSubmit={handleSearch} className="hidden md:flex flex-1 max-w-2xl relative">
-              <input
-                type="text"
-                placeholder="Chercher un produit, une marque ou une catégorie..."
-                className="w-full py-2 pl-4 pr-10 rounded-md bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-orange-300"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-              <button type="submit" className="absolute right-0 top-0 h-full px-3 text-gray-500 hover:text-orange-500">
-                <Search size={20} />
-              </button>
-            </form>
+            <div ref={searchRef} className="hidden md:flex flex-1 max-w-2xl relative">
+              <form onSubmit={handleSearch} className="w-full relative">
+                <input
+                  type="text"
+                  placeholder="Chercher un produit, une marque ou une catégorie..."
+                  className="w-full py-2 pl-4 pr-10 rounded-md bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-orange-300"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onFocus={() => { if (searchQuery.trim().length > 0) setShowSuggestions(true); }}
+                />
+                <button type="submit" className="absolute right-0 top-0 h-full px-3 text-gray-500 hover:text-orange-500">
+                  <Search size={20} />
+                </button>
+              </form>
+
+              {/* Suggestions Dropdown */}
+              {showSuggestions && suggestions.length > 0 && (
+                <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-md shadow-xl border border-gray-100 overflow-hidden z-50">
+                  <ul className="py-1">
+                    {suggestions.map((product) => (
+                      <li key={product.id}>
+                        <Link 
+                          to={`/product/${product.slug}`}
+                          className="block px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-orange-600 transition-colors cursor-pointer"
+                          onClick={() => {
+                            setShowSuggestions(false);
+                            setSearchQuery('');
+                          }}
+                        >
+                          <div className="flex items-center gap-3">
+                            <Search size={14} className="text-gray-400" />
+                            <span className="truncate">{product.name}</span>
+                          </div>
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
 
             {/* Icons */}
             <div className="flex items-center gap-4">
@@ -123,18 +198,46 @@ export default function Layout() {
           </div>
 
           {/* Search Bar (Mobile) */}
-          <form onSubmit={handleSearch} className="mt-3 md:hidden relative">
-            <input
-              type="text"
-              placeholder="Chercher un produit..."
-              className="w-full py-2 pl-4 pr-10 rounded-md bg-white text-gray-900 focus:outline-none"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-            <button type="submit" className="absolute right-0 top-0 h-full px-3 text-gray-500">
-              <Search size={20} />
-            </button>
-          </form>
+          <div ref={mobileSearchRef} className="mt-3 md:hidden relative">
+            <form onSubmit={handleSearch} className="relative">
+              <input
+                type="text"
+                placeholder="Chercher un produit..."
+                className="w-full py-2 pl-4 pr-10 rounded-md bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-orange-300"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onFocus={() => { if (searchQuery.trim().length > 0) setShowSuggestions(true); }}
+              />
+              <button type="submit" className="absolute right-0 top-0 h-full px-3 text-gray-500">
+                <Search size={20} />
+              </button>
+            </form>
+
+            {/* Suggestions Dropdown */}
+            {showSuggestions && suggestions.length > 0 && (
+              <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-md shadow-xl border border-gray-100 overflow-hidden z-50">
+                <ul className="py-1">
+                  {suggestions.map((product) => (
+                    <li key={product.id}>
+                      <Link 
+                        to={`/product/${product.slug}`}
+                        className="block px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-orange-600 transition-colors cursor-pointer"
+                        onClick={() => {
+                          setShowSuggestions(false);
+                          setSearchQuery('');
+                        }}
+                      >
+                        <div className="flex items-center gap-3">
+                          <Search size={14} className="text-gray-400" />
+                          <span className="truncate">{product.name}</span>
+                        </div>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Categories Nav (Desktop) */}

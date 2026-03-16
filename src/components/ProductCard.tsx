@@ -41,6 +41,8 @@ export const ProductCard: React.FC<{ product: Product }> = ({ product }) => {
         <img 
           src={product.image || `https://picsum.photos/seed/${product.slug}/400/400`} 
           alt={product.name}
+          loading="lazy"
+          decoding="async"
           className={`w-full h-full object-cover group-hover:scale-110 transition-transform duration-500 ${isOutOfStock ? 'opacity-50 grayscale' : ''}`}
           referrerPolicy="no-referrer"
         />
@@ -56,16 +58,17 @@ export const ProductCard: React.FC<{ product: Product }> = ({ product }) => {
 
         {/* Hover Add to Cart Button */}
         {!isOutOfStock && (
-          <div className="absolute inset-x-0 bottom-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300 translate-y-4 group-hover:translate-y-0 z-20 flex justify-center">
+          <div className="absolute inset-x-0 bottom-0 p-2 md:p-4 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all duration-300 translate-y-0 md:translate-y-4 md:group-hover:translate-y-0 z-20 flex justify-center">
             <button 
               onClick={(e) => {
                 e.preventDefault();
                 addItem(product as any, 1);
               }}
-              className="w-full bg-orange-500 text-white py-2 rounded-md font-medium shadow-md hover:bg-orange-600 transition-colors flex items-center justify-center gap-2"
+              className="w-full bg-orange-500/95 backdrop-blur-sm md:bg-orange-500 text-white py-2 md:py-2 rounded-md text-sm md:text-base font-medium shadow-md hover:bg-orange-600 transition-colors flex items-center justify-center gap-2"
             >
-              <ShoppingCart size={18} />
-              Ajouter au panier
+              <ShoppingCart size={16} className="md:w-[18px] md:h-[18px]" />
+              <span className="hidden sm:inline">Ajouter au panier</span>
+              <span className="sm:hidden">Ajouter</span>
             </button>
           </div>
         )}

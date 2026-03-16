@@ -4,21 +4,41 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import multer from 'multer';
 import path from 'path';
+import rateLimit from 'express-rate-limit';
+import sharp from 'sharp';
 
 const router = Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'yumi-secret-key-123';
+if (process.env.NODE_ENV === 'production' && JWT_SECRET === 'yumi-secret-key-123') {
+  console.warn('WARNING: Using default JWT secret in production! Please set JWT_SECRET environment variable.');
+}
 
-// Configure multer for file uploads
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, path.join(process.cwd(), 'public', 'uploads'));
-  },
-  filename: function (req, file, cb) {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, uniqueSuffix + path.extname(file.originalname));
+// Rate Limiter for Login
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // Limit each IP to 5 login requests per windowMs
+  message: { error: 'Trop de tentatives de connexion, réessayez plus tard.' },
+  keyGenerator: (req) => {
+    return req.ip || req.socket.remoteAddress || 'unknown';
   }
 });
-const upload = multer({ storage: storage });
+
+// Configure multer for file uploads securely
+const storage = multer.memoryStorage();
+const upload = multer({ 
+  storage: storage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = /jpeg|jpg|png|webp|gif/i;
+    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+    const mimetype = allowedTypes.test(file.mimetype);
+    
+    if (extname && mimetype) {
+      return cb(null, true);
+    }
+    cb(new Error('Seules les images sont autorisées !'));
+  }
+});
 
 // Auth middleware
 const authenticate = (req: any, res: any, next: any) => {
@@ -34,7 +54,7 @@ const authenticate = (req: any, res: any, next: any) => {
 };
 
 // --- AUTH ---
-router.post('/admin/login', (req, res) => {
+router.post('/admin/login', loginLimiter, (req, res) => {
   const { username, password } = req.body;
   const user = db.prepare('SELECT * FROM users WHERE username = ?').get(username) as any;
   if (!user || !bcrypt.compareSync(password, user.password_hash)) {
@@ -104,8 +124,8 @@ router.get('/subcategories', (req, res) => {
 });
 
 router.get('/products', (req, res) => {
-  const { category, subcategory, brand, search, popular, best_seller, new: isNew, recommended } = req.query;
-  let query = 'SELECT p.*, b.name as brand_name, b.slug as brand_slug, b.image as brand_image FROM products p LEFT JOIN brands b ON p.brand_id = b.id WHERE 1=1';
+  const { category, subcategory, brand, search, popular, best_seller, new: isNew, recommended, promotions } = req.query;
+  let query = 'SELECT p.*, COALESCE(p.brand_name, b.name) as brand_name, b.slug as brand_slug, b.image as brand_image FROM products p LEFT JOIN brands b ON p.brand_id = b.id WHERE 1=1';
   const params: any[] = [];
 
   if (category) {
@@ -128,6 +148,7 @@ router.get('/products', (req, res) => {
   if (best_seller === 'true') query += ' AND p.is_best_seller = 1';
   if (isNew === 'true') query += ' AND p.is_new = 1';
   if (recommended === 'true') query += ' AND p.is_recommended = 1';
+  if (promotions === 'true') query += ' AND p.promo_price IS NOT NULL';
 
   const products = db.prepare(query).all(...params) as any[];
   
@@ -157,7 +178,7 @@ router.get('/products', (req, res) => {
 });
 
 router.get('/products/:slug', (req, res) => {
-  const product = db.prepare('SELECT p.*, c.name as category_name, b.name as brand_name, b.slug as brand_slug, b.image as brand_image FROM products p LEFT JOIN categories c ON p.category_id = c.id LEFT JOIN brands b ON p.brand_id = b.id WHERE p.slug = ?').get(req.params.slug) as any;
+  const product = db.prepare('SELECT p.*, c.name as category_name, COALESCE(p.brand_name, b.name) as brand_name, b.slug as brand_slug, b.image as brand_image FROM products p LEFT JOIN categories c ON p.category_id = c.id LEFT JOIN brands b ON p.brand_id = b.id WHERE p.slug = ?').get(req.params.slug) as any;
   if (!product) return res.status(404).json({ error: 'Product not found' });
   
   if (product.features) {
@@ -196,6 +217,11 @@ router.get('/products/:slug/reviews', (req, res) => {
 
 router.post('/products/:slug/reviews', (req, res) => {
   const { customer_name, rating, comment } = req.body;
+  
+  if (typeof customer_name !== 'string' || customer_name.length > 100) return res.status(400).json({ error: 'Nom invalide' });
+  if (typeof comment !== 'string' || comment.length > 1000) return res.status(400).json({ error: 'Commentaire trop long' });
+  if (typeof rating !== 'number' || rating < 1 || rating > 5) return res.status(400).json({ error: 'Note invalide' });
+
   const product = db.prepare('SELECT id FROM products WHERE slug = ?').get(req.params.slug) as any;
   if (!product) return res.status(404).json({ error: 'Product not found' });
 
@@ -209,27 +235,60 @@ router.post('/products/:slug/reviews', (req, res) => {
 });
 
 router.post('/orders', (req, res) => {
-  const { customer_name, customer_phone, wilaya, address, note, total_amount, delivery_cost, items } = req.body;
+  const { customer_name, customer_phone, wilaya, address, note, items } = req.body;
   
-  const insertOrder = db.prepare(`
-    INSERT INTO orders (customer_name, customer_phone, wilaya, address, note, total_amount, delivery_cost)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-  `);
-  const insertItem = db.prepare(`
-    INSERT INTO order_items (order_id, product_id, quantity, price)
-    VALUES (?, ?, ?, ?)
-  `);
-
-  const transaction = db.transaction(() => {
-    const info = insertOrder.run(customer_name, customer_phone, wilaya, address, note, total_amount, delivery_cost);
-    const orderId = info.lastInsertRowid;
-    for (const item of items) {
-      insertItem.run(orderId, item.product_id, item.quantity, item.price);
-    }
-    return orderId;
-  });
+  if (!items || !Array.isArray(items) || items.length === 0) {
+    return res.status(400).json({ error: 'La commande doit contenir au moins un article' });
+  }
 
   try {
+    let calculatedTotal = 0;
+    
+    // Fetch delivery cost from settings
+    const deliverySetting = db.prepare("SELECT value FROM settings WHERE key = 'delivery_cost'").get() as any;
+    const delivery_cost = deliverySetting ? parseInt(deliverySetting.value, 10) : 600;
+
+    const getProduct = db.prepare('SELECT price, promo_price FROM products WHERE id = ?');
+    
+    const validatedItems = items.map((item: any) => {
+      const product = getProduct.get(item.product_id) as any;
+      if (!product) throw new Error(`Produit invalide: ${item.product_id}`);
+      
+      const actualPrice = product.promo_price || product.price;
+      const quantity = parseInt(item.quantity, 10);
+      if (isNaN(quantity) || quantity <= 0) throw new Error('Quantité invalide');
+
+      calculatedTotal += actualPrice * quantity;
+      return { ...item, price: actualPrice, quantity };
+    });
+
+    calculatedTotal += delivery_cost;
+
+    const insertOrder = db.prepare(`
+      INSERT INTO orders (customer_name, customer_phone, wilaya, address, note, total_amount, delivery_cost)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `);
+    const insertItem = db.prepare(`
+      INSERT INTO order_items (order_id, product_id, quantity, price)
+      VALUES (?, ?, ?, ?)
+    `);
+    const updateStock = db.prepare(`
+      UPDATE products SET stock = stock - ? WHERE id = ? AND stock >= ?
+    `);
+
+    const transaction = db.transaction(() => {
+      const info = insertOrder.run(customer_name, customer_phone, wilaya, address, note, calculatedTotal, delivery_cost);
+      const orderId = info.lastInsertRowid;
+      for (const item of validatedItems) {
+        const stockResult = updateStock.run(item.quantity, item.product_id, item.quantity);
+        if (stockResult.changes === 0) {
+          throw new Error(`Stock insuffisant pour le produit ID: ${item.product_id}`);
+        }
+        insertItem.run(orderId, item.product_id, item.quantity, item.price);
+      }
+      return orderId;
+    });
+
     const orderId = transaction();
     
     // Simulate sending email to admin
@@ -239,13 +298,17 @@ router.post('/orders', (req, res) => {
     }
     
     res.status(201).json({ id: orderId, message: 'Order created successfully' });
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to create order' });
+  } catch (err: any) {
+    res.status(400).json({ error: err.message || 'Failed to create order' });
   }
 });
 
 router.post('/contact', (req, res) => {
   const { name, email, message } = req.body;
+  
+  if (typeof name !== 'string' || name.length > 100) return res.status(400).json({ error: 'Nom invalide' });
+  if (typeof email !== 'string' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ error: 'Email invalide' });
+  if (typeof message !== 'string' || message.length > 2000) return res.status(400).json({ error: 'Message trop long' });
   
   try {
     // Simulate sending email to admin
@@ -403,12 +466,27 @@ router.delete('/admin/footer-links/:id', authenticate, (req, res) => {
   }
 });
 
-router.post('/admin/upload', authenticate, upload.single('image'), (req, res) => {
+router.post('/admin/upload', authenticate, upload.single('image'), async (req, res) => {
   if (!req.file) {
     return res.status(400).json({ error: 'No file uploaded' });
   }
-  const imageUrl = `/uploads/${req.file.filename}`;
-  res.json({ url: imageUrl });
+  
+  try {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    const filename = `${uniqueSuffix}.webp`;
+    const outputPath = path.join(process.cwd(), 'public', 'uploads', filename);
+
+    await sharp(req.file.buffer)
+      .resize({ width: 800, height: 800, fit: 'inside', withoutEnlargement: true })
+      .webp({ quality: 80 })
+      .toFile(outputPath);
+
+    const imageUrl = `/uploads/${filename}`;
+    res.json({ url: imageUrl });
+  } catch (error) {
+    console.error('Image processing error:', error);
+    res.status(500).json({ error: 'Failed to process image' });
+  }
 });
 
 router.get('/admin/slides', authenticate, (req, res) => {
@@ -471,7 +549,7 @@ router.put('/admin/orders/:id/status', authenticate, (req, res) => {
 
 router.get('/admin/products', authenticate, (req, res) => {
   const products = db.prepare(`
-    SELECT p.*, c.name as category_name, s.name as subcategory_name, b.name as brand_name 
+    SELECT p.*, c.name as category_name, s.name as subcategory_name, COALESCE(p.brand_name, b.name) as brand_name 
     FROM products p 
     LEFT JOIN categories c ON p.category_id = c.id 
     LEFT JOIN subcategories s ON p.subcategory_id = s.id
@@ -513,27 +591,14 @@ router.get('/admin/products', authenticate, (req, res) => {
 });
 
 router.post('/admin/products', authenticate, (req, res) => {
-  const { category_id, subcategory_id, brand_name, name, slug, description, price, promo_price, stock, image, is_popular, is_best_seller, is_new, is_recommended, is_fast_delivery, images, features, key_points } = req.body;
+  const { category_id, subcategory_id, brand_id, brand_name, name, slug, description, price, promo_price, stock, image, is_popular, is_best_seller, is_new, is_recommended, is_fast_delivery, images, features, key_points } = req.body;
   
   const transaction = db.transaction(() => {
-    let final_brand_id = null;
-    if (brand_name) {
-      const existingBrand = db.prepare('SELECT id FROM brands WHERE name = ?').get(brand_name) as any;
-      if (existingBrand) {
-        final_brand_id = existingBrand.id;
-      } else {
-        const brandSlug = brand_name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-        const insertBrand = db.prepare('INSERT INTO brands (name, slug) VALUES (?, ?)');
-        const info = insertBrand.run(brand_name, brandSlug);
-        final_brand_id = info.lastInsertRowid;
-      }
-    }
-
     const insert = db.prepare(`
-      INSERT INTO products (category_id, subcategory_id, brand_id, name, slug, description, price, promo_price, stock, image, is_popular, is_best_seller, is_new, is_recommended, is_fast_delivery, features, key_points)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO products (category_id, subcategory_id, brand_id, brand_name, name, slug, description, price, promo_price, stock, image, is_popular, is_best_seller, is_new, is_recommended, is_fast_delivery, features, key_points)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
-    const info = insert.run(category_id, subcategory_id || null, final_brand_id, name, slug, description, price, promo_price, stock, image, is_popular ? 1 : 0, is_best_seller ? 1 : 0, is_new ? 1 : 0, is_recommended ? 1 : 0, is_fast_delivery ? 1 : 0, features ? JSON.stringify(features) : null, key_points ? JSON.stringify(key_points) : null);
+    const info = insert.run(category_id, subcategory_id || null, brand_id || null, brand_name || null, name, slug, description, price, promo_price, stock, image, is_popular ? 1 : 0, is_best_seller ? 1 : 0, is_new ? 1 : 0, is_recommended ? 1 : 0, is_fast_delivery ? 1 : 0, features ? JSON.stringify(features) : null, key_points ? JSON.stringify(key_points) : null);
     const productId = info.lastInsertRowid;
 
     if (images && Array.isArray(images)) {
@@ -554,28 +619,15 @@ router.post('/admin/products', authenticate, (req, res) => {
 });
 
 router.put('/admin/products/:id', authenticate, (req, res) => {
-  const { category_id, subcategory_id, brand_name, name, slug, description, price, promo_price, stock, image, is_popular, is_best_seller, is_new, is_recommended, is_fast_delivery, images, features, key_points } = req.body;
+  const { category_id, subcategory_id, brand_id, brand_name, name, slug, description, price, promo_price, stock, image, is_popular, is_best_seller, is_new, is_recommended, is_fast_delivery, images, features, key_points } = req.body;
   
   const transaction = db.transaction(() => {
-    let final_brand_id = null;
-    if (brand_name) {
-      const existingBrand = db.prepare('SELECT id FROM brands WHERE name = ?').get(brand_name) as any;
-      if (existingBrand) {
-        final_brand_id = existingBrand.id;
-      } else {
-        const brandSlug = brand_name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-        const insertBrand = db.prepare('INSERT INTO brands (name, slug) VALUES (?, ?)');
-        const info = insertBrand.run(brand_name, brandSlug);
-        final_brand_id = info.lastInsertRowid;
-      }
-    }
-
     const update = db.prepare(`
       UPDATE products 
-      SET category_id = ?, subcategory_id = ?, brand_id = ?, name = ?, slug = ?, description = ?, price = ?, promo_price = ?, stock = ?, image = ?, is_popular = ?, is_best_seller = ?, is_new = ?, is_recommended = ?, is_fast_delivery = ?, features = ?, key_points = ?
+      SET category_id = ?, subcategory_id = ?, brand_id = ?, brand_name = ?, name = ?, slug = ?, description = ?, price = ?, promo_price = ?, stock = ?, image = ?, is_popular = ?, is_best_seller = ?, is_new = ?, is_recommended = ?, is_fast_delivery = ?, features = ?, key_points = ?
       WHERE id = ?
     `);
-    update.run(category_id, subcategory_id || null, final_brand_id, name, slug, description, price, promo_price, stock, image, is_popular ? 1 : 0, is_best_seller ? 1 : 0, is_new ? 1 : 0, is_recommended ? 1 : 0, is_fast_delivery ? 1 : 0, features ? JSON.stringify(features) : null, key_points ? JSON.stringify(key_points) : null, req.params.id);
+    update.run(category_id, subcategory_id || null, brand_id || null, brand_name || null, name, slug, description, price, promo_price, stock, image, is_popular ? 1 : 0, is_best_seller ? 1 : 0, is_new ? 1 : 0, is_recommended ? 1 : 0, is_fast_delivery ? 1 : 0, features ? JSON.stringify(features) : null, key_points ? JSON.stringify(key_points) : null, req.params.id);
 
     if (images && Array.isArray(images)) {
       db.prepare('DELETE FROM product_images WHERE product_id = ?').run(req.params.id);

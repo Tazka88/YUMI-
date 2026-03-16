@@ -1,7 +1,8 @@
 import express from 'express';
 import cors from 'cors';
+import compression from 'compression';
 import { createServer as createViteServer } from 'vite';
-import { setupDb } from './src/db/setup.js';
+import { setupDb, db } from './src/db/setup.js';
 import apiRoutes from './src/api/routes.js';
 import path from 'path';
 import fs from 'fs';
@@ -9,6 +10,9 @@ import fs from 'fs';
 async function startServer() {
   const app = express();
   const PORT = 3000;
+
+  // Trust proxy to handle X-Forwarded-For correctly
+  app.set('trust proxy', 1);
 
   // Initialize DB
   setupDb();
@@ -19,11 +23,54 @@ async function startServer() {
     fs.mkdirSync(uploadsDir, { recursive: true });
   }
 
-  app.use(cors());
-  app.use(express.json());
+  app.use(cors({
+    origin: true, // Allow the current origin (useful for AI Studio preview)
+    credentials: true
+  }));
+  app.use(compression()); // Compress all HTTP responses (Gzip/Brotli)
+  app.use(express.json({ limit: '5mb' })); // Reduced from 50mb to prevent DoS
+  app.use(express.urlencoded({ limit: '5mb', extended: true }));
 
-  // Serve uploads statically
-  app.use('/uploads', express.static(uploadsDir));
+  // Serve uploads statically with Cache-Control (1 year)
+  app.use('/uploads', express.static(uploadsDir, { maxAge: '1y' }));
+
+  // SEO Routes
+  app.get('/robots.txt', (req, res) => {
+    res.type('text/plain');
+    res.send(`User-agent: *\nAllow: /\nDisallow: /admin/\nSitemap: https://${req.get('host')}/sitemap.xml`);
+  });
+
+  app.get('/sitemap.xml', (req, res) => {
+    try {
+      const products = db.prepare('SELECT slug FROM products').all() as any[];
+      const categories = db.prepare('SELECT slug FROM categories').all() as any[];
+      
+      const baseUrl = `https://${req.get('host')}`;
+      
+      let xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n`;
+      
+      // Home
+      xml += `  <url>\n    <loc>${baseUrl}/</loc>\n    <changefreq>daily</changefreq>\n    <priority>1.0</priority>\n  </url>\n`;
+      
+      // Categories
+      categories.forEach(cat => {
+        xml += `  <url>\n    <loc>${baseUrl}/category/${cat.slug}</loc>\n    <changefreq>weekly</changefreq>\n    <priority>0.8</priority>\n  </url>\n`;
+      });
+      
+      // Products
+      products.forEach(prod => {
+        xml += `  <url>\n    <loc>${baseUrl}/product/${prod.slug}</loc>\n    <changefreq>weekly</changefreq>\n    <priority>0.9</priority>\n  </url>\n`;
+      });
+      
+      xml += `</urlset>`;
+      
+      res.header('Content-Type', 'application/xml');
+      res.send(xml);
+    } catch (error) {
+      console.error('Sitemap error:', error);
+      res.status(500).send('Error generating sitemap');
+    }
+  });
 
   // API Routes
   app.use('/api', apiRoutes);

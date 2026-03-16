@@ -4,6 +4,7 @@ import { ShoppingCart, Star } from 'lucide-react';
 import { useCartStore, Product } from '../store/cartStore';
 import { formatPrice } from '../utils/formatPrice';
 import { ProductCard } from '../components/ProductCard';
+import SEO from '../components/SEO';
 
 export default function Category() {
   const { slug } = useParams();
@@ -68,6 +69,11 @@ export default function Category() {
 
   return (
     <div className="container mx-auto px-4 py-8">
+      <SEO 
+        title={categoryName} 
+        description={`Découvrez notre sélection de produits dans la catégorie ${categoryName}. Achetez au meilleur prix sur Yumi.`} 
+        url={window.location.href}
+      />
       <div className="flex flex-col md:flex-row gap-6">
         {/* Sidebar Filters */}
         <div className="w-full md:w-64 shrink-0">

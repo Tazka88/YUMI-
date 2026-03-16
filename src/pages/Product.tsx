@@ -4,22 +4,40 @@ import { ShoppingCart, Star, ShieldCheck, Truck, RotateCcw, ThumbsUp } from 'luc
 import { useCartStore, Product as ProductType } from '../store/cartStore';
 import { formatPrice } from '../utils/formatPrice';
 import { ProductCard } from '../components/ProductCard';
+import SEO from '../components/SEO';
+import ReactGA from 'react-ga4';
+import ReactPixel from 'react-facebook-pixel';
 
 export default function Product() {
   const { slug } = useParams();
   const [product, setProduct] = useState<any>(null);
+  const [error, setError] = useState<string | null>(null);
   const [selectedImage, setSelectedImage] = useState<string>('');
   const [relatedProducts, setRelatedProducts] = useState<ProductType[]>([]);
   const [reviews, setReviews] = useState<any[]>([]);
   const [quantity, setQuantity] = useState(1);
   const [reviewForm, setReviewForm] = useState({ name: '', rating: 5, comment: '' });
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
+  const [trackingIds, setTrackingIds] = useState({ ga: '', fb: '' });
   const addItem = useCartStore(state => state.addItem);
 
   useEffect(() => {
+    fetch('/api/settings')
+      .then(res => res.json())
+      .then(data => {
+        setTrackingIds({
+          ga: data.ga_measurement_id || import.meta.env.VITE_GA_MEASUREMENT_ID || '',
+          fb: data.fb_pixel_id || import.meta.env.VITE_FB_PIXEL_ID || ''
+        });
+      })
+      .catch(console.error);
+  }, []);
+
+  useEffect(() => {
+    setError(null);
     fetch(`/api/products/${slug}`)
       .then(res => {
-        if (!res.ok) throw new Error('Not found');
+        if (!res.ok) throw new Error('Produit introuvable');
         return res.json();
       })
       .then(data => {
@@ -28,15 +46,32 @@ export default function Product() {
         // Fetch related
         fetch(`/api/products?category=${data.category_id}`)
           .then(res => res.json())
-          .then(related => setRelatedProducts(related.filter((p: ProductType) => p.id !== data.id).slice(0, 4)));
+          .then(related => setRelatedProducts(related.filter((p: ProductType) => p.id !== data.id).slice(0, 4)))
+          .catch(console.error);
           
         // Fetch reviews
         fetch(`/api/products/${slug}/reviews`)
           .then(res => res.json())
-          .then(setReviews);
+          .then(setReviews)
+          .catch(console.error);
       })
-      .catch(err => console.error(err));
+      .catch(err => {
+        console.error(err);
+        setError(err.message);
+      });
   }, [slug]);
+
+  if (error) {
+    return (
+      <div className="container mx-auto px-4 py-16 text-center">
+        <h1 className="text-2xl font-bold text-gray-800 mb-4">Oups !</h1>
+        <p className="text-gray-600 mb-8">{error}</p>
+        <Link to="/" className="bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 px-8 rounded-md transition-colors shadow-md">
+          Retour à l'accueil
+        </Link>
+      </div>
+    );
+  }
 
   if (!product) {
     return (
@@ -52,7 +87,30 @@ export default function Product() {
 
   const handleAddToCart = () => {
     addItem(product, quantity);
-    // Optional: show toast notification
+    
+    // Track Add to Cart
+    if (trackingIds.ga) {
+      ReactGA.event("add_to_cart", {
+        currency: "DZD",
+        value: currentPrice * quantity,
+        items: [{
+          item_id: product.id.toString(),
+          item_name: product.name,
+          price: currentPrice,
+          quantity: quantity
+        }]
+      });
+    }
+    
+    if (trackingIds.fb) {
+      ReactPixel.track('AddToCart', {
+        content_name: product.name,
+        content_ids: [product.id.toString()],
+        content_type: 'product',
+        value: currentPrice * quantity,
+        currency: 'DZD'
+      });
+    }
   };
 
   const handleReviewSubmit = async (e: React.FormEvent) => {
@@ -74,7 +132,8 @@ export default function Product() {
         setReviewForm({ name: '', rating: 5, comment: '' });
         fetch(`/api/products/${slug}/reviews`)
           .then(res => res.json())
-          .then(setReviews);
+          .then(setReviews)
+          .catch(console.error);
       }
     } catch (err) {
       console.error(err);
@@ -87,8 +146,43 @@ export default function Product() {
     ? (reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length).toFixed(1)
     : '0.0';
 
+  const productSchema = {
+    "@context": "https://schema.org/",
+    "@type": "Product",
+    "name": product.name,
+    "image": product.image || `https://picsum.photos/seed/${product.slug}/800/800`,
+    "description": product.description,
+    "sku": product.id.toString(),
+    "brand": {
+      "@type": "Brand",
+      "name": product.brand_name || "Yumi"
+    },
+    "offers": {
+      "@type": "Offer",
+      "url": window.location.href,
+      "priceCurrency": "DZD",
+      "price": currentPrice,
+      "availability": product.stock > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+      "itemCondition": "https://schema.org/NewCondition"
+    },
+    ...(reviews.length > 0 && {
+      "aggregateRating": {
+        "@type": "AggregateRating",
+        "ratingValue": avgRating,
+        "reviewCount": reviews.length
+      }
+    })
+  };
+
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-4 py-8 pb-24 md:pb-8">
+      <SEO 
+        title={product.name} 
+        description={product.description.substring(0, 150) + '...'} 
+        image={product.image || `https://picsum.photos/seed/${product.slug}/800/800`}
+        url={window.location.href}
+        schema={productSchema}
+      />
       {/* Breadcrumb */}
       <div className="text-sm text-gray-500 mb-6 flex items-center gap-2">
         <Link to="/" className="hover:text-orange-500">Accueil</Link>
@@ -260,21 +354,27 @@ export default function Product() {
       </div>
 
       {/* Features Section */}
-      {product.features && product.features.length > 0 && (
+      {product.features && (typeof product.features === 'string' ? product.features.trim().length > 0 : product.features.length > 0) && (
         <div className="bg-white rounded-lg shadow-sm p-6 mb-12">
           <h2 className="text-xl font-bold text-gray-800 mb-6 border-b pb-4">Caractéristiques techniques</h2>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse border border-gray-200">
-              <tbody>
-                {product.features.map((feature: any, idx: number) => (
-                  <tr key={idx} className={idx % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
-                    <td className="py-3 px-4 border border-gray-200 font-medium text-gray-700 w-1/3 bg-gray-100">{feature.key}</td>
-                    <td className="py-3 px-4 border border-gray-200 text-gray-600">{feature.value}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          {typeof product.features === 'string' ? (
+            <div className="prose max-w-none text-gray-700">
+              <p className="whitespace-pre-line leading-relaxed">{product.features}</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse border border-gray-200">
+                <tbody>
+                  {product.features.map((feature: any, idx: number) => (
+                    <tr key={idx} className={idx % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
+                      <td className="py-3 px-4 border border-gray-200 font-medium text-gray-700 w-1/3 bg-gray-100">{feature.key}</td>
+                      <td className="py-3 px-4 border border-gray-200 text-gray-600">{feature.value}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
 
@@ -378,6 +478,21 @@ export default function Product() {
           </div>
         </div>
       )}
+
+      {/* Sticky Mobile Add to Cart */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 z-50 md:hidden flex items-center justify-between gap-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]">
+        <div className="flex flex-col">
+          <span className="text-xs text-gray-500">Total</span>
+          <span className="text-lg font-bold text-gray-900">{formatPrice(currentPrice * quantity)}</span>
+        </div>
+        <button
+          onClick={handleAddToCart}
+          className="flex-1 bg-orange-500 text-white py-3 rounded-xl font-bold shadow-md hover:bg-orange-600 transition-colors flex items-center justify-center gap-2"
+        >
+          <ShoppingCart size={20} />
+          Ajouter au panier
+        </button>
+      </div>
     </div>
   );
 }

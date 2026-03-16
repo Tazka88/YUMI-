@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 
 export interface Product {
   id: number;
@@ -15,7 +16,7 @@ export interface Product {
   is_best_seller: boolean;
   is_new: boolean;
   is_recommended: boolean;
-  features?: { key: string; value: string }[];
+  features?: string | { key: string; value: string }[];
   key_points?: string[];
 }
 
@@ -32,38 +33,45 @@ interface CartStore {
   total: () => number;
 }
 
-export const useCartStore = create<CartStore>((set, get) => ({
-  items: [],
-  addItem: (product, quantity) => {
-    set((state) => {
-      const existingItem = state.items.find((i) => i.id === product.id);
-      if (existingItem) {
-        return {
+export const useCartStore = create<CartStore>()(
+  persist(
+    (set, get) => ({
+      items: [],
+      addItem: (product, quantity) => {
+        set((state) => {
+          const existingItem = state.items.find((i) => i.id === product.id);
+          if (existingItem) {
+            return {
+              items: state.items.map((i) =>
+                i.id === product.id ? { ...i, quantity: i.quantity + quantity } : i
+              ),
+            };
+          }
+          return { items: [...state.items, { ...product, quantity }] };
+        });
+      },
+      removeItem: (productId) => {
+        set((state) => ({
+          items: state.items.filter((i) => i.id !== productId),
+        }));
+      },
+      updateQuantity: (productId, quantity) => {
+        set((state) => ({
           items: state.items.map((i) =>
-            i.id === product.id ? { ...i, quantity: i.quantity + quantity } : i
+            i.id === productId ? { ...i, quantity } : i
           ),
-        };
-      }
-      return { items: [...state.items, { ...product, quantity }] };
-    });
-  },
-  removeItem: (productId) => {
-    set((state) => ({
-      items: state.items.filter((i) => i.id !== productId),
-    }));
-  },
-  updateQuantity: (productId, quantity) => {
-    set((state) => ({
-      items: state.items.map((i) =>
-        i.id === productId ? { ...i, quantity } : i
-      ),
-    }));
-  },
-  clearCart: () => set({ items: [] }),
-  total: () => {
-    return get().items.reduce((sum, item) => {
-      const price = item.promo_price || item.price;
-      return sum + price * item.quantity;
-    }, 0);
-  },
-}));
+        }));
+      },
+      clearCart: () => set({ items: [] }),
+      total: () => {
+        return get().items.reduce((sum, item) => {
+          const price = item.promo_price || item.price;
+          return sum + price * item.quantity;
+        }, 0);
+      },
+    }),
+    {
+      name: 'yumi-cart-storage', // name of the item in the storage (must be unique)
+    }
+  )
+);

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Navigate } from 'react-router-dom';
+import DOMPurify from 'dompurify';
 
 export default function Page() {
   const { slug } = useParams();
@@ -43,7 +44,7 @@ export default function Page() {
         </h1>
         <div 
           className="prose prose-orange max-w-none"
-          dangerouslySetInnerHTML={{ __html: page.content }}
+          dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(page.content) }}
         />
       </div>
     </div>

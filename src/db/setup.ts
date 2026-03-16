@@ -78,6 +78,12 @@ export function setupDb() {
     // Column might already exist
   }
 
+  try {
+    db.exec('ALTER TABLE products ADD COLUMN brand_name TEXT;');
+  } catch (e) {
+    // Column might already exist
+  }
+
   db.exec(`
     CREATE TABLE IF NOT EXISTS orders (
       id INTEGER PRIMARY KEY AUTOINCREMENT,

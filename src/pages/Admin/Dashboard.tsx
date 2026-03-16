@@ -6,6 +6,13 @@ import FooterSettings from './FooterSettings';
 import PageSettings from './PageSettings';
 import { FileText } from 'lucide-react';
 
+export interface CustomSection {
+  id: string;
+  title: string;
+  emoji: string;
+  isVisible: boolean;
+}
+
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState('overview');
   const [productSubTab, setProductSubTab] = useState('products');
@@ -33,7 +40,7 @@ export default function AdminDashboard() {
   });
   
   const [productForm, setProductForm] = useState({
-    name: '', slug: '', category_id: '', subcategory_id: '', brand_name: '', price: '', promo_price: '', stock: '', description: '', image: '',
+    name: '', slug: '', category_id: '', subcategory_id: '', brand_id: '', brand_name: '', price: '', promo_price: '', stock: '', description: '', image: '',
     is_popular: false, is_best_seller: false, is_new: false, is_recommended: false, is_fast_delivery: false, images: [] as any[],
     features: ''
   });
@@ -49,8 +56,8 @@ export default function AdminDashboard() {
   const [slideForm, setSlideForm] = useState({
     title: '', description: '', image: '', link: '', button_text: '', order_index: 0
   });
-  const [settingsForm, setSettingsForm] = useState({
-    announcement_phone: '', announcement_text: '', whatsapp_number: '', admin_email: '', site_logo: ''
+  const [settingsForm, setSettingsForm] = useState<Record<string, any>>({
+    announcement_phone: '', announcement_text: '', whatsapp_number: '', admin_email: '', site_logo: '', active_theme: 'normal'
   });
   const [isSavingSettings, setIsSavingSettings] = useState(false);
   const [credentialsForm, setCredentialsForm] = useState({
@@ -58,6 +65,48 @@ export default function AdminDashboard() {
   });
   const [isSavingCredentials, setIsSavingCredentials] = useState(false);
   const navigate = useNavigate();
+
+  const [customSections, setCustomSections] = useState<CustomSection[]>([]);
+  const [newSectionTitle, setNewSectionTitle] = useState('');
+  const [newSectionEmoji, setNewSectionEmoji] = useState('✨');
+
+  useEffect(() => {
+    const saved = localStorage.getItem('yumi_custom_sections');
+    if (saved) {
+      try {
+        setCustomSections(JSON.parse(saved));
+      } catch (e) {}
+    }
+  }, []);
+
+  const saveCustomSections = (sections: CustomSection[]) => {
+    setCustomSections(sections);
+    localStorage.setItem('yumi_custom_sections', JSON.stringify(sections));
+    window.dispatchEvent(new Event('yumi_sections_updated'));
+  };
+
+  const handleAddSection = () => {
+    if (!newSectionTitle.trim()) return;
+    const newSection: CustomSection = {
+      id: Date.now().toString(),
+      title: newSectionTitle,
+      emoji: newSectionEmoji || '✨',
+      isVisible: true
+    };
+    saveCustomSections([...customSections, newSection]);
+    setNewSectionTitle('');
+    setNewSectionEmoji('✨');
+  };
+
+  const handleToggleSection = (id: string) => {
+    const updated = customSections.map(s => s.id === id ? { ...s, isVisible: !s.isVisible } : s);
+    saveCustomSections(updated);
+  };
+
+  const handleDeleteSection = (id: string) => {
+    const updated = customSections.filter(s => s.id !== id);
+    saveCustomSections(updated);
+  };
 
   useEffect(() => {
     const token = localStorage.getItem('adminToken');
@@ -68,38 +117,68 @@ export default function AdminDashboard() {
 
     const headers = { 'Authorization': `Bearer ${token}` };
 
-    fetch('/api/admin/stats', { headers })
-      .then(res => {
-        if (!res.ok) throw new Error('Unauthorized');
-        return res.json();
-      })
-      .then(setStats)
-      .catch(() => navigate('/admin/login'));
+    if (activeTab === 'overview') {
+      fetch('/api/admin/stats', { headers })
+        .then(res => {
+          if (!res.ok) throw new Error('Unauthorized');
+          return res.json();
+        })
+        .then(setStats)
+        .catch(() => navigate('/admin/login'));
+    }
 
-    fetch('/api/admin/orders', { headers })
-      .then(res => res.json())
-      .then(setOrders);
+    if (activeTab === 'orders') {
+      fetch('/api/admin/orders', { headers })
+        .then(res => res.json())
+        .then(setOrders)
+        .catch(console.error);
+    }
 
-    fetch('/api/admin/products', { headers })
-      .then(res => res.json())
-      .then(setProducts);
+    if (activeTab === 'products') {
+      fetch('/api/admin/products', { headers })
+        .then(res => res.json())
+        .then(setProducts)
+        .catch(console.error);
+      
+      fetch('/api/categories')
+        .then(res => res.json())
+        .then(setCategories)
+        .catch(console.error);
 
-    fetch('/api/categories')
-      .then(res => res.json())
-      .then(setCategories);
+      fetch('/api/brands')
+        .then(res => res.json())
+        .then(setBrands)
+        .catch(console.error);
+    }
 
-    fetch('/api/brands')
-      .then(res => res.json())
-      .then(setBrands);
+    if (activeTab === 'categories') {
+      fetch('/api/categories')
+        .then(res => res.json())
+        .then(setCategories)
+        .catch(console.error);
+    }
 
-    fetch('/api/admin/slides', { headers })
-      .then(res => res.json())
-      .then(setSlides);
+    if (activeTab === 'brands') {
+      fetch('/api/brands')
+        .then(res => res.json())
+        .then(setBrands)
+        .catch(console.error);
+    }
 
-    fetch('/api/admin/settings', { headers })
-      .then(res => res.json())
-      .then(setSettingsForm);
-  }, [navigate]);
+    if (activeTab === 'slides') {
+      fetch('/api/admin/slides', { headers })
+        .then(res => res.json())
+        .then(setSlides)
+        .catch(console.error);
+    }
+
+    if (activeTab === 'settings') {
+      fetch('/api/admin/settings', { headers })
+        .then(res => res.json())
+        .then(setSettingsForm)
+        .catch(console.error);
+    }
+  }, [navigate, activeTab]);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -140,7 +219,8 @@ export default function AdminDashboard() {
     // Refresh orders
     fetch('/api/admin/orders', { headers: { 'Authorization': `Bearer ${token}` } })
       .then(res => res.json())
-      .then(setOrders);
+      .then(setOrders)
+      .catch(console.error);
   };
 
   const getStatusColor = (status: string) => {
@@ -158,19 +238,19 @@ export default function AdminDashboard() {
     if (product) {
       setEditingProduct(product);
       setProductForm({
-        name: product.name, slug: product.slug, category_id: product.category_id, subcategory_id: product.subcategory_id || '', brand_name: product.brand_name || '',
+        name: product.name, slug: product.slug, category_id: product.category_id, subcategory_id: product.subcategory_id || '', brand_id: product.brand_id || '', brand_name: product.brand_name || '',
         price: product.price, promo_price: product.promo_price || '', stock: product.stock, 
         description: product.description || '', image: product.image || '',
         is_popular: !!product.is_popular, is_best_seller: !!product.is_best_seller, 
         is_new: !!product.is_new, is_recommended: !!product.is_recommended,
         is_fast_delivery: !!product.is_fast_delivery,
         images: product.images || [],
-        features: product.features ? product.features.map((f: any) => `${f.key}: ${f.value}`).join('\n') : ''
+        features: typeof product.features === 'string' ? product.features : (Array.isArray(product.features) ? product.features.map((f: any) => `${f.key}: ${f.value}`).join('\n') : '')
       });
     } else {
       setEditingProduct(null);
       setProductForm({
-        name: '', slug: '', category_id: categories[0]?.id || '', subcategory_id: '', brand_name: '', price: '', promo_price: '', stock: '', description: '', image: '',
+        name: '', slug: '', category_id: categories[0]?.id || '', subcategory_id: '', brand_id: '', brand_name: '', price: '', promo_price: '', stock: '', description: '', image: '',
         is_popular: false, is_best_seller: false, is_new: false, is_recommended: false, is_fast_delivery: false, images: [], features: ''
       });
     }
@@ -249,27 +329,23 @@ export default function AdminDashboard() {
       price: parseFloat(productForm.price as string),
       promo_price: productForm.promo_price ? parseFloat(productForm.promo_price as string) : null,
       stock: parseInt(productForm.stock as string, 10),
-      features: typeof productForm.features === 'string'
-        ? productForm.features.split('\n').filter(f => f.trim()).map(f => {
-            const parts = f.split(':');
-            if (parts.length > 1) {
-              return { key: parts[0].trim(), value: parts.slice(1).join(':').trim() };
-            }
-            return { key: f.trim(), value: '' };
-          })
-        : productForm.features
     };
 
-    await fetch(url, {
-      method,
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-      body: JSON.stringify(payload)
-    });
+    try {
+      await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify(payload)
+      });
 
-    setIsModalOpen(false);
-    fetch('/api/admin/products', { headers: { 'Authorization': `Bearer ${token}` } })
-      .then(res => res.json())
-      .then(setProducts);
+      setIsModalOpen(false);
+      fetch('/api/admin/products', { headers: { 'Authorization': `Bearer ${token}` } })
+        .then(res => res.json())
+        .then(setProducts)
+        .catch(console.error);
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   const deleteProduct = async (id: number) => {
@@ -278,14 +354,19 @@ export default function AdminDashboard() {
       message: 'Êtes-vous sûr de vouloir supprimer ce produit ?',
       onConfirm: async () => {
         const token = localStorage.getItem('adminToken');
-        await fetch(`/api/admin/products/${id}`, {
-          method: 'DELETE',
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        fetch('/api/admin/products', { headers: { 'Authorization': `Bearer ${token}` } })
-          .then(res => res.json())
-          .then(setProducts);
-        setConfirmModal({ ...confirmModal, isOpen: false });
+        try {
+          await fetch(`/api/admin/products/${id}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          fetch('/api/admin/products', { headers: { 'Authorization': `Bearer ${token}` } })
+            .then(res => res.json())
+            .then(setProducts)
+            .catch(console.error);
+          setConfirmModal({ ...confirmModal, isOpen: false });
+        } catch (err) {
+          console.error(err);
+        }
       }
     });
   };
@@ -296,16 +377,21 @@ export default function AdminDashboard() {
     const url = editingSubcategory ? `/api/admin/subcategories/${editingSubcategory.id}` : '/api/admin/subcategories';
     const method = editingSubcategory ? 'PUT' : 'POST';
 
-    await fetch(url, {
-      method,
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-      body: JSON.stringify(subcategoryForm)
-    });
+    try {
+      await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify(subcategoryForm)
+      });
 
-    setIsSubcategoryModalOpen(false);
-    fetch('/api/categories')
-      .then(res => res.json())
-      .then(setCategories);
+      setIsSubcategoryModalOpen(false);
+      fetch('/api/categories')
+        .then(res => res.json())
+        .then(setCategories)
+        .catch(console.error);
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   const deleteSubcategory = async (id: number) => {
@@ -314,14 +400,19 @@ export default function AdminDashboard() {
       message: 'Êtes-vous sûr de vouloir supprimer cette sous-catégorie ?',
       onConfirm: async () => {
         const token = localStorage.getItem('adminToken');
-        await fetch(`/api/admin/subcategories/${id}`, {
-          method: 'DELETE',
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        fetch('/api/categories')
-          .then(res => res.json())
-          .then(setCategories);
-        setConfirmModal({ ...confirmModal, isOpen: false });
+        try {
+          await fetch(`/api/admin/subcategories/${id}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          fetch('/api/categories')
+            .then(res => res.json())
+            .then(setCategories)
+            .catch(console.error);
+          setConfirmModal({ ...confirmModal, isOpen: false });
+        } catch (err) {
+          console.error(err);
+        }
       }
     });
   };
@@ -332,16 +423,21 @@ export default function AdminDashboard() {
     const url = editingCategory ? `/api/admin/categories/${editingCategory.id}` : '/api/admin/categories';
     const method = editingCategory ? 'PUT' : 'POST';
 
-    await fetch(url, {
-      method,
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-      body: JSON.stringify(categoryForm)
-    });
+    try {
+      await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify(categoryForm)
+      });
 
-    setIsCategoryModalOpen(false);
-    fetch('/api/categories')
-      .then(res => res.json())
-      .then(setCategories);
+      setIsCategoryModalOpen(false);
+      fetch('/api/categories')
+        .then(res => res.json())
+        .then(setCategories)
+        .catch(console.error);
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   const deleteCategory = async (id: number) => {
@@ -350,14 +446,19 @@ export default function AdminDashboard() {
       message: 'Êtes-vous sûr de vouloir supprimer cette catégorie ?',
       onConfirm: async () => {
         const token = localStorage.getItem('adminToken');
-        await fetch(`/api/admin/categories/${id}`, {
-          method: 'DELETE',
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        fetch('/api/categories')
-          .then(res => res.json())
-          .then(setCategories);
-        setConfirmModal({ ...confirmModal, isOpen: false });
+        try {
+          await fetch(`/api/admin/categories/${id}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          fetch('/api/categories')
+            .then(res => res.json())
+            .then(setCategories)
+            .catch(console.error);
+          setConfirmModal({ ...confirmModal, isOpen: false });
+        } catch (err) {
+          console.error(err);
+        }
       }
     });
   };
@@ -368,16 +469,21 @@ export default function AdminDashboard() {
     const url = editingSlide ? `/api/admin/slides/${editingSlide.id}` : '/api/admin/slides';
     const method = editingSlide ? 'PUT' : 'POST';
 
-    await fetch(url, {
-      method,
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-      body: JSON.stringify(slideForm)
-    });
+    try {
+      await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify(slideForm)
+      });
 
-    setIsSlideModalOpen(false);
-    fetch('/api/admin/slides', { headers: { 'Authorization': `Bearer ${token}` } })
-      .then(res => res.json())
-      .then(setSlides);
+      setIsSlideModalOpen(false);
+      fetch('/api/admin/slides', { headers: { 'Authorization': `Bearer ${token}` } })
+        .then(res => res.json())
+        .then(setSlides)
+        .catch(console.error);
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   const handleBrandSubmit = async (e: React.FormEvent) => {
@@ -386,16 +492,21 @@ export default function AdminDashboard() {
     const url = editingBrand ? `/api/admin/brands/${editingBrand.id}` : '/api/admin/brands';
     const method = editingBrand ? 'PUT' : 'POST';
 
-    await fetch(url, {
-      method,
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-      body: JSON.stringify(brandForm)
-    });
+    try {
+      await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify(brandForm)
+      });
 
-    setIsBrandModalOpen(false);
-    fetch('/api/brands')
-      .then(res => res.json())
-      .then(setBrands);
+      setIsBrandModalOpen(false);
+      fetch('/api/brands')
+        .then(res => res.json())
+        .then(setBrands)
+        .catch(console.error);
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   const deleteSlide = async (id: number) => {
@@ -404,14 +515,19 @@ export default function AdminDashboard() {
       message: 'Êtes-vous sûr de vouloir supprimer ce slide ?',
       onConfirm: async () => {
         const token = localStorage.getItem('adminToken');
-        await fetch(`/api/admin/slides/${id}`, {
-          method: 'DELETE',
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        fetch('/api/admin/slides', { headers: { 'Authorization': `Bearer ${token}` } })
-          .then(res => res.json())
-          .then(setSlides);
-        setConfirmModal({ ...confirmModal, isOpen: false });
+        try {
+          await fetch(`/api/admin/slides/${id}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          fetch('/api/admin/slides', { headers: { 'Authorization': `Bearer ${token}` } })
+            .then(res => res.json())
+            .then(setSlides)
+            .catch(console.error);
+          setConfirmModal({ ...confirmModal, isOpen: false });
+        } catch (err) {
+          console.error(err);
+        }
       }
     });
   };
@@ -436,7 +552,8 @@ export default function AdminDashboard() {
         
         fetch('/api/brands')
           .then(res => res.json())
-          .then(setBrands);
+          .then(setBrands)
+          .catch(console.error);
         setConfirmModal({ ...confirmModal, isOpen: false });
       }
     });
@@ -618,6 +735,13 @@ export default function AdminDashboard() {
           >
             <FileText size={20} />
             Gestion des Pages
+          </button>
+          <button 
+            onClick={() => setActiveTab('sections')}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-md transition-colors ${activeTab === 'sections' ? 'bg-orange-500 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white'}`}
+          >
+            <LayoutDashboard size={20} />
+            Sections Accueil
           </button>
           <button 
             onClick={() => setActiveTab('footer')}
@@ -828,7 +952,7 @@ export default function AdminDashboard() {
                     <thead className="bg-gray-50 text-gray-700 font-medium">
                       <tr>
                         <th className="px-6 py-3">Image</th>
-                        <th className="px-6 py-3">Nom</th>
+                        <th className="px-6 py-3">Nom du produit</th>
                         <th className="px-6 py-3">Catégorie</th>
                         <th className="px-6 py-3">Sous-catégorie</th>
                         <th className="px-6 py-3">Marque</th>
@@ -1167,6 +1291,105 @@ export default function AdminDashboard() {
               </div>
 
               <div>
+                <h3 className="text-md font-bold text-gray-800 mb-4 border-b pb-2">Thème Saisonnier</h3>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Thème Actif</label>
+                    <select
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all"
+                      value={settingsForm.active_theme || 'normal'}
+                      onChange={e => setSettingsForm({...settingsForm, active_theme: e.target.value})}
+                    >
+                      <option value="normal">Normal (Défaut)</option>
+                      <option value="ramadan">Ramadan</option>
+                      <option value="aid">Aïd</option>
+                      <option value="independance">Fête de l'Indépendance</option>
+                      <option value="yennayer">Yennayer (Nouvel An Amazigh)</option>
+                      <option value="mouloud">El Mouloud</option>
+                      <option value="rentree">Rentrée Scolaire</option>
+                      <option value="soldes">Soldes</option>
+                      <option value="ete">Été</option>
+                    </select>
+                    <p className="mt-2 text-sm text-gray-500">
+                      Change l'apparence de la page d'accueil avec des couleurs et images adaptées à la saison.
+                    </p>
+                  </div>
+                  
+                  {settingsForm.active_theme && settingsForm.active_theme !== 'normal' && (
+                    <>
+                      <div className="mt-4 pt-4 border-t border-gray-100">
+                        <div className="flex justify-between items-center mb-2">
+                          <label className="block text-sm font-medium text-gray-700">Intensité de l'overlay</label>
+                          <span className="text-sm font-bold text-orange-500">{settingsForm.overlay_intensity ?? 60}%</span>
+                        </div>
+                        <div className="flex items-center gap-4">
+                          <span className="text-xs text-gray-500">0</span>
+                          <input 
+                            type="range" 
+                            min="0" 
+                            max="100" 
+                            value={settingsForm.overlay_intensity ?? 60}
+                            onChange={(e) => {
+                              const val = parseInt(e.target.value);
+                              setSettingsForm({...settingsForm, overlay_intensity: val});
+                              
+                              const token = localStorage.getItem('adminToken');
+                              fetch('/api/admin/settings', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                                body: JSON.stringify({...settingsForm, overlay_intensity: val})
+                              }).catch(console.error);
+                            }}
+                            className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-orange-500"
+                          />
+                          <span className="text-xs text-gray-500">100</span>
+                        </div>
+                        <p className="mt-2 text-xs text-gray-500">0 = image pure, zéro filtre | 100 = filtre maximum</p>
+                      </div>
+
+                      <div className="mt-4 pt-4 border-t border-gray-100">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Image de fond personnalisée pour le thème {settingsForm.active_theme}</label>
+                      <div className="flex items-center gap-4">
+                        <div className="w-32 h-16 bg-gray-100 rounded-md flex items-center justify-center overflow-hidden border border-gray-200">
+                          {settingsForm[`theme_image_${settingsForm.active_theme}`] ? (
+                            <img src={settingsForm[`theme_image_${settingsForm.active_theme}`]} alt="Theme preview" className="max-w-full max-h-full object-cover" />
+                          ) : (
+                            <span className="text-sm text-gray-400 text-center px-2">Image par défaut</span>
+                          )}
+                        </div>
+                        <div className="flex flex-col gap-2">
+                          <label className="cursor-pointer bg-white border border-gray-300 text-gray-700 px-3 py-1.5 rounded-md text-sm font-medium hover:bg-gray-50 transition-colors text-center">
+                            <Upload size={16} className="inline mr-2" />
+                            Uploader une image
+                            <input 
+                              type="file" 
+                              className="hidden" 
+                              accept="image/*"
+                              onChange={async (e) => {
+                                const url = await handleFileUpload(e);
+                                if (url) setSettingsForm({...settingsForm, [`theme_image_${settingsForm.active_theme}`]: url});
+                              }} 
+                            />
+                          </label>
+                          {settingsForm[`theme_image_${settingsForm.active_theme}`] && (
+                            <button 
+                              type="button"
+                              onClick={() => setSettingsForm({...settingsForm, [`theme_image_${settingsForm.active_theme}`]: ''})}
+                              className="text-red-500 text-sm hover:underline text-left"
+                            >
+                              Supprimer l'image
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                      <p className="mt-2 text-xs text-gray-500">Format recommandé : JPG/WebP, 1600x900px, max 500KB. Si vous laissez vide, l'image par défaut sera utilisée.</p>
+                    </div>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              <div>
                 <h3 className="text-md font-bold text-gray-800 mb-4 border-b pb-2">Barre d'annonce (Haut de page)</h3>
                 <div className="space-y-4">
                   <div>
@@ -1205,6 +1428,34 @@ export default function AdminDashboard() {
                       placeholder="213555000000"
                     />
                     <p className="text-sm text-gray-500 mt-1">Ce numéro sera utilisé pour le bouton WhatsApp flottant sur le site.</p>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <h3 className="text-md font-bold text-gray-800 mb-4 border-b pb-2">Intégrations Marketing</h3>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Google Analytics (ID de mesure)</label>
+                    <input 
+                      type="text" 
+                      className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500" 
+                      value={settingsForm.ga_measurement_id || ''} 
+                      onChange={e => setSettingsForm({...settingsForm, ga_measurement_id: e.target.value})} 
+                      placeholder="G-XXXXXXXXXX"
+                    />
+                    <p className="text-sm text-gray-500 mt-1">Laissez vide pour désactiver Google Analytics.</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Facebook Pixel ID</label>
+                    <input 
+                      type="text" 
+                      className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500" 
+                      value={settingsForm.fb_pixel_id || ''} 
+                      onChange={e => setSettingsForm({...settingsForm, fb_pixel_id: e.target.value})} 
+                      placeholder="123456789012345"
+                    />
+                    <p className="text-sm text-gray-500 mt-1">Laissez vide pour désactiver le Pixel Facebook.</p>
                   </div>
                 </div>
               </div>
@@ -1320,23 +1571,101 @@ export default function AdminDashboard() {
         {activeTab === 'pages' && (
           <PageSettings />
         )}
+
+        {activeTab === 'sections' && (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+            <div className="p-6 border-b border-gray-100 flex justify-between items-center">
+              <h2 className="text-lg font-bold text-gray-800">Sections Accueil</h2>
+            </div>
+            <div className="p-6">
+              <div className="space-y-4 mb-6">
+                {customSections.map(section => (
+                  <div key={section.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg bg-gray-50">
+                    <div className="flex items-center gap-3">
+                      <span className="text-2xl">{section.emoji}</span>
+                      <span className="font-medium text-gray-800">{section.title}</span>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <button 
+                        onClick={() => handleToggleSection(section.id)}
+                        className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${section.isVisible ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-600'}`}
+                      >
+                        {section.isVisible ? 'ON ●' : 'OFF ○'}
+                      </button>
+                      <button 
+                        onClick={() => handleDeleteSection(section.id)}
+                        className="text-red-500 hover:bg-red-50 p-2 rounded-full transition-colors"
+                      >
+                        🗑️
+                      </button>
+                    </div>
+                  </div>
+                ))}
+                {customSections.length === 0 && (
+                  <p className="text-gray-500 text-center py-4">Aucune section personnalisée. Ajoutez-en une ci-dessous.</p>
+                )}
+              </div>
+
+              <div className="border border-gray-200 rounded-lg p-4 bg-white">
+                <h3 className="text-sm font-bold text-gray-800 mb-4">+ Ajouter une section</h3>
+                <div className="flex gap-4">
+                  <div className="flex-1">
+                    <input 
+                      type="text" 
+                      placeholder="Titre de la section (ex: Moins de 1000 DA)"
+                      value={newSectionTitle}
+                      onChange={e => setNewSectionTitle(e.target.value)}
+                      className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500"
+                    />
+                  </div>
+                  <div className="w-24">
+                    <input 
+                      type="text" 
+                      placeholder="Emoji"
+                      value={newSectionEmoji}
+                      onChange={e => setNewSectionEmoji(e.target.value)}
+                      className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500 text-center"
+                    />
+                  </div>
+                  <button 
+                    onClick={handleAddSection}
+                    className="px-6 py-2 bg-orange-500 text-white rounded-md hover:bg-orange-600 font-medium transition-colors"
+                  >
+                    Créer
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </main>
 
       {/* Product Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-3xl my-8">
-            <div className="flex justify-between items-center p-6 border-b border-gray-100">
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-3xl max-h-[90vh] flex flex-col">
+            <div className="flex justify-between items-center p-6 border-b border-gray-100 shrink-0">
               <h2 className="text-xl font-bold text-gray-800">{editingProduct ? 'Modifier le produit' : 'Ajouter un produit'}</h2>
               <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-gray-600">
                 <X size={24} />
               </button>
             </div>
-            <form onSubmit={handleProductSubmit} className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <form onSubmit={handleProductSubmit} className="flex flex-col overflow-hidden">
+              <div className="p-6 overflow-y-auto">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Nom du produit *</label>
-                  <input type="text" required className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500" value={productForm.name} onChange={e => setProductForm({...productForm, name: e.target.value})} />
+                  <input 
+                    type="text" 
+                    required 
+                    className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500" 
+                    value={productForm.name} 
+                    onChange={e => {
+                      const name = e.target.value;
+                      const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
+                      setProductForm({...productForm, name, slug});
+                    }} 
+                  />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Slug (URL) *</label>
@@ -1359,17 +1688,13 @@ export default function AdminDashboard() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Stock *</label>
-                  <input type="number" required min="0" className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500" value={productForm.stock} onChange={e => setProductForm({...productForm, stock: e.target.value})} />
-                </div>
-                <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Marque</label>
                   <input 
-                    type="text"
-                    className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500"
+                    type="text" 
                     placeholder="Saisissez la marque"
+                    className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500"
                     value={productForm.brand_name}
-                    onChange={e => setProductForm({...productForm, brand_name: e.target.value})}
+                    onChange={e => setProductForm({...productForm, brand_name: e.target.value, brand_id: ''})}
                   />
                 </div>
                 <div>
@@ -1379,6 +1704,10 @@ export default function AdminDashboard() {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Prix Promo (DA)</label>
                   <input type="number" min="0" className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500" value={productForm.promo_price} onChange={e => setProductForm({...productForm, promo_price: e.target.value})} />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Stock *</label>
+                  <input type="number" required min="0" className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500" value={productForm.stock} onChange={e => setProductForm({...productForm, stock: e.target.value})} />
                 </div>
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-2">Image Principale</label>
@@ -1421,16 +1750,6 @@ export default function AdminDashboard() {
                     }} />
                   </label>
                 </div>
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Points clés (Bullet points)</label>
-                  <textarea 
-                    rows={4} 
-                    className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500" 
-                    placeholder="Collez vos points clés ici... (un point par ligne)"
-                    value={productForm.key_points as string} 
-                    onChange={e => setProductForm({...productForm, key_points: e.target.value})}
-                  ></textarea>
-                </div>
 
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-2">Description détaillée</label>
@@ -1439,13 +1758,7 @@ export default function AdminDashboard() {
 
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-2">Caractéristiques techniques</label>
-                  <textarea 
-                    rows={4} 
-                    className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500" 
-                    placeholder="Collez vos caractéristiques ici... (ex: Marque: Samsung)"
-                    value={productForm.features as string} 
-                    onChange={e => setProductForm({...productForm, features: e.target.value})}
-                  ></textarea>
+                  <textarea rows={5} placeholder="Entrez les caractéristiques techniques ici..." className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500" value={productForm.features as string} onChange={e => setProductForm({...productForm, features: e.target.value})}></textarea>
                 </div>
               </div>
               
@@ -1471,9 +1784,10 @@ export default function AdminDashboard() {
                   Livraison Rapide
                 </label>
               </div>
+              </div>
 
-              <div className="flex justify-end gap-4 border-t border-gray-100 pt-6">
-                <button type="button" onClick={() => setIsModalOpen(false)} className="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 font-medium transition-colors">
+              <div className="flex justify-end gap-4 border-t border-gray-100 p-6 shrink-0 bg-gray-50 rounded-b-xl">
+                <button type="button" onClick={() => setIsModalOpen(false)} className="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 font-medium transition-colors bg-white">
                   Annuler
                 </button>
                 <button type="submit" className="px-6 py-2 bg-orange-500 text-white rounded-md hover:bg-orange-600 font-medium transition-colors">
@@ -1486,16 +1800,17 @@ export default function AdminDashboard() {
       )}
       {/* Subcategory Modal */}
       {isSubcategoryModalOpen && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-md my-8">
-            <div className="flex justify-between items-center p-6 border-b border-gray-100">
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md max-h-[90vh] flex flex-col">
+            <div className="flex justify-between items-center p-6 border-b border-gray-100 shrink-0">
               <h2 className="text-xl font-bold text-gray-800">{editingSubcategory ? 'Modifier la sous-catégorie' : 'Ajouter une sous-catégorie'}</h2>
               <button onClick={() => setIsSubcategoryModalOpen(false)} className="text-gray-400 hover:text-gray-600">
                 <X size={24} />
               </button>
             </div>
-            <form onSubmit={handleSubcategorySubmit} className="p-6">
-              <div className="space-y-4 mb-6">
+            <form onSubmit={handleSubcategorySubmit} className="flex flex-col overflow-hidden">
+              <div className="p-6 overflow-y-auto">
+                <div className="space-y-4 mb-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Nom de la sous-catégorie *</label>
                   <input type="text" required className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500" value={subcategoryForm.name} onChange={e => setSubcategoryForm({...subcategoryForm, name: e.target.value})} />
@@ -1528,9 +1843,10 @@ export default function AdminDashboard() {
                   </div>
                 </div>
               </div>
+              </div>
 
-              <div className="flex justify-end gap-4 border-t border-gray-100 pt-6">
-                <button type="button" onClick={() => setIsSubcategoryModalOpen(false)} className="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 font-medium transition-colors">
+              <div className="flex justify-end gap-4 border-t border-gray-100 p-6 shrink-0 bg-gray-50 rounded-b-xl">
+                <button type="button" onClick={() => setIsSubcategoryModalOpen(false)} className="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 font-medium transition-colors bg-white">
                   Annuler
                 </button>
                 <button type="submit" className="px-6 py-2 bg-orange-500 text-white rounded-md hover:bg-orange-600 font-medium transition-colors">
@@ -1543,16 +1859,17 @@ export default function AdminDashboard() {
       )}
       {/* Category Modal */}
       {isCategoryModalOpen && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-md my-8">
-            <div className="flex justify-between items-center p-6 border-b border-gray-100">
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md max-h-[90vh] flex flex-col">
+            <div className="flex justify-between items-center p-6 border-b border-gray-100 shrink-0">
               <h2 className="text-xl font-bold text-gray-800">{editingCategory ? 'Modifier la catégorie' : 'Ajouter une catégorie'}</h2>
               <button onClick={() => setIsCategoryModalOpen(false)} className="text-gray-400 hover:text-gray-600">
                 <X size={24} />
               </button>
             </div>
-            <form onSubmit={handleCategorySubmit} className="p-6">
-              <div className="space-y-4 mb-6">
+            <form onSubmit={handleCategorySubmit} className="flex flex-col overflow-hidden">
+              <div className="p-6 overflow-y-auto">
+                <div className="space-y-4 mb-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Nom de la catégorie *</label>
                   <input type="text" required className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500" value={categoryForm.name} onChange={e => setCategoryForm({...categoryForm, name: e.target.value})} />
@@ -1578,9 +1895,10 @@ export default function AdminDashboard() {
                   </div>
                 </div>
               </div>
+              </div>
 
-              <div className="flex justify-end gap-4 border-t border-gray-100 pt-6">
-                <button type="button" onClick={() => setIsCategoryModalOpen(false)} className="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 font-medium transition-colors">
+              <div className="flex justify-end gap-4 border-t border-gray-100 p-6 shrink-0 bg-gray-50 rounded-b-xl">
+                <button type="button" onClick={() => setIsCategoryModalOpen(false)} className="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 font-medium transition-colors bg-white">
                   Annuler
                 </button>
                 <button type="submit" className="px-6 py-2 bg-orange-500 text-white rounded-md hover:bg-orange-600 font-medium transition-colors">
@@ -1594,16 +1912,17 @@ export default function AdminDashboard() {
 
       {/* Slide Modal */}
       {isBrandModalOpen && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg my-8">
-            <div className="flex justify-between items-center p-6 border-b border-gray-100">
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col">
+            <div className="flex justify-between items-center p-6 border-b border-gray-100 shrink-0">
               <h2 className="text-xl font-bold text-gray-800">{editingBrand ? 'Modifier la marque' : 'Ajouter une marque'}</h2>
               <button onClick={() => setIsBrandModalOpen(false)} className="text-gray-400 hover:text-gray-600">
                 <X size={24} />
               </button>
             </div>
-            <form onSubmit={handleBrandSubmit} className="p-6">
-              <div className="space-y-4 mb-6">
+            <form onSubmit={handleBrandSubmit} className="flex flex-col overflow-hidden">
+              <div className="p-6 overflow-y-auto">
+                <div className="space-y-4 mb-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Nom de la marque</label>
                   <input 
@@ -1672,11 +1991,12 @@ export default function AdminDashboard() {
                   ></textarea>
                 </div>
               </div>
-              <div className="flex justify-end gap-3">
+              </div>
+              <div className="flex justify-end gap-3 border-t border-gray-100 p-6 shrink-0 bg-gray-50 rounded-b-xl">
                 <button 
                   type="button" 
                   onClick={() => setIsBrandModalOpen(false)}
-                  className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-md font-medium transition-colors"
+                  className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-md font-medium transition-colors bg-white border border-gray-300"
                 >
                   Annuler
                 </button>
@@ -1693,16 +2013,17 @@ export default function AdminDashboard() {
       )}
 
       {isSlideModalOpen && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg my-8">
-            <div className="flex justify-between items-center p-6 border-b border-gray-100">
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col">
+            <div className="flex justify-between items-center p-6 border-b border-gray-100 shrink-0">
               <h2 className="text-xl font-bold text-gray-800">{editingSlide ? 'Modifier le slide' : 'Ajouter un slide'}</h2>
               <button onClick={() => setIsSlideModalOpen(false)} className="text-gray-400 hover:text-gray-600">
                 <X size={24} />
               </button>
             </div>
-            <form onSubmit={handleSlideSubmit} className="p-6">
-              <div className="space-y-4 mb-6">
+            <form onSubmit={handleSlideSubmit} className="flex flex-col overflow-hidden">
+              <div className="p-6 overflow-y-auto">
+                <div className="space-y-4 mb-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Titre *</label>
                   <input type="text" required className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500" value={slideForm.title} onChange={e => setSlideForm({...slideForm, title: e.target.value})} />
@@ -1740,9 +2061,10 @@ export default function AdminDashboard() {
                   </div>
                 </div>
               </div>
+              </div>
 
-              <div className="flex justify-end gap-4 border-t border-gray-100 pt-6">
-                <button type="button" onClick={() => setIsSlideModalOpen(false)} className="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 font-medium transition-colors">
+              <div className="flex justify-end gap-4 border-t border-gray-100 p-6 shrink-0 bg-gray-50 rounded-b-xl">
+                <button type="button" onClick={() => setIsSlideModalOpen(false)} className="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 font-medium transition-colors bg-white">
                   Annuler
                 </button>
                 <button type="submit" className="px-6 py-2 bg-orange-500 text-white rounded-md hover:bg-orange-600 font-medium transition-colors">

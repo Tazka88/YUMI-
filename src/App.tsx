@@ -1,20 +1,27 @@
+import React, { Suspense } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { HelmetProvider } from 'react-helmet-async';
 import Layout from './components/Layout';
-import Home from './pages/Home';
-import Category from './pages/Category';
-import Product from './pages/Product';
-import Cart from './pages/Cart';
-import Checkout from './pages/Checkout';
-import AdminLogin from './pages/Admin/Login';
-import AdminDashboard from './pages/Admin/Dashboard';
-import Brands from './pages/Brands';
-import BrandProducts from './pages/BrandProducts';
-import Page from './pages/Page';
+import Analytics from './components/Analytics';
+
+const Home = React.lazy(() => import('./pages/Home'));
+const Category = React.lazy(() => import('./pages/Category'));
+const Product = React.lazy(() => import('./pages/Product'));
+const Cart = React.lazy(() => import('./pages/Cart'));
+const Checkout = React.lazy(() => import('./pages/Checkout'));
+const AdminLogin = React.lazy(() => import('./pages/Admin/Login'));
+const AdminDashboard = React.lazy(() => import('./pages/Admin/Dashboard'));
+const Brands = React.lazy(() => import('./pages/Brands'));
+const BrandProducts = React.lazy(() => import('./pages/BrandProducts'));
+const Page = React.lazy(() => import('./pages/Page'));
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <Routes>
+    <HelmetProvider>
+      <BrowserRouter>
+        <Analytics />
+        <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500"></div></div>}>
+          <Routes>
         <Route path="/" element={<Layout />}>
           <Route index element={<Home />} />
           <Route path="category/:slug" element={<Category />} />
@@ -28,6 +35,8 @@ export default function App() {
         <Route path="/admin/login" element={<AdminLogin />} />
         <Route path="/admin/*" element={<AdminDashboard />} />
       </Routes>
+      </Suspense>
     </BrowserRouter>
+    </HelmetProvider>
   );
 }

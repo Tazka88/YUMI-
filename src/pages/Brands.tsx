@@ -7,16 +7,20 @@ export default function Brands() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch('/api/brands')
+    const controller = new AbortController();
+    fetch('/api/brands', { signal: controller.signal })
       .then(res => res.json())
       .then(data => {
         setBrands(data);
         setLoading(false);
       })
       .catch(err => {
-        console.error("Failed to fetch brands", err);
-        setLoading(false);
+        if (err.name !== 'AbortError') {
+          console.error("Failed to fetch brands", err);
+          setLoading(false);
+        }
       });
+    return () => controller.abort();
   }, []);
 
   if (loading) {
@@ -45,12 +49,12 @@ export default function Brands() {
               <Link 
                 key={brand.id} 
                 to={`/brands/${brand.slug}`} 
-                className="flex flex-col items-center justify-center w-[200px] h-[180px] rounded-[12px] bg-white shadow-[0_2px_12px_rgba(0,0,0,0.08)] hover:shadow-[0_8px_24px_rgba(0,0,0,0.12)] hover:scale-[1.03] transition-all duration-300 group"
+                className="flex flex-col items-center justify-center w-[160px] h-[120px] sm:w-[180px] sm:h-[140px] rounded-[12px] bg-white shadow-[0_2px_12px_rgba(0,0,0,0.08)] hover:shadow-[0_8px_24px_rgba(0,0,0,0.12)] hover:scale-[1.03] transition-all duration-300 group"
               >
                 {brand.image ? (
-                  <img src={brand.image} alt={brand.name} className="w-[80%] h-[120px] object-contain p-[20px]" />
+                  <img src={brand.image} alt={brand.name} className="w-[80%] h-[80%] object-contain p-4" />
                 ) : (
-                  <div className="w-[80%] h-[120px] flex items-center justify-center text-gray-400 p-[20px]">
+                  <div className="w-[80%] h-[80%] flex items-center justify-center text-gray-400 p-4">
                     <span className="font-bold text-4xl">{brand.name.charAt(0)}</span>
                   </div>
                 )}

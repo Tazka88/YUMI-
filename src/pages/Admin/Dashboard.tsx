@@ -4,7 +4,8 @@ import { LayoutDashboard, ShoppingBag, Users, Settings, LogOut, TrendingUp, Aler
 import { formatPrice } from '../../utils/formatPrice';
 import FooterSettings from './FooterSettings';
 import PageSettings from './PageSettings';
-import { FileText } from 'lucide-react';
+import WilayasSettings from './WilayasSettings';
+import { FileText, MapPin } from 'lucide-react';
 
 export interface CustomSection {
   id: string;
@@ -115,69 +116,79 @@ export default function AdminDashboard() {
       return;
     }
 
+    const controller = new AbortController();
+    const signal = controller.signal;
     const headers = { 'Authorization': `Bearer ${token}` };
 
+    const handleFetchError = (err: any) => {
+      if (err.name !== 'AbortError') console.error(err);
+    };
+
     if (activeTab === 'overview') {
-      fetch('/api/admin/stats', { headers })
+      fetch('/api/admin/stats', { headers, signal })
         .then(res => {
           if (!res.ok) throw new Error('Unauthorized');
           return res.json();
         })
         .then(setStats)
-        .catch(() => navigate('/admin/login'));
+        .catch(err => {
+          if (err.name !== 'AbortError') navigate('/admin/login');
+        });
     }
 
     if (activeTab === 'orders') {
-      fetch('/api/admin/orders', { headers })
+      fetch('/api/admin/orders', { headers, signal })
         .then(res => res.json())
         .then(setOrders)
-        .catch(console.error);
+        .catch(handleFetchError);
     }
 
     if (activeTab === 'products') {
-      fetch('/api/admin/products', { headers })
+      fetch('/api/admin/products', { headers, signal })
         .then(res => res.json())
         .then(setProducts)
-        .catch(console.error);
+        .catch(handleFetchError);
       
-      fetch('/api/categories')
+      fetch('/api/categories', { signal })
         .then(res => res.json())
         .then(setCategories)
-        .catch(console.error);
+        .catch(handleFetchError);
 
-      fetch('/api/brands')
+      fetch('/api/brands', { signal })
         .then(res => res.json())
         .then(setBrands)
-        .catch(console.error);
+        .catch(handleFetchError);
     }
 
     if (activeTab === 'categories') {
-      fetch('/api/categories')
+      fetch('/api/categories', { signal })
         .then(res => res.json())
         .then(setCategories)
-        .catch(console.error);
+        .catch(handleFetchError);
     }
 
     if (activeTab === 'brands') {
-      fetch('/api/brands')
+      fetch('/api/brands', { signal })
         .then(res => res.json())
         .then(setBrands)
-        .catch(console.error);
+        .catch(handleFetchError);
     }
 
-    if (activeTab === 'slides') {
-      fetch('/api/admin/slides', { headers })
+    if (activeTab === 'images') {
+      fetch('/api/admin/slides', { headers, signal })
         .then(res => res.json())
         .then(setSlides)
-        .catch(console.error);
+        .catch(handleFetchError);
     }
 
     if (activeTab === 'settings') {
-      fetch('/api/admin/settings', { headers })
+      fetch('/api/admin/settings', { headers, signal })
         .then(res => res.json())
         .then(setSettingsForm)
-        .catch(console.error);
+        .catch(handleFetchError);
     }
+    
+    return () => controller.abort();
   }, [navigate, activeTab]);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -723,6 +734,13 @@ export default function AdminDashboard() {
             Clients
           </button>
           <button 
+            onClick={() => setActiveTab('wilayas')}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-md transition-colors ${activeTab === 'wilayas' ? 'bg-orange-500 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white'}`}
+          >
+            <MapPin size={20} />
+            Wilayas & Livraison
+          </button>
+          <button 
             onClick={() => setActiveTab('settings')}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-md transition-colors ${activeTab === 'settings' ? 'bg-orange-500 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white'}`}
           >
@@ -1131,7 +1149,7 @@ export default function AdminDashboard() {
                     <tr key={brand.id} className="hover:bg-gray-50 transition-colors">
                       <td className="py-3 px-4 border-b border-gray-100">
                         {brand.image ? (
-                          <img src={brand.image} alt={brand.name} className="w-12 h-12 object-contain p-[15px] rounded-md border border-gray-200" />
+                          <img src={brand.image} alt={brand.name} className="w-12 h-12 object-contain p-1 rounded-md border border-gray-200" />
                         ) : (
                           <div className="w-12 h-12 bg-gray-100 rounded-md flex items-center justify-center text-gray-400 p-[15px]">
                             <ImageIcon size={20} />
@@ -1234,6 +1252,8 @@ export default function AdminDashboard() {
             </p>
           </div>
         )}
+
+        {activeTab === 'wilayas' && <WilayasSettings />}
 
         {activeTab === 'settings' && (
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">

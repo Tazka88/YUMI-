@@ -9,14 +9,19 @@ export default function PageSettings() {
   const [pageForm, setPageForm] = useState({ title: '', slug: '', content: '' });
   const [isSaving, setIsSaving] = useState(false);
 
-  const fetchPages = () => {
-    fetch('/api/pages')
+  const fetchPages = (signal?: AbortSignal) => {
+    fetch('/api/pages', { signal })
       .then(res => res.json())
-      .then(setPages);
+      .then(setPages)
+      .catch(err => {
+        if (err.name !== 'AbortError') console.error(err);
+      });
   };
 
   useEffect(() => {
-    fetchPages();
+    const controller = new AbortController();
+    fetchPages(controller.signal);
+    return () => controller.abort();
   }, []);
 
   const generateSlug = (title: string) => {

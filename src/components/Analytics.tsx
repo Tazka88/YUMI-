@@ -10,7 +10,8 @@ export default function Analytics() {
   const [fbId, setFbId] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch('/api/settings')
+    const controller = new AbortController();
+    fetch('/api/settings', { signal: controller.signal })
       .then(res => res.json())
       .then(data => {
         const gaMeasurementId = data.ga_measurement_id || import.meta.env.VITE_GA_MEASUREMENT_ID;
@@ -28,7 +29,11 @@ export default function Analytics() {
 
         setIsInitialized(true);
       })
-      .catch(console.error);
+      .catch(err => {
+        if (err.name !== 'AbortError') console.error(err);
+      });
+      
+    return () => controller.abort();
   }, []);
 
   useEffect(() => {

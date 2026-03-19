@@ -273,17 +273,24 @@ export default function Home() {
   const [slides, setSlides] = useState<any[]>([]);
 
   useEffect(() => {
-    fetch('/api/settings').then(res => res.json()).then(data => {
+    const controller = new AbortController();
+    const signal = controller.signal;
+
+    const handleFetchError = (err: any) => {
+      if (err.name !== 'AbortError') console.error(err);
+    };
+
+    fetch('/api/settings', { signal }).then(res => res.json()).then(data => {
       if (data.active_theme) setActiveTheme(data.active_theme);
       setThemeImages(data);
-    }).catch(console.error);
-    fetch('/api/slides').then(res => res.json()).then(setSlides).catch(console.error);
-    fetch('/api/categories').then(res => res.json()).then(setCategories).catch(console.error);
-    fetch('/api/brands').then(res => res.json()).then(data => setBrands(data)).catch(console.error);
-    fetch('/api/products?popular=true').then(res => res.json()).then(setPopularProducts).catch(console.error);
-    fetch('/api/products?best_seller=true').then(res => res.json()).then(setBestSellers).catch(console.error);
-    fetch('/api/products?new=true').then(res => res.json()).then(setNewProducts).catch(console.error);
-    fetch('/api/products?promotions=true').then(res => res.json()).then(setPromotions).catch(console.error);
+    }).catch(handleFetchError);
+    fetch('/api/slides', { signal }).then(res => res.json()).then(setSlides).catch(handleFetchError);
+    fetch('/api/categories', { signal }).then(res => res.json()).then(setCategories).catch(handleFetchError);
+    fetch('/api/brands', { signal }).then(res => res.json()).then(data => setBrands(data)).catch(handleFetchError);
+    fetch('/api/products?popular=true', { signal }).then(res => res.json()).then(setPopularProducts).catch(handleFetchError);
+    fetch('/api/products?best_seller=true', { signal }).then(res => res.json()).then(setBestSellers).catch(handleFetchError);
+    fetch('/api/products?new=true', { signal }).then(res => res.json()).then(setNewProducts).catch(handleFetchError);
+    fetch('/api/products?promotions=true', { signal }).then(res => res.json()).then(setPromotions).catch(handleFetchError);
 
     const loadSections = () => {
       const saved = localStorage.getItem('yumi_custom_sections');
@@ -295,7 +302,10 @@ export default function Home() {
     };
     loadSections();
     window.addEventListener('yumi_sections_updated', loadSections);
-    return () => window.removeEventListener('yumi_sections_updated', loadSections);
+    return () => {
+      controller.abort();
+      window.removeEventListener('yumi_sections_updated', loadSections);
+    };
   }, []);
 
   useEffect(() => {
@@ -452,23 +462,23 @@ export default function Home() {
                     <Link 
                       key={`${i}-${brand.id}`} 
                       to={`/brands/${brand.slug}`} 
-                      className="relative w-[250px] h-[250px] sm:w-[280px] sm:h-[280px] shrink-0 rounded-xl overflow-hidden shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300 border border-gray-100 group/brand bg-white block"
+                      className="relative w-[140px] h-[100px] sm:w-[180px] sm:h-[120px] shrink-0 rounded-xl overflow-hidden shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300 border border-gray-100 group/brand bg-white block"
                       tabIndex={i > 0 ? -1 : 0}
                     >
                       {brand.image ? (
                         <img 
                           src={brand.image} 
                           alt={brand.name} 
-                          className="w-full h-full object-cover group-hover/brand:scale-105 transition-transform duration-500" 
+                          className="w-full h-full object-contain p-4 sm:p-6 group-hover/brand:scale-105 transition-transform duration-500" 
                           referrerPolicy="no-referrer"
                         />
                       ) : (
                         <div className="w-full h-full bg-gray-50 flex items-center justify-center text-gray-400 group-hover/brand:scale-105 transition-transform duration-500">
-                          <span className="font-bold text-6xl">{brand.name.charAt(0)}</span>
+                          <span className="font-bold text-4xl">{brand.name.charAt(0)}</span>
                         </div>
                       )}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent opacity-0 group-hover/brand:opacity-100 transition-opacity duration-300 flex items-end justify-center pb-4">
-                        <span className="text-white font-bold text-lg text-center px-4">{brand.name}</span>
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent opacity-0 group-hover/brand:opacity-100 transition-opacity duration-300 flex items-end justify-center pb-3">
+                        <span className="text-white font-bold text-sm text-center px-2">{brand.name}</span>
                       </div>
                     </Link>
                   ))}

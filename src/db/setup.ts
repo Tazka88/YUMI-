@@ -1,7 +1,11 @@
 import Database from 'better-sqlite3';
 import bcrypt from 'bcryptjs';
+import path from 'path';
 
-export const db = new Database('yumi.db');
+const isVercel = process.env.VERCEL === '1';
+const dbPath = isVercel ? path.join('/tmp', 'yumi.db') : 'yumi.db';
+
+export const db = new Database(dbPath);
 db.pragma('foreign_keys = ON');
 
 export function setupDb() {
@@ -155,6 +159,14 @@ export function setupDb() {
       content TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS wilayas (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      number TEXT NOT NULL UNIQUE,
+      name TEXT NOT NULL,
+      delivery_cost REAL NOT NULL DEFAULT 600,
+      is_active BOOLEAN DEFAULT 1
     );
 
     CREATE TABLE IF NOT EXISTS footer_links (
@@ -406,5 +418,24 @@ export function setupDb() {
     
     const insertSetting2 = db.prepare('INSERT INTO settings (key, value) VALUES (?, ?)');
     defaultSettings.forEach(s => insertSetting2.run(s.key, s.value));
+  }
+
+  // Seed wilayas if empty
+  const wilayasCount = db.prepare('SELECT COUNT(*) as count FROM wilayas').get() as { count: number };
+  if (wilayasCount.count === 0) {
+    const wilayas = [
+      "Adrar", "Chlef", "Laghouat", "Oum El Bouaghi", "Batna", "Béjaïa", "Biskra", "Béchar", "Blida", "Bouira",
+      "Tamanrasset", "Tébessa", "Tlemcen", "Tiaret", "Tizi Ouzou", "Alger", "Djelfa", "Jijel", "Sétif", "Saïda",
+      "Skikda", "Sidi Bel Abbès", "Annaba", "Guelma", "Constantine", "Médéa", "Mostaganem", "M'Sila", "Mascara", "Ouargla",
+      "Oran", "El Bayadh", "Illizi", "Bordj Bou Arreridj", "Boumerdès", "El Tarf", "Tindouf", "Tissemsilt", "El Oued", "Khenchela",
+      "Souk Ahras", "Tipaza", "Mila", "Aïn Defla", "Naâma", "Aïn Témouchent", "Ghardaïa", "Relizane", "Timimoun", "Bordj Badji Mokhtar",
+      "Ouled Djellal", "Béni Abbès", "In Salah", "In Guezzam", "Touggourt", "Djanet", "El M'Ghair", "El Meniaa"
+    ];
+    
+    const insertWilaya = db.prepare('INSERT INTO wilayas (number, name, delivery_cost, is_active) VALUES (?, ?, ?, ?)');
+    wilayas.forEach((name, index) => {
+      const number = (index + 1).toString().padStart(2, '0');
+      insertWilaya.run(number, name, 600, 1);
+    });
   }
 }

@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import compression from 'compression';
+import helmet from 'helmet';
 import { createServer as createViteServer } from 'vite';
 import { setupDb, db } from './src/db/setup.js';
 import apiRoutes from './src/api/routes.js';
@@ -26,6 +27,10 @@ async function startServer() {
   app.use(cors({
     origin: true, // Allow the current origin (useful for AI Studio preview)
     credentials: true
+  }));
+  app.use(helmet({
+    crossOriginResourcePolicy: false, // Allow loading images from other origins if needed
+    contentSecurityPolicy: false, // Disable CSP for preview environment compatibility
   }));
   app.use(compression()); // Compress all HTTP responses (Gzip/Brotli)
   app.use(express.json({ limit: '5mb' })); // Reduced from 50mb to prevent DoS

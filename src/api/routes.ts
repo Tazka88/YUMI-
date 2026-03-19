@@ -6,11 +6,12 @@ import multer from 'multer';
 import path from 'path';
 import rateLimit from 'express-rate-limit';
 import sharp from 'sharp';
+import fs from 'fs';
 
 const router = Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'yumi-secret-key-123';
 if (process.env.NODE_ENV === 'production' && JWT_SECRET === 'yumi-secret-key-123') {
-  console.warn('WARNING: Using default JWT secret in production! Please set JWT_SECRET environment variable.');
+  throw new Error('FATAL: JWT_SECRET environment variable is missing in production!');
 }
 
 // Rate Limiter for Login
@@ -23,13 +24,23 @@ const loginLimiter = rateLimit({
   }
 });
 
+// Rate Limiter for Orders
+const orderLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 10, // Limit each IP to 10 orders per hour
+  message: { error: 'Trop de commandes passées récemment. Veuillez patienter.' },
+  keyGenerator: (req) => {
+    return req.ip || req.socket.remoteAddress || 'unknown';
+  }
+});
+
 // Configure multer for file uploads securely
 const storage = multer.memoryStorage();
 const upload = multer({ 
   storage: storage,
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
   fileFilter: (req, file, cb) => {
-    const allowedTypes = /jpeg|jpg|png|webp|gif/i;
+    const allowedTypes = /jpeg|jpg|png|webp|gif|svg|avif/i;
     const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
     const mimetype = allowedTypes.test(file.mimetype);
     
@@ -150,6 +161,9 @@ router.get('/products', (req, res) => {
   if (recommended === 'true') query += ' AND p.is_recommended = 1';
   if (promotions === 'true') query += ' AND p.promo_price IS NOT NULL';
 
+  // Add a hard limit to prevent memory exhaustion
+  query += ' LIMIT 100';
+
   const products = db.prepare(query).all(...params) as any[];
   
   products.forEach(p => {
@@ -234,8 +248,8 @@ router.post('/products/:slug/reviews', (req, res) => {
   }
 });
 
-router.post('/orders', (req, res) => {
-  const { customer_name, customer_phone, wilaya, address, note, items } = req.body;
+router.post('/orders', orderLimiter, (req, res) => {
+  const { customer_name, customer_phone, wilaya, address, note, items, delivery_cost: clientDeliveryCost } = req.body;
   
   if (!items || !Array.isArray(items) || items.length === 0) {
     return res.status(400).json({ error: 'La commande doit contenir au moins un article' });
@@ -244,9 +258,8 @@ router.post('/orders', (req, res) => {
   try {
     let calculatedTotal = 0;
     
-    // Fetch delivery cost from settings
-    const deliverySetting = db.prepare("SELECT value FROM settings WHERE key = 'delivery_cost'").get() as any;
-    const delivery_cost = deliverySetting ? parseInt(deliverySetting.value, 10) : 600;
+    // Use client delivery cost, fallback to 600 if invalid
+    const delivery_cost = typeof clientDeliveryCost === 'number' && clientDeliveryCost >= 0 ? clientDeliveryCost : 600;
 
     const getProduct = db.prepare('SELECT price, promo_price FROM products WHERE id = ?');
     
@@ -473,8 +486,23 @@ router.post('/admin/upload', authenticate, upload.single('image'), async (req, r
   
   try {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    const isVercel = process.env.VERCEL === '1';
+    const uploadsDir = isVercel ? path.join('/tmp', 'uploads') : path.join(process.cwd(), 'public', 'uploads');
+    
+    // Ensure directory exists
+    if (!fs.existsSync(uploadsDir)) {
+      fs.mkdirSync(uploadsDir, { recursive: true });
+    }
+    
+    if (req.file.mimetype === 'image/svg+xml') {
+      const filename = `${uniqueSuffix}.svg`;
+      const outputPath = path.join(uploadsDir, filename);
+      fs.writeFileSync(outputPath, req.file.buffer);
+      return res.json({ url: `/uploads/${filename}` });
+    }
+
     const filename = `${uniqueSuffix}.webp`;
-    const outputPath = path.join(process.cwd(), 'public', 'uploads', filename);
+    const outputPath = path.join(uploadsDir, filename);
 
     await sharp(req.file.buffer)
       .resize({ width: 800, height: 800, fit: 'inside', withoutEnlargement: true })
@@ -537,7 +565,8 @@ router.get('/admin/stats', authenticate, (req, res) => {
 });
 
 router.get('/admin/orders', authenticate, (req, res) => {
-  const orders = db.prepare('SELECT * FROM orders ORDER BY created_at DESC').all();
+  // Limit to last 500 orders to prevent memory issues
+  const orders = db.prepare('SELECT * FROM orders ORDER BY created_at DESC LIMIT 500').all();
   res.json(orders);
 });
 
@@ -772,6 +801,59 @@ router.delete('/admin/subcategories/:id', authenticate, (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to delete subcategory' });
+  }
+});
+
+// --- WILAYAS ROUTES ---
+router.get('/wilayas', (req, res) => {
+  const wilayas = db.prepare('SELECT * FROM wilayas ORDER BY number ASC').all();
+  res.json(wilayas);
+});
+
+router.post('/admin/wilayas', authenticate, (req, res) => {
+  const { number, name, delivery_cost, is_active } = req.body;
+  
+  if (!number || !name || delivery_cost === undefined) {
+    return res.status(400).json({ error: 'Numéro, nom et tarif sont requis' });
+  }
+
+  try {
+    const insert = db.prepare('INSERT INTO wilayas (number, name, delivery_cost, is_active) VALUES (?, ?, ?, ?)');
+    const info = insert.run(number, name, delivery_cost, is_active !== undefined ? (is_active ? 1 : 0) : 1);
+    res.status(201).json({ id: info.lastInsertRowid, message: 'Wilaya ajoutée' });
+  } catch (err: any) {
+    if (err.code === 'SQLITE_CONSTRAINT_UNIQUE') {
+      return res.status(400).json({ error: 'Ce numéro de wilaya existe déjà' });
+    }
+    res.status(500).json({ error: 'Erreur lors de l\'ajout de la wilaya' });
+  }
+});
+
+router.put('/admin/wilayas/:id', authenticate, (req, res) => {
+  const { number, name, delivery_cost, is_active } = req.body;
+  
+  if (!number || !name || delivery_cost === undefined) {
+    return res.status(400).json({ error: 'Numéro, nom et tarif sont requis' });
+  }
+
+  try {
+    const update = db.prepare('UPDATE wilayas SET number = ?, name = ?, delivery_cost = ?, is_active = ? WHERE id = ?');
+    update.run(number, name, delivery_cost, is_active ? 1 : 0, req.params.id);
+    res.json({ message: 'Wilaya modifiée' });
+  } catch (err: any) {
+    if (err.code === 'SQLITE_CONSTRAINT_UNIQUE') {
+      return res.status(400).json({ error: 'Ce numéro de wilaya existe déjà' });
+    }
+    res.status(500).json({ error: 'Erreur lors de la modification de la wilaya' });
+  }
+});
+
+router.delete('/admin/wilayas/:id', authenticate, (req, res) => {
+  try {
+    db.prepare('DELETE FROM wilayas WHERE id = ?').run(req.params.id);
+    res.json({ message: 'Wilaya supprimée' });
+  } catch (err) {
+    res.status(500).json({ error: 'Erreur lors de la suppression de la wilaya' });
   }
 });
 

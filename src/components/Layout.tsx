@@ -25,37 +25,51 @@ export default function Layout() {
   }, [location.pathname]);
 
   useEffect(() => {
-    fetch('/api/categories')
+    const controller = new AbortController();
+    const signal = controller.signal;
+
+    const handleFetchError = (err: any) => {
+      if (err.name !== 'AbortError') console.error(err);
+    };
+
+    fetch('/api/categories', { signal })
       .then(res => res.json())
       .then(data => setCategories(data))
-      .catch(console.error);
+      .catch(handleFetchError);
       
-    fetch('/api/settings')
+    fetch('/api/settings', { signal })
       .then(res => res.json())
       .then(data => setSettings(data))
-      .catch(console.error);
+      .catch(handleFetchError);
 
-    fetch('/api/footer-links')
+    fetch('/api/footer-links', { signal })
       .then(res => res.json())
       .then(data => setFooterLinks(data))
-      .catch(console.error);
+      .catch(handleFetchError);
+
+    return () => controller.abort();
   }, []);
 
   useEffect(() => {
+    const controller = new AbortController();
+
     if (searchQuery.trim().length > 0) {
       const fetchSuggestions = async () => {
         try {
-          const res = await fetch(`/api/products?search=${encodeURIComponent(searchQuery)}`);
+          const res = await fetch(`/api/products?search=${encodeURIComponent(searchQuery)}`, { signal: controller.signal });
           const data = await res.json();
           setSuggestions(data.slice(0, 5));
           setShowSuggestions(true);
-        } catch (error) {
-          console.error("Error fetching suggestions:", error);
+        } catch (error: any) {
+          if (error.name !== 'AbortError') console.error("Error fetching suggestions:", error);
         }
       };
       
       const timeoutId = setTimeout(fetchSuggestions, 300);
-      return () => clearTimeout(timeoutId);
+      return () => {
+        clearTimeout(timeoutId);
+        controller.abort();
+      };
     } else {
       setSuggestions([]);
       setShowSuggestions(false);

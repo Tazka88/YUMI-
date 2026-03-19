@@ -22,7 +22,8 @@ export default function Product() {
   const addItem = useCartStore(state => state.addItem);
 
   useEffect(() => {
-    fetch('/api/settings')
+    const controller = new AbortController();
+    fetch('/api/settings', { signal: controller.signal })
       .then(res => res.json())
       .then(data => {
         setTrackingIds({
@@ -30,12 +31,18 @@ export default function Product() {
           fb: data.fb_pixel_id || import.meta.env.VITE_FB_PIXEL_ID || ''
         });
       })
-      .catch(console.error);
+      .catch(err => {
+        if (err.name !== 'AbortError') console.error(err);
+      });
+    return () => controller.abort();
   }, []);
 
   useEffect(() => {
+    const controller = new AbortController();
+    const signal = controller.signal;
+
     setError(null);
-    fetch(`/api/products/${slug}`)
+    fetch(`/api/products/${slug}`, { signal })
       .then(res => {
         if (!res.ok) throw new Error('Produit introuvable');
         return res.json();
@@ -44,21 +51,29 @@ export default function Product() {
         setProduct(data);
         setSelectedImage(data.image || `https://picsum.photos/seed/${data.slug}/800/800`);
         // Fetch related
-        fetch(`/api/products?category=${data.category_id}`)
+        fetch(`/api/products?category=${data.category_id}`, { signal })
           .then(res => res.json())
           .then(related => setRelatedProducts(related.filter((p: ProductType) => p.id !== data.id).slice(0, 4)))
-          .catch(console.error);
+          .catch(err => {
+            if (err.name !== 'AbortError') console.error(err);
+          });
           
         // Fetch reviews
-        fetch(`/api/products/${slug}/reviews`)
+        fetch(`/api/products/${slug}/reviews`, { signal })
           .then(res => res.json())
           .then(setReviews)
-          .catch(console.error);
+          .catch(err => {
+            if (err.name !== 'AbortError') console.error(err);
+          });
       })
       .catch(err => {
-        console.error(err);
-        setError(err.message);
+        if (err.name !== 'AbortError') {
+          console.error(err);
+          setError(err.message);
+        }
       });
+      
+    return () => controller.abort();
   }, [slug]);
 
   if (error) {

@@ -10,8 +10,11 @@ export default function BrandProducts() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const controller = new AbortController();
+    const signal = controller.signal;
+
     // Fetch brand details
-    fetch(`/api/brands/${slug}`)
+    fetch(`/api/brands/${slug}`, { signal })
       .then(res => {
         if (!res.ok) throw new Error('Brand not found');
         return res.json();
@@ -19,7 +22,7 @@ export default function BrandProducts() {
       .then(data => {
         setBrand(data);
         // Fetch products for this brand
-        return fetch(`/api/products?brand=${data.id}`);
+        return fetch(`/api/products?brand=${data.id}`, { signal });
       })
       .then(res => res.json())
       .then(data => {
@@ -27,9 +30,13 @@ export default function BrandProducts() {
         setLoading(false);
       })
       .catch(err => {
-        console.error("Failed to fetch brand or products", err);
-        setLoading(false);
+        if (err.name !== 'AbortError') {
+          console.error("Failed to fetch brand or products", err);
+          setLoading(false);
+        }
       });
+
+    return () => controller.abort();
   }, [slug]);
 
   if (loading) {

@@ -8,8 +8,10 @@ export default function Page() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const controller = new AbortController();
+    
     setLoading(true);
-    fetch(`/api/pages/${slug}`)
+    fetch(`/api/pages/${slug}`, { signal: controller.signal })
       .then(res => {
         if (!res.ok) throw new Error('Page not found');
         return res.json();
@@ -18,10 +20,14 @@ export default function Page() {
         setPage(data);
         setLoading(false);
       })
-      .catch(() => {
-        setPage(null);
-        setLoading(false);
+      .catch(err => {
+        if (err.name !== 'AbortError') {
+          setPage(null);
+          setLoading(false);
+        }
       });
+      
+    return () => controller.abort();
   }, [slug]);
 
   if (loading) {

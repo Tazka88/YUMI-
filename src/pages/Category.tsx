@@ -19,18 +19,33 @@ export default function Category() {
   const addItem = useCartStore(state => state.addItem);
 
   useEffect(() => {
-    fetch('/api/categories').then(res => res.json()).then(setCategories);
+    const controller = new AbortController();
+    fetch('/api/categories', { signal: controller.signal })
+      .then(res => res.json())
+      .then(setCategories)
+      .catch(err => {
+        if (err.name !== 'AbortError') console.error(err);
+      });
+    return () => controller.abort();
   }, []);
 
   useEffect(() => {
+    const controller = new AbortController();
+    const signal = controller.signal;
+
     setLoading(true);
     setCategoryImage(null);
     let url = '/api/products';
+    
+    const handleFetchError = (err: any) => {
+      if (err.name !== 'AbortError') console.error(err);
+    };
+
     if (slug && slug !== 'all') {
       const isSubcategory = searchParams.get('sub') === 'true';
       if (isSubcategory) {
         url += `?subcategory=${slug}`;
-        fetch('/api/subcategories')
+        fetch('/api/subcategories', { signal })
           .then(res => res.json())
           .then(subcats => {
             const subcat = subcats.find((s: any) => s.slug === slug);
@@ -38,11 +53,12 @@ export default function Category() {
               setCategoryName(subcat.name);
               if (subcat.image) setCategoryImage(subcat.image);
             }
-          });
+          })
+          .catch(handleFetchError);
       } else {
         url += `?category=${slug}`;
         // Fetch category name
-        fetch('/api/categories')
+        fetch('/api/categories', { signal })
           .then(res => res.json())
           .then(cats => {
             const cat = cats.find((c: any) => c.slug === slug);
@@ -50,7 +66,8 @@ export default function Category() {
               setCategoryName(cat.name);
               if (cat.image) setCategoryImage(cat.image);
             }
-          });
+          })
+          .catch(handleFetchError);
       }
     } else if (searchQuery) {
       url += `?search=${encodeURIComponent(searchQuery)}`;
@@ -59,12 +76,20 @@ export default function Category() {
       setCategoryName('Tous les produits');
     }
 
-    fetch(url)
+    fetch(url, { signal })
       .then(res => res.json())
       .then(data => {
         setProducts(data);
         setLoading(false);
+      })
+      .catch(err => {
+        if (err.name !== 'AbortError') {
+          console.error(err);
+          setLoading(false);
+        }
       });
+      
+    return () => controller.abort();
   }, [slug, searchQuery]);
 
   return (

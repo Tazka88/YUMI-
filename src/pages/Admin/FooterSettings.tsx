@@ -10,17 +10,25 @@ export default function FooterSettings() {
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState('');
 
-  const fetchFooterData = () => {
-    fetch('/api/footer-links')
+  const fetchFooterData = (signal?: AbortSignal) => {
+    fetch('/api/footer-links', { signal })
       .then(res => res.json())
-      .then(setLinks);
-    fetch('/api/settings')
+      .then(setLinks)
+      .catch(err => {
+        if (err.name !== 'AbortError') console.error(err);
+      });
+    fetch('/api/settings', { signal })
       .then(res => res.json())
-      .then(setSettings);
+      .then(setSettings)
+      .catch(err => {
+        if (err.name !== 'AbortError') console.error(err);
+      });
   };
 
   useEffect(() => {
-    fetchFooterData();
+    const controller = new AbortController();
+    fetchFooterData(controller.signal);
+    return () => controller.abort();
   }, []);
 
   const handleLinkSubmit = async (e: React.FormEvent) => {

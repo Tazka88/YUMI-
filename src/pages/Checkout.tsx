@@ -6,67 +6,13 @@ import { formatPrice } from '../utils/formatPrice';
 import ReactGA from 'react-ga4';
 import ReactPixel from 'react-facebook-pixel';
 
-// Mock Wilayas data with delivery costs
-const WILAYAS = [
-  { id: '01', name: 'Adrar', cost: 1200, time: '3-5 jours' },
-  { id: '02', name: 'Chlef', cost: 600, time: '24h-48h' },
-  { id: '03', name: 'Laghouat', cost: 800, time: '48h-72h' },
-  { id: '04', name: 'Oum El Bouaghi', cost: 800, time: '48h-72h' },
-  { id: '05', name: 'Batna', cost: 800, time: '48h-72h' },
-  { id: '06', name: 'Béjaïa', cost: 600, time: '24h-48h' },
-  { id: '07', name: 'Biskra', cost: 800, time: '48h-72h' },
-  { id: '08', name: 'Béchar', cost: 1000, time: '3-5 jours' },
-  { id: '09', name: 'Blida', cost: 400, time: '24h' },
-  { id: '10', name: 'Bouira', cost: 500, time: '24h-48h' },
-  { id: '11', name: 'Tamanrasset', cost: 1500, time: '5-7 jours' },
-  { id: '12', name: 'Tébessa', cost: 800, time: '48h-72h' },
-  { id: '13', name: 'Tlemcen', cost: 800, time: '48h-72h' },
-  { id: '14', name: 'Tiaret', cost: 800, time: '48h-72h' },
-  { id: '15', name: 'Tizi Ouzou', cost: 500, time: '24h-48h' },
-  { id: '16', name: 'Alger', cost: 400, time: '24h' },
-  { id: '17', name: 'Djelfa', cost: 800, time: '48h-72h' },
-  { id: '18', name: 'Jijel', cost: 600, time: '48h-72h' },
-  { id: '19', name: 'Sétif', cost: 600, time: '24h-48h' },
-  { id: '20', name: 'Saïda', cost: 800, time: '48h-72h' },
-  { id: '21', name: 'Skikda', cost: 800, time: '48h-72h' },
-  { id: '22', name: 'Sidi Bel Abbès', cost: 800, time: '48h-72h' },
-  { id: '23', name: 'Annaba', cost: 800, time: '48h-72h' },
-  { id: '24', name: 'Guelma', cost: 800, time: '48h-72h' },
-  { id: '25', name: 'Constantine', cost: 800, time: '48h-72h' },
-  { id: '26', name: 'Médéa', cost: 500, time: '24h-48h' },
-  { id: '27', name: 'Mostaganem', cost: 800, time: '48h-72h' },
-  { id: '28', name: "M'Sila", cost: 800, time: '48h-72h' },
-  { id: '29', name: 'Mascara', cost: 800, time: '48h-72h' },
-  { id: '30', name: 'Ouargla', cost: 1200, time: '3-5 jours' },
-  { id: '31', name: 'Oran', cost: 800, time: '48h-72h' },
-  { id: '32', name: 'El Bayadh', cost: 1000, time: '3-5 jours' },
-  { id: '33', name: 'Illizi', cost: 1500, time: '5-7 jours' },
-  { id: '34', name: 'Bordj Bou Arreridj', cost: 600, time: '24h-48h' },
-  { id: '35', name: 'Boumerdès', cost: 400, time: '24h' },
-  { id: '36', name: 'El Tarf', cost: 800, time: '48h-72h' },
-  { id: '37', name: 'Tindouf', cost: 1500, time: '5-7 jours' },
-  { id: '38', name: 'Tissemsilt', cost: 800, time: '48h-72h' },
-  { id: '39', name: 'El Oued', cost: 1200, time: '3-5 jours' },
-  { id: '40', name: 'Khenchela', cost: 800, time: '48h-72h' },
-  { id: '41', name: 'Souk Ahras', cost: 800, time: '48h-72h' },
-  { id: '42', name: 'Tipaza', cost: 400, time: '24h' },
-  { id: '43', name: 'Mila', cost: 800, time: '48h-72h' },
-  { id: '44', name: 'Aïn Defla', cost: 500, time: '24h-48h' },
-  { id: '45', name: 'Naâma', cost: 1000, time: '3-5 jours' },
-  { id: '46', name: 'Aïn Témouchent', cost: 800, time: '48h-72h' },
-  { id: '47', name: 'Ghardaïa', cost: 1000, time: '3-5 jours' },
-  { id: '48', name: 'Relizane', cost: 800, time: '48h-72h' },
-  { id: '49', name: 'Timimoun', cost: 1200, time: '3-5 jours' },
-  { id: '50', name: 'Bordj Badji Mokhtar', cost: 1500, time: '5-7 jours' },
-  { id: '51', name: 'Ouled Djellal', cost: 1000, time: '3-5 jours' },
-  { id: '52', name: 'Béni Abbès', cost: 1200, time: '3-5 jours' },
-  { id: '53', name: 'In Salah', cost: 1500, time: '5-7 jours' },
-  { id: '54', name: 'In Guezzam', cost: 1500, time: '5-7 jours' },
-  { id: '55', name: 'Touggourt', cost: 1200, time: '3-5 jours' },
-  { id: '56', name: 'Djanet', cost: 1500, time: '5-7 jours' },
-  { id: '57', name: "El M'Ghair", cost: 1200, time: '3-5 jours' },
-  { id: '58', name: 'El Meniaa', cost: 1200, time: '3-5 jours' }
-];
+interface Wilaya {
+  id: number;
+  number: string;
+  name: string;
+  delivery_cost: number;
+  is_active: number;
+}
 
 export default function Checkout() {
   const { items, total, clearCart } = useCartStore();
@@ -85,9 +31,26 @@ export default function Checkout() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState(false);
   const [trackingIds, setTrackingIds] = useState({ ga: '', fb: '' });
+  const [wilayas, setWilayas] = useState<Wilaya[]>([]);
 
   useEffect(() => {
-    fetch('/api/settings')
+    const fetchWilayas = async () => {
+      try {
+        const res = await fetch('/api/wilayas');
+        if (res.ok) {
+          const data = await res.json();
+          setWilayas(data.filter((w: Wilaya) => w.is_active === 1));
+        }
+      } catch (error) {
+        console.error('Failed to fetch wilayas:', error);
+      }
+    };
+    fetchWilayas();
+  }, []);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch('/api/settings', { signal: controller.signal })
       .then(res => res.json())
       .then(data => {
         setTrackingIds({
@@ -95,7 +58,10 @@ export default function Checkout() {
           fb: data.fb_pixel_id || import.meta.env.VITE_FB_PIXEL_ID || ''
         });
       })
-      .catch(console.error);
+      .catch(err => {
+        if (err.name !== 'AbortError') console.error(err);
+      });
+    return () => controller.abort();
   }, []);
 
   useEffect(() => {
@@ -105,13 +71,13 @@ export default function Checkout() {
   }, [items, navigate, orderSuccess]);
 
   const handleWilayaChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const wilayaId = e.target.value;
-    setFormData({ ...formData, wilaya: wilayaId });
+    const wilayaNumber = e.target.value;
+    setFormData({ ...formData, wilaya: wilayaNumber });
     
-    const selectedWilaya = WILAYAS.find(w => w.id === wilayaId);
+    const selectedWilaya = wilayas.find(w => w.number === wilayaNumber);
     if (selectedWilaya) {
-      setDeliveryCost(selectedWilaya.cost);
-      setDeliveryTime(selectedWilaya.time);
+      setDeliveryCost(selectedWilaya.delivery_cost);
+      setDeliveryTime('24h-72h'); // Default time or could be added to DB
     } else {
       setDeliveryCost(0);
       setDeliveryTime('');
@@ -125,7 +91,7 @@ export default function Checkout() {
     const orderData = {
       customer_name: formData.name,
       customer_phone: formData.phone,
-      wilaya: WILAYAS.find(w => w.id === formData.wilaya)?.name || formData.wilaya,
+      wilaya: wilayas.find(w => w.number === formData.wilaya)?.name || formData.wilaya,
       address: formData.address,
       note: formData.note,
       total_amount: total() + deliveryCost,
@@ -177,10 +143,11 @@ export default function Checkout() {
         // Mock notification
         console.log(`Notification envoyée à ${formData.phone} via WhatsApp`);
       } else {
-        throw new Error('Erreur lors de la commande');
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || 'Erreur lors de la commande');
       }
-    } catch (error) {
-      alert('Une erreur est survenue. Veuillez réessayer.');
+    } catch (error: any) {
+      alert(error.message || 'Une erreur est survenue. Veuillez réessayer.');
     } finally {
       setIsSubmitting(false);
     }
@@ -264,8 +231,8 @@ export default function Checkout() {
                   onChange={handleWilayaChange}
                 >
                   <option value="" disabled>Sélectionnez votre wilaya</option>
-                  {WILAYAS.map(w => (
-                    <option key={w.id} value={w.id}>{w.id} - {w.name}</option>
+                  {wilayas.map(w => (
+                    <option key={w.number} value={w.number}>{w.number} - {w.name}</option>
                   ))}
                 </select>
               </div>

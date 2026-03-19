@@ -3,7 +3,7 @@ import cors from 'cors';
 import compression from 'compression';
 import helmet from 'helmet';
 import { createServer as createViteServer } from 'vite';
-import { setupDb, db } from './src/db/setup.js';
+import { setupDb, sql } from './src/db/setup.js';
 import apiRoutes from './src/api/routes.js';
 import path from 'path';
 import fs from 'fs';
@@ -45,10 +45,10 @@ async function startServer() {
     res.send(`User-agent: *\nAllow: /\nDisallow: /admin/\nSitemap: https://${req.get('host')}/sitemap.xml`);
   });
 
-  app.get('/sitemap.xml', (req, res) => {
+  app.get('/sitemap.xml', async (req, res) => {
     try {
-      const products = db.prepare('SELECT slug FROM products').all() as any[];
-      const categories = db.prepare('SELECT slug FROM categories').all() as any[];
+      const products = await sql`SELECT slug FROM products`;
+      const categories = await sql`SELECT slug FROM categories`;
       
       const baseUrl = `https://${req.get('host')}`;
       

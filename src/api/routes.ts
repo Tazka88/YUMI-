@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { db } from '../db/setup.js';
+import { sql } from '../db/setup.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import multer from 'multer';
@@ -16,42 +16,33 @@ if (process.env.NODE_ENV === 'production' && JWT_SECRET === 'yumi-secret-key-123
 
 // Rate Limiter for Login
 const loginLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // Limit each IP to 5 login requests per windowMs
+  windowMs: 15 * 60 * 1000,
+  max: 5,
   message: { error: 'Trop de tentatives de connexion, réessayez plus tard.' },
-  keyGenerator: (req) => {
-    return req.ip || req.socket.remoteAddress || 'unknown';
-  }
+  keyGenerator: (req) => req.ip || req.socket.remoteAddress || 'unknown'
 });
 
 // Rate Limiter for Orders
 const orderLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000, // 1 hour
-  max: 10, // Limit each IP to 10 orders per hour
+  windowMs: 60 * 60 * 1000,
+  max: 10,
   message: { error: 'Trop de commandes passées récemment. Veuillez patienter.' },
-  keyGenerator: (req) => {
-    return req.ip || req.socket.remoteAddress || 'unknown';
-  }
+  keyGenerator: (req) => req.ip || req.socket.remoteAddress || 'unknown'
 });
 
-// Configure multer for file uploads securely
 const storage = multer.memoryStorage();
 const upload = multer({ 
   storage: storage,
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+  limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     const allowedTypes = /jpeg|jpg|png|webp|gif|svg|avif/i;
     const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
     const mimetype = allowedTypes.test(file.mimetype);
-    
-    if (extname && mimetype) {
-      return cb(null, true);
-    }
+    if (extname && mimetype) return cb(null, true);
     cb(new Error('Seules les images sont autorisées !'));
   }
 });
 
-// Auth middleware
 const authenticate = (req: any, res: any, next: any) => {
   const token = req.headers.authorization?.split(' ')[1];
   if (!token) return res.status(401).json({ error: 'Unauthorized' });
@@ -65,190 +56,211 @@ const authenticate = (req: any, res: any, next: any) => {
 };
 
 // --- AUTH ---
-router.post('/admin/login', loginLimiter, (req, res) => {
+router.post('/admin/login', loginLimiter, async (req, res) => {
   const { username, password } = req.body;
-  const user = db.prepare('SELECT * FROM users WHERE username = ?').get(username) as any;
-  if (!user || !bcrypt.compareSync(password, user.password_hash)) {
-    return res.status(401).json({ error: 'Invalid credentials' });
+  try {
+    const [user] = await sql`SELECT * FROM users WHERE email = ${username}`;
+    if (!user || !bcrypt.compareSync(password, user.password)) {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+    const token = jwt.sign({ id: user.id, username: user.email }, JWT_SECRET, { expiresIn: '1d' });
+    res.json({ token });
+  } catch (err) {
+    res.status(500).json({ error: 'Login failed' });
   }
-  const token = jwt.sign({ id: user.id, username: user.username }, JWT_SECRET, { expiresIn: '1d' });
-  res.json({ token });
 });
 
 // --- PUBLIC ROUTES ---
-router.get('/pages', (req, res) => {
-  const pages = db.prepare('SELECT id, title, slug, created_at, updated_at FROM pages').all();
-  res.json(pages);
-});
-
-router.get('/pages/:slug', (req, res) => {
-  const page = db.prepare('SELECT * FROM pages WHERE slug = ?').get(req.params.slug);
-  if (!page) return res.status(404).json({ error: 'Page not found' });
-  res.json(page);
-});
-
-router.get('/settings', (req, res) => {
-  const settings = db.prepare("SELECT * FROM settings WHERE key != 'admin_email'").all();
-  const settingsObj = settings.reduce((acc: any, setting: any) => {
-    acc[setting.key] = setting.value;
-    return acc;
-  }, {});
-  res.json(settingsObj);
-});
-
-router.get('/footer-links', (req, res) => {
-  const links = db.prepare('SELECT * FROM footer_links ORDER BY column_id ASC, order_index ASC').all();
-  res.json(links);
-});
-
-router.get('/slides', (req, res) => {
-  const slides = db.prepare('SELECT * FROM slides ORDER BY order_index ASC').all();
-  res.json(slides);
-});
-
-router.get('/brands', (req, res) => {
-  const brands = db.prepare('SELECT * FROM brands ORDER BY name ASC').all();
-  res.json(brands);
-});
-
-router.get('/brands/:slug', (req, res) => {
-  const brand = db.prepare('SELECT * FROM brands WHERE slug = ?').get(req.params.slug);
-  if (!brand) return res.status(404).json({ error: 'Brand not found' });
-  res.json(brand);
-});
-
-router.get('/categories', (req, res) => {
-  const categories = db.prepare('SELECT * FROM categories').all();
-  const subcategories = db.prepare('SELECT * FROM subcategories').all();
-  
-  const categoriesWithSubcats = categories.map((cat: any) => ({
-    ...cat,
-    subcategories: subcategories.filter((sub: any) => sub.category_id === cat.id)
-  }));
-  
-  res.json(categoriesWithSubcats);
-});
-
-router.get('/subcategories', (req, res) => {
-  const subcategories = db.prepare('SELECT * FROM subcategories').all();
-  res.json(subcategories);
-});
-
-router.get('/products', (req, res) => {
-  const { category, subcategory, brand, search, popular, best_seller, new: isNew, recommended, promotions } = req.query;
-  let query = 'SELECT p.*, COALESCE(p.brand_name, b.name) as brand_name, b.slug as brand_slug, b.image as brand_image FROM products p LEFT JOIN brands b ON p.brand_id = b.id WHERE 1=1';
-  const params: any[] = [];
-
-  if (category) {
-    query += ' AND p.category_id = (SELECT id FROM categories WHERE slug = ? OR id = ?)';
-    params.push(category, category);
+router.get('/pages', async (req, res) => {
+  try {
+    const pages = await sql`SELECT id, title, slug, created_at, updated_at FROM pages`;
+    res.json(pages);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch pages' });
   }
-  if (subcategory) {
-    query += ' AND p.subcategory_id = (SELECT id FROM subcategories WHERE slug = ? OR id = ?)';
-    params.push(subcategory, subcategory);
-  }
-  if (brand) {
-    query += ' AND p.brand_id = (SELECT id FROM brands WHERE slug = ? OR id = ?)';
-    params.push(brand, brand);
-  }
-  if (search) {
-    query += ' AND p.name LIKE ?';
-    params.push(`%${search}%`);
-  }
-  if (popular === 'true') query += ' AND p.is_popular = 1';
-  if (best_seller === 'true') query += ' AND p.is_best_seller = 1';
-  if (isNew === 'true') query += ' AND p.is_new = 1';
-  if (recommended === 'true') query += ' AND p.is_recommended = 1';
-  if (promotions === 'true') query += ' AND p.promo_price IS NOT NULL';
+});
 
-  // Add a hard limit to prevent memory exhaustion
-  query += ' LIMIT 100';
+router.get('/pages/:slug', async (req, res) => {
+  try {
+    const [page] = await sql`SELECT * FROM pages WHERE slug = ${req.params.slug}`;
+    if (!page) return res.status(404).json({ error: 'Page not found' });
+    res.json(page);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch page' });
+  }
+});
 
-  const products = db.prepare(query).all(...params) as any[];
-  
-  products.forEach(p => {
-    if (p.features) {
-      try {
-        p.features = JSON.parse(p.features);
-      } catch (e) {
-        p.features = [];
-      }
-    } else {
-      p.features = [];
-    }
+router.get('/settings', async (req, res) => {
+  try {
+    const settings = await sql`SELECT * FROM settings WHERE key != 'admin_email'`;
+    const settingsObj = settings.reduce((acc: any, setting: any) => {
+      acc[setting.key] = setting.value;
+      return acc;
+    }, {});
+    res.json(settingsObj);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch settings' });
+  }
+});
+
+router.get('/footer-links', async (req, res) => {
+  try {
+    const links = await sql`SELECT * FROM footer_links ORDER BY column_id ASC, order_index ASC`;
+    res.json(links);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch footer links' });
+  }
+});
+
+router.get('/slides', async (req, res) => {
+  try {
+    const slides = await sql`SELECT * FROM slides ORDER BY order_index ASC`;
+    res.json(slides);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch slides' });
+  }
+});
+
+router.get('/brands', async (req, res) => {
+  try {
+    const brands = await sql`SELECT * FROM brands ORDER BY name ASC`;
+    res.json(brands);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch brands' });
+  }
+});
+
+router.get('/brands/:slug', async (req, res) => {
+  try {
+    const [brand] = await sql`SELECT * FROM brands WHERE slug = ${req.params.slug}`;
+    if (!brand) return res.status(404).json({ error: 'Brand not found' });
+    res.json(brand);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch brand' });
+  }
+});
+
+router.get('/categories', async (req, res) => {
+  try {
+    const categories = await sql`SELECT * FROM categories`;
+    const subcategories = await sql`SELECT * FROM subcategories`;
     
-    if (p.key_points) {
-      try {
-        p.key_points = JSON.parse(p.key_points);
-      } catch (e) {
-        p.key_points = [];
-      }
-    } else {
-      p.key_points = [];
-    }
-  });
-
-  res.json(products);
-});
-
-router.get('/products/:slug', (req, res) => {
-  const product = db.prepare('SELECT p.*, c.name as category_name, COALESCE(p.brand_name, b.name) as brand_name, b.slug as brand_slug, b.image as brand_image FROM products p LEFT JOIN categories c ON p.category_id = c.id LEFT JOIN brands b ON p.brand_id = b.id WHERE p.slug = ?').get(req.params.slug) as any;
-  if (!product) return res.status(404).json({ error: 'Product not found' });
-  
-  if (product.features) {
-    try {
-      product.features = JSON.parse(product.features);
-    } catch (e) {
-      product.features = [];
-    }
-  } else {
-    product.features = [];
+    const categoriesWithSubcats = categories.map((cat: any) => ({
+      ...cat,
+      subcategories: subcategories.filter((sub: any) => sub.category_id === cat.id)
+    }));
+    
+    res.json(categoriesWithSubcats);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch categories' });
   }
+});
 
-  if (product.key_points) {
-    try {
-      product.key_points = JSON.parse(product.key_points);
-    } catch (e) {
-      product.key_points = [];
-    }
-  } else {
-    product.key_points = [];
+router.get('/subcategories', async (req, res) => {
+  try {
+    const subcategories = await sql`SELECT * FROM subcategories`;
+    res.json(subcategories);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch subcategories' });
   }
-
-  const images = db.prepare('SELECT * FROM product_images WHERE product_id = ?').all(product.id);
-  product.images = images;
-  
-  res.json(product);
 });
 
-router.get('/products/:slug/reviews', (req, res) => {
-  const product = db.prepare('SELECT id FROM products WHERE slug = ?').get(req.params.slug) as any;
-  if (!product) return res.status(404).json({ error: 'Product not found' });
+router.get('/products', async (req, res) => {
+  const category = req.query.category as string | undefined;
+  const subcategory = req.query.subcategory as string | undefined;
+  const brand = req.query.brand as string | undefined;
+  const search = req.query.search as string | undefined;
+  const popular = req.query.popular as string | undefined;
+  const best_seller = req.query.best_seller as string | undefined;
+  const isNew = req.query.new as string | undefined;
+  const recommended = req.query.recommended as string | undefined;
+  const promotions = req.query.promotions as string | undefined;
   
-  const reviews = db.prepare('SELECT * FROM reviews WHERE product_id = ? ORDER BY created_at DESC').all(product.id);
-  res.json(reviews);
+  try {
+    const products = await sql`
+      SELECT p.*, COALESCE(p.brand_name, b.name) as brand_name, b.slug as brand_slug, b.image as brand_image 
+      FROM products p 
+      LEFT JOIN brands b ON p.brand_id = b.id 
+      WHERE 
+        (${category || null}::text IS NULL OR p.category_id = (SELECT id FROM categories WHERE slug = ${category || null} OR id = ${Number(category) || 0} LIMIT 1))
+        AND (${subcategory || null}::text IS NULL OR p.subcategory_id = (SELECT id FROM subcategories WHERE slug = ${subcategory || null} OR id = ${Number(subcategory) || 0} LIMIT 1))
+        AND (${brand || null}::text IS NULL OR p.brand_id = (SELECT id FROM brands WHERE slug = ${brand || null} OR id = ${Number(brand) || 0} LIMIT 1))
+        AND (${search || null}::text IS NULL OR p.name ILIKE ${search ? '%' + search + '%' : null})
+        AND (${popular === 'true' ? true : null}::boolean IS NULL OR p.is_popular = true)
+        AND (${best_seller === 'true' ? true : null}::boolean IS NULL OR p.is_best_seller = true)
+        AND (${isNew === 'true' ? true : null}::boolean IS NULL OR p.is_new = true)
+        AND (${recommended === 'true' ? true : null}::boolean IS NULL OR p.is_recommended = true)
+        AND (${promotions === 'true' ? true : null}::boolean IS NULL OR p.promo_price IS NOT NULL)
+      LIMIT 100
+    `;
+    
+    products.forEach(p => {
+      p.features = typeof p.features === 'string' ? JSON.parse(p.features) : (p.features || []);
+      p.key_points = typeof p.key_points === 'string' ? JSON.parse(p.key_points) : (p.key_points || []);
+    });
+
+    res.json(products);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to fetch products' });
+  }
 });
 
-router.post('/products/:slug/reviews', (req, res) => {
+router.get('/products/:slug', async (req, res) => {
+  try {
+    const [product] = await sql`
+      SELECT p.*, c.name as category_name, COALESCE(p.brand_name, b.name) as brand_name, b.slug as brand_slug, b.image as brand_image 
+      FROM products p 
+      LEFT JOIN categories c ON p.category_id = c.id 
+      LEFT JOIN brands b ON p.brand_id = b.id 
+      WHERE p.slug = ${req.params.slug}
+    `;
+    
+    if (!product) return res.status(404).json({ error: 'Product not found' });
+    
+    product.features = typeof product.features === 'string' ? JSON.parse(product.features) : (product.features || []);
+    product.key_points = typeof product.key_points === 'string' ? JSON.parse(product.key_points) : (product.key_points || []);
+
+    const images = await sql`SELECT * FROM product_images WHERE product_id = ${product.id}`;
+    product.images = images;
+    
+    res.json(product);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch product' });
+  }
+});
+
+router.get('/products/:slug/reviews', async (req, res) => {
+  try {
+    const [product] = await sql`SELECT id FROM products WHERE slug = ${req.params.slug}`;
+    if (!product) return res.status(404).json({ error: 'Product not found' });
+    
+    const reviews = await sql`SELECT * FROM reviews WHERE product_id = ${product.id} ORDER BY created_at DESC`;
+    res.json(reviews);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch reviews' });
+  }
+});
+
+router.post('/products/:slug/reviews', async (req, res) => {
   const { customer_name, rating, comment } = req.body;
   
   if (typeof customer_name !== 'string' || customer_name.length > 100) return res.status(400).json({ error: 'Nom invalide' });
   if (typeof comment !== 'string' || comment.length > 1000) return res.status(400).json({ error: 'Commentaire trop long' });
   if (typeof rating !== 'number' || rating < 1 || rating > 5) return res.status(400).json({ error: 'Note invalide' });
 
-  const product = db.prepare('SELECT id FROM products WHERE slug = ?').get(req.params.slug) as any;
-  if (!product) return res.status(404).json({ error: 'Product not found' });
-
   try {
-    const insert = db.prepare('INSERT INTO reviews (product_id, customer_name, rating, comment) VALUES (?, ?, ?, ?)');
-    insert.run(product.id, customer_name, rating, comment);
+    const [product] = await sql`SELECT id FROM products WHERE slug = ${req.params.slug}`;
+    if (!product) return res.status(404).json({ error: 'Product not found' });
+
+    await sql`INSERT INTO reviews (product_id, customer_name, rating, comment) VALUES (${product.id}, ${customer_name}, ${rating}, ${comment})`;
     res.status(201).json({ message: 'Review added' });
   } catch (err) {
     res.status(500).json({ error: 'Failed to add review' });
   }
 });
 
-router.post('/orders', orderLimiter, (req, res) => {
+router.post('/orders', orderLimiter, async (req, res) => {
   const { customer_name, customer_phone, wilaya, address, note, items, delivery_cost: clientDeliveryCost } = req.body;
   
   if (!items || !Array.isArray(items) || items.length === 0) {
@@ -257,14 +269,11 @@ router.post('/orders', orderLimiter, (req, res) => {
 
   try {
     let calculatedTotal = 0;
-    
-    // Use client delivery cost, fallback to 600 if invalid
     const delivery_cost = typeof clientDeliveryCost === 'number' && clientDeliveryCost >= 0 ? clientDeliveryCost : 600;
 
-    const getProduct = db.prepare('SELECT price, promo_price FROM products WHERE id = ?');
-    
-    const validatedItems = items.map((item: any) => {
-      const product = getProduct.get(item.product_id) as any;
+    const validatedItems = [];
+    for (const item of items) {
+      const [product] = await sql`SELECT price, promo_price FROM products WHERE id = ${item.product_id}`;
       if (!product) throw new Error(`Produit invalide: ${item.product_id}`);
       
       const actualPrice = product.promo_price || product.price;
@@ -272,40 +281,34 @@ router.post('/orders', orderLimiter, (req, res) => {
       if (isNaN(quantity) || quantity <= 0) throw new Error('Quantité invalide');
 
       calculatedTotal += actualPrice * quantity;
-      return { ...item, price: actualPrice, quantity };
-    });
+      validatedItems.push({ ...item, price: actualPrice, quantity });
+    }
 
     calculatedTotal += delivery_cost;
 
-    const insertOrder = db.prepare(`
-      INSERT INTO orders (customer_name, customer_phone, wilaya, address, note, total_amount, delivery_cost)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    `);
-    const insertItem = db.prepare(`
-      INSERT INTO order_items (order_id, product_id, quantity, price)
-      VALUES (?, ?, ?, ?)
-    `);
-    const updateStock = db.prepare(`
-      UPDATE products SET stock = stock - ? WHERE id = ? AND stock >= ?
-    `);
-
-    const transaction = db.transaction(() => {
-      const info = insertOrder.run(customer_name, customer_phone, wilaya, address, note, calculatedTotal, delivery_cost);
-      const orderId = info.lastInsertRowid;
+    const orderId = await sql.begin(async (sql: any) => {
+      const [order] = await sql`
+        INSERT INTO orders (customer_name, customer_phone, wilaya, address, note, total_amount, delivery_cost)
+        VALUES (${customer_name || ''}, ${customer_phone || ''}, ${wilaya || ''}, ${address || ''}, ${note || null}, ${calculatedTotal}, ${delivery_cost})
+        RETURNING id
+      `;
+      
       for (const item of validatedItems) {
-        const stockResult = updateStock.run(item.quantity, item.product_id, item.quantity);
-        if (stockResult.changes === 0) {
+        const result = await sql`
+          UPDATE products SET stock = stock - ${item.quantity} WHERE id = ${item.product_id} AND stock >= ${item.quantity}
+        `;
+        if (result.count === 0) {
           throw new Error(`Stock insuffisant pour le produit ID: ${item.product_id}`);
         }
-        insertItem.run(orderId, item.product_id, item.quantity, item.price);
+        await sql`
+          INSERT INTO order_items (order_id, product_id, quantity, price)
+          VALUES (${order.id}, ${item.product_id}, ${item.quantity}, ${item.price})
+        `;
       }
-      return orderId;
+      return order.id;
     });
-
-    const orderId = transaction();
     
-    // Simulate sending email to admin
-    const adminEmailSetting = db.prepare("SELECT value FROM settings WHERE key = 'admin_email'").get() as any;
+    const [adminEmailSetting] = await sql`SELECT value FROM settings WHERE key = 'admin_email'`;
     if (adminEmailSetting && adminEmailSetting.value) {
       console.log(`[EMAIL SIMULATION] Nouvelle commande #${orderId} envoyée à l'administrateur : ${adminEmailSetting.value}`);
     }
@@ -316,7 +319,7 @@ router.post('/orders', orderLimiter, (req, res) => {
   }
 });
 
-router.post('/contact', (req, res) => {
+router.post('/contact', async (req, res) => {
   const { name, email, message } = req.body;
   
   if (typeof name !== 'string' || name.length > 100) return res.status(400).json({ error: 'Nom invalide' });
@@ -324,13 +327,11 @@ router.post('/contact', (req, res) => {
   if (typeof message !== 'string' || message.length > 2000) return res.status(400).json({ error: 'Message trop long' });
   
   try {
-    // Simulate sending email to admin
-    const adminEmailSetting = db.prepare("SELECT value FROM settings WHERE key = 'admin_email'").get() as any;
+    const [adminEmailSetting] = await sql`SELECT value FROM settings WHERE key = 'admin_email'`;
     if (adminEmailSetting && adminEmailSetting.value) {
       console.log(`[EMAIL SIMULATION] Nouveau message de contact de ${name} (${email}) envoyé à l'administrateur : ${adminEmailSetting.value}`);
       console.log(`Message: ${message}`);
     }
-    
     res.status(200).json({ success: true, message: 'Message envoyé avec succès' });
   } catch (err) {
     res.status(500).json({ error: 'Failed to send message' });
@@ -338,45 +339,49 @@ router.post('/contact', (req, res) => {
 });
 
 // --- ADMIN ROUTES ---
-router.post('/admin/pages', authenticate, (req, res) => {
+router.post('/admin/pages', authenticate, async (req, res) => {
   const { title, slug, content } = req.body;
   try {
-    const result = db.prepare('INSERT INTO pages (title, slug, content) VALUES (?, ?, ?)').run(title, slug, content);
-    res.json({ id: result.lastInsertRowid, title, slug, content });
+    const [result] = await sql`INSERT INTO pages (title, slug, content) VALUES (${title || ''}, ${slug || ''}, ${content || ''}) RETURNING id`;
+    res.json({ id: result.id, title, slug, content });
   } catch (err) {
     res.status(500).json({ error: 'Failed to create page' });
   }
 });
 
-router.put('/admin/pages/:id', authenticate, (req, res) => {
+router.put('/admin/pages/:id', authenticate, async (req, res) => {
   const { title, slug, content } = req.body;
   try {
-    db.prepare('UPDATE pages SET title = ?, slug = ?, content = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(title, slug, content, req.params.id);
+    await sql`UPDATE pages SET title = ${title || ''}, slug = ${slug || ''}, content = ${content || ''}, updated_at = CURRENT_TIMESTAMP WHERE id = ${req.params.id}`;
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: 'Failed to update page' });
   }
 });
 
-router.delete('/admin/pages/:id', authenticate, (req, res) => {
+router.delete('/admin/pages/:id', authenticate, async (req, res) => {
   try {
-    db.prepare('DELETE FROM pages WHERE id = ?').run(req.params.id);
+    await sql`DELETE FROM pages WHERE id = ${req.params.id}`;
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: 'Failed to delete page' });
   }
 });
 
-router.get('/admin/settings', authenticate, (req, res) => {
-  const settings = db.prepare('SELECT * FROM settings').all();
-  const settingsObj = settings.reduce((acc: any, setting: any) => {
-    acc[setting.key] = setting.value;
-    return acc;
-  }, {});
-  res.json(settingsObj);
+router.get('/admin/settings', authenticate, async (req, res) => {
+  try {
+    const settings = await sql`SELECT * FROM settings`;
+    const settingsObj = settings.reduce((acc: any, setting: any) => {
+      acc[setting.key] = setting.value;
+      return acc;
+    }, {});
+    res.json(settingsObj);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch settings' });
+  }
 });
 
-router.put('/admin/credentials', authenticate, (req: any, res) => {
+router.put('/admin/credentials', authenticate, async (req: any, res) => {
   const { currentPassword, newUsername, newPassword } = req.body;
   const userId = req.user.id;
 
@@ -384,31 +389,31 @@ router.put('/admin/credentials', authenticate, (req: any, res) => {
     return res.status(400).json({ error: 'Mot de passe actuel requis' });
   }
 
-  const user = db.prepare('SELECT * FROM users WHERE id = ?').get(userId) as any;
-  if (!user || !bcrypt.compareSync(currentPassword, user.password_hash)) {
-    return res.status(401).json({ error: 'Mot de passe actuel incorrect' });
-  }
-
   try {
+    const [user] = await sql`SELECT * FROM users WHERE id = ${userId}`;
+    if (!user || !bcrypt.compareSync(currentPassword, user.password)) {
+      return res.status(401).json({ error: 'Mot de passe actuel incorrect' });
+    }
+
     if (newUsername && newPassword) {
       const hash = bcrypt.hashSync(newPassword, 10);
-      db.prepare('UPDATE users SET username = ?, password_hash = ? WHERE id = ?').run(newUsername, hash, userId);
+      await sql`UPDATE users SET email = ${newUsername}, password = ${hash} WHERE id = ${userId}`;
     } else if (newUsername) {
-      db.prepare('UPDATE users SET username = ? WHERE id = ?').run(newUsername, userId);
+      await sql`UPDATE users SET email = ${newUsername} WHERE id = ${userId}`;
     } else if (newPassword) {
       const hash = bcrypt.hashSync(newPassword, 10);
-      db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(hash, userId);
+      await sql`UPDATE users SET password = ${hash} WHERE id = ${userId}`;
     }
     res.json({ success: true, message: 'Identifiants mis à jour avec succès' });
   } catch (err: any) {
-    if (err.code === 'SQLITE_CONSTRAINT_UNIQUE') {
+    if (err.code === '23505') { // Postgres unique violation
       return res.status(400).json({ error: 'Ce nom d\'utilisateur existe déjà' });
     }
     res.status(500).json({ error: 'Erreur lors de la mise à jour des identifiants' });
   }
 });
 
-router.post('/admin/settings', authenticate, (req, res) => {
+router.post('/admin/settings', authenticate, async (req, res) => {
   const settings = req.body;
   
   if (settings.admin_email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(settings.admin_email)) {
@@ -416,63 +421,56 @@ router.post('/admin/settings', authenticate, (req, res) => {
   }
   
   try {
-    const updateSetting = db.prepare('INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value');
-    const transaction = db.transaction(() => {
+    await sql.begin(async (sql: any) => {
       for (const [key, value] of Object.entries(settings)) {
         if (value !== undefined) {
-          updateSetting.run(key, value as string);
+          await sql`INSERT INTO settings (key, value) VALUES (${key}, ${String(value)}) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`;
         }
       }
     });
-    transaction();
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: 'Failed to update settings' });
   }
 });
 
-// Footer Links
-router.post('/admin/footer-links', authenticate, (req, res) => {
+router.post('/admin/footer-links', authenticate, async (req, res) => {
   const { name, url, column_id, order_index } = req.body;
   try {
-    const insert = db.prepare('INSERT INTO footer_links (name, url, column_id, order_index) VALUES (?, ?, ?, ?)');
-    const info = insert.run(name, url, column_id, order_index || 0);
-    res.status(201).json({ id: info.lastInsertRowid, message: 'Link created' });
+    const [info] = await sql`INSERT INTO footer_links (name, url, column_id, order_index) VALUES (${name || ''}, ${url || ''}, ${column_id || null}, ${order_index || 0}) RETURNING id`;
+    res.status(201).json({ id: info.id, message: 'Link created' });
   } catch (err) {
     res.status(500).json({ error: 'Failed to create link' });
   }
 });
 
-router.put('/admin/footer-links/reorder', authenticate, (req, res) => {
-  const { links } = req.body; // Expecting array of { id, order_index, column_id }
+router.put('/admin/footer-links/reorder', authenticate, async (req, res) => {
+  const { links } = req.body;
   try {
-    const update = db.prepare('UPDATE footer_links SET order_index = ?, column_id = ? WHERE id = ?');
-    const transaction = db.transaction(() => {
-      links.forEach((link: any) => {
-        update.run(link.order_index, link.column_id, link.id);
-      });
+    await sql.begin(async (sql: any) => {
+      for (const link of links) {
+        await sql`UPDATE footer_links SET order_index = ${link.order_index || 0}, column_id = ${link.column_id || null} WHERE id = ${link.id}`;
+      }
     });
-    transaction();
     res.json({ message: 'Links reordered' });
   } catch (err) {
     res.status(500).json({ error: 'Failed to reorder links' });
   }
 });
 
-router.put('/admin/footer-links/:id', authenticate, (req, res) => {
+router.put('/admin/footer-links/:id', authenticate, async (req, res) => {
   const { name, url, column_id, order_index } = req.body;
   try {
-    const update = db.prepare('UPDATE footer_links SET name = ?, url = ?, column_id = ?, order_index = ? WHERE id = ?');
-    update.run(name, url, column_id, order_index, req.params.id);
+    await sql`UPDATE footer_links SET name = ${name || ''}, url = ${url || ''}, column_id = ${column_id || null}, order_index = ${order_index || 0} WHERE id = ${req.params.id}`;
     res.json({ message: 'Link updated' });
   } catch (err) {
     res.status(500).json({ error: 'Failed to update link' });
   }
 });
 
-router.delete('/admin/footer-links/:id', authenticate, (req, res) => {
+router.delete('/admin/footer-links/:id', authenticate, async (req, res) => {
   try {
-    db.prepare('DELETE FROM footer_links WHERE id = ?').run(req.params.id);
+    await sql`DELETE FROM footer_links WHERE id = ${req.params.id}`;
     res.json({ message: 'Link deleted' });
   } catch (err) {
     res.status(500).json({ error: 'Failed to delete link' });
@@ -489,7 +487,6 @@ router.post('/admin/upload', authenticate, upload.single('image'), async (req, r
     const isVercel = process.env.VERCEL === '1' || process.env.VERCEL_ENV || process.env.VERCEL_URL;
     const uploadsDir = isVercel ? path.join('/tmp', 'uploads') : path.join(process.cwd(), 'public', 'uploads');
     
-    // Ensure directory exists
     if (!fs.existsSync(uploadsDir)) {
       fs.mkdirSync(uploadsDir, { recursive: true });
     }
@@ -509,308 +506,288 @@ router.post('/admin/upload', authenticate, upload.single('image'), async (req, r
       .webp({ quality: 80 })
       .toFile(outputPath);
 
-    const imageUrl = `/uploads/${filename}`;
-    res.json({ url: imageUrl });
+    res.json({ url: `/uploads/${filename}` });
   } catch (error) {
     console.error('Image processing error:', error);
     res.status(500).json({ error: 'Failed to process image' });
   }
 });
 
-router.get('/admin/slides', authenticate, (req, res) => {
-  const slides = db.prepare('SELECT * FROM slides ORDER BY order_index ASC').all();
-  res.json(slides);
+router.get('/admin/slides', authenticate, async (req, res) => {
+  try {
+    const slides = await sql`SELECT * FROM slides ORDER BY order_index ASC`;
+    res.json(slides);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch slides' });
+  }
 });
 
-router.post('/admin/slides', authenticate, (req, res) => {
+router.post('/admin/slides', authenticate, async (req, res) => {
   const { title, description, image, link, button_text, order_index } = req.body;
   try {
-    const insert = db.prepare('INSERT INTO slides (title, description, image, link, button_text, order_index) VALUES (?, ?, ?, ?, ?, ?)');
-    const info = insert.run(title, description, image, link, button_text, order_index || 0);
-    res.status(201).json({ id: info.lastInsertRowid, message: 'Slide created' });
+    const [info] = await sql`INSERT INTO slides (title, description, image, link, button_text, order_index) VALUES (${title || ''}, ${description || null}, ${image || ''}, ${link || null}, ${button_text || null}, ${order_index || 0}) RETURNING id`;
+    res.status(201).json({ id: info.id, message: 'Slide created' });
   } catch (err) {
     res.status(500).json({ error: 'Failed to create slide' });
   }
 });
 
-router.put('/admin/slides/:id', authenticate, (req, res) => {
+router.put('/admin/slides/:id', authenticate, async (req, res) => {
   const { title, description, image, link, button_text, order_index } = req.body;
   try {
-    const update = db.prepare('UPDATE slides SET title = ?, description = ?, image = ?, link = ?, button_text = ?, order_index = ? WHERE id = ?');
-    update.run(title, description, image, link, button_text, order_index || 0, req.params.id);
+    await sql`UPDATE slides SET title = ${title || ''}, description = ${description || null}, image = ${image || ''}, link = ${link || null}, button_text = ${button_text || null}, order_index = ${order_index || 0} WHERE id = ${req.params.id}`;
     res.json({ message: 'Slide updated' });
   } catch (err) {
     res.status(500).json({ error: 'Failed to update slide' });
   }
 });
 
-router.delete('/admin/slides/:id', authenticate, (req, res) => {
+router.delete('/admin/slides/:id', authenticate, async (req, res) => {
   try {
-    db.prepare('DELETE FROM slides WHERE id = ?').run(req.params.id);
+    await sql`DELETE FROM slides WHERE id = ${req.params.id}`;
     res.json({ message: 'Slide deleted' });
   } catch (err) {
     res.status(500).json({ error: 'Failed to delete slide' });
   }
 });
 
-router.get('/admin/stats', authenticate, (req, res) => {
-  const totalOrders = db.prepare('SELECT COUNT(*) as count FROM orders').get() as any;
-  const totalRevenue = db.prepare('SELECT SUM(total_amount) as total FROM orders WHERE status = ?').get('livrée') as any;
-  const lowStock = db.prepare('SELECT COUNT(*) as count FROM products WHERE stock < 5').get() as any;
-  res.json({
-    orders: totalOrders.count,
-    revenue: totalRevenue.total || 0,
-    lowStock: lowStock.count
-  });
-});
-
-router.get('/admin/orders', authenticate, (req, res) => {
-  // Limit to last 500 orders to prevent memory issues
-  const orders = db.prepare('SELECT * FROM orders ORDER BY created_at DESC LIMIT 500').all();
-  res.json(orders);
-});
-
-router.put('/admin/orders/:id/status', authenticate, (req, res) => {
-  const { status } = req.body;
-  db.prepare('UPDATE orders SET status = ? WHERE id = ?').run(status, req.params.id);
-  res.json({ message: 'Status updated' });
-});
-
-router.get('/admin/products', authenticate, (req, res) => {
-  const products = db.prepare(`
-    SELECT p.*, c.name as category_name, s.name as subcategory_name, COALESCE(p.brand_name, b.name) as brand_name 
-    FROM products p 
-    LEFT JOIN categories c ON p.category_id = c.id 
-    LEFT JOIN subcategories s ON p.subcategory_id = s.id
-    LEFT JOIN brands b ON p.brand_id = b.id
-    ORDER BY p.id DESC
-  `).all() as any[];
-  
-  const productIds = products.map(p => p.id);
-  if (productIds.length > 0) {
-    const images = db.prepare(`SELECT * FROM product_images WHERE product_id IN (${productIds.join(',')})`).all() as any[];
-    products.forEach(p => {
-      p.images = images.filter(img => img.product_id === p.id);
+router.get('/admin/stats', authenticate, async (req, res) => {
+  try {
+    const [totalOrders] = await sql`SELECT COUNT(*) as count FROM orders`;
+    const [totalRevenue] = await sql`SELECT SUM(total_amount) as total FROM orders WHERE status = 'livrée'`;
+    const [lowStock] = await sql`SELECT COUNT(*) as count FROM products WHERE stock < 5`;
+    res.json({
+      orders: totalOrders.count,
+      revenue: totalRevenue.total || 0,
+      lowStock: lowStock.count
     });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch stats' });
   }
-  
-  products.forEach(p => {
-    if (p.features) {
-      try {
-        p.features = JSON.parse(p.features);
-      } catch (e) {
-        p.features = [];
-      }
-    } else {
-      p.features = [];
+});
+
+router.get('/admin/orders', authenticate, async (req, res) => {
+  try {
+    const orders = await sql`SELECT * FROM orders ORDER BY created_at DESC LIMIT 500`;
+    res.json(orders);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch orders' });
+  }
+});
+
+router.put('/admin/orders/:id/status', authenticate, async (req, res) => {
+  const { status } = req.body;
+  if (!status) return res.status(400).json({ error: 'Status is required' });
+  try {
+    await sql`UPDATE orders SET status = ${status} WHERE id = ${req.params.id}`;
+    res.json({ message: 'Status updated' });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to update order status' });
+  }
+});
+
+router.get('/admin/products', authenticate, async (req, res) => {
+  try {
+    const products = await sql`
+      SELECT p.*, c.name as category_name, s.name as subcategory_name, COALESCE(p.brand_name, b.name) as brand_name 
+      FROM products p 
+      LEFT JOIN categories c ON p.category_id = c.id 
+      LEFT JOIN subcategories s ON p.subcategory_id = s.id
+      LEFT JOIN brands b ON p.brand_id = b.id
+      ORDER BY p.id DESC
+    `;
+    
+    const productIds = products.map((p: any) => p.id);
+    if (productIds.length > 0) {
+      const images = await sql`SELECT * FROM product_images WHERE product_id IN ${sql(productIds)}`;
+      products.forEach((p: any) => {
+        p.images = images.filter((img: any) => img.product_id === p.id);
+      });
     }
     
-    if (p.key_points) {
-      try {
-        p.key_points = JSON.parse(p.key_points);
-      } catch (e) {
-        p.key_points = [];
-      }
-    } else {
-      p.key_points = [];
-    }
-  });
+    products.forEach((p: any) => {
+      p.features = typeof p.features === 'string' ? JSON.parse(p.features) : (p.features || []);
+      p.key_points = typeof p.key_points === 'string' ? JSON.parse(p.key_points) : (p.key_points || []);
+    });
 
-  res.json(products);
-});
-
-router.post('/admin/products', authenticate, (req, res) => {
-  const { category_id, subcategory_id, brand_id, brand_name, name, slug, description, price, promo_price, stock, image, is_popular, is_best_seller, is_new, is_recommended, is_fast_delivery, images, features, key_points } = req.body;
-  
-  const transaction = db.transaction(() => {
-    const insert = db.prepare(`
-      INSERT INTO products (category_id, subcategory_id, brand_id, brand_name, name, slug, description, price, promo_price, stock, image, is_popular, is_best_seller, is_new, is_recommended, is_fast_delivery, features, key_points)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `);
-    const info = insert.run(category_id, subcategory_id || null, brand_id || null, brand_name || null, name, slug, description, price, promo_price, stock, image, is_popular ? 1 : 0, is_best_seller ? 1 : 0, is_new ? 1 : 0, is_recommended ? 1 : 0, is_fast_delivery ? 1 : 0, features ? JSON.stringify(features) : null, key_points ? JSON.stringify(key_points) : null);
-    const productId = info.lastInsertRowid;
-
-    if (images && Array.isArray(images)) {
-      const insertImg = db.prepare('INSERT INTO product_images (product_id, image, is_main) VALUES (?, ?, ?)');
-      images.forEach((img: any) => {
-        insertImg.run(productId, img.url || img.image, img.is_main ? 1 : 0);
-      });
-    }
-    return productId;
-  });
-
-  try {
-    const id = transaction();
-    res.status(201).json({ id, message: 'Product created' });
+    res.json(products);
   } catch (err) {
-    res.status(500).json({ error: 'Failed to create product' });
+    res.status(500).json({ error: 'Failed to fetch products' });
   }
 });
 
-router.put('/admin/products/:id', authenticate, (req, res) => {
+router.post('/admin/products', authenticate, async (req, res) => {
   const { category_id, subcategory_id, brand_id, brand_name, name, slug, description, price, promo_price, stock, image, is_popular, is_best_seller, is_new, is_recommended, is_fast_delivery, images, features, key_points } = req.body;
   
-  const transaction = db.transaction(() => {
-    const update = db.prepare(`
-      UPDATE products 
-      SET category_id = ?, subcategory_id = ?, brand_id = ?, brand_name = ?, name = ?, slug = ?, description = ?, price = ?, promo_price = ?, stock = ?, image = ?, is_popular = ?, is_best_seller = ?, is_new = ?, is_recommended = ?, is_fast_delivery = ?, features = ?, key_points = ?
-      WHERE id = ?
-    `);
-    update.run(category_id, subcategory_id || null, brand_id || null, brand_name || null, name, slug, description, price, promo_price, stock, image, is_popular ? 1 : 0, is_best_seller ? 1 : 0, is_new ? 1 : 0, is_recommended ? 1 : 0, is_fast_delivery ? 1 : 0, features ? JSON.stringify(features) : null, key_points ? JSON.stringify(key_points) : null, req.params.id);
-
-    if (images && Array.isArray(images)) {
-      db.prepare('DELETE FROM product_images WHERE product_id = ?').run(req.params.id);
-      const insertImg = db.prepare('INSERT INTO product_images (product_id, image, is_main) VALUES (?, ?, ?)');
-      images.forEach((img: any) => {
-        insertImg.run(req.params.id, img.url || img.image, img.is_main ? 1 : 0);
-      });
-    }
-  });
-
   try {
-    transaction();
+    const productId = await sql.begin(async (sql: any) => {
+      const [info] = await sql`
+        INSERT INTO products (category_id, subcategory_id, brand_id, brand_name, name, slug, description, price, promo_price, stock, image, is_popular, is_best_seller, is_new, is_recommended, is_fast_delivery, features, key_points)
+        VALUES (${category_id || null}, ${subcategory_id || null}, ${brand_id || null}, ${brand_name || null}, ${name || ''}, ${slug || ''}, ${description || null}, ${price || 0}, ${promo_price || null}, ${stock || 0}, ${image || null}, ${is_popular ? true : false}, ${is_best_seller ? true : false}, ${is_new ? true : false}, ${is_recommended ? true : false}, ${is_fast_delivery ? true : false}, ${features ? JSON.stringify(features) : null}::jsonb, ${key_points ? JSON.stringify(key_points) : null}::jsonb)
+        RETURNING id
+      `;
+      
+      if (images && Array.isArray(images)) {
+        for (const img of images) {
+          await sql`INSERT INTO product_images (product_id, image, is_main) VALUES (${info.id}, ${img.url || img.image}, ${img.is_main ? true : false})`;
+        }
+      }
+      return info.id;
+    });
+    res.status(201).json({ id: productId, message: 'Product created' });
+  } catch (err) {
+    console.error('Failed to create product:', err);
+    res.status(500).json({ error: 'Failed to create product', details: err instanceof Error ? err.message : String(err) });
+  }
+});
+
+router.put('/admin/products/:id', authenticate, async (req, res) => {
+  const { category_id, subcategory_id, brand_id, brand_name, name, slug, description, price, promo_price, stock, image, is_popular, is_best_seller, is_new, is_recommended, is_fast_delivery, images, features, key_points } = req.body;
+  
+  try {
+    await sql.begin(async (sql: any) => {
+      await sql`
+        UPDATE products 
+        SET category_id = ${category_id || null}, subcategory_id = ${subcategory_id || null}, brand_id = ${brand_id || null}, brand_name = ${brand_name || null}, name = ${name || ''}, slug = ${slug || ''}, description = ${description || null}, price = ${price || 0}, promo_price = ${promo_price || null}, stock = ${stock || 0}, image = ${image || null}, is_popular = ${is_popular ? true : false}, is_best_seller = ${is_best_seller ? true : false}, is_new = ${is_new ? true : false}, is_recommended = ${is_recommended ? true : false}, is_fast_delivery = ${is_fast_delivery ? true : false}, features = ${features ? JSON.stringify(features) : null}::jsonb, key_points = ${key_points ? JSON.stringify(key_points) : null}::jsonb
+        WHERE id = ${req.params.id}
+      `;
+
+      if (images && Array.isArray(images)) {
+        await sql`DELETE FROM product_images WHERE product_id = ${req.params.id}`;
+        for (const img of images) {
+          await sql`INSERT INTO product_images (product_id, image, is_main) VALUES (${req.params.id}, ${img.url || img.image}, ${img.is_main ? true : false})`;
+        }
+      }
+    });
     res.json({ message: 'Product updated' });
   } catch (err) {
-    res.status(500).json({ error: 'Failed to update product' });
+    console.error('Failed to update product:', err);
+    res.status(500).json({ error: 'Failed to update product', details: err instanceof Error ? err.message : String(err) });
   }
 });
 
-router.delete('/admin/products/:id', authenticate, (req, res) => {
-  const transaction = db.transaction(() => {
-    db.prepare('UPDATE order_items SET product_id = NULL WHERE product_id = ?').run(req.params.id);
-    db.prepare('DELETE FROM reviews WHERE product_id = ?').run(req.params.id);
-    db.prepare('DELETE FROM product_images WHERE product_id = ?').run(req.params.id);
-    db.prepare('DELETE FROM products WHERE id = ?').run(req.params.id);
-  });
-
+router.delete('/admin/products/:id', authenticate, async (req, res) => {
   try {
-    transaction();
+    await sql.begin(async (sql: any) => {
+      await sql`UPDATE order_items SET product_id = NULL WHERE product_id = ${req.params.id}`;
+      await sql`DELETE FROM reviews WHERE product_id = ${req.params.id}`;
+      await sql`DELETE FROM product_images WHERE product_id = ${req.params.id}`;
+      await sql`DELETE FROM products WHERE id = ${req.params.id}`;
+    });
     res.json({ message: 'Product deleted' });
   } catch (err) {
-    console.error(err);
     res.status(500).json({ error: 'Failed to delete product' });
   }
 });
 
-router.post('/admin/categories', authenticate, (req, res) => {
+router.post('/admin/categories', authenticate, async (req, res) => {
   const { name, slug, image } = req.body;
   try {
-    const insert = db.prepare('INSERT INTO categories (name, slug, image) VALUES (?, ?, ?)');
-    const info = insert.run(name, slug, image);
-    res.status(201).json({ id: info.lastInsertRowid, message: 'Category created' });
+    const [info] = await sql`INSERT INTO categories (name, slug, image) VALUES (${name || ''}, ${slug || ''}, ${image || null}) RETURNING id`;
+    res.status(201).json({ id: info.id, message: 'Category created' });
   } catch (err) {
     res.status(500).json({ error: 'Failed to create category' });
   }
 });
 
-router.put('/admin/categories/:id', authenticate, (req, res) => {
+router.put('/admin/categories/:id', authenticate, async (req, res) => {
   const { name, slug, image } = req.body;
   try {
-    const update = db.prepare('UPDATE categories SET name = ?, slug = ?, image = ? WHERE id = ?');
-    update.run(name, slug, image, req.params.id);
+    await sql`UPDATE categories SET name = ${name || ''}, slug = ${slug || ''}, image = ${image || null} WHERE id = ${req.params.id}`;
     res.json({ message: 'Category updated' });
   } catch (err) {
     res.status(500).json({ error: 'Failed to update category' });
   }
 });
 
-router.post('/admin/brands', authenticate, (req, res) => {
+router.post('/admin/brands', authenticate, async (req, res) => {
   const { name, slug, image, description } = req.body;
   try {
-    const insert = db.prepare('INSERT INTO brands (name, slug, image, description) VALUES (?, ?, ?, ?)');
-    const info = insert.run(name, slug, image, description);
-    res.json({ id: info.lastInsertRowid });
+    const [info] = await sql`INSERT INTO brands (name, slug, image, description) VALUES (${name || ''}, ${slug || ''}, ${image || null}, ${description || null}) RETURNING id`;
+    res.json({ id: info.id });
   } catch (err) {
     res.status(500).json({ error: 'Failed to create brand' });
   }
 });
 
-router.put('/admin/brands/:id', authenticate, (req, res) => {
+router.put('/admin/brands/:id', authenticate, async (req, res) => {
   const { name, slug, image, description } = req.body;
   try {
-    const update = db.prepare('UPDATE brands SET name = ?, slug = ?, image = ?, description = ? WHERE id = ?');
-    update.run(name, slug, image, description, req.params.id);
+    await sql`UPDATE brands SET name = ${name || ''}, slug = ${slug || ''}, image = ${image || null}, description = ${description || null} WHERE id = ${req.params.id}`;
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: 'Failed to update brand' });
   }
 });
 
-router.delete('/admin/brands/:id', authenticate, (req, res) => {
+router.delete('/admin/brands/:id', authenticate, async (req, res) => {
   try {
-    // Check if brand is used in products
-    const productsCount = db.prepare('SELECT COUNT(*) as count FROM products WHERE brand_id = ?').get(req.params.id) as any;
+    const [productsCount] = await sql`SELECT COUNT(*) as count FROM products WHERE brand_id = ${req.params.id}`;
     if (productsCount.count > 0) {
       return res.status(400).json({ error: 'Cannot delete brand with associated products' });
     }
-    
-    db.prepare('DELETE FROM brands WHERE id = ?').run(req.params.id);
+    await sql`DELETE FROM brands WHERE id = ${req.params.id}`;
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: 'Failed to delete brand' });
   }
 });
 
-router.delete('/admin/categories/:id', authenticate, (req, res) => {
-  const transaction = db.transaction(() => {
-    db.prepare('UPDATE products SET category_id = NULL, subcategory_id = NULL WHERE category_id = ?').run(req.params.id);
-    db.prepare('DELETE FROM subcategories WHERE category_id = ?').run(req.params.id);
-    db.prepare('DELETE FROM categories WHERE id = ?').run(req.params.id);
-  });
-
+router.delete('/admin/categories/:id', authenticate, async (req, res) => {
   try {
-    transaction();
+    await sql.begin(async (sql: any) => {
+      await sql`UPDATE products SET category_id = NULL, subcategory_id = NULL WHERE category_id = ${req.params.id}`;
+      await sql`DELETE FROM subcategories WHERE category_id = ${req.params.id}`;
+      await sql`DELETE FROM categories WHERE id = ${req.params.id}`;
+    });
     res.json({ message: 'Category deleted' });
   } catch (err) {
-    console.error(err);
     res.status(500).json({ error: 'Failed to delete category' });
   }
 });
 
-router.post('/admin/subcategories', authenticate, (req, res) => {
+router.post('/admin/subcategories', authenticate, async (req, res) => {
   const { category_id, name, slug, image } = req.body;
   try {
-    const insert = db.prepare('INSERT INTO subcategories (category_id, name, slug, image) VALUES (?, ?, ?, ?)');
-    const info = insert.run(category_id, name, slug, image);
-    res.status(201).json({ id: info.lastInsertRowid, message: 'Subcategory created' });
+    const [info] = await sql`INSERT INTO subcategories (category_id, name, slug, image) VALUES (${category_id || null}, ${name || ''}, ${slug || ''}, ${image || null}) RETURNING id`;
+    res.status(201).json({ id: info.id, message: 'Subcategory created' });
   } catch (err) {
     res.status(500).json({ error: 'Failed to create subcategory' });
   }
 });
 
-router.put('/admin/subcategories/:id', authenticate, (req, res) => {
+router.put('/admin/subcategories/:id', authenticate, async (req, res) => {
   const { category_id, name, slug, image } = req.body;
   try {
-    const update = db.prepare('UPDATE subcategories SET category_id = ?, name = ?, slug = ?, image = ? WHERE id = ?');
-    update.run(category_id, name, slug, image, req.params.id);
+    await sql`UPDATE subcategories SET category_id = ${category_id || null}, name = ${name || ''}, slug = ${slug || ''}, image = ${image || null} WHERE id = ${req.params.id}`;
     res.json({ message: 'Subcategory updated' });
   } catch (err) {
     res.status(500).json({ error: 'Failed to update subcategory' });
   }
 });
 
-router.delete('/admin/subcategories/:id', authenticate, (req, res) => {
-  const transaction = db.transaction(() => {
-    db.prepare('UPDATE products SET subcategory_id = NULL WHERE subcategory_id = ?').run(req.params.id);
-    db.prepare('DELETE FROM subcategories WHERE id = ?').run(req.params.id);
-  });
-
+router.delete('/admin/subcategories/:id', authenticate, async (req, res) => {
   try {
-    transaction();
+    await sql.begin(async (sql: any) => {
+      await sql`UPDATE products SET subcategory_id = NULL WHERE subcategory_id = ${req.params.id}`;
+      await sql`DELETE FROM subcategories WHERE id = ${req.params.id}`;
+    });
     res.json({ message: 'Subcategory deleted' });
   } catch (err) {
-    console.error(err);
     res.status(500).json({ error: 'Failed to delete subcategory' });
   }
 });
 
-// --- WILAYAS ROUTES ---
-router.get('/wilayas', (req, res) => {
-  const wilayas = db.prepare('SELECT * FROM wilayas ORDER BY number ASC').all();
-  res.json(wilayas);
+router.get('/wilayas', async (req, res) => {
+  try {
+    const wilayas = await sql`SELECT * FROM wilayas ORDER BY number ASC`;
+    res.json(wilayas);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch wilayas' });
+  }
 });
 
-router.post('/admin/wilayas', authenticate, (req, res) => {
+router.post('/admin/wilayas', authenticate, async (req, res) => {
   const { number, name, delivery_cost, is_active } = req.body;
   
   if (!number || !name || delivery_cost === undefined) {
@@ -818,18 +795,17 @@ router.post('/admin/wilayas', authenticate, (req, res) => {
   }
 
   try {
-    const insert = db.prepare('INSERT INTO wilayas (number, name, delivery_cost, is_active) VALUES (?, ?, ?, ?)');
-    const info = insert.run(number, name, delivery_cost, is_active !== undefined ? (is_active ? 1 : 0) : 1);
-    res.status(201).json({ id: info.lastInsertRowid, message: 'Wilaya ajoutée' });
+    const [info] = await sql`INSERT INTO wilayas (number, name, delivery_cost, is_active) VALUES (${number}, ${name}, ${delivery_cost}, ${is_active !== undefined ? (is_active ? true : false) : true}) RETURNING id`;
+    res.status(201).json({ id: info.id, message: 'Wilaya ajoutée' });
   } catch (err: any) {
-    if (err.code === 'SQLITE_CONSTRAINT_UNIQUE') {
+    if (err.code === '23505') {
       return res.status(400).json({ error: 'Ce numéro de wilaya existe déjà' });
     }
     res.status(500).json({ error: 'Erreur lors de l\'ajout de la wilaya' });
   }
 });
 
-router.put('/admin/wilayas/:id', authenticate, (req, res) => {
+router.put('/admin/wilayas/:id', authenticate, async (req, res) => {
   const { number, name, delivery_cost, is_active } = req.body;
   
   if (!number || !name || delivery_cost === undefined) {
@@ -837,20 +813,19 @@ router.put('/admin/wilayas/:id', authenticate, (req, res) => {
   }
 
   try {
-    const update = db.prepare('UPDATE wilayas SET number = ?, name = ?, delivery_cost = ?, is_active = ? WHERE id = ?');
-    update.run(number, name, delivery_cost, is_active ? 1 : 0, req.params.id);
+    await sql`UPDATE wilayas SET number = ${number}, name = ${name}, delivery_cost = ${delivery_cost}, is_active = ${is_active ? true : false} WHERE id = ${req.params.id}`;
     res.json({ message: 'Wilaya modifiée' });
   } catch (err: any) {
-    if (err.code === 'SQLITE_CONSTRAINT_UNIQUE') {
+    if (err.code === '23505') {
       return res.status(400).json({ error: 'Ce numéro de wilaya existe déjà' });
     }
     res.status(500).json({ error: 'Erreur lors de la modification de la wilaya' });
   }
 });
 
-router.delete('/admin/wilayas/:id', authenticate, (req, res) => {
+router.delete('/admin/wilayas/:id', authenticate, async (req, res) => {
   try {
-    db.prepare('DELETE FROM wilayas WHERE id = ?').run(req.params.id);
+    await sql`DELETE FROM wilayas WHERE id = ${req.params.id}`;
     res.json({ message: 'Wilaya supprimée' });
   } catch (err) {
     res.status(500).json({ error: 'Erreur lors de la suppression de la wilaya' });

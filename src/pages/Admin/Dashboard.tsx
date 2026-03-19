@@ -343,11 +343,17 @@ export default function AdminDashboard() {
     };
 
     try {
-      await fetch(url, {
+      const res = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify(payload)
       });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        alert(`Erreur: ${errorData.error || 'Impossible de sauvegarder le produit'}`);
+        return;
+      }
 
       setIsModalOpen(false);
       fetch('/api/admin/products', { headers: { 'Authorization': `Bearer ${token}` } })
@@ -356,6 +362,7 @@ export default function AdminDashboard() {
         .catch(console.error);
     } catch (err) {
       console.error(err);
+      alert('Erreur de connexion au serveur');
     }
   };
 
@@ -389,11 +396,17 @@ export default function AdminDashboard() {
     const method = editingSubcategory ? 'PUT' : 'POST';
 
     try {
-      await fetch(url, {
+      const res = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify(subcategoryForm)
       });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        alert(`Erreur: ${errorData.error || 'Impossible de sauvegarder la sous-catégorie'}`);
+        return;
+      }
 
       setIsSubcategoryModalOpen(false);
       fetch('/api/categories')
@@ -402,6 +415,7 @@ export default function AdminDashboard() {
         .catch(console.error);
     } catch (err) {
       console.error(err);
+      alert('Erreur de connexion au serveur');
     }
   };
 
@@ -435,11 +449,17 @@ export default function AdminDashboard() {
     const method = editingCategory ? 'PUT' : 'POST';
 
     try {
-      await fetch(url, {
+      const res = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify(categoryForm)
       });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        alert(`Erreur: ${errorData.error || 'Impossible de sauvegarder la catégorie'}`);
+        return;
+      }
 
       setIsCategoryModalOpen(false);
       fetch('/api/categories')
@@ -448,6 +468,7 @@ export default function AdminDashboard() {
         .catch(console.error);
     } catch (err) {
       console.error(err);
+      alert('Erreur de connexion au serveur');
     }
   };
 
@@ -481,11 +502,17 @@ export default function AdminDashboard() {
     const method = editingSlide ? 'PUT' : 'POST';
 
     try {
-      await fetch(url, {
+      const res = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify(slideForm)
       });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        alert(`Erreur: ${errorData.error || 'Impossible de sauvegarder le slide'}`);
+        return;
+      }
 
       setIsSlideModalOpen(false);
       fetch('/api/admin/slides', { headers: { 'Authorization': `Bearer ${token}` } })
@@ -494,6 +521,7 @@ export default function AdminDashboard() {
         .catch(console.error);
     } catch (err) {
       console.error(err);
+      alert('Erreur de connexion au serveur');
     }
   };
 
@@ -504,11 +532,17 @@ export default function AdminDashboard() {
     const method = editingBrand ? 'PUT' : 'POST';
 
     try {
-      await fetch(url, {
+      const res = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify(brandForm)
       });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        alert(`Erreur: ${errorData.error || 'Impossible de sauvegarder la marque'}`);
+        return;
+      }
 
       setIsBrandModalOpen(false);
       fetch('/api/brands')
@@ -517,6 +551,7 @@ export default function AdminDashboard() {
         .catch(console.error);
     } catch (err) {
       console.error(err);
+      alert('Erreur de connexion au serveur');
     }
   };
 

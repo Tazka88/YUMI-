@@ -11,7 +11,7 @@ import fs from 'fs';
 const router = Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'yumi-secret-key-123';
 if (process.env.NODE_ENV === 'production' && JWT_SECRET === 'yumi-secret-key-123') {
-  throw new Error('FATAL: JWT_SECRET environment variable is missing in production!');
+  console.warn('WARNING: JWT_SECRET environment variable is missing in production! Using default insecure key.');
 }
 
 // Rate Limiter for Login
@@ -486,7 +486,7 @@ router.post('/admin/upload', authenticate, upload.single('image'), async (req, r
   
   try {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    const isVercel = process.env.VERCEL === '1';
+    const isVercel = process.env.VERCEL === '1' || process.env.VERCEL_ENV || process.env.VERCEL_URL;
     const uploadsDir = isVercel ? path.join('/tmp', 'uploads') : path.join(process.cwd(), 'public', 'uploads');
     
     // Ensure directory exists

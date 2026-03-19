@@ -19,7 +19,7 @@ try {
 }
 
 // Create uploads directory if it doesn't exist (ephemeral on Vercel)
-const isVercel = process.env.VERCEL === '1';
+const isVercel = process.env.VERCEL === '1' || process.env.VERCEL_ENV || process.env.VERCEL_URL;
 const uploadsDir = isVercel 
   ? path.join('/tmp', 'uploads') 
   : path.join(process.cwd(), 'public', 'uploads');

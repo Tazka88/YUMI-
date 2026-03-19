@@ -2,7 +2,7 @@ import Database from 'better-sqlite3';
 import bcrypt from 'bcryptjs';
 import path from 'path';
 
-const isVercel = process.env.VERCEL === '1';
+const isVercel = process.env.VERCEL === '1' || process.env.VERCEL_ENV || process.env.VERCEL_URL;
 const dbPath = isVercel ? path.join('/tmp', 'yumi.db') : 'yumi.db';
 
 export const db = new Database(dbPath);

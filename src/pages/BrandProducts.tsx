@@ -26,7 +26,9 @@ export default function BrandProducts() {
       })
       .then(res => res.json())
       .then(data => {
-        setProducts(data);
+        if (Array.isArray(data)) {
+          setProducts(data);
+        }
         setLoading(false);
       })
       .catch(err => {

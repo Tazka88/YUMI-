@@ -139,52 +139,52 @@ export default function AdminDashboard() {
     if (activeTab === 'orders') {
       fetch('/api/admin/orders', { headers, signal })
         .then(res => res.json())
-        .then(setOrders)
+        .then(data => { if (Array.isArray(data)) setOrders(data); })
         .catch(handleFetchError);
     }
 
     if (activeTab === 'products') {
       fetch('/api/admin/products', { headers, signal })
         .then(res => res.json())
-        .then(setProducts)
+        .then(data => { if (Array.isArray(data)) setProducts(data); })
         .catch(handleFetchError);
       
       fetch('/api/categories', { signal })
         .then(res => res.json())
-        .then(setCategories)
+        .then(data => { if (Array.isArray(data)) setCategories(data); })
         .catch(handleFetchError);
 
       fetch('/api/brands', { signal })
         .then(res => res.json())
-        .then(setBrands)
+        .then(data => { if (Array.isArray(data)) setBrands(data); })
         .catch(handleFetchError);
     }
 
     if (activeTab === 'categories') {
       fetch('/api/categories', { signal })
         .then(res => res.json())
-        .then(setCategories)
+        .then(data => { if (Array.isArray(data)) setCategories(data); })
         .catch(handleFetchError);
     }
 
     if (activeTab === 'brands') {
       fetch('/api/brands', { signal })
         .then(res => res.json())
-        .then(setBrands)
+        .then(data => { if (Array.isArray(data)) setBrands(data); })
         .catch(handleFetchError);
     }
 
     if (activeTab === 'images') {
       fetch('/api/admin/slides', { headers, signal })
         .then(res => res.json())
-        .then(setSlides)
+        .then(data => { if (Array.isArray(data)) setSlides(data); })
         .catch(handleFetchError);
     }
 
     if (activeTab === 'settings') {
       fetch('/api/admin/settings', { headers, signal })
         .then(res => res.json())
-        .then(setSettingsForm)
+        .then(data => { if (data && typeof data === 'object' && !data.error) setSettingsForm(data); })
         .catch(handleFetchError);
     }
     
@@ -230,7 +230,7 @@ export default function AdminDashboard() {
     // Refresh orders
     fetch('/api/admin/orders', { headers: { 'Authorization': `Bearer ${token}` } })
       .then(res => res.json())
-      .then(setOrders)
+      .then(data => { if (Array.isArray(data)) setOrders(data); })
       .catch(console.error);
   };
 
@@ -379,7 +379,7 @@ export default function AdminDashboard() {
       setIsModalOpen(false);
       fetch('/api/admin/products', { headers: { 'Authorization': `Bearer ${token}` } })
         .then(res => res.json())
-        .then(setProducts)
+        .then(data => { if (Array.isArray(data)) setProducts(data); })
         .catch(console.error);
     } catch (err) {
       console.error(err);
@@ -400,7 +400,7 @@ export default function AdminDashboard() {
           });
           fetch('/api/admin/products', { headers: { 'Authorization': `Bearer ${token}` } })
             .then(res => res.json())
-            .then(setProducts)
+            .then(data => { if (Array.isArray(data)) setProducts(data); })
             .catch(console.error);
           setConfirmModal({ ...confirmModal, isOpen: false });
         } catch (err) {
@@ -432,7 +432,7 @@ export default function AdminDashboard() {
       setIsSubcategoryModalOpen(false);
       fetch('/api/categories')
         .then(res => res.json())
-        .then(setCategories)
+        .then(data => { if (Array.isArray(data)) setCategories(data); })
         .catch(console.error);
     } catch (err) {
       console.error(err);
@@ -453,7 +453,7 @@ export default function AdminDashboard() {
           });
           fetch('/api/categories')
             .then(res => res.json())
-            .then(setCategories)
+            .then(data => { if (Array.isArray(data)) setCategories(data); })
             .catch(console.error);
           setConfirmModal({ ...confirmModal, isOpen: false });
         } catch (err) {
@@ -485,7 +485,7 @@ export default function AdminDashboard() {
       setIsCategoryModalOpen(false);
       fetch('/api/categories')
         .then(res => res.json())
-        .then(setCategories)
+        .then(data => { if (Array.isArray(data)) setCategories(data); })
         .catch(console.error);
     } catch (err) {
       console.error(err);
@@ -506,7 +506,7 @@ export default function AdminDashboard() {
           });
           fetch('/api/categories')
             .then(res => res.json())
-            .then(setCategories)
+            .then(data => { if (Array.isArray(data)) setCategories(data); })
             .catch(console.error);
           setConfirmModal({ ...confirmModal, isOpen: false });
         } catch (err) {
@@ -538,7 +538,7 @@ export default function AdminDashboard() {
       setIsSlideModalOpen(false);
       fetch('/api/admin/slides', { headers: { 'Authorization': `Bearer ${token}` } })
         .then(res => res.json())
-        .then(setSlides)
+        .then(data => { if (Array.isArray(data)) setSlides(data); })
         .catch(console.error);
     } catch (err) {
       console.error(err);
@@ -568,7 +568,7 @@ export default function AdminDashboard() {
       setIsBrandModalOpen(false);
       fetch('/api/brands')
         .then(res => res.json())
-        .then(setBrands)
+        .then(data => { if (Array.isArray(data)) setBrands(data); })
         .catch(console.error);
     } catch (err) {
       console.error(err);
@@ -589,7 +589,7 @@ export default function AdminDashboard() {
           });
           fetch('/api/admin/slides', { headers: { 'Authorization': `Bearer ${token}` } })
             .then(res => res.json())
-            .then(setSlides)
+            .then(data => { if (Array.isArray(data)) setSlides(data); })
             .catch(console.error);
           setConfirmModal({ ...confirmModal, isOpen: false });
         } catch (err) {
@@ -619,7 +619,7 @@ export default function AdminDashboard() {
         
         fetch('/api/brands')
           .then(res => res.json())
-          .then(setBrands)
+          .then(data => { if (Array.isArray(data)) setBrands(data); })
           .catch(console.error);
         setConfirmModal({ ...confirmModal, isOpen: false });
       }

@@ -53,7 +53,11 @@ export default function Product() {
         // Fetch related
         fetch(`/api/products?category=${data.category_id}`, { signal })
           .then(res => res.json())
-          .then(related => setRelatedProducts(related.filter((p: ProductType) => p.id !== data.id).slice(0, 4)))
+          .then(related => {
+            if (Array.isArray(related)) {
+              setRelatedProducts(related.filter((p: ProductType) => p.id !== data.id).slice(0, 4));
+            }
+          })
           .catch(err => {
             if (err.name !== 'AbortError') console.error(err);
           });
@@ -61,7 +65,11 @@ export default function Product() {
         // Fetch reviews
         fetch(`/api/products/${slug}/reviews`, { signal })
           .then(res => res.json())
-          .then(setReviews)
+          .then(reviewsData => {
+            if (Array.isArray(reviewsData)) {
+              setReviews(reviewsData);
+            }
+          })
           .catch(err => {
             if (err.name !== 'AbortError') console.error(err);
           });
@@ -104,27 +112,38 @@ export default function Product() {
     addItem(product, quantity);
     
     // Track Add to Cart
-    if (trackingIds.ga) {
-      ReactGA.event("add_to_cart", {
-        currency: "DZD",
-        value: currentPrice * quantity,
-        items: [{
-          item_id: product.id.toString(),
-          item_name: product.name,
-          price: currentPrice,
-          quantity: quantity
-        }]
-      });
+    if (trackingIds.ga && ReactGA && typeof ReactGA.event === 'function') {
+      try {
+        ReactGA.event("add_to_cart", {
+          currency: "DZD",
+          value: currentPrice * quantity,
+          items: [{
+            item_id: product.id.toString(),
+            item_name: product.name,
+            price: currentPrice,
+            quantity: quantity
+          }]
+        });
+      } catch (e) {
+        console.error('Failed to send GA add_to_cart event', e);
+      }
     }
     
     if (trackingIds.fb) {
-      ReactPixel.track('AddToCart', {
-        content_name: product.name,
-        content_ids: [product.id.toString()],
-        content_type: 'product',
-        value: currentPrice * quantity,
-        currency: 'DZD'
-      });
+      try {
+        const pixel = (ReactPixel && (ReactPixel as any).default) || ReactPixel;
+        if (pixel && typeof pixel.track === 'function') {
+          pixel.track('AddToCart', {
+            content_name: product.name,
+            content_ids: [product.id.toString()],
+            content_type: 'product',
+            value: currentPrice * quantity,
+            currency: 'DZD'
+          });
+        }
+      } catch (e) {
+        console.error('Failed to send FB add_to_cart event', e);
+      }
     }
   };
 

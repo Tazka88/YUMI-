@@ -284,13 +284,13 @@ export default function Home() {
       if (data.active_theme) setActiveTheme(data.active_theme);
       setThemeImages(data);
     }).catch(handleFetchError);
-    fetch('/api/slides', { signal }).then(res => res.json()).then(setSlides).catch(handleFetchError);
-    fetch('/api/categories', { signal }).then(res => res.json()).then(setCategories).catch(handleFetchError);
-    fetch('/api/brands', { signal }).then(res => res.json()).then(data => setBrands(data)).catch(handleFetchError);
-    fetch('/api/products?popular=true', { signal }).then(res => res.json()).then(setPopularProducts).catch(handleFetchError);
-    fetch('/api/products?best_seller=true', { signal }).then(res => res.json()).then(setBestSellers).catch(handleFetchError);
-    fetch('/api/products?new=true', { signal }).then(res => res.json()).then(setNewProducts).catch(handleFetchError);
-    fetch('/api/products?promotions=true', { signal }).then(res => res.json()).then(setPromotions).catch(handleFetchError);
+    fetch('/api/slides', { signal }).then(res => res.json()).then(data => { if (Array.isArray(data)) setSlides(data); }).catch(handleFetchError);
+    fetch('/api/categories', { signal }).then(res => res.json()).then(data => { if (Array.isArray(data)) setCategories(data); }).catch(handleFetchError);
+    fetch('/api/brands', { signal }).then(res => res.json()).then(data => { if (Array.isArray(data)) setBrands(data); }).catch(handleFetchError);
+    fetch('/api/products?popular=true', { signal }).then(res => res.json()).then(data => { if (Array.isArray(data)) setPopularProducts(data); }).catch(handleFetchError);
+    fetch('/api/products?best_seller=true', { signal }).then(res => res.json()).then(data => { if (Array.isArray(data)) setBestSellers(data); }).catch(handleFetchError);
+    fetch('/api/products?new=true', { signal }).then(res => res.json()).then(data => { if (Array.isArray(data)) setNewProducts(data); }).catch(handleFetchError);
+    fetch('/api/products?promotions=true', { signal }).then(res => res.json()).then(data => { if (Array.isArray(data)) setPromotions(data); }).catch(handleFetchError);
 
     const loadSections = () => {
       const saved = localStorage.getItem('yumi_custom_sections');

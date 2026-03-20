@@ -11,7 +11,9 @@ export default function Brands() {
     fetch('/api/brands', { signal: controller.signal })
       .then(res => res.json())
       .then(data => {
-        setBrands(data);
+        if (Array.isArray(data)) {
+          setBrands(data);
+        }
         setLoading(false);
       })
       .catch(err => {

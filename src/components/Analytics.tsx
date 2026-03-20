@@ -17,14 +17,26 @@ export default function Analytics() {
         const gaMeasurementId = data.ga_measurement_id || import.meta.env.VITE_GA_MEASUREMENT_ID;
         const fbPixelId = data.fb_pixel_id || import.meta.env.VITE_FB_PIXEL_ID;
 
-        if (gaMeasurementId) {
-          ReactGA.initialize(gaMeasurementId);
-          setGaId(gaMeasurementId);
+        if (gaMeasurementId && ReactGA && typeof ReactGA.initialize === 'function') {
+          try {
+            ReactGA.initialize(gaMeasurementId);
+            setGaId(gaMeasurementId);
+          } catch (e) {
+            console.error('Failed to initialize GA', e);
+          }
         }
 
         if (fbPixelId) {
-          ReactPixel.init(fbPixelId);
-          setFbId(fbPixelId);
+          try {
+            // Handle different import resolutions for CommonJS in Vite
+            const pixel = (ReactPixel && (ReactPixel as any).default) || ReactPixel;
+            if (pixel && typeof pixel.init === 'function') {
+              pixel.init(fbPixelId);
+              setFbId(fbPixelId);
+            }
+          } catch (e) {
+            console.error('Failed to initialize FB Pixel', e);
+          }
         }
 
         setIsInitialized(true);
@@ -39,12 +51,23 @@ export default function Analytics() {
   useEffect(() => {
     if (!isInitialized) return;
 
-    if (gaId) {
-      ReactGA.send({ hitType: "pageview", page: location.pathname + location.search });
+    if (gaId && ReactGA && typeof ReactGA.send === 'function') {
+      try {
+        ReactGA.send({ hitType: "pageview", page: location.pathname + location.search });
+      } catch (e) {
+        console.error('Failed to send GA pageview', e);
+      }
     }
 
     if (fbId) {
-      ReactPixel.pageView();
+      try {
+        const pixel = (ReactPixel && (ReactPixel as any).default) || ReactPixel;
+        if (pixel && typeof pixel.pageView === 'function') {
+          pixel.pageView();
+        }
+      } catch (e) {
+        console.error('Failed to send FB pageview', e);
+      }
     }
   }, [location, isInitialized, gaId, fbId]);
 

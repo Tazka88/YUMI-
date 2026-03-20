@@ -22,7 +22,7 @@ export default function Category() {
     const controller = new AbortController();
     fetch('/api/categories', { signal: controller.signal })
       .then(res => res.json())
-      .then(setCategories)
+      .then(data => { if (Array.isArray(data)) setCategories(data); })
       .catch(err => {
         if (err.name !== 'AbortError') console.error(err);
       });
@@ -48,10 +48,12 @@ export default function Category() {
         fetch('/api/subcategories', { signal })
           .then(res => res.json())
           .then(subcats => {
-            const subcat = subcats.find((s: any) => s.slug === slug);
-            if (subcat) {
-              setCategoryName(subcat.name);
-              if (subcat.image) setCategoryImage(subcat.image);
+            if (Array.isArray(subcats)) {
+              const subcat = subcats.find((s: any) => s.slug === slug);
+              if (subcat) {
+                setCategoryName(subcat.name);
+                if (subcat.image) setCategoryImage(subcat.image);
+              }
             }
           })
           .catch(handleFetchError);
@@ -61,10 +63,12 @@ export default function Category() {
         fetch('/api/categories', { signal })
           .then(res => res.json())
           .then(cats => {
-            const cat = cats.find((c: any) => c.slug === slug);
-            if (cat) {
-              setCategoryName(cat.name);
-              if (cat.image) setCategoryImage(cat.image);
+            if (Array.isArray(cats)) {
+              const cat = cats.find((c: any) => c.slug === slug);
+              if (cat) {
+                setCategoryName(cat.name);
+                if (cat.image) setCategoryImage(cat.image);
+              }
             }
           })
           .catch(handleFetchError);
@@ -79,7 +83,11 @@ export default function Category() {
     fetch(url, { signal })
       .then(res => res.json())
       .then(data => {
-        setProducts(data);
+        if (Array.isArray(data)) {
+          setProducts(data);
+        } else {
+          setProducts([]);
+        }
         setLoading(false);
       })
       .catch(err => {

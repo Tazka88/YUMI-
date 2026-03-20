@@ -13,13 +13,13 @@ export default function FooterSettings() {
   const fetchFooterData = (signal?: AbortSignal) => {
     fetch('/api/footer-links', { signal })
       .then(res => res.json())
-      .then(setLinks)
+      .then(data => { if (Array.isArray(data)) setLinks(data); })
       .catch(err => {
         if (err.name !== 'AbortError') console.error(err);
       });
     fetch('/api/settings', { signal })
       .then(res => res.json())
-      .then(setSettings)
+      .then(data => { if (data && typeof data === 'object' && !data.error) setSettings(data); })
       .catch(err => {
         if (err.name !== 'AbortError') console.error(err);
       });

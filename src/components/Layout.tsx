@@ -34,17 +34,23 @@ export default function Layout() {
 
     fetch('/api/categories', { signal })
       .then(res => res.json())
-      .then(data => setCategories(data))
+      .then(data => {
+        if (Array.isArray(data)) setCategories(data);
+      })
       .catch(handleFetchError);
       
     fetch('/api/settings', { signal })
       .then(res => res.json())
-      .then(data => setSettings(data))
+      .then(data => {
+        if (data && typeof data === 'object' && !data.error) setSettings(data);
+      })
       .catch(handleFetchError);
 
     fetch('/api/footer-links', { signal })
       .then(res => res.json())
-      .then(data => setFooterLinks(data))
+      .then(data => {
+        if (Array.isArray(data)) setFooterLinks(data);
+      })
       .catch(handleFetchError);
 
     return () => controller.abort();
@@ -58,8 +64,13 @@ export default function Layout() {
         try {
           const res = await fetch(`/api/products?search=${encodeURIComponent(searchQuery)}`, { signal: controller.signal });
           const data = await res.json();
-          setSuggestions(data.slice(0, 5));
-          setShowSuggestions(true);
+          if (Array.isArray(data)) {
+            setSuggestions(data.slice(0, 5));
+            setShowSuggestions(true);
+          } else {
+            setSuggestions([]);
+            setShowSuggestions(false);
+          }
         } catch (error: any) {
           if (error.name !== 'AbortError') console.error("Error fetching suggestions:", error);
         }

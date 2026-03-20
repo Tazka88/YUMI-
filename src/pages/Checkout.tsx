@@ -39,7 +39,9 @@ export default function Checkout() {
         const res = await fetch('/api/wilayas');
         if (res.ok) {
           const data = await res.json();
-          setWilayas(data.filter((w: Wilaya) => w.is_active === 1));
+          if (Array.isArray(data)) {
+            setWilayas(data.filter((w: Wilaya) => w.is_active === 1));
+          }
         }
       } catch (error) {
         console.error('Failed to fetch wilayas:', error);
@@ -116,28 +118,39 @@ export default function Checkout() {
         
         // Track Purchase
         const finalTotal = total() + deliveryCost;
-        if (trackingIds.ga) {
-          ReactGA.event("purchase", {
-            transaction_id: Date.now().toString(),
-            value: finalTotal,
-            currency: "DZD",
-            shipping: deliveryCost,
-            items: items.map(item => ({
-              item_id: item.id.toString(),
-              item_name: item.name,
-              price: item.promo_price || item.price,
-              quantity: item.quantity
-            }))
-          });
+        if (trackingIds.ga && ReactGA && typeof ReactGA.event === 'function') {
+          try {
+            ReactGA.event("purchase", {
+              transaction_id: Date.now().toString(),
+              value: finalTotal,
+              currency: "DZD",
+              shipping: deliveryCost,
+              items: items.map(item => ({
+                item_id: item.id.toString(),
+                item_name: item.name,
+                price: item.promo_price || item.price,
+                quantity: item.quantity
+              }))
+            });
+          } catch (e) {
+            console.error('Failed to send GA purchase event', e);
+          }
         }
         
         if (trackingIds.fb) {
-          ReactPixel.track('Purchase', {
-            value: finalTotal,
-            currency: 'DZD',
-            content_ids: items.map(item => item.id.toString()),
-            content_type: 'product'
-          });
+          try {
+            const pixel = (ReactPixel && (ReactPixel as any).default) || ReactPixel;
+            if (pixel && typeof pixel.track === 'function') {
+              pixel.track('Purchase', {
+                value: finalTotal,
+                currency: 'DZD',
+                content_ids: items.map(item => item.id.toString()),
+                content_type: 'product'
+              });
+            }
+          } catch (e) {
+            console.error('Failed to send FB purchase event', e);
+          }
         }
 
         // Mock notification

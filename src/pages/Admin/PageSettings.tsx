@@ -12,7 +12,7 @@ export default function PageSettings() {
   const fetchPages = (signal?: AbortSignal) => {
     fetch('/api/pages', { signal })
       .then(res => res.json())
-      .then(setPages)
+      .then(data => { if (Array.isArray(data)) setPages(data); })
       .catch(err => {
         if (err.name !== 'AbortError') console.error(err);
       });

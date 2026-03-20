@@ -98,8 +98,8 @@ router.get('/settings', async (req, res) => {
       return acc;
     }, {});
     res.json(settingsObj);
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to fetch settings' });
+  } catch (err: any) {
+    res.status(500).json({ error: 'Failed to fetch settings', details: err.message, stack: err.stack });
   }
 });
 

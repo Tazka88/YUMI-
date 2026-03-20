@@ -52,5 +52,15 @@ app.use('/uploads', express.static(uploadsDir, { maxAge: '1y' }));
 // API Routes
 app.use('/api', apiRoutes);
 
+// Global error handler for debugging
+app.use((err: any, req: any, res: any, next: any) => {
+  console.error('Global error:', err);
+  res.status(500).json({ 
+    error: 'Internal Server Error', 
+    message: err.message,
+    stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+  });
+});
+
 // Export the Express API for Vercel Serverless Functions
 export default app;

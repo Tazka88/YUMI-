@@ -195,8 +195,16 @@ router.get('/products', async (req, res) => {
     `;
     
     products.forEach(p => {
-      p.features = typeof p.features === 'string' ? JSON.parse(p.features) : (p.features || []);
-      p.key_points = typeof p.key_points === 'string' ? JSON.parse(p.key_points) : (p.key_points || []);
+      try {
+        p.features = typeof p.features === 'string' ? JSON.parse(p.features) : (p.features || []);
+      } catch (e) {
+        // Keep as string if it can't be parsed
+      }
+      try {
+        p.key_points = typeof p.key_points === 'string' ? JSON.parse(p.key_points) : (p.key_points || []);
+      } catch (e) {
+        // Keep as string if it can't be parsed
+      }
     });
 
     res.json(products);
@@ -218,8 +226,16 @@ router.get('/products/:slug', async (req, res) => {
     
     if (!product) return res.status(404).json({ error: 'Product not found' });
     
-    product.features = typeof product.features === 'string' ? JSON.parse(product.features) : (product.features || []);
-    product.key_points = typeof product.key_points === 'string' ? JSON.parse(product.key_points) : (product.key_points || []);
+    try {
+      product.features = typeof product.features === 'string' ? JSON.parse(product.features) : (product.features || []);
+    } catch (e) {
+      // Keep as string if it can't be parsed
+    }
+    try {
+      product.key_points = typeof product.key_points === 'string' ? JSON.parse(product.key_points) : (product.key_points || []);
+    } catch (e) {
+      // Keep as string if it can't be parsed
+    }
 
     const images = await sql`SELECT * FROM product_images WHERE product_id = ${product.id}`;
     product.images = images;
@@ -606,8 +622,16 @@ router.get('/admin/products', authenticate, async (req, res) => {
     }
     
     products.forEach((p: any) => {
-      p.features = typeof p.features === 'string' ? JSON.parse(p.features) : (p.features || []);
-      p.key_points = typeof p.key_points === 'string' ? JSON.parse(p.key_points) : (p.key_points || []);
+      try {
+        p.features = typeof p.features === 'string' ? JSON.parse(p.features) : (p.features || []);
+      } catch (e) {
+        // Keep as string if it can't be parsed
+      }
+      try {
+        p.key_points = typeof p.key_points === 'string' ? JSON.parse(p.key_points) : (p.key_points || []);
+      } catch (e) {
+        // Keep as string if it can't be parsed
+      }
     });
 
     res.json(products);

@@ -43,7 +43,7 @@ export default function AdminDashboard() {
   const [productForm, setProductForm] = useState({
     name: '', slug: '', category_id: '', subcategory_id: '', brand_id: '', brand_name: '', price: '', promo_price: '', stock: '', description: '', image: '',
     is_popular: false, is_best_seller: false, is_new: false, is_recommended: false, is_fast_delivery: false, images: [] as any[],
-    features: ''
+    features: '', key_points: ''
   });
   const [subcategoryForm, setSubcategoryForm] = useState({
     name: '', slug: '', category_id: '', image: ''
@@ -256,13 +256,14 @@ export default function AdminDashboard() {
         is_new: !!product.is_new, is_recommended: !!product.is_recommended,
         is_fast_delivery: !!product.is_fast_delivery,
         images: product.images || [],
-        features: typeof product.features === 'string' ? product.features : (Array.isArray(product.features) ? product.features.map((f: any) => `${f.key}: ${f.value}`).join('\n') : '')
+        features: typeof product.features === 'string' ? product.features : (Array.isArray(product.features) ? product.features.map((f: any) => `${f.key}: ${f.value}`).join('\n') : ''),
+        key_points: typeof product.key_points === 'string' ? product.key_points : (Array.isArray(product.key_points) ? product.key_points.join('\n') : '')
       });
     } else {
       setEditingProduct(null);
       setProductForm({
         name: '', slug: '', category_id: categories[0]?.id || '', subcategory_id: '', brand_id: '', brand_name: '', price: '', promo_price: '', stock: '', description: '', image: '',
-        is_popular: false, is_best_seller: false, is_new: false, is_recommended: false, is_fast_delivery: false, images: [], features: ''
+        is_popular: false, is_best_seller: false, is_new: false, is_recommended: false, is_fast_delivery: false, images: [], features: '', key_points: ''
       });
     }
     setIsModalOpen(true);
@@ -335,11 +336,31 @@ export default function AdminDashboard() {
     const url = editingProduct ? `/api/admin/products/${editingProduct.id}` : '/api/admin/products';
     const method = editingProduct ? 'PUT' : 'POST';
 
+    let parsedFeatures: any = productForm.features;
+    if (typeof productForm.features === 'string' && productForm.features.trim()) {
+      const lines = productForm.features.split('\n').filter(line => line.trim());
+      const hasColons = lines.some(line => line.includes(':'));
+      
+      if (hasColons) {
+        parsedFeatures = lines.map(line => {
+          const parts = line.split(':');
+          if (parts.length >= 2) {
+            return { key: parts[0].trim(), value: parts.slice(1).join(':').trim() };
+          }
+          return { key: '', value: line.trim() };
+        });
+      }
+    }
+
     const payload = {
       ...productForm,
       price: parseFloat(productForm.price as string),
       promo_price: productForm.promo_price ? parseFloat(productForm.promo_price as string) : null,
       stock: parseInt(productForm.stock as string, 10),
+      features: parsedFeatures,
+      key_points: typeof productForm.key_points === 'string' 
+        ? productForm.key_points.split('\n').map(p => p.trim()).filter(p => p) 
+        : productForm.key_points
     };
 
     try {
@@ -1814,6 +1835,11 @@ export default function AdminDashboard() {
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-2">Caractéristiques techniques</label>
                   <textarea rows={5} placeholder="Entrez les caractéristiques techniques ici..." className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500" value={productForm.features as string} onChange={e => setProductForm({...productForm, features: e.target.value})}></textarea>
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Points clés (un par ligne)</label>
+                  <textarea rows={5} placeholder="Entrez les points clés ici..." className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500" value={productForm.key_points as string} onChange={e => setProductForm({...productForm, key_points: e.target.value})}></textarea>
                 </div>
               </div>
               

@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS users (
 
 -- Insert default admin user if not exists (password: admin123)
 INSERT INTO users (email, password, role)
-SELECT 'admin@admin.com', '$2a$10$vI8aWBnW3fID.ZQ4/zo1G.q1lRps.9cGLcZEiGDMVr5yUP1KUOYTa', 'admin'
+SELECT 'admin@admin.com', '$2b$10$Gk.QStjiG/z5U6ydCbTNx.Fd8AR6A9QZKbFmzmMtkiwjk/B4jw8xK', 'admin'
 WHERE NOT EXISTS (SELECT 1 FROM users WHERE email = 'admin@admin.com');
 
 CREATE TABLE IF NOT EXISTS categories (

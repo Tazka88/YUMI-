@@ -9,10 +9,75 @@ import sharp from 'sharp';
 import fs from 'fs';
 
 const router = Router();
+
+// Helper to process images to avoid Vercel 4.5MB payload limit
+const processImage = (table: string, id: number | string, field: string, image: string | null) => {
+  if (!image) return null;
+  if (image.startsWith('data:image/')) {
+    return `/api/images/${table}/${id}/${field}`;
+  }
+  return image;
+};
+
+// Route to serve images from the database
+router.get('/images/:table/:id/:field', async (req, res) => {
+  const { table, id, field } = req.params;
+  
+  // Validate table and field to prevent SQL injection
+  const allowedTables = ['products', 'categories', 'subcategories', 'brands', 'slides', 'product_images', 'settings'];
+  const allowedFields = ['image', 'value'];
+  
+  if (!allowedTables.includes(table) || !allowedFields.includes(field)) {
+    return res.status(400).json({ error: 'Invalid table or field' });
+  }
+
+  try {
+    let query;
+    if (table === 'settings') {
+      query = `SELECT ${field} FROM ${table} WHERE key = '${id}'`;
+    } else {
+      query = `SELECT ${field} FROM ${table} WHERE id = ${id}`;
+    }
+    const result = await sql.unsafe(query);
+    
+    if (!result || result.length === 0 || !result[0][field]) {
+      return res.status(404).json({ error: 'Image not found' });
+    }
+    
+    const imageData = result[0][field];
+    
+    if (imageData.startsWith('data:image/')) {
+      const matches = imageData.match(/^data:image\/([a-zA-Z0-9+]+);base64,(.+)$/);
+      if (matches && matches.length === 3) {
+        const ext = matches[1];
+        const base64Data = matches[2];
+        const buffer = Buffer.from(base64Data, 'base64');
+        
+        res.setHeader('Content-Type', `image/${ext}`);
+        res.setHeader('Cache-Control', 'public, max-age=31536000'); // Cache for 1 year
+        return res.send(buffer);
+      }
+    }
+    
+    // If it's a regular URL, redirect
+    if (imageData.startsWith('http')) {
+      return res.redirect(imageData);
+    }
+    
+    res.status(404).json({ error: 'Invalid image format' });
+  } catch (err) {
+    console.error('Error serving image:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 const JWT_SECRET = process.env.JWT_SECRET || 'yumi-secret-key-123';
+
 if (process.env.NODE_ENV === 'production' && JWT_SECRET === 'yumi-secret-key-123') {
-  console.warn('WARNING: JWT_SECRET environment variable is missing in production! Using default insecure key.');
+  console.error('CRITICAL ERROR: Default JWT_SECRET is used in production! Please set JWT_SECRET in Vercel.');
+  // We don't exit the process to avoid crashing completely, but we log a critical error.
 }
+
 
 // Rate Limiter for Login
 const loginLimiter = rateLimit({
@@ -94,7 +159,11 @@ router.get('/settings', async (req, res) => {
   try {
     const settings = await sql`SELECT * FROM settings WHERE key != 'admin_email'`;
     const settingsObj = settings.reduce((acc: any, setting: any) => {
-      acc[setting.key] = setting.value;
+      let val = setting.value;
+      if (setting.key === 'site_logo' || setting.key.startsWith('theme_image_')) {
+        val = processImage('settings', setting.key, 'value', val);
+      }
+      acc[setting.key] = val;
       return acc;
     }, {});
     res.json(settingsObj);
@@ -115,7 +184,12 @@ router.get('/footer-links', async (req, res) => {
 router.get('/slides', async (req, res) => {
   try {
     const slides = await sql`SELECT * FROM slides ORDER BY order_index ASC`;
+    
+    slides.forEach((s: any) => {
+      s.image = processImage('slides', s.id, 'image', s.image);
+    });
     res.json(slides);
+
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch slides' });
   }
@@ -124,7 +198,12 @@ router.get('/slides', async (req, res) => {
 router.get('/brands', async (req, res) => {
   try {
     const brands = await sql`SELECT * FROM brands ORDER BY name ASC`;
+    
+    brands.forEach((b: any) => {
+      b.image = processImage('brands', b.id, 'image', b.image);
+    });
     res.json(brands);
+
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch brands' });
   }
@@ -134,7 +213,10 @@ router.get('/brands/:slug', async (req, res) => {
   try {
     const [brand] = await sql`SELECT * FROM brands WHERE slug = ${req.params.slug}`;
     if (!brand) return res.status(404).json({ error: 'Brand not found' });
+    
+    brand.image = processImage('brands', brand.id, 'image', brand.image);
     res.json(brand);
+
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch brand' });
   }
@@ -150,7 +232,17 @@ router.get('/categories', async (req, res) => {
       subcategories: subcategories.filter((sub: any) => sub.category_id === cat.id)
     }));
     
+    
+    categoriesWithSubcats.forEach((c: any) => {
+      c.image = processImage('categories', c.id, 'image', c.image);
+      if (c.subcategories && Array.isArray(c.subcategories)) {
+        c.subcategories.forEach((sub: any) => {
+          sub.image = processImage('subcategories', sub.id, 'image', sub.image);
+        });
+      }
+    });
     res.json(categoriesWithSubcats);
+
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch categories' });
   }
@@ -159,7 +251,12 @@ router.get('/categories', async (req, res) => {
 router.get('/subcategories', async (req, res) => {
   try {
     const subcategories = await sql`SELECT * FROM subcategories`;
+    
+    subcategories.forEach((s: any) => {
+      s.image = processImage('subcategories', s.id, 'image', s.image);
+    });
     res.json(subcategories);
+
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch subcategories' });
   }
@@ -207,7 +304,18 @@ router.get('/products', async (req, res) => {
       }
     });
 
+    
+    products.forEach((p: any) => {
+      p.image = processImage('products', p.id, 'image', p.image);
+      if (p.brand_image) p.brand_image = processImage('brands', p.brand_id, 'image', p.brand_image);
+      if (p.images && Array.isArray(p.images)) {
+        p.images.forEach((img: any) => {
+          img.image = processImage('product_images', img.id, 'image', img.image);
+        });
+      }
+    });
     res.json(products);
+
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to fetch products' });
@@ -240,7 +348,16 @@ router.get('/products/:slug', async (req, res) => {
     const images = await sql`SELECT * FROM product_images WHERE product_id = ${product.id}`;
     product.images = images;
     
+    
+    product.image = processImage('products', product.id, 'image', product.image);
+    if (product.brand_image) product.brand_image = processImage('brands', product.brand_id, 'image', product.brand_image);
+    if (product.images && Array.isArray(product.images)) {
+      product.images.forEach((img: any) => {
+        img.image = processImage('product_images', img.id, 'image', img.image);
+      });
+    }
     res.json(product);
+
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch product' });
   }
@@ -388,7 +505,11 @@ router.get('/admin/settings', authenticate, async (req, res) => {
   try {
     const settings = await sql`SELECT * FROM settings`;
     const settingsObj = settings.reduce((acc: any, setting: any) => {
-      acc[setting.key] = setting.value;
+      let val = setting.value;
+      if (setting.key === 'site_logo' || setting.key.startsWith('theme_image_')) {
+        val = processImage('settings', setting.key, 'value', val);
+      }
+      acc[setting.key] = val;
       return acc;
     }, {});
     res.json(settingsObj);
@@ -499,30 +620,18 @@ router.post('/admin/upload', authenticate, upload.single('image'), async (req, r
   }
   
   try {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    const isVercel = process.env.VERCEL === '1' || process.env.VERCEL_ENV || process.env.VERCEL_URL;
-    const uploadsDir = isVercel ? path.join('/tmp', 'uploads') : path.join(process.cwd(), 'public', 'uploads');
-    
-    if (!fs.existsSync(uploadsDir)) {
-      fs.mkdirSync(uploadsDir, { recursive: true });
-    }
-    
     if (req.file.mimetype === 'image/svg+xml') {
-      const filename = `${uniqueSuffix}.svg`;
-      const outputPath = path.join(uploadsDir, filename);
-      fs.writeFileSync(outputPath, req.file.buffer);
-      return res.json({ url: `/uploads/${filename}` });
+      const base64 = req.file.buffer.toString('base64');
+      return res.json({ url: `data:image/svg+xml;base64,${base64}` });
     }
 
-    const filename = `${uniqueSuffix}.webp`;
-    const outputPath = path.join(uploadsDir, filename);
-
-    await sharp(req.file.buffer)
+    const buffer = await sharp(req.file.buffer)
       .resize({ width: 800, height: 800, fit: 'inside', withoutEnlargement: true })
       .webp({ quality: 80 })
-      .toFile(outputPath);
+      .toBuffer();
 
-    res.json({ url: `/uploads/${filename}` });
+    const base64 = buffer.toString('base64');
+    res.json({ url: `data:image/webp;base64,${base64}` });
   } catch (error) {
     console.error('Image processing error:', error);
     res.status(500).json({ error: 'Failed to process image' });
@@ -532,7 +641,12 @@ router.post('/admin/upload', authenticate, upload.single('image'), async (req, r
 router.get('/admin/slides', authenticate, async (req, res) => {
   try {
     const slides = await sql`SELECT * FROM slides ORDER BY order_index ASC`;
+    
+    slides.forEach((s: any) => {
+      s.image = processImage('slides', s.id, 'image', s.image);
+    });
     res.json(slides);
+
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch slides' });
   }
@@ -634,7 +748,18 @@ router.get('/admin/products', authenticate, async (req, res) => {
       }
     });
 
+    
+    products.forEach((p: any) => {
+      p.image = processImage('products', p.id, 'image', p.image);
+      if (p.brand_image) p.brand_image = processImage('brands', p.brand_id, 'image', p.brand_image);
+      if (p.images && Array.isArray(p.images)) {
+        p.images.forEach((img: any) => {
+          img.image = processImage('product_images', img.id, 'image', img.image);
+        });
+      }
+    });
     res.json(products);
+
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch products' });
   }

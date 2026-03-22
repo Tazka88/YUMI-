@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { ProductCard } from '../components/ProductCard';
+import SEO from '../components/SEO';
 import { Product } from '../store/cartStore';
 
 export default function BrandProducts() {
@@ -52,6 +53,7 @@ export default function BrandProducts() {
   if (!brand) {
     return (
       <div className="container mx-auto px-4 py-16 text-center">
+        <SEO title="Marque introuvable" description="La marque demandée n'existe pas." />
         <h1 className="text-3xl font-bold text-gray-800 mb-4">Marque introuvable</h1>
         <p className="text-gray-600 mb-8">La marque que vous recherchez n'existe pas ou a été supprimée.</p>
         <Link to="/brands" className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-3 rounded-md font-medium transition-colors">
@@ -63,6 +65,11 @@ export default function BrandProducts() {
 
   return (
     <div className="container mx-auto px-4 py-8">
+      <SEO 
+        title={`Produits ${brand.name}`} 
+        description={brand.description || `Découvrez tous les produits de la marque ${brand.name} sur Yumi.`}
+        image={brand.image}
+      />
       {/* Breadcrumb */}
       <div className="text-sm text-gray-500 mb-6 flex items-center gap-2">
         <Link to="/" className="hover:text-orange-500">Accueil</Link>

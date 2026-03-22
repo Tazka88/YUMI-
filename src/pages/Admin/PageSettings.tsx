@@ -1,3 +1,4 @@
+import toast from 'react-hot-toast';
 import React, { useState, useEffect } from 'react';
 import { Plus, Edit, Trash2, Save, X } from 'lucide-react';
 import DefaultEditor from 'react-simple-wysiwyg';
@@ -65,11 +66,11 @@ export default function PageSettings() {
         setPageForm({ title: '', slug: '', content: '' });
         fetchPages();
       } else {
-        alert('Erreur lors de la sauvegarde de la page');
+        toast.error('Erreur lors de la sauvegarde de la page');
       }
     } catch (err) {
       console.error(err);
-      alert('Erreur lors de la sauvegarde de la page');
+      toast.error('Erreur lors de la sauvegarde de la page');
     } finally {
       setIsSaving(false);
     }

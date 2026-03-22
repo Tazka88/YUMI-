@@ -1,3 +1,4 @@
+import toast from 'react-hot-toast';
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCartStore } from '../store/cartStore';
@@ -160,7 +161,7 @@ export default function Checkout() {
         throw new Error(errData.error || 'Erreur lors de la commande');
       }
     } catch (error: any) {
-      alert(error.message || 'Une erreur est survenue. Veuillez réessayer.');
+      toast.error(error.message || 'Une erreur est survenue. Veuillez réessayer.');
     } finally {
       setIsSubmitting(false);
     }

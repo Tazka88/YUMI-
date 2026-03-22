@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ImageIcon } from 'lucide-react';
+import SEO from '../components/SEO';
 
 export default function Brands() {
   const [brands, setBrands] = useState<any[]>([]);
@@ -35,6 +36,10 @@ export default function Brands() {
 
   return (
     <div className="container mx-auto px-4 py-8">
+      <SEO 
+        title="Toutes les marques" 
+        description="Découvrez toutes les marques de produits disponibles sur Yumi."
+      />
       <div className="text-sm text-gray-500 mb-6 flex items-center gap-2">
         <Link to="/" className="hover:text-orange-500">Accueil</Link>
         <span>/</span>

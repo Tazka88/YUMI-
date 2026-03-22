@@ -1,3 +1,4 @@
+import toast from 'react-hot-toast';
 import React, { useState, useEffect } from 'react';
 import { Plus, Edit, Trash2, Search, X } from 'lucide-react';
 
@@ -81,7 +82,7 @@ export default function WilayasSettings() {
       setIsModalOpen(false);
       fetchWilayas();
     } catch (err: any) {
-      alert(err.message);
+      toast.error(err.message);
     }
   };
 
@@ -97,7 +98,7 @@ export default function WilayasSettings() {
       fetchWilayas();
     } catch (err) {
       console.error(err);
-      alert('Erreur lors de la suppression');
+      toast.error('Erreur lors de la suppression');
     }
   };
 

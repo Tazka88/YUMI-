@@ -1,3 +1,4 @@
+import toast from 'react-hot-toast';
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { LayoutDashboard, ShoppingBag, Users, Settings, LogOut, TrendingUp, AlertCircle, Package, Plus, Edit, Trash2, X, Image as ImageIcon, Upload, User } from 'lucide-react';
@@ -195,21 +196,32 @@ export default function AdminDashboard() {
     const file = e.target.files?.[0];
     if (!file) return null;
 
-    const formData = new FormData();
-    formData.append('image', file);
+    const toastId = toast.loading('Téléchargement de l\'image...');
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
 
-    const token = localStorage.getItem('adminToken');
-    const res = await fetch('/api/admin/upload', {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${token}` },
-      body: formData
-    });
+      const token = localStorage.getItem('adminToken');
+      const res = await fetch('/api/admin/upload', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+        body: formData
+      });
 
-    if (res.ok) {
-      const data = await res.json();
-      return data.url;
+      if (res.ok) {
+        const data = await res.json();
+        toast.success('Image téléchargée avec succès', { id: toastId });
+        return data.url;
+      } else {
+        const err = await res.json();
+        toast.error(`Erreur: ${err.error || 'Échec du téléchargement'}`, { id: toastId });
+        return null;
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error('Erreur de connexion au serveur', { id: toastId });
+      return null;
     }
-    return null;
   };
 
   const handleLogout = () => {
@@ -372,7 +384,7 @@ export default function AdminDashboard() {
 
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}));
-        alert(`Erreur: ${errorData.error || 'Impossible de sauvegarder le produit'}`);
+        toast.error(`Erreur: ${errorData.error || 'Impossible de sauvegarder le produit'}`);
         return;
       }
 
@@ -383,7 +395,7 @@ export default function AdminDashboard() {
         .catch(console.error);
     } catch (err) {
       console.error(err);
-      alert('Erreur de connexion au serveur');
+      toast.error('Erreur de connexion au serveur');
     }
   };
 
@@ -425,7 +437,7 @@ export default function AdminDashboard() {
 
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}));
-        alert(`Erreur: ${errorData.error || 'Impossible de sauvegarder la sous-catégorie'}`);
+        toast.error(`Erreur: ${errorData.error || 'Impossible de sauvegarder la sous-catégorie'}`);
         return;
       }
 
@@ -436,7 +448,7 @@ export default function AdminDashboard() {
         .catch(console.error);
     } catch (err) {
       console.error(err);
-      alert('Erreur de connexion au serveur');
+      toast.error('Erreur de connexion au serveur');
     }
   };
 
@@ -478,7 +490,7 @@ export default function AdminDashboard() {
 
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}));
-        alert(`Erreur: ${errorData.error || 'Impossible de sauvegarder la catégorie'}`);
+        toast.error(`Erreur: ${errorData.error || 'Impossible de sauvegarder la catégorie'}`);
         return;
       }
 
@@ -489,7 +501,7 @@ export default function AdminDashboard() {
         .catch(console.error);
     } catch (err) {
       console.error(err);
-      alert('Erreur de connexion au serveur');
+      toast.error('Erreur de connexion au serveur');
     }
   };
 
@@ -531,7 +543,7 @@ export default function AdminDashboard() {
 
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}));
-        alert(`Erreur: ${errorData.error || 'Impossible de sauvegarder le slide'}`);
+        toast.error(`Erreur: ${errorData.error || 'Impossible de sauvegarder le slide'}`);
         return;
       }
 
@@ -542,7 +554,7 @@ export default function AdminDashboard() {
         .catch(console.error);
     } catch (err) {
       console.error(err);
-      alert('Erreur de connexion au serveur');
+      toast.error('Erreur de connexion au serveur');
     }
   };
 
@@ -561,7 +573,7 @@ export default function AdminDashboard() {
 
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}));
-        alert(`Erreur: ${errorData.error || 'Impossible de sauvegarder la marque'}`);
+        toast.error(`Erreur: ${errorData.error || 'Impossible de sauvegarder la marque'}`);
         return;
       }
 
@@ -572,7 +584,7 @@ export default function AdminDashboard() {
         .catch(console.error);
     } catch (err) {
       console.error(err);
-      alert('Erreur de connexion au serveur');
+      toast.error('Erreur de connexion au serveur');
     }
   };
 
@@ -612,7 +624,7 @@ export default function AdminDashboard() {
         
         if (!res.ok) {
           const data = await res.json();
-          alert(data.error || "Erreur lors de la suppression");
+          toast.error(data.error || "Erreur lors de la suppression");
           setConfirmModal({ ...confirmModal, isOpen: false });
           return;
         }
@@ -644,9 +656,9 @@ export default function AdminDashboard() {
         throw new Error(data.error || 'Erreur serveur');
       }
       
-      alert('Paramètres enregistrés avec succès !');
+      toast.success('Paramètres enregistrés avec succès !');
     } catch (err: any) {
-      alert(err.message || 'Erreur lors de la sauvegarde des paramètres.');
+      toast.error(err.message || 'Erreur lors de la sauvegarde des paramètres.');
     } finally {
       setIsSavingSettings(false);
     }
@@ -657,7 +669,7 @@ export default function AdminDashboard() {
     
     // Validate email format
     if (settingsForm.admin_email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(settingsForm.admin_email)) {
-      alert("Veuillez entrer une adresse email valide.");
+      toast.error("Veuillez entrer une adresse email valide.");
       return;
     }
     
@@ -676,9 +688,9 @@ export default function AdminDashboard() {
         throw new Error(data.error || 'Erreur serveur');
       }
       
-      alert('Email modifié avec succès');
+      toast.success('Email modifié avec succès');
     } catch (err: any) {
-      alert(err.message || 'Erreur lors de la sauvegarde de l\'email.');
+      toast.error(err.message || 'Erreur lors de la sauvegarde de l\'email.');
     } finally {
       setIsSavingSettings(false);
     }
@@ -688,12 +700,12 @@ export default function AdminDashboard() {
     e.preventDefault();
     
     if (!credentialsForm.currentPassword) {
-      alert("Le mot de passe actuel est requis.");
+      toast.error("Le mot de passe actuel est requis.");
       return;
     }
     
     if (credentialsForm.newPassword && credentialsForm.newPassword !== credentialsForm.confirmPassword) {
-      alert("Les nouveaux mots de passe ne correspondent pas.");
+      toast.error("Les nouveaux mots de passe ne correspondent pas.");
       return;
     }
     
@@ -716,11 +728,11 @@ export default function AdminDashboard() {
         throw new Error(data.error || 'Erreur serveur');
       }
       
-      alert('Identifiants modifiés avec succès. Veuillez vous reconnecter.');
+      toast.success('Identifiants modifiés avec succès. Veuillez vous reconnecter.');
       setCredentialsForm({ currentPassword: '', newUsername: '', newPassword: '', confirmPassword: '' });
       handleLogout();
     } catch (err: any) {
-      alert(err.message || 'Erreur lors de la sauvegarde des identifiants.');
+      toast.error(err.message || 'Erreur lors de la sauvegarde des identifiants.');
     } finally {
       setIsSavingCredentials(false);
     }

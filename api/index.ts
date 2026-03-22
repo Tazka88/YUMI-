@@ -2,7 +2,6 @@ import express from 'express';
 import cors from 'cors';
 import compression from 'compression';
 import helmet from 'helmet';
-import { setupDb } from '../src/db/setup.js';
 import apiRoutes from '../src/api/routes.js';
 import path from 'path';
 import fs from 'fs';
@@ -10,13 +9,6 @@ import fs from 'fs';
 const app = express();
 
 app.set('trust proxy', 1);
-
-// Initialize DB (Note: SQLite on Vercel is ephemeral, data will reset on cold starts)
-try {
-  setupDb();
-} catch (error) {
-  console.error('Failed to setup DB:', error);
-}
 
 // Create uploads directory if it doesn't exist (ephemeral on Vercel)
 const isVercel = process.env.VERCEL === '1' || process.env.VERCEL_ENV || process.env.VERCEL_URL;

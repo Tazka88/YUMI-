@@ -3,7 +3,7 @@ import cors from 'cors';
 import compression from 'compression';
 import helmet from 'helmet';
 import { createServer as createViteServer } from 'vite';
-import { setupDb, sql } from './src/db/setup.js';
+import { sql } from './src/db/setup.js';
 import apiRoutes from './src/api/routes.js';
 import path from 'path';
 import fs from 'fs';
@@ -14,9 +14,6 @@ async function startServer() {
 
   // Trust proxy to handle X-Forwarded-For correctly
   app.set('trust proxy', 1);
-
-  // Initialize DB
-  setupDb();
 
   // Create uploads directory if it doesn't exist
   const uploadsDir = path.join(process.cwd(), 'public', 'uploads');

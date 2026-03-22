@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { sql } from '../db/setup.js';
+import { getSupabase } from '../lib/supabase.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import multer from 'multer';
@@ -108,9 +109,21 @@ const upload = multer({
   }
 });
 
-const authenticate = (req: any, res: any, next: any) => {
+const authenticate = async (req: any, res: any, next: any) => {
   const token = req.headers.authorization?.split(' ')[1];
   if (!token) return res.status(401).json({ error: 'Unauthorized' });
+
+  // Try Supabase Auth first if configured
+  const supabase = getSupabase();
+  if (supabase) {
+    const { data: { user }, error } = await supabase.auth.getUser(token);
+    if (user && !error) {
+      req.user = { id: user.id, username: user.email };
+      return next();
+    }
+  }
+
+  // Fallback to local JWT
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
     req.user = decoded;
@@ -123,6 +136,22 @@ const authenticate = (req: any, res: any, next: any) => {
 // --- AUTH ---
 router.post('/admin/login', loginLimiter, async (req, res) => {
   const { username, password } = req.body;
+  
+  // Try Supabase Auth first if configured
+  const supabase = getSupabase();
+  if (supabase) {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: username,
+      password: password
+    });
+    
+    if (data?.session) {
+      return res.json({ token: data.session.access_token });
+    }
+    // If Supabase login fails (e.g. user not migrated yet), we fall through to local DB
+  }
+
+  // Fallback to local DB
   try {
     const [user] = await sql`SELECT * FROM users WHERE email = ${username}`;
     if (!user || !bcrypt.compareSync(password, user.password)) {
@@ -136,6 +165,84 @@ router.post('/admin/login', loginLimiter, async (req, res) => {
 });
 
 // --- PUBLIC ROUTES ---
+router.get('/robots.txt', (req, res) => {
+  const baseUrl = process.env.APP_URL || `https://${req.get('host')}`;
+  res.type('text/plain');
+  res.send(`User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /api/
+
+Sitemap: ${baseUrl}/sitemap.xml`);
+});
+
+router.get('/sitemap.xml', async (req, res) => {
+  try {
+    const baseUrl = process.env.APP_URL || `https://${req.get('host')}`;
+    
+    const [products, categories, brands, pages] = await Promise.all([
+      sql`SELECT slug, updated_at FROM products WHERE is_active = true`,
+      sql`SELECT slug FROM categories`,
+      sql`SELECT slug FROM brands`,
+      sql`SELECT slug, updated_at FROM pages`
+    ]);
+
+    let xml = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>${baseUrl}/</loc>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+  </url>`;
+
+    products.forEach(p => {
+      xml += `
+  <url>
+    <loc>${baseUrl}/product/${p.slug}</loc>
+    <lastmod>${new Date(p.updated_at || Date.now()).toISOString()}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>`;
+    });
+
+    categories.forEach(c => {
+      xml += `
+  <url>
+    <loc>${baseUrl}/category/${c.slug}</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>`;
+    });
+
+    brands.forEach(b => {
+      xml += `
+  <url>
+    <loc>${baseUrl}/brands/${b.slug}</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>`;
+    });
+
+    pages.forEach(p => {
+      xml += `
+  <url>
+    <loc>${baseUrl}/${p.slug}</loc>
+    <lastmod>${new Date(p.updated_at || Date.now()).toISOString()}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>`;
+    });
+
+    xml += `\n</urlset>`;
+
+    res.header('Content-Type', 'application/xml');
+    res.send(xml);
+  } catch (err) {
+    console.error('Sitemap error:', err);
+    res.status(500).end();
+  }
+});
+
 router.get('/pages', async (req, res) => {
   try {
     const pages = await sql`SELECT id, title, slug, created_at, updated_at FROM pages`;
@@ -620,18 +727,54 @@ router.post('/admin/upload', authenticate, upload.single('image'), async (req, r
   }
   
   try {
-    if (req.file.mimetype === 'image/svg+xml') {
-      const base64 = req.file.buffer.toString('base64');
-      return res.json({ url: `data:image/svg+xml;base64,${base64}` });
+    let buffer = req.file.buffer;
+    let contentType = req.file.mimetype;
+    let ext = req.file.originalname.split('.').pop() || 'bin';
+
+    if (req.file.mimetype !== 'image/svg+xml') {
+      buffer = await sharp(req.file.buffer)
+        .resize({ width: 1200, height: 1200, fit: 'inside', withoutEnlargement: true })
+        .webp({ quality: 80 })
+        .toBuffer();
+      contentType = 'image/webp';
+      ext = 'webp';
     }
 
-    const buffer = await sharp(req.file.buffer)
-      .resize({ width: 800, height: 800, fit: 'inside', withoutEnlargement: true })
-      .webp({ quality: 80 })
-      .toBuffer();
+    // If Supabase is configured, upload to Storage
+    const supabase = getSupabase();
+    if (supabase) {
+      // Ensure bucket exists
+      const { data: bucketData, error: bucketError } = await supabase.storage.getBucket('images');
+      if (bucketError && (bucketError.message.includes('not found') || bucketError.message.includes('does not exist') || (bucketError as any).status === 404 || bucketError.name === 'StorageApiError')) {
+        console.log('Bucket "images" not found, creating it...');
+        await supabase.storage.createBucket('images', { public: true });
+      }
 
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${ext}`;
+      
+      const { data, error } = await supabase.storage
+        .from('images') // The user must create this bucket in Supabase
+        .upload(fileName, buffer, {
+          contentType,
+          cacheControl: '3600',
+          upsert: false
+        });
+
+      if (error) {
+        console.error('Supabase upload error:', error);
+        return res.status(500).json({ error: 'Failed to upload image to Supabase' });
+      }
+
+      const { data: publicUrlData } = supabase.storage
+        .from('images')
+        .getPublicUrl(fileName);
+
+      return res.json({ url: publicUrlData.publicUrl });
+    }
+
+    // Fallback to base64 if Supabase is not configured
     const base64 = buffer.toString('base64');
-    res.json({ url: `data:image/webp;base64,${base64}` });
+    res.json({ url: `data:${contentType};base64,${base64}` });
   } catch (error) {
     console.error('Image processing error:', error);
     res.status(500).json({ error: 'Failed to process image' });

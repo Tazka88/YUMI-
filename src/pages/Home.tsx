@@ -6,6 +6,7 @@ import { useCartStore, Product } from '../store/cartStore';
 import { formatPrice } from '../utils/formatPrice';
 import { ProductCard } from '../components/ProductCard';
 import SEO from '../components/SEO';
+import { getCategoryWithEmoji, CategoryNameDisplay } from '../components/Layout';
 
 const THEME_IMAGES: Record<string, string> = {
   ramadan:      "/images/themes/ramadan.jpg",
@@ -497,7 +498,7 @@ export default function Home() {
                 />
               </div>
               <span className="text-[14px] text-center text-gray-700 group-hover:text-orange-500 font-medium">
-                {cat.name}
+                <CategoryNameDisplay name={cat.name} className="justify-center" />
               </span>
             </Link>
           ))}

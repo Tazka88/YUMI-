@@ -4,6 +4,58 @@ import { useCartStore } from '../store/cartStore';
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 
+const categoryEmojis: Record<string, string> = {
+  "Mode & Vêtements": "👗",
+  "Beauté & Santé": "💄",
+  "Électroménager": "🔌",
+  "Informatique": "💻",
+  "Sports & Loisirs": "⚽",
+  "Bébé & Jouets": "🧸",
+  "Téléphone & Tablette": "📱",
+  "Accessoire Auto Moto": "🚗",
+  "Jouets et Jeux": "🎲",
+  "Maison, cuisine & bureau": "🏠"
+};
+
+export const getCategoryWithEmoji = (name: string) => {
+  // Check if the name already starts with an emoji to avoid duplication
+  if (!name) return name;
+  const emoji = categoryEmojis[name];
+  if (emoji && !name.startsWith(emoji)) {
+    return `${emoji} ${name}`;
+  }
+  return name;
+};
+
+export const CategoryNameDisplay = ({ name, className = "" }: { name: string, className?: string }) => {
+  if (!name) return null;
+  const emoji = categoryEmojis[name];
+  
+  // If the name already has the emoji at the start, we can try to split it for alignment
+  if (emoji && name.startsWith(emoji)) {
+    const textWithoutEmoji = name.substring(emoji.length).trim();
+    return (
+      <span className={`flex items-start gap-2 ${className}`}>
+        <span className="shrink-0">{emoji}</span>
+        <span>{textWithoutEmoji}</span>
+      </span>
+    );
+  }
+  
+  // If it doesn't have the emoji but should
+  if (emoji) {
+    return (
+      <span className={`flex items-start gap-2 ${className}`}>
+        <span className="shrink-0">{emoji}</span>
+        <span>{name}</span>
+      </span>
+    );
+  }
+  
+  // No emoji
+  return <span className={className}>{name}</span>;
+};
+
 export default function Layout() {
   const cartItems = useCartStore((state) => state.items);
   const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
@@ -126,26 +178,26 @@ export default function Layout() {
       {/* Announcement Bar */}
       {showAnnouncement && (
         <div 
-          className="text-xs py-2 relative z-50 overflow-hidden"
+          className="text-xs py-2 relative z-50"
           style={{ 
             backgroundColor: settings.announcement_bg_color || '#000000',
             color: settings.announcement_text_color || '#ffffff'
           }}
         >
-          <div className="container mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
-            <a href={`tel:${settings.announcement_phone?.replace(/\s/g, '')}`} className="flex items-center gap-1 hover:opacity-80 transition-opacity whitespace-nowrap">
-              <Phone size={12} />
+          <div className="container mx-auto px-8 sm:px-4 flex flex-col sm:flex-row items-center justify-center sm:justify-between gap-1 sm:gap-2">
+            <a href={`tel:${settings.announcement_phone?.replace(/\s/g, '')}`} className="flex items-center gap-1 hover:opacity-80 transition-opacity whitespace-nowrap order-2 sm:order-1 text-[10px] sm:text-xs opacity-80 sm:opacity-100">
+              <Phone size={10} className="sm:w-3 sm:h-3" />
               {settings.announcement_phone || '+213 555 00 00 00'}
             </a>
-            <div className="text-center flex-1 px-4 relative h-4 flex items-center justify-center">
-              <AnimatePresence>
+            <div className="text-center flex-1 w-full min-h-[16px] flex items-center justify-center order-1 sm:order-2">
+              <AnimatePresence mode="wait">
                 <motion.div
                   key={currentMessageIndex}
-                  initial={{ opacity: 0, y: 10 }}
+                  initial={{ opacity: 0, y: 5 }}
                   animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  transition={{ duration: 0.3 }}
-                  className="absolute w-full text-center"
+                  exit={{ opacity: 0, y: -5 }}
+                  transition={{ duration: 0.2 }}
+                  className="w-full text-center line-clamp-2 sm:truncate"
                 >
                   {announcementMessages[currentMessageIndex]}
                 </motion.div>
@@ -153,7 +205,7 @@ export default function Layout() {
             </div>
             <button 
               onClick={() => setShowAnnouncement(false)}
-              className="absolute right-0 top-0 bottom-0 px-4 sm:static sm:p-0 flex items-center justify-center opacity-70 hover:opacity-100"
+              className="absolute right-2 top-1/2 -translate-y-1/2 sm:static sm:translate-y-0 p-2 sm:p-0 flex items-center justify-center opacity-70 hover:opacity-100 order-3"
               aria-label="Fermer"
             >
               <X size={16} />
@@ -299,11 +351,11 @@ export default function Layout() {
         {/* Categories Nav (Desktop) */}
         <nav className="hidden md:block bg-orange-600">
           <div className="container mx-auto px-4 relative flex items-center">
-            <ul className="flex items-center space-x-6 py-2 text-sm font-medium flex-wrap">
+            <ul className="flex items-center gap-x-6 gap-y-2 py-2 text-sm font-medium flex-wrap">
               {categories.map(cat => (
                 <li key={cat.id} className="group relative">
                   <Link to={`/category/${cat.slug}`} className="hover:text-black transition-colors py-2 block whitespace-nowrap">
-                    {cat.name}
+                    <CategoryNameDisplay name={cat.name} />
                   </Link>
                   {cat.subcategories && cat.subcategories.length > 0 && (
                     <div className="absolute left-0 top-full mt-0 hidden group-hover:block bg-white text-gray-800 shadow-lg rounded-b-md border border-gray-100 min-w-[200px] z-50">
@@ -314,7 +366,7 @@ export default function Layout() {
                               to={`/category/${sub.slug}?sub=true`} 
                               className="block px-4 py-2 hover:bg-orange-50 hover:text-orange-500 transition-colors whitespace-normal"
                             >
-                              {sub.name}
+                              <CategoryNameDisplay name={sub.name} />
                             </Link>
                           </li>
                         ))}
@@ -341,7 +393,7 @@ export default function Layout() {
                     className="block font-bold text-gray-800 hover:text-orange-500 mb-2"
                     onClick={() => setIsMenuOpen(false)}
                   >
-                    {cat.name}
+                    <CategoryNameDisplay name={cat.name} />
                   </Link>
                   {cat.subcategories && cat.subcategories.length > 0 && (
                     <ul className="pl-4 space-y-2 border-l-2 border-gray-100">
@@ -352,7 +404,7 @@ export default function Layout() {
                             className="block text-sm text-gray-600 hover:text-orange-500"
                             onClick={() => setIsMenuOpen(false)}
                           >
-                            {sub.name}
+                            <CategoryNameDisplay name={sub.name} />
                           </Link>
                         </li>
                       ))}

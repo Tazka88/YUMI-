@@ -5,6 +5,7 @@ import { useCartStore, Product } from '../store/cartStore';
 import { formatPrice } from '../utils/formatPrice';
 import { ProductCard } from '../components/ProductCard';
 import SEO from '../components/SEO';
+import { getCategoryWithEmoji, CategoryNameDisplay } from '../components/Layout';
 
 export default function Category() {
   const { slug } = useParams();
@@ -51,7 +52,7 @@ export default function Category() {
             if (Array.isArray(subcats)) {
               const subcat = subcats.find((s: any) => s.slug === slug);
               if (subcat) {
-                setCategoryName(subcat.name);
+                setCategoryName(getCategoryWithEmoji(subcat.name));
                 if (subcat.image) setCategoryImage(subcat.image);
               }
             }
@@ -66,7 +67,7 @@ export default function Category() {
             if (Array.isArray(cats)) {
               const cat = cats.find((c: any) => c.slug === slug);
               if (cat) {
-                setCategoryName(cat.name);
+                setCategoryName(getCategoryWithEmoji(cat.name));
                 if (cat.image) setCategoryImage(cat.image);
               }
             }
@@ -127,7 +128,7 @@ export default function Category() {
                     to={`/category/${cat.slug}`} 
                     className={`block font-medium ${slug === cat.slug && searchParams.get('sub') !== 'true' ? 'text-orange-500' : 'text-gray-700 hover:text-orange-500'}`}
                   >
-                    {cat.name}
+                    <CategoryNameDisplay name={cat.name} />
                   </Link>
                   {(slug === cat.slug || cat.subcategories.some((s: any) => s.slug === slug)) && cat.subcategories && cat.subcategories.length > 0 && (
                     <ul className="pl-4 mt-2 space-y-1 border-l-2 border-orange-100">
@@ -137,7 +138,7 @@ export default function Category() {
                             to={`/category/${sub.slug}?sub=true`} 
                             className={`block text-sm ${slug === sub.slug && searchParams.get('sub') === 'true' ? 'text-orange-500 font-bold' : 'text-gray-600 hover:text-orange-500'}`}
                           >
-                            {sub.name}
+                            <CategoryNameDisplay name={sub.name} />
                           </Link>
                         </li>
                       ))}

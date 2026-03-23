@@ -287,6 +287,7 @@ export default function Home() {
   const [bestSellers, setBestSellers] = useState<Product[]>([]);
   const [newProducts, setNewProducts] = useState<Product[]>([]);
   const [promotions, setPromotions] = useState<Product[]>([]);
+  const [customProducts, setCustomProducts] = useState<Record<string, Product[]>>({});
   const [homeSections, setHomeSections] = useState<any[]>([
     { id: 'flash_sales', type: 'flash_sales', title: 'Ventes Flash', isVisible: true },
     { id: 'best_sellers', type: 'best_sellers', title: 'Meilleures Ventes 🏆', isVisible: true },
@@ -309,6 +310,24 @@ export default function Home() {
     fetch('/api/settings', { signal }).then(res => res.json()).then(data => {
       if (data.active_theme) setActiveTheme(data.active_theme);
       setThemeImages(data);
+      if (data.home_sections) {
+        try {
+          const sections = JSON.parse(data.home_sections);
+          setHomeSections(sections);
+          
+          // Fetch products for custom sections
+          sections.filter((s: any) => s.type === 'custom' && s.isVisible && s.productIds?.length > 0).forEach((section: any) => {
+            fetch(`/api/products?ids=${section.productIds.join(',')}`, { signal })
+              .then(res => res.json())
+              .then(products => {
+                if (Array.isArray(products)) {
+                  setCustomProducts(prev => ({ ...prev, [section.id]: products }));
+                }
+              })
+              .catch(handleFetchError);
+          });
+        } catch (e) {}
+      }
     }).catch(handleFetchError);
     fetch('/api/slides', { signal }).then(res => res.json()).then(data => { if (Array.isArray(data)) setSlides(data); }).catch(handleFetchError);
     fetch('/api/categories', { signal }).then(res => res.json()).then(data => { if (Array.isArray(data)) setCategories(data); }).catch(handleFetchError);
@@ -319,22 +338,29 @@ export default function Home() {
     fetch('/api/products?promotions=true', { signal }).then(res => res.json()).then(data => { if (Array.isArray(data)) setPromotions(data); }).catch(handleFetchError);
 
     const loadSections = () => {
-      const saved = localStorage.getItem('yumi_home_sections');
-      if (saved) {
-        try {
-          setHomeSections(JSON.parse(saved));
-        } catch (e) {}
-      } else {
-        const oldCustom = localStorage.getItem('yumi_custom_sections');
-        if (oldCustom) {
-          try {
-            const parsed = JSON.parse(oldCustom);
-            setHomeSections(prev => [...prev, ...parsed.map((s: any) => ({ ...s, type: 'custom' }))]);
-          } catch (e) {}
-        }
-      }
+      fetch('/api/settings')
+        .then(res => res.json())
+        .then(data => {
+          if (data.home_sections) {
+            try {
+              const sections = JSON.parse(data.home_sections);
+              setHomeSections(sections);
+              
+              sections.filter((s: any) => s.type === 'custom' && s.isVisible && s.productIds?.length > 0).forEach((section: any) => {
+                fetch(`/api/products?ids=${section.productIds.join(',')}`)
+                  .then(res => res.json())
+                  .then(products => {
+                    if (Array.isArray(products)) {
+                      setCustomProducts(prev => ({ ...prev, [section.id]: products }));
+                    }
+                  })
+                  .catch(console.error);
+              });
+            } catch (e) {}
+          }
+        })
+        .catch(console.error);
     };
-    loadSections();
     window.addEventListener('yumi_sections_updated', loadSections);
     return () => {
       controller.abort();
@@ -566,11 +592,13 @@ export default function Home() {
           );
         }
         if (section.type === 'custom') {
+          const sectionProducts = customProducts[section.id] || [];
+          if (sectionProducts.length === 0) return null;
           return (
             <section key={section.id}>
               <SectionHeader title={`${section.title} ${section.emoji || ''}`} link="/category/all" />
               <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                {popularProducts.slice(0, 5).map(p => <ProductCard key={`${section.id}-${p.id}`} product={p} />)}
+                {sectionProducts.map(p => <ProductCard key={`${section.id}-${p.id}`} product={p} />)}
               </div>
             </section>
           );

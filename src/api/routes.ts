@@ -379,8 +379,11 @@ router.get('/products', async (req, res) => {
   const isNew = req.query.new as string | undefined;
   const recommended = req.query.recommended as string | undefined;
   const promotions = req.query.promotions as string | undefined;
+  const ids = req.query.ids as string | undefined;
   
   try {
+    const idArray = ids ? ids.split(',').map(id => Number(id)).filter(id => !isNaN(id)) : [];
+    
     const products = await sql`
       SELECT p.*, COALESCE(p.brand_name, b.name) as brand_name, b.slug as brand_slug, b.image as brand_image 
       FROM products p 
@@ -395,6 +398,7 @@ router.get('/products', async (req, res) => {
         AND (${isNew === 'true' ? true : null}::boolean IS NULL OR p.is_new = true)
         AND (${recommended === 'true' ? true : null}::boolean IS NULL OR p.is_recommended = true)
         AND (${promotions === 'true' ? true : null}::boolean IS NULL OR p.promo_price IS NOT NULL)
+        AND (${idArray.length > 0 ? sql`p.id = ANY(${idArray})` : sql`true`})
       LIMIT 100
     `;
     

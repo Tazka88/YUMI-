@@ -14,6 +14,7 @@ export interface HomeSection {
   title: string;
   emoji?: string;
   isVisible: boolean;
+  productIds?: string[];
 }
 
 const defaultSections: HomeSection[] = [
@@ -79,31 +80,43 @@ export default function AdminDashboard() {
   const [homeSections, setHomeSections] = useState<HomeSection[]>([]);
   const [newSectionTitle, setNewSectionTitle] = useState('');
   const [newSectionEmoji, setNewSectionEmoji] = useState('✨');
+  const [editingSectionProducts, setEditingSectionProducts] = useState<string | null>(null);
+  const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
+  const [productSearch, setProductSearch] = useState('');
 
   useEffect(() => {
-    const saved = localStorage.getItem('yumi_home_sections');
-    if (saved) {
-      try {
-        setHomeSections(JSON.parse(saved));
-      } catch (e) {}
-    } else {
-      const oldCustom = localStorage.getItem('yumi_custom_sections');
-      let newSections = [...defaultSections];
-      if (oldCustom) {
-        try {
-          const parsed = JSON.parse(oldCustom);
-          newSections = [...newSections, ...parsed.map((s: any) => ({ ...s, type: 'custom' }))];
-        } catch (e) {}
-      }
-      setHomeSections(newSections);
-      localStorage.setItem('yumi_home_sections', JSON.stringify(newSections));
-    }
+    fetch('/api/settings')
+      .then(res => res.json())
+      .then(data => {
+        if (data.home_sections) {
+          try {
+            setHomeSections(JSON.parse(data.home_sections));
+          } catch (e) {
+            setHomeSections(defaultSections);
+          }
+        } else {
+          setHomeSections(defaultSections);
+        }
+      })
+      .catch(() => setHomeSections(defaultSections));
   }, []);
 
-  const saveHomeSections = (sections: HomeSection[]) => {
+  const saveHomeSections = async (sections: HomeSection[]) => {
     setHomeSections(sections);
-    localStorage.setItem('yumi_home_sections', JSON.stringify(sections));
-    window.dispatchEvent(new Event('yumi_sections_updated'));
+    
+    const token = localStorage.getItem('adminToken');
+    if (!token) return;
+
+    try {
+      await fetch('/api/admin/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ home_sections: JSON.stringify(sections) })
+      });
+      window.dispatchEvent(new Event('yumi_sections_updated'));
+    } catch (err) {
+      console.error('Failed to save sections', err);
+    }
   };
 
   const handleAddSection = () => {
@@ -113,7 +126,8 @@ export default function AdminDashboard() {
       type: 'custom',
       title: newSectionTitle,
       emoji: newSectionEmoji || '✨',
-      isVisible: true
+      isVisible: true,
+      productIds: []
     };
     saveHomeSections([...homeSections, newSection]);
     setNewSectionTitle('');
@@ -1728,9 +1742,26 @@ export default function AdminDashboard() {
                         {section.type !== 'custom' && (
                           <span className="text-xs bg-gray-200 text-gray-600 px-2 py-1 rounded-full">Par défaut</span>
                         )}
+                        {section.type === 'custom' && (
+                          <span className="text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded-full">
+                            {section.productIds?.length || 0} produits
+                          </span>
+                        )}
                       </div>
                     </div>
                     <div className="flex items-center gap-4">
+                      {section.type === 'custom' && (
+                        <button 
+                          onClick={() => {
+                            setEditingSectionProducts(section.id);
+                            setSelectedProducts(section.productIds || []);
+                          }}
+                          className="flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
+                        >
+                          <ShoppingBag size={16} />
+                          Gérer les produits
+                        </button>
+                      )}
                       <button 
                         onClick={() => handleToggleSection(section.id)}
                         className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${section.isVisible ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-600'}`}
@@ -2250,6 +2281,76 @@ export default function AdminDashboard() {
                 className="px-4 py-2 bg-red-500 text-white rounded-md font-medium hover:bg-red-600 transition-colors"
               >
                 Supprimer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Section Products Modal */}
+      {editingSectionProducts && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-3xl max-h-[90vh] flex flex-col">
+            <div className="flex justify-between items-center p-6 border-b border-gray-100 shrink-0">
+              <h2 className="text-xl font-bold text-gray-800">Sélectionner les produits</h2>
+              <button onClick={() => setEditingSectionProducts(null)} className="text-gray-400 hover:text-gray-600">
+                <X size={24} />
+              </button>
+            </div>
+            <div className="p-4 border-b border-gray-100 shrink-0">
+              <input 
+                type="text" 
+                placeholder="Rechercher un produit..."
+                value={productSearch}
+                onChange={e => setProductSearch(e.target.value)}
+                className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500"
+              />
+            </div>
+            <div className="p-6 overflow-y-auto flex-1">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {products.filter(p => p.name.toLowerCase().includes(productSearch.toLowerCase())).map(product => (
+                  <label key={product.id} className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
+                    <input 
+                      type="checkbox" 
+                      checked={selectedProducts.includes(product.id.toString())}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedProducts([...selectedProducts, product.id.toString()]);
+                        } else {
+                          setSelectedProducts(selectedProducts.filter(id => id !== product.id.toString()));
+                        }
+                      }}
+                      className="w-5 h-5 text-orange-500 rounded focus:ring-orange-500"
+                    />
+                    <div className="flex items-center gap-3 flex-1 overflow-hidden">
+                      <div className="w-10 h-10 bg-gray-100 rounded-md overflow-hidden shrink-0">
+                        {product.image && <img src={product.image} alt="" className="w-full h-full object-cover" />}
+                      </div>
+                      <div className="flex flex-col overflow-hidden">
+                        <span className="font-medium text-gray-800 truncate">{product.name}</span>
+                        <span className="text-sm text-gray-500">{formatPrice(product.price)}</span>
+                      </div>
+                    </div>
+                  </label>
+                ))}
+              </div>
+            </div>
+            <div className="p-6 border-t border-gray-100 shrink-0 flex justify-end gap-3 bg-gray-50 rounded-b-xl">
+              <button 
+                onClick={() => setEditingSectionProducts(null)}
+                className="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 font-medium transition-colors"
+              >
+                Annuler
+              </button>
+              <button 
+                onClick={() => {
+                  const updated = homeSections.map(s => s.id === editingSectionProducts ? { ...s, productIds: selectedProducts } : s);
+                  saveHomeSections(updated);
+                  setEditingSectionProducts(null);
+                  toast.success('Produits enregistrés !');
+                }}
+                className="px-6 py-2 bg-orange-500 text-white rounded-md hover:bg-orange-600 font-medium transition-colors"
+              >
+                Enregistrer les produits ({selectedProducts.length})
               </button>
             </div>
           </div>

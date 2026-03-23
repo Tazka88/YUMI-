@@ -287,7 +287,12 @@ export default function Home() {
   const [bestSellers, setBestSellers] = useState<Product[]>([]);
   const [newProducts, setNewProducts] = useState<Product[]>([]);
   const [promotions, setPromotions] = useState<Product[]>([]);
-  const [customSections, setCustomSections] = useState<any[]>([]);
+  const [homeSections, setHomeSections] = useState<any[]>([
+    { id: 'flash_sales', type: 'flash_sales', title: 'Ventes Flash', isVisible: true },
+    { id: 'best_sellers', type: 'best_sellers', title: 'Meilleures Ventes 🏆', isVisible: true },
+    { id: 'popular', type: 'popular', title: 'Produits Populaires 🔥', isVisible: true },
+    { id: 'new', type: 'new', title: 'Nouveautés 🆕', isVisible: true },
+  ]);
   const addItem = useCartStore(state => state.addItem);
   const [currentSlide, setCurrentSlide] = useState(0);
 
@@ -314,11 +319,19 @@ export default function Home() {
     fetch('/api/products?promotions=true', { signal }).then(res => res.json()).then(data => { if (Array.isArray(data)) setPromotions(data); }).catch(handleFetchError);
 
     const loadSections = () => {
-      const saved = localStorage.getItem('yumi_custom_sections');
+      const saved = localStorage.getItem('yumi_home_sections');
       if (saved) {
         try {
-          setCustomSections(JSON.parse(saved));
+          setHomeSections(JSON.parse(saved));
         } catch (e) {}
+      } else {
+        const oldCustom = localStorage.getItem('yumi_custom_sections');
+        if (oldCustom) {
+          try {
+            const parsed = JSON.parse(oldCustom);
+            setHomeSections(prev => [...prev, ...parsed.map((s: any) => ({ ...s, type: 'custom' }))]);
+          } catch (e) {}
+        }
       }
     };
     loadSections();
@@ -510,55 +523,60 @@ export default function Home() {
         </div>
       )}
 
-      {/* Promotions */}
-      {promotions.length > 0 && (
-        <section>
-          <FlashSalesHeader link="/category/all" />
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
-            {promotions.slice(0, 5).map(p => <ProductCard key={p.id} product={p} />)}
-          </div>
-        </section>
-      )}
-
-      {/* Best Sellers */}
-      {bestSellers.length > 0 && (
-        <section>
-          <SectionHeader title="Meilleures Ventes 🏆" link="/category/all" />
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
-            {bestSellers.slice(0, 5).map(p => <ProductCard key={p.id} product={p} />)}
-          </div>
-        </section>
-      )}
-
-      {/* Popular Products */}
-      {popularProducts.length > 0 && (
-        <section>
-          <SectionHeader title="Produits Populaires 🔥" link="/category/all" />
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
-            {popularProducts.slice(0, 10).map(p => <ProductCard key={p.id} product={p} />)}
-          </div>
-        </section>
-      )}
-
-      {/* New Products */}
-      {newProducts.length > 0 && (
-        <section>
-          <SectionHeader title="Nouveautés 🆕" link="/category/all" />
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
-            {newProducts.slice(0, 5).map(p => <ProductCard key={p.id} product={p} />)}
-          </div>
-        </section>
-      )}
-
-      {/* Custom Sections */}
-      {customSections.filter(s => s.isVisible).map(section => (
-        <section key={section.id}>
-          <SectionHeader title={`${section.title} ${section.emoji}`} link="/category/all" />
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
-            {popularProducts.slice(0, 5).map(p => <ProductCard key={`${section.id}-${p.id}`} product={p} />)}
-          </div>
-        </section>
-      ))}
+      {/* Dynamic Sections */}
+      {homeSections.filter(s => s.isVisible).map(section => {
+        if (section.type === 'flash_sales' && promotions.length > 0) {
+          return (
+            <section key={section.id}>
+              <FlashSalesHeader link="/category/all" />
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                {promotions.slice(0, 5).map(p => <ProductCard key={p.id} product={p} />)}
+              </div>
+            </section>
+          );
+        }
+        if (section.type === 'best_sellers' && bestSellers.length > 0) {
+          return (
+            <section key={section.id}>
+              <SectionHeader title={section.title || "Meilleures Ventes 🏆"} link="/category/all" />
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                {bestSellers.slice(0, 5).map(p => <ProductCard key={p.id} product={p} />)}
+              </div>
+            </section>
+          );
+        }
+        if (section.type === 'popular' && popularProducts.length > 0) {
+          return (
+            <section key={section.id}>
+              <SectionHeader title={section.title || "Produits Populaires 🔥"} link="/category/all" />
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                {popularProducts.slice(0, 10).map(p => <ProductCard key={p.id} product={p} />)}
+              </div>
+            </section>
+          );
+        }
+        if (section.type === 'new' && newProducts.length > 0) {
+          return (
+            <section key={section.id}>
+              <SectionHeader title={section.title || "Nouveautés 🆕"} link="/category/all" />
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                {newProducts.slice(0, 5).map(p => <ProductCard key={p.id} product={p} />)}
+              </div>
+            </section>
+          );
+        }
+        if (section.type === 'custom') {
+          return (
+            <section key={section.id}>
+              <SectionHeader title={`${section.title} ${section.emoji || ''}`} link="/category/all" />
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                {popularProducts.slice(0, 5).map(p => <ProductCard key={`${section.id}-${p.id}`} product={p} />)}
+              </div>
+            </section>
+          );
+        }
+        return null;
+      })}
     </div>
     </>
   );

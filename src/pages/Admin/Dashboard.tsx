@@ -8,12 +8,20 @@ import PageSettings from './PageSettings';
 import WilayasSettings from './WilayasSettings';
 import { FileText, MapPin } from 'lucide-react';
 
-export interface CustomSection {
+export interface HomeSection {
   id: string;
+  type: 'flash_sales' | 'best_sellers' | 'popular' | 'new' | 'custom';
   title: string;
-  emoji: string;
+  emoji?: string;
   isVisible: boolean;
 }
+
+const defaultSections: HomeSection[] = [
+  { id: 'flash_sales', type: 'flash_sales', title: 'Ventes Flash', isVisible: true },
+  { id: 'best_sellers', type: 'best_sellers', title: 'Meilleures Ventes 🏆', isVisible: true },
+  { id: 'popular', type: 'popular', title: 'Produits Populaires 🔥', isVisible: true },
+  { id: 'new', type: 'new', title: 'Nouveautés 🆕', isVisible: true },
+];
 
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState('overview');
@@ -68,46 +76,74 @@ export default function AdminDashboard() {
   const [isSavingCredentials, setIsSavingCredentials] = useState(false);
   const navigate = useNavigate();
 
-  const [customSections, setCustomSections] = useState<CustomSection[]>([]);
+  const [homeSections, setHomeSections] = useState<HomeSection[]>([]);
   const [newSectionTitle, setNewSectionTitle] = useState('');
   const [newSectionEmoji, setNewSectionEmoji] = useState('✨');
 
   useEffect(() => {
-    const saved = localStorage.getItem('yumi_custom_sections');
+    const saved = localStorage.getItem('yumi_home_sections');
     if (saved) {
       try {
-        setCustomSections(JSON.parse(saved));
+        setHomeSections(JSON.parse(saved));
       } catch (e) {}
+    } else {
+      const oldCustom = localStorage.getItem('yumi_custom_sections');
+      let newSections = [...defaultSections];
+      if (oldCustom) {
+        try {
+          const parsed = JSON.parse(oldCustom);
+          newSections = [...newSections, ...parsed.map((s: any) => ({ ...s, type: 'custom' }))];
+        } catch (e) {}
+      }
+      setHomeSections(newSections);
+      localStorage.setItem('yumi_home_sections', JSON.stringify(newSections));
     }
   }, []);
 
-  const saveCustomSections = (sections: CustomSection[]) => {
-    setCustomSections(sections);
-    localStorage.setItem('yumi_custom_sections', JSON.stringify(sections));
+  const saveHomeSections = (sections: HomeSection[]) => {
+    setHomeSections(sections);
+    localStorage.setItem('yumi_home_sections', JSON.stringify(sections));
     window.dispatchEvent(new Event('yumi_sections_updated'));
   };
 
   const handleAddSection = () => {
     if (!newSectionTitle.trim()) return;
-    const newSection: CustomSection = {
+    const newSection: HomeSection = {
       id: Date.now().toString(),
+      type: 'custom',
       title: newSectionTitle,
       emoji: newSectionEmoji || '✨',
       isVisible: true
     };
-    saveCustomSections([...customSections, newSection]);
+    saveHomeSections([...homeSections, newSection]);
     setNewSectionTitle('');
     setNewSectionEmoji('✨');
   };
 
   const handleToggleSection = (id: string) => {
-    const updated = customSections.map(s => s.id === id ? { ...s, isVisible: !s.isVisible } : s);
-    saveCustomSections(updated);
+    const updated = homeSections.map(s => s.id === id ? { ...s, isVisible: !s.isVisible } : s);
+    saveHomeSections(updated);
   };
 
   const handleDeleteSection = (id: string) => {
-    const updated = customSections.filter(s => s.id !== id);
-    saveCustomSections(updated);
+    const updated = homeSections.filter(s => s.id !== id);
+    saveHomeSections(updated);
+  };
+
+  const moveSection = (index: number, direction: 'up' | 'down') => {
+    if (
+      (direction === 'up' && index === 0) || 
+      (direction === 'down' && index === homeSections.length - 1)
+    ) return;
+
+    const newSections = [...homeSections];
+    const swapIndex = direction === 'up' ? index - 1 : index + 1;
+    
+    const temp = newSections[index];
+    newSections[index] = newSections[swapIndex];
+    newSections[swapIndex] = temp;
+
+    saveHomeSections(newSections);
   };
 
   useEffect(() => {
@@ -1667,11 +1703,32 @@ export default function AdminDashboard() {
             </div>
             <div className="p-6">
               <div className="space-y-4 mb-6">
-                {customSections.map(section => (
+                {homeSections.map((section, index) => (
                   <div key={section.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg bg-gray-50">
-                    <div className="flex items-center gap-3">
-                      <span className="text-2xl">{section.emoji}</span>
-                      <span className="font-medium text-gray-800">{section.title}</span>
+                    <div className="flex items-center gap-4">
+                      <div className="flex flex-col gap-1">
+                        <button 
+                          onClick={() => moveSection(index, 'up')}
+                          disabled={index === 0}
+                          className="text-gray-400 hover:text-orange-500 disabled:opacity-30"
+                        >
+                          ▲
+                        </button>
+                        <button 
+                          onClick={() => moveSection(index, 'down')}
+                          disabled={index === homeSections.length - 1}
+                          className="text-gray-400 hover:text-orange-500 disabled:opacity-30"
+                        >
+                          ▼
+                        </button>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="text-2xl">{section.emoji}</span>
+                        <span className="font-medium text-gray-800">{section.title}</span>
+                        {section.type !== 'custom' && (
+                          <span className="text-xs bg-gray-200 text-gray-600 px-2 py-1 rounded-full">Par défaut</span>
+                        )}
+                      </div>
                     </div>
                     <div className="flex items-center gap-4">
                       <button 
@@ -1683,13 +1740,16 @@ export default function AdminDashboard() {
                       <button 
                         onClick={() => handleDeleteSection(section.id)}
                         className="text-red-500 hover:bg-red-50 p-2 rounded-full transition-colors"
+                        title={section.type !== 'custom' ? "Vous pouvez seulement masquer les sections par défaut" : "Supprimer"}
+                        disabled={section.type !== 'custom'}
+                        style={{ opacity: section.type !== 'custom' ? 0.3 : 1 }}
                       >
                         🗑️
                       </button>
                     </div>
                   </div>
                 ))}
-                {customSections.length === 0 && (
+                {homeSections.length === 0 && (
                   <p className="text-gray-500 text-center py-4">Aucune section personnalisée. Ajoutez-en une ci-dessous.</p>
                 )}
               </div>

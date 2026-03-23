@@ -4,11 +4,13 @@ import { Plus, Edit, Trash2, GripVertical, Save, Check, X } from 'lucide-react';
 export default function FooterSettings() {
   const [links, setLinks] = useState<any[]>([]);
   const [settings, setSettings] = useState<any>({});
+  const [pages, setPages] = useState<any[]>([]);
   const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
   const [editingLink, setEditingLink] = useState<any>(null);
   const [linkForm, setLinkForm] = useState({ name: '', url: '', column_id: 1, order_index: 0 });
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState('');
+  const [linkType, setLinkType] = useState<'page' | 'custom'>('page');
 
   const fetchFooterData = (signal?: AbortSignal) => {
     fetch('/api/footer-links', { signal })
@@ -20,6 +22,12 @@ export default function FooterSettings() {
     fetch('/api/settings', { signal })
       .then(res => res.json())
       .then(data => { if (data && typeof data === 'object' && !data.error) setSettings(data); })
+      .catch(err => {
+        if (err.name !== 'AbortError') console.error(err);
+      });
+    fetch('/api/pages', { signal })
+      .then(res => res.json())
+      .then(data => { if (Array.isArray(data)) setPages(data); })
       .catch(err => {
         if (err.name !== 'AbortError') console.error(err);
       });
@@ -151,6 +159,7 @@ export default function FooterSettings() {
             onClick={() => {
               setEditingLink(null);
               setLinkForm({ name: '', url: '', column_id: columnId, order_index: columnLinks.length });
+              setLinkType('page');
               setIsLinkModalOpen(true);
             }}
             className="bg-orange-50 text-orange-600 hover:bg-orange-100 px-3 py-1 rounded-md text-sm font-medium flex items-center gap-1 transition-colors"
@@ -192,6 +201,7 @@ export default function FooterSettings() {
                     onClick={() => {
                       setEditingLink(link);
                       setLinkForm(link);
+                      setLinkType(link.url.startsWith('/') && !link.url.startsWith('/category/') && !link.url.startsWith('/product/') && !link.url.startsWith('/brands') && !link.url.startsWith('/cart') && !link.url.startsWith('/checkout') ? 'page' : 'custom');
                       setIsLinkModalOpen(true);
                     }}
                     className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
@@ -349,17 +359,64 @@ export default function FooterSettings() {
                   placeholder="Ex: Contactez-nous"
                 />
               </div>
+
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">URL</label>
-                <input 
-                  type="text" 
-                  required
-                  value={linkForm.url}
-                  onChange={e => setLinkForm({...linkForm, url: e.target.value})}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-orange-500 focus:border-orange-500"
-                  placeholder="Ex: /contact ou https://..."
-                />
+                <label className="block text-sm font-medium text-gray-700 mb-2">Type de lien</label>
+                <div className="flex gap-4 mb-3">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input 
+                      type="radio" 
+                      name="linkType" 
+                      checked={linkType === 'page'} 
+                      onChange={() => setLinkType('page')}
+                      className="text-orange-500 focus:ring-orange-500"
+                    />
+                    <span className="text-sm">Page existante</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input 
+                      type="radio" 
+                      name="linkType" 
+                      checked={linkType === 'custom'} 
+                      onChange={() => setLinkType('custom')}
+                      className="text-orange-500 focus:ring-orange-500"
+                    />
+                    <span className="text-sm">URL personnalisée</span>
+                  </label>
+                </div>
+
+                {linkType === 'page' ? (
+                  <select 
+                    required
+                    value={linkForm.url}
+                    onChange={e => {
+                      const url = e.target.value;
+                      const selectedPage = pages.find(p => `/${p.slug}` === url);
+                      setLinkForm({
+                        ...linkForm, 
+                        url,
+                        name: linkForm.name || (selectedPage ? selectedPage.title : '')
+                      });
+                    }}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-orange-500 focus:border-orange-500"
+                  >
+                    <option value="" disabled>Sélectionnez une page</option>
+                    {pages.map(page => (
+                      <option key={page.id} value={`/${page.slug}`}>{page.title}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <input 
+                    type="text" 
+                    required
+                    value={linkForm.url}
+                    onChange={e => setLinkForm({...linkForm, url: e.target.value})}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-orange-500 focus:border-orange-500"
+                    placeholder="Ex: /contact ou https://..."
+                  />
+                )}
               </div>
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Colonne</label>
                 <select 

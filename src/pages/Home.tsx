@@ -204,7 +204,7 @@ function AnimatedCounter({ target }: { target: number }) {
   return <span ref={ref}>+{count.toLocaleString('fr-FR')}</span>;
 }
 
-const CountdownTimer = () => {
+const FlashSalesHeader = ({ link }: { link?: string }) => {
   const [timeLeft, setTimeLeft] = useState({ hours: 0, minutes: 0, seconds: 0 });
 
   useEffect(() => {
@@ -232,13 +232,34 @@ const CountdownTimer = () => {
   const formatNumber = (num: number) => num.toString().padStart(2, '0');
 
   return (
-    <div className="flex items-center gap-1 text-sm ml-4">
-      <span className="text-gray-600 mr-1 hidden sm:inline font-medium">Se termine dans :</span>
-      <div className="bg-red-500 text-white font-bold px-2 py-1 rounded">{formatNumber(timeLeft.hours)}</div>
-      <span className="text-red-500 font-bold">:</span>
-      <div className="bg-red-500 text-white font-bold px-2 py-1 rounded">{formatNumber(timeLeft.minutes)}</div>
-      <span className="text-red-500 font-bold">:</span>
-      <div className="bg-red-500 text-white font-bold px-2 py-1 rounded">{formatNumber(timeLeft.seconds)}</div>
+    <div className="flex flex-col sm:flex-row items-center justify-between mb-4 mt-8 bg-gray-900 p-4 rounded-lg shadow-md">
+      {/* Left: Title */}
+      <div className="flex items-center mb-3 sm:mb-0 w-full sm:w-auto justify-center sm:justify-start">
+        <h2 className="text-xl font-bold text-white flex items-center gap-2">
+          <span className="text-yellow-400 text-2xl">⚡</span> Ventes Flash
+        </h2>
+      </div>
+
+      {/* Center: Countdown */}
+      <div className="flex items-center gap-2 mb-3 sm:mb-0">
+        <span className="text-gray-300 text-sm font-medium hidden md:inline mr-2">Se termine dans :</span>
+        <div className="flex items-center gap-1.5">
+          <div className="bg-red-600 text-white font-bold text-lg px-2.5 py-1 rounded shadow-sm min-w-[36px] text-center">{formatNumber(timeLeft.hours)}</div>
+          <span className="text-white font-bold text-lg">:</span>
+          <div className="bg-red-600 text-white font-bold text-lg px-2.5 py-1 rounded shadow-sm min-w-[36px] text-center">{formatNumber(timeLeft.minutes)}</div>
+          <span className="text-white font-bold text-lg">:</span>
+          <div className="bg-red-600 text-white font-bold text-lg px-2.5 py-1 rounded shadow-sm min-w-[36px] text-center">{formatNumber(timeLeft.seconds)}</div>
+        </div>
+      </div>
+
+      {/* Right: Link */}
+      {link && (
+        <div className="w-full sm:w-auto flex justify-center sm:justify-end">
+          <Link to={link} className="text-white hover:text-yellow-400 font-medium text-sm flex items-center transition-colors">
+            Voir plus <ChevronRight size={18} className="ml-1" />
+          </Link>
+        </div>
+      )}
     </div>
   );
 };
@@ -492,9 +513,7 @@ export default function Home() {
       {/* Promotions */}
       {promotions.length > 0 && (
         <section>
-          <SectionHeader title="Ventes Flash ⚡" link="/category/all">
-            <CountdownTimer />
-          </SectionHeader>
+          <FlashSalesHeader link="/category/all" />
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
             {promotions.slice(0, 5).map(p => <ProductCard key={p.id} product={p} />)}
           </div>

@@ -68,7 +68,7 @@ export default function AdminDashboard() {
     title: '', description: '', image: '', link: '', button_text: '', order_index: 0
   });
   const [settingsForm, setSettingsForm] = useState<Record<string, any>>({
-    announcement_phone: '', announcement_text: '', whatsapp_number: '', admin_email: '', site_logo: '', active_theme: 'normal'
+    announcement_phone: '', announcement_text: '', announcement_bg_color: '#000000', announcement_text_color: '#ffffff', whatsapp_number: '', admin_email: '', site_logo: '', active_theme: 'normal'
   });
   const [isSavingSettings, setIsSavingSettings] = useState(false);
   const [credentialsForm, setCredentialsForm] = useState({
@@ -1541,14 +1541,51 @@ export default function AdminDashboard() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Texte d'annonce</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Texte d'annonce (un message par ligne)</label>
                     <textarea 
-                      rows={2}
+                      rows={4}
                       className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500" 
                       value={settingsForm.announcement_text} 
                       onChange={e => setSettingsForm({...settingsForm, announcement_text: e.target.value})} 
-                      placeholder="🚚 Livraison gratuite à partir de 5 000 DA..."
+                      placeholder="📞 Appelez pour commander : 05 22 04 18 18&#10;🚚 Livraison à partir de 149 Dhs&#10;🎉 Spécial Aïd - Jusqu'à -70%"
                     ></textarea>
+                    <p className="text-xs text-gray-500 mt-1">Chaque ligne s'affichera pendant 3 secondes avec une animation.</p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Couleur de fond</label>
+                      <div className="flex items-center gap-2">
+                        <input 
+                          type="color" 
+                          className="h-10 w-10 rounded cursor-pointer border-0 p-0" 
+                          value={settingsForm.announcement_bg_color || '#000000'} 
+                          onChange={e => setSettingsForm({...settingsForm, announcement_bg_color: e.target.value})} 
+                        />
+                        <input 
+                          type="text" 
+                          className="flex-1 px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500" 
+                          value={settingsForm.announcement_bg_color || '#000000'} 
+                          onChange={e => setSettingsForm({...settingsForm, announcement_bg_color: e.target.value})} 
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Couleur du texte</label>
+                      <div className="flex items-center gap-2">
+                        <input 
+                          type="color" 
+                          className="h-10 w-10 rounded cursor-pointer border-0 p-0" 
+                          value={settingsForm.announcement_text_color || '#ffffff'} 
+                          onChange={e => setSettingsForm({...settingsForm, announcement_text_color: e.target.value})} 
+                        />
+                        <input 
+                          type="text" 
+                          className="flex-1 px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500" 
+                          value={settingsForm.announcement_text_color || '#ffffff'} 
+                          onChange={e => setSettingsForm({...settingsForm, announcement_text_color: e.target.value})} 
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>

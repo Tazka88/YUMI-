@@ -2,6 +2,7 @@ import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { ShoppingCart, Search, Menu, User, MessageCircle, X, Phone, LayoutDashboard, Facebook, Instagram, Youtube, Truck, MapPin } from 'lucide-react';
 import { useCartStore } from '../store/cartStore';
 import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 
 export default function Layout() {
   const cartItems = useCartStore((state) => state.items);
@@ -16,6 +17,7 @@ export default function Layout() {
   const [categories, setCategories] = useState<any[]>([]);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showAnnouncement, setShowAnnouncement] = useState(true);
+  const [currentMessageIndex, setCurrentMessageIndex] = useState(0);
   const [settings, setSettings] = useState<any>({});
   const [footerLinks, setFooterLinks] = useState<any[]>([]);
 
@@ -99,6 +101,18 @@ export default function Layout() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  const announcementMessages = (settings.announcement_text || '🚚 Livraison gratuite à partir de 5 000 DA | Paiement à la livraison partout en Algérie')
+    .split('\n')
+    .filter((msg: string) => msg.trim() !== '');
+
+  useEffect(() => {
+    if (announcementMessages.length <= 1) return;
+    const interval = setInterval(() => {
+      setCurrentMessageIndex(prev => (prev + 1) % announcementMessages.length);
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [announcementMessages.length]);
+
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
@@ -111,18 +125,35 @@ export default function Layout() {
     <div className="min-h-screen flex flex-col bg-gray-50 font-sans">
       {/* Announcement Bar */}
       {showAnnouncement && (
-        <div className="bg-black text-white text-xs py-2 relative z-50">
+        <div 
+          className="text-xs py-2 relative z-50 overflow-hidden"
+          style={{ 
+            backgroundColor: settings.announcement_bg_color || '#000000',
+            color: settings.announcement_text_color || '#ffffff'
+          }}
+        >
           <div className="container mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
-            <a href={`tel:${settings.announcement_phone?.replace(/\s/g, '')}`} className="flex items-center gap-1 hover:text-orange-400 transition-colors whitespace-nowrap">
+            <a href={`tel:${settings.announcement_phone?.replace(/\s/g, '')}`} className="flex items-center gap-1 hover:opacity-80 transition-opacity whitespace-nowrap">
               <Phone size={12} />
               {settings.announcement_phone || '+213 555 00 00 00'}
             </a>
-            <div className="text-center flex-1 px-4">
-              {settings.announcement_text || '🚚 Livraison gratuite à partir de 5 000 DA | Paiement à la livraison partout en Algérie'}
+            <div className="text-center flex-1 px-4 relative h-4 flex items-center justify-center">
+              <AnimatePresence>
+                <motion.div
+                  key={currentMessageIndex}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.3 }}
+                  className="absolute w-full text-center"
+                >
+                  {announcementMessages[currentMessageIndex]}
+                </motion.div>
+              </AnimatePresence>
             </div>
             <button 
               onClick={() => setShowAnnouncement(false)}
-              className="absolute right-0 top-0 bottom-0 px-4 sm:static sm:p-0 flex items-center justify-center text-gray-400 hover:text-white"
+              className="absolute right-0 top-0 bottom-0 px-4 sm:static sm:p-0 flex items-center justify-center opacity-70 hover:opacity-100"
               aria-label="Fermer"
             >
               <X size={16} />

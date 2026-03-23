@@ -249,17 +249,17 @@ export default function Product() {
               <div className="flex gap-2 overflow-x-auto pb-2">
                 <button 
                   onClick={() => setSelectedImage(product.image || `https://picsum.photos/seed/${product.slug}/800/800`)}
-                  className={`w-20 h-20 flex-shrink-0 rounded-md overflow-hidden border-2 transition-colors ${selectedImage === (product.image || `https://picsum.photos/seed/${product.slug}/800/800`) ? 'border-orange-500' : 'border-transparent'}`}
+                  className={`w-20 h-20 flex-shrink-0 rounded-md overflow-hidden border-2 transition-colors bg-white p-1 ${selectedImage === (product.image || `https://picsum.photos/seed/${product.slug}/800/800`) ? 'border-orange-500' : 'border-transparent'}`}
                 >
-                  <img src={product.image || `https://picsum.photos/seed/${product.slug}/800/800`} alt="Main" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                  <img src={product.image || `https://picsum.photos/seed/${product.slug}/800/800`} alt="Main" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
                 </button>
                 {product.images.map((img: any) => (
                   <button 
                     key={img.id}
                     onClick={() => setSelectedImage(img.image)}
-                    className={`w-20 h-20 flex-shrink-0 rounded-md overflow-hidden border-2 transition-colors ${selectedImage === img.image ? 'border-orange-500' : 'border-transparent'}`}
+                    className={`w-20 h-20 flex-shrink-0 rounded-md overflow-hidden border-2 transition-colors bg-white p-1 ${selectedImage === img.image ? 'border-orange-500' : 'border-transparent'}`}
                   >
-                    <img src={img.image} alt="Thumbnail" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                    <img src={img.image} alt="Thumbnail" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
                   </button>
                 ))}
               </div>

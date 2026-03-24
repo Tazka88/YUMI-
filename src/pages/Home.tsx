@@ -491,7 +491,7 @@ export default function Home() {
             <Link key={cat.id} to={`/category/${cat.slug}`} className="flex flex-col items-center group">
               <div className="w-full aspect-square max-w-[160px] rounded-2xl overflow-hidden mb-3 shadow-sm group-hover:shadow-md group-hover:scale-105 transition-all duration-300 border border-gray-100">
                 <img 
-                  src={cat.image || `https://picsum.photos/seed/${cat.slug}/200/200`} 
+                  src={cat.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(cat.name)}&background=random&color=fff&size=200`} 
                   alt={cat.name}
                   className="w-full h-full object-cover"
                   referrerPolicy="no-referrer"

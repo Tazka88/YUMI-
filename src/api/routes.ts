@@ -385,7 +385,9 @@ router.get('/products', async (req, res) => {
     const idArray = ids ? ids.split(',').map(id => Number(id)).filter(id => !isNaN(id)) : [];
     
     const products = await sql`
-      SELECT p.*, COALESCE(p.brand_name, b.name) as brand_name, b.slug as brand_slug, b.image as brand_image 
+      SELECT p.*, COALESCE(p.brand_name, b.name) as brand_name, b.slug as brand_slug, b.image as brand_image,
+      (SELECT COUNT(*) FROM reviews r WHERE r.product_id = p.id) as reviews_count,
+      (SELECT COALESCE(AVG(rating), 0) FROM reviews r WHERE r.product_id = p.id) as avg_rating
       FROM products p 
       LEFT JOIN brands b ON p.brand_id = b.id 
       WHERE 
@@ -436,7 +438,9 @@ router.get('/products', async (req, res) => {
 router.get('/products/:slug', async (req, res) => {
   try {
     const [product] = await sql`
-      SELECT p.*, c.name as category_name, COALESCE(p.brand_name, b.name) as brand_name, b.slug as brand_slug, b.image as brand_image 
+      SELECT p.*, c.name as category_name, COALESCE(p.brand_name, b.name) as brand_name, b.slug as brand_slug, b.image as brand_image,
+      (SELECT COUNT(*) FROM reviews r WHERE r.product_id = p.id) as reviews_count,
+      (SELECT COALESCE(AVG(rating), 0) FROM reviews r WHERE r.product_id = p.id) as avg_rating
       FROM products p 
       LEFT JOIN categories c ON p.category_id = c.id 
       LEFT JOIN brands b ON p.brand_id = b.id 

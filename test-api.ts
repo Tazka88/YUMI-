@@ -1,7 +1,8 @@
-import http from 'http';
-import https from 'https';
-https.get('https://ais-dev-gdjvqzszojzzmgjbdz2kvf-501951638809.europe-west2.run.app/api/products', (res) => {
-  let data = '';
-  res.on('data', (chunk) => data += chunk);
-  res.on('end', () => console.log(data));
-}).on('error', (err) => console.error(err));
+import { sql } from './src/db/setup.js';
+async function main() {
+  await sql`UPDATE categories SET image = null WHERE image LIKE '%unsplash%'`;
+  await sql`UPDATE subcategories SET image = null WHERE image LIKE '%unsplash%'`;
+  console.log("Updated categories and subcategories");
+  process.exit(0);
+}
+main();

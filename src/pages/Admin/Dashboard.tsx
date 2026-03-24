@@ -1101,7 +1101,7 @@ export default function AdminDashboard() {
                       {products.map(product => (
                         <tr key={product.id} className="hover:bg-gray-50">
                           <td className="px-6 py-4">
-                            <img src={product.image || `https://picsum.photos/seed/${product.slug}/50/50`} alt={product.name} className="w-10 h-10 rounded object-cover" referrerPolicy="no-referrer" />
+                            <img src={product.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(product.name)}&background=random&size=50`} alt={product.name} className="w-10 h-10 rounded object-cover" referrerPolicy="no-referrer" />
                           </td>
                           <td className="px-6 py-4 font-medium text-gray-900">{product.name}</td>
                           <td className="px-6 py-4">{product.category_name}</td>
@@ -1161,7 +1161,7 @@ export default function AdminDashboard() {
                       {categories.map(cat => (
                         <tr key={cat.id} className="hover:bg-gray-50">
                           <td className="px-6 py-4">
-                            <img src={cat.image || `https://picsum.photos/seed/${cat.slug}/50/50`} alt={cat.name} className="w-10 h-10 rounded object-cover" referrerPolicy="no-referrer" />
+                            <img src={cat.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(cat.name)}&background=random&size=50`} alt={cat.name} className="w-10 h-10 rounded object-cover" referrerPolicy="no-referrer" />
                           </td>
                           <td className="px-6 py-4 font-medium text-gray-900">#{cat.id}</td>
                           <td className="px-6 py-4 font-medium text-gray-900">{cat.name}</td>
@@ -1213,7 +1213,7 @@ export default function AdminDashboard() {
                         (cat.subcategories || []).map((sub: any) => (
                           <tr key={sub.id} className="hover:bg-gray-50">
                             <td className="px-6 py-4">
-                              <img src={sub.image || `https://picsum.photos/seed/${sub.slug}/50/50`} alt={sub.name} className="w-10 h-10 rounded object-cover" referrerPolicy="no-referrer" />
+                              <img src={sub.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(sub.name)}&background=random&size=50`} alt={sub.name} className="w-10 h-10 rounded object-cover" referrerPolicy="no-referrer" />
                             </td>
                             <td className="px-6 py-4 font-medium text-gray-900">#{sub.id}</td>
                             <td className="px-6 py-4 font-medium text-gray-900">{sub.name}</td>

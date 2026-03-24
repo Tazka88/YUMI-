@@ -18,6 +18,8 @@ export interface Product {
   is_recommended: boolean;
   features?: string | { key: string; value: string }[];
   key_points?: string[];
+  reviews_count?: number;
+  avg_rating?: number;
 }
 
 export interface CartItem extends Product {

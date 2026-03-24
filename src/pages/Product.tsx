@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ShoppingCart, Star, ShieldCheck, Truck, RotateCcw, ThumbsUp } from 'lucide-react';
+import { ShoppingCart, Star, ShieldCheck, Truck, RotateCcw, ThumbsUp, Facebook, Instagram, MessageCircle, CreditCard, ArrowDown } from 'lucide-react';
 import { useCartStore, Product as ProductType } from '../store/cartStore';
 import { formatPrice } from '../utils/formatPrice';
 import { ProductCard } from '../components/ProductCard';
@@ -49,7 +49,7 @@ export default function Product() {
       })
       .then(data => {
         setProduct(data);
-        setSelectedImage(data.image || `https://picsum.photos/seed/${data.slug}/800/800`);
+        setSelectedImage(data.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(data.name)}&background=random&size=800`);
         // Fetch related
         fetch(`/api/products?category=${data.category_id}`, { signal })
           .then(res => res.json())
@@ -184,7 +184,7 @@ export default function Product() {
     "@context": "https://schema.org/",
     "@type": "Product",
     "name": product.name,
-    "image": product.image || `https://picsum.photos/seed/${product.slug}/800/800`,
+    "image": product.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(product.name)}&background=random&size=800`,
     "description": product.description,
     "sku": product.id.toString(),
     "brand": {
@@ -213,7 +213,7 @@ export default function Product() {
       <SEO 
         title={product.name} 
         description={product.description.substring(0, 150) + '...'} 
-        image={product.image || `https://picsum.photos/seed/${product.slug}/800/800`}
+        image={product.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(product.name)}&background=random&size=800`}
         url={window.location.href}
         schema={productSchema}
       />
@@ -248,10 +248,10 @@ export default function Product() {
             {product.images && product.images.length > 0 && (
               <div className="flex gap-2 overflow-x-auto pb-2">
                 <button 
-                  onClick={() => setSelectedImage(product.image || `https://picsum.photos/seed/${product.slug}/800/800`)}
-                  className={`w-20 h-20 flex-shrink-0 rounded-md overflow-hidden border-2 transition-colors bg-white p-1 ${selectedImage === (product.image || `https://picsum.photos/seed/${product.slug}/800/800`) ? 'border-orange-500' : 'border-transparent'}`}
+                  onClick={() => setSelectedImage(product.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(product.name)}&background=random&size=800`)}
+                  className={`w-20 h-20 flex-shrink-0 rounded-md overflow-hidden border-2 transition-colors bg-white p-1 ${selectedImage === (product.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(product.name)}&background=random&size=800`) ? 'border-orange-500' : 'border-transparent'}`}
                 >
-                  <img src={product.image || `https://picsum.photos/seed/${product.slug}/800/800`} alt="Main" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
+                  <img src={product.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(product.name)}&background=random&size=800`} alt="Main" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
                 </button>
                 {product.images.map((img: any) => (
                   <button 
@@ -316,6 +316,62 @@ export default function Product() {
               )}
             </div>
 
+            {/* Reassurance Badges */}
+            <div className="grid grid-cols-3 gap-3 mb-6">
+              <div className="flex flex-col items-center text-center p-3 bg-gray-50 rounded-lg border border-gray-100">
+                <Truck size={24} className="text-orange-500 mb-2" />
+                <span className="text-xs font-bold text-gray-800">Livraison Rapide</span>
+              </div>
+              <div className="flex flex-col items-center text-center p-3 bg-gray-50 rounded-lg border border-gray-100">
+                <RotateCcw size={24} className="text-orange-500 mb-2" />
+                <span className="text-xs font-bold text-gray-800">Retour Facile</span>
+              </div>
+              <div className="flex flex-col items-center text-center p-3 bg-gray-50 rounded-lg border border-gray-100">
+                <ShieldCheck size={24} className="text-orange-500 mb-2" />
+                <span className="text-xs font-bold text-gray-800">Paiement Sécurisé</span>
+              </div>
+            </div>
+
+            {/* Info Boxes */}
+            <div className="space-y-3 mb-6">
+              <div className="flex items-start gap-3 p-3 bg-blue-50/50 border border-blue-100 rounded-lg">
+                <Truck className="text-blue-500 mt-0.5" size={20} />
+                <div>
+                  <h4 className="text-sm font-bold text-gray-800">Livraison</h4>
+                  <p className="text-xs text-gray-600 mt-1">Livraison disponible partout en Algérie (58 wilayas)</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3 p-3 bg-green-50/50 border border-green-100 rounded-lg">
+                <CreditCard className="text-green-500 mt-0.5" size={20} />
+                <div>
+                  <h4 className="text-sm font-bold text-gray-800">Paiement</h4>
+                  <p className="text-xs text-gray-600 mt-1">Paiement à la livraison disponible</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Social Share & Scroll Link */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-6 border-b border-gray-100">
+              <div className="flex items-center gap-3">
+                <span className="text-sm font-medium text-gray-700">Partager :</span>
+                <a href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(window.location.href)}`} target="_blank" rel="noreferrer" className="w-8 h-8 flex items-center justify-center rounded-full bg-blue-600 text-white hover:bg-blue-700 transition-colors shadow-sm">
+                  <Facebook size={16} />
+                </a>
+                <a href={`https://wa.me/?text=${encodeURIComponent(window.location.href)}`} target="_blank" rel="noreferrer" className="w-8 h-8 flex items-center justify-center rounded-full bg-green-500 text-white hover:bg-green-600 transition-colors shadow-sm">
+                  <MessageCircle size={16} />
+                </a>
+                <a href={`https://www.instagram.com/`} target="_blank" rel="noreferrer" className="w-8 h-8 flex items-center justify-center rounded-full bg-gradient-to-tr from-yellow-400 via-red-500 to-purple-500 text-white hover:opacity-90 transition-opacity shadow-sm">
+                  <Instagram size={16} />
+                </a>
+              </div>
+              <button 
+                onClick={() => document.getElementById('description')?.scrollIntoView({ behavior: 'smooth' })}
+                className="text-sm text-orange-500 hover:text-orange-600 font-bold flex items-center gap-1 transition-colors"
+              >
+                Voir la description complète <ArrowDown size={16} />
+              </button>
+            </div>
+
             <div className="mt-auto flex flex-col sm:flex-row gap-4">
               <div className="flex items-center border border-gray-300 rounded-md bg-white w-32">
                 <button 
@@ -376,7 +432,7 @@ export default function Product() {
       </div>
 
       {/* Product Description Section */}
-      <div className="bg-white rounded-lg shadow-sm p-6 mb-12">
+      <div id="description" className="bg-white rounded-lg shadow-sm p-6 mb-12 scroll-mt-24">
         <h2 className="text-xl font-bold text-gray-800 mb-6 border-b pb-4">Description du produit</h2>
         <div className="prose max-w-none text-gray-700">
           {product.description ? (

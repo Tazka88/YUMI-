@@ -13,6 +13,8 @@ interface Product {
   image: string;
   stock: number;
   is_fast_delivery?: boolean;
+  reviews_count?: number;
+  avg_rating?: number;
 }
 
 export const ProductCard: React.FC<{ product: Product }> = ({ product }) => {
@@ -20,6 +22,8 @@ export const ProductCard: React.FC<{ product: Product }> = ({ product }) => {
   const isPromo = product.promo_price !== null;
   const discount = isPromo ? Math.round(((product.price - product.promo_price!) / product.price) * 100) : 0;
   const isOutOfStock = product.stock <= 0;
+  const avgRating = product.avg_rating ? Number(product.avg_rating) : 0;
+  const reviewsCount = product.reviews_count ? Number(product.reviews_count) : 0;
 
   return (
     <div className="bg-white rounded-lg shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden group flex flex-col h-full relative">
@@ -39,7 +43,7 @@ export const ProductCard: React.FC<{ product: Product }> = ({ product }) => {
         </div>
         
         <img 
-          src={product.image || `https://picsum.photos/seed/${product.slug}/400/400`} 
+          src={product.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(product.name)}&background=random&size=400`} 
           alt={product.name}
           loading="lazy"
           decoding="async"
@@ -80,13 +84,11 @@ export const ProductCard: React.FC<{ product: Product }> = ({ product }) => {
         </Link>
         <div className="flex items-center mb-2">
           <div className="flex text-orange-400 text-xs">
-            <Star fill="currentColor" size={14} />
-            <Star fill="currentColor" size={14} />
-            <Star fill="currentColor" size={14} />
-            <Star fill="currentColor" size={14} />
-            <Star size={14} />
+            {[1, 2, 3, 4, 5].map(star => (
+              <Star key={star} fill={star <= Math.round(avgRating) ? "currentColor" : "none"} size={14} />
+            ))}
           </div>
-          <span className="text-xs text-gray-500 ml-1">(12)</span>
+          <span className="text-xs text-gray-500 ml-1">({reviewsCount})</span>
         </div>
         <div className="flex flex-col mt-auto">
           {isPromo ? (

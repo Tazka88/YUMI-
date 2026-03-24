@@ -41,7 +41,7 @@ export default function Checkout() {
         if (res.ok) {
           const data = await res.json();
           if (Array.isArray(data)) {
-            setWilayas(data.filter((w: Wilaya) => w.is_active === 1));
+            setWilayas(data.filter((w: any) => w.is_active === true || w.is_active === 1));
           }
         }
       } catch (error) {

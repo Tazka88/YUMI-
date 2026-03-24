@@ -37,7 +37,7 @@ export default function Cart() {
               <div key={item.id} className="bg-white p-4 rounded-lg shadow-sm flex flex-col sm:flex-row items-start sm:items-center gap-4 relative">
                 <Link to={`/product/${item.slug}`} className="w-24 h-24 shrink-0 rounded-md overflow-hidden bg-gray-50">
                   <img 
-                    src={item.image || `https://picsum.photos/seed/${item.slug}/200/200`} 
+                    src={item.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(item.name)}&background=random&size=200`} 
                     alt={item.name}
                     className="w-full h-full object-cover"
                     referrerPolicy="no-referrer"

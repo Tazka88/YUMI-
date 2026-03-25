@@ -25,10 +25,7 @@ async function startServer() {
     origin: true, // Allow the current origin (useful for AI Studio preview)
     credentials: true
   }));
-  app.use(helmet({
-    crossOriginResourcePolicy: false, // Allow loading images from other origins if needed
-    contentSecurityPolicy: false, // Disable CSP for preview environment compatibility
-  }));
+  // Removed helmet to prevent iframe blocking in AI Studio preview
   app.use(compression()); // Compress all HTTP responses (Gzip/Brotli)
   app.use(express.json({ limit: '5mb' })); // Reduced from 50mb to prevent DoS
   app.use(express.urlencoded({ limit: '5mb', extended: true }));

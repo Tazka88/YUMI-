@@ -174,8 +174,8 @@ export default function Category() {
         {/* Main Content */}
         <div className="flex-1">
           {categoryImage && (
-            <div className="mb-6 rounded-xl overflow-hidden shadow-sm h-48 md:h-64">
-              <img src={categoryImage} alt={categoryName} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+            <div className="mb-6 rounded-xl overflow-hidden shadow-sm bg-gray-50 flex items-center justify-center">
+              <img src={categoryImage} alt={categoryName} className="w-full max-h-64 object-contain" referrerPolicy="no-referrer" />
             </div>
           )}
           <div className="bg-white p-4 rounded-lg shadow-sm mb-6 flex justify-between items-center">

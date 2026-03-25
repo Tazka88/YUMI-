@@ -15,7 +15,9 @@ const router = Router();
 const processImage = (table: string, id: number | string, field: string, image: string | null) => {
   if (!image) return null;
   if (image.startsWith('data:image/')) {
-    return `/api/images/${table}/${id}/${field}`;
+    // Create a simple hash from the base64 string to bust cache when image changes
+    const hash = image.substring(image.length - 20).replace(/[^a-zA-Z0-9]/g, '');
+    return `/api/images/${table}/${id}/${field}?v=${hash}`;
   }
   return image;
 };

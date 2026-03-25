@@ -6,7 +6,7 @@ import { formatPrice } from '../../utils/formatPrice';
 import FooterSettings from './FooterSettings';
 import PageSettings from './PageSettings';
 import WilayasSettings from './WilayasSettings';
-import { FileText, MapPin } from 'lucide-react';
+import { FileText, MapPin, Search } from 'lucide-react';
 
 export interface HomeSection {
   id: string;
@@ -29,6 +29,7 @@ export default function AdminDashboard() {
   const [productSubTab, setProductSubTab] = useState('products');
   const [stats, setStats] = useState({ orders: 0, revenue: 0, lowStock: 0 });
   const [orders, setOrders] = useState<any[]>([]);
+  const [orderSearchTerm, setOrderSearchTerm] = useState('');
   const [products, setProducts] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
   const [brands, setBrands] = useState<any[]>([]);
@@ -974,7 +975,7 @@ export default function AdminDashboard() {
                   <tbody className="divide-y divide-gray-100">
                     {orders.slice(0, 5).map(order => (
                       <tr key={order.id} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 font-medium text-gray-900">#{order.id}</td>
+                        <td className="px-6 py-4 font-medium text-gray-900">{order.order_id || `#${order.id}`}</td>
                         <td className="px-6 py-4">{order.customer_name}</td>
                         <td className="px-6 py-4">{order.wilaya}</td>
                         <td className="px-6 py-4 font-bold text-gray-900">{formatPrice(order.total_amount)}</td>
@@ -995,8 +996,18 @@ export default function AdminDashboard() {
 
         {activeTab === 'orders' && (
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-            <div className="p-6 border-b border-gray-100">
+            <div className="p-6 border-b border-gray-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <h2 className="text-lg font-bold text-gray-800">Gestion des commandes</h2>
+              <div className="relative w-full sm:w-64">
+                <input 
+                  type="text" 
+                  placeholder="Rechercher par ID (ex: CMD-1023)..." 
+                  value={orderSearchTerm}
+                  onChange={(e) => setOrderSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+              </div>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm text-gray-600">
@@ -1012,9 +1023,9 @@ export default function AdminDashboard() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                  {orders.map(order => (
+                  {orders.filter(order => !orderSearchTerm || (order.order_id && order.order_id.toLowerCase().includes(orderSearchTerm.toLowerCase())) || order.id.toString().includes(orderSearchTerm)).map(order => (
                     <tr key={order.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 font-medium text-gray-900">#{order.id}</td>
+                      <td className="px-6 py-4 font-medium text-gray-900">{order.order_id || `#${order.id}`}</td>
                       <td className="px-6 py-4">
                         <div className="font-medium text-gray-900">{order.customer_name}</div>
                         <div className="text-xs text-gray-500 truncate max-w-[150px]">{order.address}</div>

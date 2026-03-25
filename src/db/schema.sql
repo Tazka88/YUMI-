@@ -70,6 +70,7 @@ CREATE TABLE IF NOT EXISTS product_images (
 
 CREATE TABLE IF NOT EXISTS orders (
   id SERIAL PRIMARY KEY,
+  order_id VARCHAR(50) UNIQUE,
   customer_name VARCHAR(255) NOT NULL,
   customer_phone VARCHAR(255) NOT NULL,
   wilaya VARCHAR(255) NOT NULL,

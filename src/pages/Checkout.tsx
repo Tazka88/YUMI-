@@ -31,6 +31,7 @@ export default function Checkout() {
   const [deliveryTime, setDeliveryTime] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState(false);
+  const [createdOrderId, setCreatedOrderId] = useState<string | null>(null);
   const [trackingIds, setTrackingIds] = useState({ ga: '', fb: '' });
   const [wilayas, setWilayas] = useState<Wilaya[]>([]);
 
@@ -114,6 +115,8 @@ export default function Checkout() {
       });
 
       if (res.ok) {
+        const responseData = await res.json();
+        setCreatedOrderId(responseData.order_id || `#${responseData.id}`);
         setOrderSuccess(true);
         clearCart();
         
@@ -174,6 +177,12 @@ export default function Checkout() {
           <CheckCircle size={64} />
         </div>
         <h1 className="text-3xl font-bold text-gray-800 mb-4">Commande Confirmée !</h1>
+        {createdOrderId && (
+          <div className="bg-gray-100 px-6 py-3 rounded-lg mb-6 inline-block">
+            <span className="text-gray-600 mr-2">Numéro de commande:</span>
+            <span className="font-bold text-gray-900 text-lg">{createdOrderId}</span>
+          </div>
+        )}
         <p className="text-gray-600 mb-8 max-w-md">
           Merci pour votre achat. Votre commande a été enregistrée avec succès. 
           Vous recevrez bientôt un appel de confirmation.

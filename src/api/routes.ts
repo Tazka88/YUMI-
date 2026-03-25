@@ -536,12 +536,15 @@ router.post('/orders', orderLimiter, async (req, res) => {
 
     calculatedTotal += delivery_cost;
 
-    const orderId = await sql.begin(async (sql: any) => {
+    const orderData = await sql.begin(async (sql: any) => {
       const [order] = await sql`
         INSERT INTO orders (customer_name, customer_phone, wilaya, address, note, total_amount, delivery_cost)
         VALUES (${customer_name || ''}, ${customer_phone || ''}, ${wilaya || ''}, ${address || ''}, ${note || null}, ${calculatedTotal}, ${delivery_cost})
         RETURNING id
       `;
+      
+      const generatedOrderId = `CMD-${1000 + order.id}`;
+      await sql`UPDATE orders SET order_id = ${generatedOrderId} WHERE id = ${order.id}`;
       
       for (const item of validatedItems) {
         const result = await sql`
@@ -555,15 +558,15 @@ router.post('/orders', orderLimiter, async (req, res) => {
           VALUES (${order.id}, ${item.product_id}, ${item.quantity}, ${item.price})
         `;
       }
-      return order.id;
+      return { id: order.id, order_id: generatedOrderId };
     });
     
     const [adminEmailSetting] = await sql`SELECT value FROM settings WHERE key = 'admin_email'`;
     if (adminEmailSetting && adminEmailSetting.value) {
-      console.log(`[EMAIL SIMULATION] Nouvelle commande #${orderId} envoyée à l'administrateur : ${adminEmailSetting.value}`);
+      console.log(`[EMAIL SIMULATION] Nouvelle commande ${orderData.order_id} envoyée à l'administrateur : ${adminEmailSetting.value}`);
     }
     
-    res.status(201).json({ id: orderId, message: 'Order created successfully' });
+    res.status(201).json({ id: orderData.id, order_id: orderData.order_id, message: 'Order created successfully' });
   } catch (err: any) {
     res.status(400).json({ error: err.message || 'Failed to create order' });
   }

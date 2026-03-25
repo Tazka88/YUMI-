@@ -79,7 +79,7 @@ export default function Checkout() {
     
     const selectedWilaya = wilayas.find(w => w.number === wilayaNumber);
     if (selectedWilaya) {
-      setDeliveryCost(selectedWilaya.delivery_cost);
+      setDeliveryCost(Number(selectedWilaya.delivery_cost));
       setDeliveryTime('24h-72h'); // Default time or could be added to DB
     } else {
       setDeliveryCost(0);

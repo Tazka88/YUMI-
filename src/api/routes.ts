@@ -676,6 +676,9 @@ router.post('/admin/settings', authenticate, async (req, res) => {
     await sql.begin(async (sql: any) => {
       for (const [key, value] of Object.entries(settings)) {
         if (value !== undefined) {
+          if (typeof value === 'string' && value.startsWith('/api/images/')) {
+            continue;
+          }
           await sql`INSERT INTO settings (key, value) VALUES (${key}, ${String(value)}) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`;
         }
       }
@@ -816,7 +819,11 @@ router.post('/admin/slides', authenticate, async (req, res) => {
 router.put('/admin/slides/:id', authenticate, async (req, res) => {
   const { title, description, image, link, button_text, order_index } = req.body;
   try {
-    await sql`UPDATE slides SET title = ${title || ''}, description = ${description || null}, image = ${image || ''}, link = ${link || null}, button_text = ${button_text || null}, order_index = ${order_index || 0} WHERE id = ${req.params.id}`;
+    if (image && image.startsWith('/api/images/')) {
+      await sql`UPDATE slides SET title = ${title || ''}, description = ${description || null}, link = ${link || null}, button_text = ${button_text || null}, order_index = ${order_index || 0} WHERE id = ${req.params.id}`;
+    } else {
+      await sql`UPDATE slides SET title = ${title || ''}, description = ${description || null}, image = ${image || ''}, link = ${link || null}, button_text = ${button_text || null}, order_index = ${order_index || 0} WHERE id = ${req.params.id}`;
+    }
     res.json({ message: 'Slide updated' });
   } catch (err) {
     res.status(500).json({ error: 'Failed to update slide' });
@@ -946,16 +953,33 @@ router.put('/admin/products/:id', authenticate, async (req, res) => {
   
   try {
     await sql.begin(async (sql: any) => {
-      await sql`
-        UPDATE products 
-        SET category_id = ${category_id || null}, subcategory_id = ${subcategory_id || null}, brand_id = ${brand_id || null}, brand_name = ${brand_name || null}, name = ${name || ''}, slug = ${slug || ''}, description = ${description || null}, price = ${price || 0}, promo_price = ${promo_price || null}, stock = ${stock || 0}, image = ${image || null}, is_popular = ${is_popular ? true : false}, is_best_seller = ${is_best_seller ? true : false}, is_new = ${is_new ? true : false}, is_recommended = ${is_recommended ? true : false}, is_fast_delivery = ${is_fast_delivery ? true : false}, features = ${features ? JSON.stringify(features) : null}::jsonb, key_points = ${key_points ? JSON.stringify(key_points) : null}::jsonb
-        WHERE id = ${req.params.id}
-      `;
+      if (image && image.startsWith('/api/images/')) {
+        await sql`
+          UPDATE products 
+          SET category_id = ${category_id || null}, subcategory_id = ${subcategory_id || null}, brand_id = ${brand_id || null}, brand_name = ${brand_name || null}, name = ${name || ''}, slug = ${slug || ''}, description = ${description || null}, price = ${price || 0}, promo_price = ${promo_price || null}, stock = ${stock || 0}, is_popular = ${is_popular ? true : false}, is_best_seller = ${is_best_seller ? true : false}, is_new = ${is_new ? true : false}, is_recommended = ${is_recommended ? true : false}, is_fast_delivery = ${is_fast_delivery ? true : false}, features = ${features ? JSON.stringify(features) : null}::jsonb, key_points = ${key_points ? JSON.stringify(key_points) : null}::jsonb
+          WHERE id = ${req.params.id}
+        `;
+      } else {
+        await sql`
+          UPDATE products 
+          SET category_id = ${category_id || null}, subcategory_id = ${subcategory_id || null}, brand_id = ${brand_id || null}, brand_name = ${brand_name || null}, name = ${name || ''}, slug = ${slug || ''}, description = ${description || null}, price = ${price || 0}, promo_price = ${promo_price || null}, stock = ${stock || 0}, image = ${image || null}, is_popular = ${is_popular ? true : false}, is_best_seller = ${is_best_seller ? true : false}, is_new = ${is_new ? true : false}, is_recommended = ${is_recommended ? true : false}, is_fast_delivery = ${is_fast_delivery ? true : false}, features = ${features ? JSON.stringify(features) : null}::jsonb, key_points = ${key_points ? JSON.stringify(key_points) : null}::jsonb
+          WHERE id = ${req.params.id}
+        `;
+      }
 
       if (images && Array.isArray(images)) {
+        const existingImages = await sql`SELECT id, image FROM product_images WHERE product_id = ${req.params.id}`;
         await sql`DELETE FROM product_images WHERE product_id = ${req.params.id}`;
         for (const img of images) {
-          await sql`INSERT INTO product_images (product_id, image, is_main) VALUES (${req.params.id}, ${img.url || img.image}, ${img.is_main ? true : false})`;
+          let imgData = img.url || img.image;
+          if (imgData && imgData.startsWith('/api/images/product_images/')) {
+            const imgId = imgData.split('/')[4];
+            const existing = existingImages.find((e: any) => e.id.toString() === imgId);
+            if (existing) {
+              imgData = existing.image;
+            }
+          }
+          await sql`INSERT INTO product_images (product_id, image, is_main) VALUES (${req.params.id}, ${imgData}, ${img.is_main ? true : false})`;
         }
       }
     });
@@ -993,7 +1017,11 @@ router.post('/admin/categories', authenticate, async (req, res) => {
 router.put('/admin/categories/:id', authenticate, async (req, res) => {
   const { name, slug, image } = req.body;
   try {
-    await sql`UPDATE categories SET name = ${name || ''}, slug = ${slug || ''}, image = ${image || null} WHERE id = ${req.params.id}`;
+    if (image && image.startsWith('/api/images/')) {
+      await sql`UPDATE categories SET name = ${name || ''}, slug = ${slug || ''} WHERE id = ${req.params.id}`;
+    } else {
+      await sql`UPDATE categories SET name = ${name || ''}, slug = ${slug || ''}, image = ${image || null} WHERE id = ${req.params.id}`;
+    }
     res.json({ message: 'Category updated' });
   } catch (err) {
     res.status(500).json({ error: 'Failed to update category' });
@@ -1013,7 +1041,11 @@ router.post('/admin/brands', authenticate, async (req, res) => {
 router.put('/admin/brands/:id', authenticate, async (req, res) => {
   const { name, slug, image, description } = req.body;
   try {
-    await sql`UPDATE brands SET name = ${name || ''}, slug = ${slug || ''}, image = ${image || null}, description = ${description || null} WHERE id = ${req.params.id}`;
+    if (image && image.startsWith('/api/images/')) {
+      await sql`UPDATE brands SET name = ${name || ''}, slug = ${slug || ''}, description = ${description || null} WHERE id = ${req.params.id}`;
+    } else {
+      await sql`UPDATE brands SET name = ${name || ''}, slug = ${slug || ''}, image = ${image || null}, description = ${description || null} WHERE id = ${req.params.id}`;
+    }
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: 'Failed to update brand' });
@@ -1059,7 +1091,11 @@ router.post('/admin/subcategories', authenticate, async (req, res) => {
 router.put('/admin/subcategories/:id', authenticate, async (req, res) => {
   const { category_id, name, slug, image } = req.body;
   try {
-    await sql`UPDATE subcategories SET category_id = ${category_id || null}, name = ${name || ''}, slug = ${slug || ''}, image = ${image || null} WHERE id = ${req.params.id}`;
+    if (image && image.startsWith('/api/images/')) {
+      await sql`UPDATE subcategories SET category_id = ${category_id || null}, name = ${name || ''}, slug = ${slug || ''} WHERE id = ${req.params.id}`;
+    } else {
+      await sql`UPDATE subcategories SET category_id = ${category_id || null}, name = ${name || ''}, slug = ${slug || ''}, image = ${image || null} WHERE id = ${req.params.id}`;
+    }
     res.json({ message: 'Subcategory updated' });
   } catch (err) {
     res.status(500).json({ error: 'Failed to update subcategory' });

@@ -1,0 +1,204 @@
+import React, { useState, useEffect } from 'react';
+import { useParams, useSearchParams, Link } from 'react-router-dom';
+import { ShoppingCart, Star } from 'lucide-react';
+import { useCartStore, Product } from '../store/cartStore';
+import { formatPrice } from '../utils/formatPrice';
+import { ProductCard } from '../components/ProductCard';
+import SEO from '../components/SEO';
+import { getCategoryWithEmoji, CategoryNameDisplay } from '../components/Layout';
+
+export default function Category() {
+  const { slug } = useParams();
+  const [searchParams] = useSearchParams();
+  const searchQuery = searchParams.get('search');
+  
+  const [products, setProducts] = useState<Product[]>([]);
+  const [categoryName, setCategoryName] = useState('Tous les produits');
+  const [categoryImage, setCategoryImage] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [categories, setCategories] = useState<any[]>([]);
+  const addItem = useCartStore(state => state.addItem);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch('/api/categories', { signal: controller.signal })
+      .then(res => res.json())
+      .then(data => { if (Array.isArray(data)) setCategories(data); })
+      .catch(err => {
+        if (err.name !== 'AbortError') console.error(err);
+      });
+    return () => controller.abort();
+  }, []);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    const signal = controller.signal;
+
+    setLoading(true);
+    setCategoryImage(null);
+    let url = '/api/products';
+    
+    const handleFetchError = (err: any) => {
+      if (err.name !== 'AbortError') console.error(err);
+    };
+
+    if (slug && slug !== 'all') {
+      const isSubcategory = searchParams.get('sub') === 'true';
+      if (isSubcategory) {
+        url += `?subcategory=${slug}`;
+        fetch('/api/subcategories', { signal })
+          .then(res => res.json())
+          .then(subcats => {
+            if (Array.isArray(subcats)) {
+              const subcat = subcats.find((s: any) => s.slug === slug);
+              if (subcat) {
+                setCategoryName(getCategoryWithEmoji(subcat.name));
+                if (subcat.image) setCategoryImage(subcat.image);
+              }
+            }
+          })
+          .catch(handleFetchError);
+      } else {
+        url += `?category=${slug}`;
+        // Fetch category name
+        fetch('/api/categories', { signal })
+          .then(res => res.json())
+          .then(cats => {
+            if (Array.isArray(cats)) {
+              const cat = cats.find((c: any) => c.slug === slug);
+              if (cat) {
+                setCategoryName(getCategoryWithEmoji(cat.name));
+                if (cat.image) setCategoryImage(cat.image);
+              }
+            }
+          })
+          .catch(handleFetchError);
+      }
+    } else if (searchQuery) {
+      url += `?search=${encodeURIComponent(searchQuery)}`;
+      setCategoryName(`Résultats pour "${searchQuery}"`);
+    } else {
+      setCategoryName('Tous les produits');
+    }
+
+    fetch(url, { signal })
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) {
+          setProducts(data);
+        } else {
+          setProducts([]);
+        }
+        setLoading(false);
+      })
+      .catch(err => {
+        if (err.name !== 'AbortError') {
+          console.error(err);
+          setLoading(false);
+        }
+      });
+      
+    return () => controller.abort();
+  }, [slug, searchQuery]);
+
+  return (
+    <div className="container mx-auto px-4 py-8">
+      <SEO 
+        title={categoryName} 
+        description={`Découvrez notre sélection de produits dans la catégorie ${categoryName}. Achetez au meilleur prix sur Yumi.`} 
+        url={window.location.href}
+      />
+      <div className="flex flex-col md:flex-row gap-6">
+        {/* Sidebar Filters */}
+        <div className="w-full md:w-64 shrink-0">
+          <div className="bg-white p-4 rounded-lg shadow-sm mb-4">
+            <h3 className="font-bold text-lg mb-4 border-b pb-2">Catégories</h3>
+            <ul className="space-y-2">
+              <li>
+                <Link 
+                  to="/category/all" 
+                  className={`block font-medium ${slug === 'all' && !searchQuery ? 'text-orange-500' : 'text-gray-700 hover:text-orange-500'}`}
+                >
+                  Toutes les catégories
+                </Link>
+              </li>
+              {categories.map(cat => (
+                <li key={cat.id}>
+                  <Link 
+                    to={`/category/${cat.slug}`} 
+                    className={`block font-medium ${slug === cat.slug && searchParams.get('sub') !== 'true' ? 'text-orange-500' : 'text-gray-700 hover:text-orange-500'}`}
+                  >
+                    <CategoryNameDisplay name={cat.name} />
+                  </Link>
+                  {(slug === cat.slug || cat.subcategories.some((s: any) => s.slug === slug)) && cat.subcategories && cat.subcategories.length > 0 && (
+                    <ul className="pl-4 mt-2 space-y-1 border-l-2 border-orange-100">
+                      {cat.subcategories.map((sub: any) => (
+                        <li key={sub.id}>
+                          <Link 
+                            to={`/category/${sub.slug}?sub=true`} 
+                            className={`block text-sm ${slug === sub.slug && searchParams.get('sub') === 'true' ? 'text-orange-500 font-bold' : 'text-gray-600 hover:text-orange-500'}`}
+                          >
+                            <CategoryNameDisplay name={sub.name} />
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div className="bg-white p-4 rounded-lg shadow-sm">
+            <h3 className="font-bold text-lg mb-4 border-b pb-2">Filtres</h3>
+            <div className="mb-4">
+              <h4 className="font-medium mb-2">Prix</h4>
+              <div className="space-y-2">
+                <label className="flex items-center gap-2 text-sm">
+                  <input type="checkbox" className="rounded text-orange-500 focus:ring-orange-500" />
+                  Moins de 5 000 DA
+                </label>
+                <label className="flex items-center gap-2 text-sm">
+                  <input type="checkbox" className="rounded text-orange-500 focus:ring-orange-500" />
+                  5 000 - 15 000 DA
+                </label>
+                <label className="flex items-center gap-2 text-sm">
+                  <input type="checkbox" className="rounded text-orange-500 focus:ring-orange-500" />
+                  Plus de 15 000 DA
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Main Content */}
+        <div className="flex-1">
+          {categoryImage && (
+            <div className="mb-6 rounded-xl overflow-hidden shadow-sm bg-gray-50 flex items-center justify-center">
+              <img src={categoryImage} alt={categoryName} className="w-full max-h-64 object-contain" referrerPolicy="no-referrer" />
+            </div>
+          )}
+          <div className="bg-white p-4 rounded-lg shadow-sm mb-6 flex justify-between items-center">
+            <h1 className="text-xl font-bold text-gray-800">{categoryName}</h1>
+            <span className="text-sm text-gray-500">{products.length} produits trouvés</span>
+          </div>
+
+          {loading ? (
+            <div className="flex justify-center py-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500"></div>
+            </div>
+          ) : products.length > 0 ? (
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {products.map(p => <ProductCard key={p.id} product={p} />)}
+            </div>
+          ) : (
+            <div className="bg-white p-8 rounded-lg shadow-sm text-center">
+              <p className="text-gray-500 text-lg">Aucun produit trouvé pour cette catégorie.</p>
+              <Link to="/" className="mt-4 inline-block text-orange-500 hover:underline">Retourner à l'accueil</Link>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}

@@ -1,6 +1,6 @@
 import { Router } from 'express';
-import { sql } from '../db/setup.ts';
-import { getSupabase } from '../lib/supabase.ts';
+import { sql } from '../db/setup.js';
+import { getSupabase } from '../lib/supabase.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import multer from 'multer';
@@ -86,14 +86,16 @@ if (process.env.NODE_ENV === 'production' && JWT_SECRET === 'yumi-secret-key-123
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 5,
-  message: { error: 'Trop de tentatives de connexion, réessayez plus tard.' }
+  message: { error: 'Trop de tentatives de connexion, réessayez plus tard.' },
+  keyGenerator: (req) => req.ip || req.socket.remoteAddress || 'unknown'
 });
 
 // Rate Limiter for Orders
 const orderLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
   max: 10,
-  message: { error: 'Trop de commandes passées récemment. Veuillez patienter.' }
+  message: { error: 'Trop de commandes passées récemment. Veuillez patienter.' },
+  keyGenerator: (req) => req.ip || req.socket.remoteAddress || 'unknown'
 });
 
 const storage = multer.memoryStorage();

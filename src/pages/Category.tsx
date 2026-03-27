@@ -6,6 +6,7 @@ import { formatPrice } from '../utils/formatPrice';
 import { ProductCard } from '../components/ProductCard';
 import SEO from '../components/SEO';
 import { getCategoryWithEmoji, CategoryNameDisplay } from '../components/Layout';
+import Slider from '../components/Slider';
 
 export default function Category() {
   const { slug } = useParams();
@@ -15,6 +16,7 @@ export default function Category() {
   const [products, setProducts] = useState<Product[]>([]);
   const [categoryName, setCategoryName] = useState('Tous les produits');
   const [categoryImage, setCategoryImage] = useState<string | null>(null);
+  const [categoryId, setCategoryId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [categories, setCategories] = useState<any[]>([]);
   const addItem = useCartStore(state => state.addItem);
@@ -54,6 +56,7 @@ export default function Category() {
               if (subcat) {
                 setCategoryName(getCategoryWithEmoji(subcat.name));
                 if (subcat.image) setCategoryImage(subcat.image);
+                setCategoryId(subcat.category_id); // Assuming subcategory has category_id
               }
             }
           })
@@ -69,6 +72,7 @@ export default function Category() {
               if (cat) {
                 setCategoryName(getCategoryWithEmoji(cat.name));
                 if (cat.image) setCategoryImage(cat.image);
+                setCategoryId(cat.id);
               }
             }
           })
@@ -77,8 +81,10 @@ export default function Category() {
     } else if (searchQuery) {
       url += `?search=${encodeURIComponent(searchQuery)}`;
       setCategoryName(`Résultats pour "${searchQuery}"`);
+      setCategoryId(null);
     } else {
       setCategoryName('Tous les produits');
+      setCategoryId(null);
     }
 
     fetch(url, { signal })
@@ -173,6 +179,7 @@ export default function Category() {
 
         {/* Main Content */}
         <div className="flex-1">
+          <Slider categoryId={categoryId} />
           {categoryImage && (
             <div className="mb-6 rounded-xl overflow-hidden shadow-sm bg-gray-50 flex items-center justify-center">
               <img src={categoryImage} alt={categoryName} className="w-full max-h-64 object-contain" referrerPolicy="no-referrer" />

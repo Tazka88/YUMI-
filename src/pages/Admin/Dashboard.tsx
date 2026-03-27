@@ -6,8 +6,9 @@ import { formatPrice } from '../../utils/formatPrice';
 import FooterSettings from './FooterSettings';
 import PageSettings from './PageSettings';
 import WilayasSettings from './WilayasSettings';
-import { FileText, MapPin, Search, LayoutGrid, List } from 'lucide-react';
+import { FileText, MapPin, Search, LayoutGrid, List, Printer } from 'lucide-react';
 import OrderKanban from './OrderKanban';
+import SliderImagesAdmin from './SliderImagesAdmin';
 
 export interface HomeSection {
   id: string;
@@ -30,22 +31,20 @@ export default function AdminDashboard() {
   const [productSubTab, setProductSubTab] = useState('products');
   const [stats, setStats] = useState({ orders: 0, revenue: 0, lowStock: 0 });
   const [orders, setOrders] = useState<any[]>([]);
+  const [selectedOrders, setSelectedOrders] = useState<number[]>([]);
   const [orderSearchTerm, setOrderSearchTerm] = useState('');
   const [orderView, setOrderView] = useState<'list' | 'kanban'>('kanban');
   const [orderStatusFilter, setOrderStatusFilter] = useState<string>('all');
   const [products, setProducts] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
   const [brands, setBrands] = useState<any[]>([]);
-  const [slides, setSlides] = useState<any[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubcategoryModalOpen, setIsSubcategoryModalOpen] = useState(false);
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
-  const [isSlideModalOpen, setIsSlideModalOpen] = useState(false);
   const [isBrandModalOpen, setIsBrandModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<any>(null);
   const [editingSubcategory, setEditingSubcategory] = useState<any>(null);
   const [editingCategory, setEditingCategory] = useState<any>(null);
-  const [editingSlide, setEditingSlide] = useState<any>(null);
   const [editingBrand, setEditingBrand] = useState<any>(null);
   
   const [confirmModal, setConfirmModal] = useState<{isOpen: boolean, message: string, onConfirm: () => void}>({
@@ -67,9 +66,6 @@ export default function AdminDashboard() {
   });
   const [brandForm, setBrandForm] = useState({
     name: '', slug: '', image: '', description: ''
-  });
-  const [slideForm, setSlideForm] = useState({
-    title: '', description: '', image: '', link: '', button_text: '', order_index: 0
   });
   const [settingsForm, setSettingsForm] = useState<Record<string, any>>({
     announcement_phone: '', announcement_text: '', announcement_bg_color: '#000000', announcement_text_color: '#ffffff', whatsapp_number: '', admin_email: '', site_logo: '', active_theme: 'normal'
@@ -229,13 +225,6 @@ export default function AdminDashboard() {
         .catch(handleFetchError);
     }
 
-    if (activeTab === 'images') {
-      fetch('/api/admin/slides', { headers, signal })
-        .then(res => res.json())
-        .then(data => { if (Array.isArray(data)) setSlides(data); })
-        .catch(handleFetchError);
-    }
-
     if (activeTab === 'settings') {
       fetch('/api/admin/settings', { headers, signal })
         .then(res => res.json())
@@ -298,6 +287,365 @@ export default function AdminDashboard() {
       .then(res => res.json())
       .then(data => { if (Array.isArray(data)) setOrders(data); })
       .catch(console.error);
+  };
+
+  const deleteOrder = async (id: number) => {
+    setConfirmModal({
+      isOpen: true,
+      message: 'Êtes-vous sûr de vouloir supprimer cette commande ? Cette action est irréversible.',
+      onConfirm: async () => {
+        const token = localStorage.getItem('adminToken');
+        try {
+          await fetch(`/api/admin/orders/${id}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          fetch('/api/admin/orders', { headers: { 'Authorization': `Bearer ${token}` } })
+            .then(res => res.json())
+            .then(data => { if (Array.isArray(data)) setOrders(data); })
+            .catch(console.error);
+          setConfirmModal({ ...confirmModal, isOpen: false });
+          toast.success('Commande supprimée avec succès');
+        } catch (err) {
+          console.error(err);
+          toast.error('Erreur lors de la suppression de la commande');
+        }
+      }
+    });
+  };
+
+  const printOrder = async (id: number) => {
+    const token = localStorage.getItem('adminToken');
+    try {
+      const res = await fetch(`/api/admin/orders/${id}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const orderData = await res.json();
+      
+      if (!res.ok) throw new Error(orderData.error);
+
+      // Create a print window
+      const printWindow = window.open('', '_blank');
+      if (!printWindow) {
+        toast.error('Veuillez autoriser les popups pour imprimer');
+        return;
+      }
+
+      const itemsHtml = orderData.items.map((item: any) => `
+        <tr>
+          <td style="padding: 10px; border-bottom: 1px solid #eee;">${item.product_name}</td>
+          <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: center;">${item.quantity}</td>
+          <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: right;">${item.price} DA</td>
+          <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: right;">${item.price * item.quantity} DA</td>
+        </tr>
+      `).join('');
+
+      const html = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Commande ${orderData.order_id || '#' + orderData.id}</title>
+          <style>
+            body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #333; line-height: 1.6; padding: 20px; max-width: 800px; margin: 0 auto; }
+            .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 40px; padding-bottom: 20px; border-bottom: 2px solid #f3f4f6; }
+            .logo { font-size: 24px; font-weight: bold; color: #f97316; }
+            .invoice-details { text-align: right; }
+            .invoice-title { font-size: 28px; font-weight: bold; margin: 0 0 10px 0; color: #111; text-transform: uppercase; }
+            .customer-info { margin-bottom: 40px; background: #f9fafb; padding: 20px; border-radius: 8px; }
+            .customer-info h3 { margin-top: 0; color: #4b5563; font-size: 14px; text-transform: uppercase; letter-spacing: 0.05em; }
+            table { w-full; border-collapse: collapse; margin-bottom: 30px; width: 100%; }
+            th { text-align: left; padding: 12px 10px; background-color: #f9fafb; color: #4b5563; font-weight: 600; font-size: 14px; text-transform: uppercase; border-bottom: 2px solid #e5e7eb; }
+            .totals { width: 300px; margin-left: auto; }
+            .total-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #eee; }
+            .total-row.final { font-weight: bold; font-size: 18px; border-bottom: none; border-top: 2px solid #111; padding-top: 15px; margin-top: 5px; }
+            .footer { margin-top: 50px; text-align: center; color: #6b7280; font-size: 14px; padding-top: 20px; border-top: 1px solid #eee; }
+            @media print {
+              body { padding: 0; }
+              button { display: none; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <div>
+              <div class="logo">Yumi Store</div>
+              <div style="color: #6b7280; margin-top: 5px;">Boutique en ligne</div>
+            </div>
+            <div class="invoice-details">
+              <h1 class="invoice-title">Bon de Livraison</h1>
+              <div><strong>Commande:</strong> ${orderData.order_id || '#' + orderData.id}</div>
+              <div><strong>Date:</strong> ${new Date(orderData.created_at).toLocaleDateString('fr-FR')}</div>
+            </div>
+          </div>
+
+          <div class="customer-info">
+            <h3>Informations Client</h3>
+            <div style="font-size: 18px; font-weight: bold; margin-bottom: 5px;">${orderData.customer_name}</div>
+            <div><strong>Téléphone:</strong> ${orderData.customer_phone}</div>
+            <div><strong>Wilaya:</strong> ${orderData.wilaya}</div>
+            <div><strong>Adresse:</strong> ${orderData.address}</div>
+            ${orderData.note ? `<div style="margin-top: 10px;"><strong>Note:</strong> ${orderData.note}</div>` : ''}
+          </div>
+
+          <table>
+            <thead>
+              <tr>
+                <th>Produit</th>
+                <th style="text-align: center;">Qté</th>
+                <th style="text-align: right;">Prix Unitaire</th>
+                <th style="text-align: right;">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${itemsHtml}
+            </tbody>
+          </table>
+
+          <div class="totals">
+            <div class="total-row">
+              <span>Sous-total</span>
+              <span>${orderData.total_amount - orderData.delivery_cost} DA</span>
+            </div>
+            <div class="total-row">
+              <span>Frais de livraison</span>
+              <span>${orderData.delivery_cost} DA</span>
+            </div>
+            <div class="total-row final">
+              <span>Total à payer</span>
+              <span>${orderData.total_amount} DA</span>
+            </div>
+          </div>
+
+          <div class="footer">
+            Merci pour votre commande !
+          </div>
+
+          <script>
+            window.onload = function() {
+              window.print();
+            }
+          </script>
+        </body>
+        </html>
+      `;
+
+      printWindow.document.write(html);
+      printWindow.document.close();
+    } catch (err) {
+      console.error(err);
+      toast.error('Erreur lors de la préparation de l\'impression');
+    }
+  };
+
+  const handleSelectAllOrders = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.checked) {
+      const filteredOrders = orders.filter(order => 
+        (orderStatusFilter === 'all' || order.status === orderStatusFilter) &&
+        (!orderSearchTerm || 
+        (order.order_id && order.order_id.toLowerCase().includes(orderSearchTerm.toLowerCase())) || 
+        order.id.toString().includes(orderSearchTerm) ||
+        (order.customer_name && order.customer_name.toLowerCase().includes(orderSearchTerm.toLowerCase())) ||
+        (order.customer_phone && order.customer_phone.includes(orderSearchTerm)))
+      );
+      setSelectedOrders(filteredOrders.map(o => o.id));
+    } else {
+      setSelectedOrders([]);
+    }
+  };
+
+  const handleSelectOrder = (id: number) => {
+    setSelectedOrders(prev => 
+      prev.includes(id) ? prev.filter(orderId => orderId !== id) : [...prev, id]
+    );
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedOrders.length === 0) return;
+    
+    setConfirmModal({
+      isOpen: true,
+      message: `Êtes-vous sûr de vouloir supprimer ${selectedOrders.length} commande(s) ? Cette action est irréversible.`,
+      onConfirm: async () => {
+        const token = localStorage.getItem('adminToken');
+        try {
+          // Delete sequentially to avoid overwhelming the server
+          for (const id of selectedOrders) {
+            await fetch(`/api/admin/orders/${id}`, {
+              method: 'DELETE',
+              headers: { 'Authorization': `Bearer ${token}` }
+            });
+          }
+          
+          toast.success(`${selectedOrders.length} commande(s) supprimée(s)`);
+          setSelectedOrders([]);
+          
+          // Refresh orders
+          fetch('/api/admin/orders', { headers: { 'Authorization': `Bearer ${token}` } })
+            .then(res => res.json())
+            .then(data => { if (Array.isArray(data)) setOrders(data); })
+            .catch(console.error);
+            
+        } catch (err) {
+          console.error(err);
+          toast.error('Erreur lors de la suppression groupée');
+        }
+      }
+    });
+  };
+
+  const handleBulkPrint = async () => {
+    if (selectedOrders.length === 0) return;
+    
+    const token = localStorage.getItem('adminToken');
+    try {
+      // Fetch all selected orders details
+      const ordersData = [];
+      for (const id of selectedOrders) {
+        const res = await fetch(`/api/admin/orders/${id}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+          ordersData.push(await res.json());
+        }
+      }
+      
+      if (ordersData.length === 0) {
+        toast.error('Aucune commande trouvée pour l\'impression');
+        return;
+      }
+
+      // Create a print window
+      const printWindow = window.open('', '_blank');
+      if (!printWindow) {
+        toast.error('Veuillez autoriser les popups pour imprimer');
+        return;
+      }
+
+      // Generate HTML for all orders
+      const allOrdersHtml = ordersData.map(orderData => {
+        const itemsHtml = orderData.items.map((item: any) => `
+          <tr>
+            <td style="padding: 10px; border-bottom: 1px solid #eee;">${item.product_name}</td>
+            <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: center;">${item.quantity}</td>
+            <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: right;">${item.price} DA</td>
+            <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: right;">${item.price * item.quantity} DA</td>
+          </tr>
+        `).join('');
+
+        return `
+          <div class="page-break">
+            <div class="header">
+              <div>
+                <div class="logo">Yumi Store</div>
+                <div style="color: #6b7280; margin-top: 5px;">Boutique en ligne</div>
+              </div>
+              <div class="invoice-details">
+                <h1 class="invoice-title">Bon de Livraison</h1>
+                <div><strong>Commande:</strong> ${orderData.order_id || '#' + orderData.id}</div>
+                <div><strong>Date:</strong> ${new Date(orderData.created_at).toLocaleDateString('fr-FR')}</div>
+              </div>
+            </div>
+
+            <div class="customer-info">
+              <h3>Informations Client</h3>
+              <div style="display: flex; justify-content: space-between; margin-top: 15px;">
+                <div>
+                  <div style="font-weight: bold; font-size: 16px; margin-bottom: 5px;">${orderData.customer_name}</div>
+                  <div style="color: #4b5563; margin-bottom: 3px;">${orderData.customer_phone}</div>
+                </div>
+                <div style="text-align: right;">
+                  <div style="font-weight: bold; margin-bottom: 5px;">Adresse de livraison</div>
+                  <div style="color: #4b5563;">${orderData.address}</div>
+                  <div style="color: #4b5563;">${orderData.wilaya}</div>
+                </div>
+              </div>
+            </div>
+
+            <table>
+              <thead>
+                <tr>
+                  <th>Produit</th>
+                  <th style="text-align: center; width: 80px;">Qté</th>
+                  <th style="text-align: right; width: 120px;">Prix Unitaire</th>
+                  <th style="text-align: right; width: 120px;">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${itemsHtml}
+              </tbody>
+            </table>
+
+            <div class="totals">
+              <div class="total-row">
+                <span style="color: #6b7280;">Sous-total</span>
+                <span>${orderData.total_amount - (orderData.delivery_cost || 0)} DA</span>
+              </div>
+              <div class="total-row">
+                <span style="color: #6b7280;">Frais de livraison</span>
+                <span>${orderData.delivery_cost || 0} DA</span>
+              </div>
+              <div class="total-row final">
+                <span>Total à payer</span>
+                <span>${orderData.total_amount} DA</span>
+              </div>
+            </div>
+
+            <div class="footer">
+              Merci pour votre confiance !<br>
+              Pour toute question, veuillez nous contacter.
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      const html = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Impression de ${ordersData.length} commande(s)</title>
+          <style>
+            body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #333; line-height: 1.6; padding: 20px; max-width: 800px; margin: 0 auto; }
+            .page-break { page-break-after: always; margin-bottom: 50px; }
+            .page-break:last-child { page-break-after: auto; margin-bottom: 0; }
+            .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 40px; padding-bottom: 20px; border-bottom: 2px solid #f3f4f6; }
+            .logo { font-size: 24px; font-weight: bold; color: #f97316; }
+            .invoice-details { text-align: right; }
+            .invoice-title { font-size: 28px; font-weight: bold; margin: 0 0 10px 0; color: #111; text-transform: uppercase; }
+            .customer-info { margin-bottom: 40px; background: #f9fafb; padding: 20px; border-radius: 8px; }
+            .customer-info h3 { margin-top: 0; color: #4b5563; font-size: 14px; text-transform: uppercase; letter-spacing: 0.05em; }
+            table { border-collapse: collapse; margin-bottom: 30px; width: 100%; }
+            th { text-align: left; padding: 12px 10px; background-color: #f9fafb; color: #4b5563; font-weight: 600; font-size: 14px; text-transform: uppercase; border-bottom: 2px solid #e5e7eb; }
+            .totals { width: 300px; margin-left: auto; }
+            .total-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #eee; }
+            .total-row.final { font-weight: bold; font-size: 18px; border-bottom: none; border-top: 2px solid #111; padding-top: 15px; margin-top: 5px; }
+            .footer { margin-top: 50px; text-align: center; color: #6b7280; font-size: 14px; padding-top: 20px; border-top: 1px solid #eee; }
+            @media print {
+              body { padding: 0; }
+              button { display: none; }
+            }
+          </style>
+        </head>
+        <body>
+          <div style="text-align: right; margin-bottom: 20px;">
+            <button onclick="window.print()" style="background: #f97316; color: white; border: none; padding: 10px 20px; border-radius: 6px; font-weight: bold; cursor: pointer;">Imprimer toutes les commandes</button>
+          </div>
+          ${allOrdersHtml}
+          <script>
+            window.onload = function() { window.print(); }
+          </script>
+        </body>
+        </html>
+      `;
+
+      printWindow.document.write(html);
+      printWindow.document.close();
+      
+      // Clear selection after printing
+      setSelectedOrders([]);
+    } catch (err) {
+      console.error(err);
+      toast.error('Erreur lors de la préparation de l\'impression groupée');
+    }
   };
 
   const getStatusColor = (status: string) => {
@@ -368,22 +716,6 @@ export default function AdminDashboard() {
       });
     }
     setIsCategoryModalOpen(true);
-  };
-
-  const openSlideModal = (slide: any = null) => {
-    if (slide) {
-      setEditingSlide(slide);
-      setSlideForm({
-        title: slide.title, description: slide.description || '', image: slide.image || '', 
-        link: slide.link || '', button_text: slide.button_text || '', order_index: slide.order_index || 0
-      });
-    } else {
-      setEditingSlide(null);
-      setSlideForm({
-        title: '', description: '', image: '', link: '', button_text: '', order_index: 0
-      });
-    }
-    setIsSlideModalOpen(true);
   };
 
   const openBrandModal = (brand: any = null) => {
@@ -587,36 +919,6 @@ export default function AdminDashboard() {
     });
   };
 
-  const handleSlideSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const token = localStorage.getItem('adminToken');
-    const url = editingSlide ? `/api/admin/slides/${editingSlide.id}` : '/api/admin/slides';
-    const method = editingSlide ? 'PUT' : 'POST';
-
-    try {
-      const res = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify(slideForm)
-      });
-
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}));
-        toast.error(`Erreur: ${errorData.error || 'Impossible de sauvegarder le slide'}`);
-        return;
-      }
-
-      setIsSlideModalOpen(false);
-      fetch('/api/admin/slides', { headers: { 'Authorization': `Bearer ${token}` } })
-        .then(res => res.json())
-        .then(data => { if (Array.isArray(data)) setSlides(data); })
-        .catch(console.error);
-    } catch (err) {
-      console.error(err);
-      toast.error('Erreur de connexion au serveur');
-    }
-  };
-
   const handleBrandSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const token = localStorage.getItem('adminToken');
@@ -645,29 +947,6 @@ export default function AdminDashboard() {
       console.error(err);
       toast.error('Erreur de connexion au serveur');
     }
-  };
-
-  const deleteSlide = async (id: number) => {
-    setConfirmModal({
-      isOpen: true,
-      message: 'Êtes-vous sûr de vouloir supprimer ce slide ?',
-      onConfirm: async () => {
-        const token = localStorage.getItem('adminToken');
-        try {
-          await fetch(`/api/admin/slides/${id}`, {
-            method: 'DELETE',
-            headers: { 'Authorization': `Bearer ${token}` }
-          });
-          fetch('/api/admin/slides', { headers: { 'Authorization': `Bearer ${token}` } })
-            .then(res => res.json())
-            .then(data => { if (Array.isArray(data)) setSlides(data); })
-            .catch(console.error);
-          setConfirmModal({ ...confirmModal, isOpen: false });
-        } catch (err) {
-          console.error(err);
-        }
-      }
-    });
   };
 
   const deleteBrand = async (id: number) => {
@@ -978,6 +1257,7 @@ export default function AdminDashboard() {
                       <th className="px-6 py-3">Total</th>
                       <th className="px-6 py-3">Statut</th>
                       <th className="px-6 py-3">Date</th>
+                      <th className="px-6 py-3">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
@@ -993,6 +1273,24 @@ export default function AdminDashboard() {
                           </span>
                         </td>
                         <td className="px-6 py-4">{new Date(order.created_at).toLocaleDateString()}</td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-3">
+                            <button 
+                              onClick={() => printOrder(order.id)}
+                              className="p-1.5 text-blue-500 hover:text-blue-700 hover:bg-blue-50 rounded-md transition-colors"
+                              title="Imprimer"
+                            >
+                              <Printer size={16} />
+                            </button>
+                            <button 
+                              onClick={() => deleteOrder(order.id)}
+                              className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-md transition-colors"
+                              title="Supprimer"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -1042,6 +1340,8 @@ export default function AdminDashboard() {
                   orders={orders} 
                   updateOrderStatus={updateOrderStatus} 
                   orderSearchTerm={orderSearchTerm} 
+                  onDeleteOrder={deleteOrder}
+                  onPrintOrder={printOrder}
                 />
               </div>
             ) : (
@@ -1077,9 +1377,55 @@ export default function AdminDashboard() {
                   })}
                 </div>
                 <div className="overflow-x-auto">
+                  {selectedOrders.length > 0 && (
+                    <div className="bg-orange-50 p-3 mb-4 rounded-lg border border-orange-100 flex items-center justify-between">
+                      <span className="text-sm font-medium text-orange-800">
+                        {selectedOrders.length} commande(s) sélectionnée(s)
+                      </span>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={handleBulkPrint}
+                          className="text-sm bg-white border border-orange-200 text-orange-700 px-3 py-1.5 rounded hover:bg-orange-100 transition-colors"
+                        >
+                          Imprimer la sélection
+                        </button>
+                        <button
+                          onClick={handleBulkDelete}
+                          className="text-sm bg-red-50 border border-red-200 text-red-700 px-3 py-1.5 rounded hover:bg-red-100 transition-colors"
+                        >
+                          Supprimer la sélection
+                        </button>
+                      </div>
+                    </div>
+                  )}
                   <table className="w-full text-left text-sm text-gray-600">
                   <thead className="bg-gray-50 text-gray-700 font-medium">
                     <tr>
+                      <th className="px-6 py-3 w-10">
+                        <input 
+                          type="checkbox" 
+                          className="rounded border-gray-300 text-orange-500 focus:ring-orange-500"
+                          checked={
+                            orders.filter(order => 
+                              (orderStatusFilter === 'all' || order.status === orderStatusFilter) &&
+                              (!orderSearchTerm || 
+                              (order.order_id && order.order_id.toLowerCase().includes(orderSearchTerm.toLowerCase())) || 
+                              order.id.toString().includes(orderSearchTerm) ||
+                              (order.customer_name && order.customer_name.toLowerCase().includes(orderSearchTerm.toLowerCase())) ||
+                              (order.customer_phone && order.customer_phone.includes(orderSearchTerm)))
+                            ).length > 0 && 
+                            selectedOrders.length === orders.filter(order => 
+                              (orderStatusFilter === 'all' || order.status === orderStatusFilter) &&
+                              (!orderSearchTerm || 
+                              (order.order_id && order.order_id.toLowerCase().includes(orderSearchTerm.toLowerCase())) || 
+                              order.id.toString().includes(orderSearchTerm) ||
+                              (order.customer_name && order.customer_name.toLowerCase().includes(orderSearchTerm.toLowerCase())) ||
+                              (order.customer_phone && order.customer_phone.includes(orderSearchTerm)))
+                            ).length
+                          }
+                          onChange={handleSelectAllOrders}
+                        />
+                      </th>
                       <th className="px-6 py-3">ID</th>
                       <th className="px-6 py-3">Client</th>
                       <th className="px-6 py-3">Téléphone</th>
@@ -1098,7 +1444,15 @@ export default function AdminDashboard() {
                       (order.customer_name && order.customer_name.toLowerCase().includes(orderSearchTerm.toLowerCase())) ||
                       (order.customer_phone && order.customer_phone.includes(orderSearchTerm)))
                     ).map(order => (
-                      <tr key={order.id} className="hover:bg-gray-50">
+                      <tr key={order.id} className={`hover:bg-gray-50 ${selectedOrders.includes(order.id) ? 'bg-orange-50/50' : ''}`}>
+                        <td className="px-6 py-4">
+                          <input 
+                            type="checkbox" 
+                            className="rounded border-gray-300 text-orange-500 focus:ring-orange-500"
+                            checked={selectedOrders.includes(order.id)}
+                            onChange={() => handleSelectOrder(order.id)}
+                          />
+                        </td>
                         <td className="px-6 py-4 font-medium text-gray-900">{order.order_id || `#${order.id}`}</td>
                       <td className="px-6 py-4">
                         <div className="font-medium text-gray-900">{order.customer_name}</div>
@@ -1121,9 +1475,22 @@ export default function AdminDashboard() {
                         </select>
                       </td>
                       <td className="px-6 py-4">
-                        <button className="text-orange-500 hover:text-orange-700 font-medium text-xs">
-                          Détails
-                        </button>
+                        <div className="flex items-center gap-3">
+                          <button 
+                            onClick={() => printOrder(order.id)}
+                            className="p-1.5 text-blue-500 hover:text-blue-700 hover:bg-blue-50 rounded-md transition-colors"
+                            title="Imprimer"
+                          >
+                            <Printer size={16} />
+                          </button>
+                          <button 
+                            onClick={() => deleteOrder(order.id)}
+                            className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-md transition-colors"
+                            title="Supprimer"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -1397,53 +1764,7 @@ export default function AdminDashboard() {
         )}
 
         {activeTab === 'images' && (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-            <div className="p-6 border-b border-gray-100 flex justify-between items-center">
-              <h2 className="text-lg font-bold text-gray-800">Gestion du Slider (Page d'accueil)</h2>
-              <button 
-                onClick={() => openSlideModal()}
-                className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-md font-medium flex items-center gap-2 transition-colors"
-              >
-                <Plus size={18} />
-                Ajouter un slide
-              </button>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm text-gray-600">
-                <thead className="bg-gray-50 text-gray-700 font-medium">
-                  <tr>
-                    <th className="px-6 py-3">Image</th>
-                    <th className="px-6 py-3">Titre</th>
-                    <th className="px-6 py-3">Lien</th>
-                    <th className="px-6 py-3">Ordre</th>
-                    <th className="px-6 py-3">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {slides.map(slide => (
-                    <tr key={slide.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4">
-                        <img src={slide.image} alt={slide.title} className="w-24 h-12 rounded object-cover" referrerPolicy="no-referrer" />
-                      </td>
-                      <td className="px-6 py-4 font-medium text-gray-900">{slide.title}</td>
-                      <td className="px-6 py-4 text-gray-500">{slide.link}</td>
-                      <td className="px-6 py-4">{slide.order_index}</td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <button onClick={() => openSlideModal(slide)} className="text-blue-500 hover:text-blue-700" title="Modifier">
-                            <Edit size={18} />
-                          </button>
-                          <button onClick={() => deleteSlide(slide.id)} className="text-red-500 hover:text-red-700" title="Supprimer">
-                            <Trash2 size={18} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
+          <SliderImagesAdmin />
         )}
 
         {activeTab === 'customers' && (
@@ -2218,7 +2539,7 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* Slide Modal */}
+      {/* Brand Modal */}
       {isBrandModalOpen && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col">
@@ -2313,70 +2634,6 @@ export default function AdminDashboard() {
                   className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-2 rounded-md font-medium transition-colors"
                 >
                   {editingBrand ? 'Mettre à jour' : 'Ajouter'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {isSlideModalOpen && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col">
-            <div className="flex justify-between items-center p-6 border-b border-gray-100 shrink-0">
-              <h2 className="text-xl font-bold text-gray-800">{editingSlide ? 'Modifier le slide' : 'Ajouter un slide'}</h2>
-              <button onClick={() => setIsSlideModalOpen(false)} className="text-gray-400 hover:text-gray-600">
-                <X size={24} />
-              </button>
-            </div>
-            <form onSubmit={handleSlideSubmit} className="flex flex-col overflow-hidden">
-              <div className="p-6 overflow-y-auto">
-                <div className="space-y-4 mb-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Titre *</label>
-                  <input type="text" required className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500" value={slideForm.title} onChange={e => setSlideForm({...slideForm, title: e.target.value})} />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
-                  <textarea rows={2} className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500" value={slideForm.description} onChange={e => setSlideForm({...slideForm, description: e.target.value})}></textarea>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Lien (URL)</label>
-                  <input type="text" className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500" value={slideForm.link} onChange={e => setSlideForm({...slideForm, link: e.target.value})} />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Texte du bouton</label>
-                  <input type="text" className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500" value={slideForm.button_text} onChange={e => setSlideForm({...slideForm, button_text: e.target.value})} />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Ordre d'affichage</label>
-                  <input type="number" className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500" value={slideForm.order_index} onChange={e => setSlideForm({...slideForm, order_index: parseInt(e.target.value)})} />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Image *</label>
-                  <div className="flex flex-col gap-4">
-                    {slideForm.image && (
-                      <img src={slideForm.image} alt="Preview" className="w-full h-32 object-cover rounded border" />
-                    )}
-                    <label className="cursor-pointer bg-white border border-gray-300 px-4 py-2 rounded-md hover:bg-gray-50 flex items-center justify-center gap-2">
-                      <Upload size={18} />
-                      Télécharger une image
-                      <input type="file" className="hidden" accept="image/*" onChange={async (e) => {
-                        const url = await handleFileUpload(e);
-                        if (url) setSlideForm({...slideForm, image: url});
-                      }} />
-                    </label>
-                  </div>
-                </div>
-              </div>
-              </div>
-
-              <div className="flex justify-end gap-4 border-t border-gray-100 p-6 shrink-0 bg-gray-50 rounded-b-xl">
-                <button type="button" onClick={() => setIsSlideModalOpen(false)} className="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 font-medium transition-colors bg-white">
-                  Annuler
-                </button>
-                <button type="submit" className="px-6 py-2 bg-orange-500 text-white rounded-md hover:bg-orange-600 font-medium transition-colors">
-                  {editingSlide ? 'Enregistrer' : 'Créer'}
                 </button>
               </div>
             </form>

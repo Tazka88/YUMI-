@@ -7,6 +7,7 @@ import { formatPrice } from '../utils/formatPrice';
 import { ProductCard } from '../components/ProductCard';
 import SEO from '../components/SEO';
 import { getCategoryWithEmoji, CategoryNameDisplay } from '../components/Layout';
+import Slider from '../components/Slider';
 
 const THEME_IMAGES: Record<string, string> = {
   ramadan:      "/images/themes/ramadan.jpg",
@@ -296,9 +297,6 @@ export default function Home() {
     { id: 'new', type: 'new', title: 'Nouveautés 🆕', isVisible: true },
   ]);
   const addItem = useCartStore(state => state.addItem);
-  const [currentSlide, setCurrentSlide] = useState(0);
-
-  const [slides, setSlides] = useState<any[]>([]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -330,7 +328,6 @@ export default function Home() {
         } catch (e) {}
       }
     }).catch(handleFetchError);
-    fetch('/api/slides', { signal }).then(res => res.json()).then(data => { if (Array.isArray(data)) setSlides(data); }).catch(handleFetchError);
     fetch('/api/categories', { signal }).then(res => res.json()).then(data => { if (Array.isArray(data)) setCategories(data); }).catch(handleFetchError);
     fetch('/api/brands', { signal }).then(res => res.json()).then(data => { if (Array.isArray(data)) setBrands(data); }).catch(handleFetchError);
     fetch('/api/products?popular=true', { signal }).then(res => res.json()).then(data => { if (Array.isArray(data)) setPopularProducts(data); }).catch(handleFetchError);
@@ -369,17 +366,6 @@ export default function Home() {
     };
   }, []);
 
-  useEffect(() => {
-    if (slides.length === 0) return;
-    const timer = setInterval(() => {
-      setCurrentSlide((prev) => (prev === slides.length - 1 ? 0 : prev + 1));
-    }, 4000);
-    return () => clearInterval(timer);
-  }, [slides.length]);
-
-  const nextSlide = () => setCurrentSlide((prev) => (prev === slides.length - 1 ? 0 : prev + 1));
-  const prevSlide = () => setCurrentSlide((prev) => (prev === 0 ? slides.length - 1 : prev - 1));
-
   return (
     <>
       <SEO 
@@ -390,59 +376,7 @@ export default function Home() {
       <ThemeBackground activeTheme={activeTheme} themeImages={themeImages} />
       <div className="container mx-auto px-4 py-6">
         {/* Hero Banner Carousel */}
-      <div className="mb-8 rounded-xl overflow-hidden shadow-md relative h-[200px] md:h-[400px] group">
-        {slides.map((slide, index) => (
-          <div
-            key={slide.id}
-            className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
-              index === currentSlide ? 'opacity-100 z-10' : 'opacity-0 z-0'
-            }`}
-          >
-            <img 
-              src={slide.image} 
-              alt={slide.title} 
-              className="w-full h-full object-cover"
-              referrerPolicy="no-referrer"
-            />
-            <div className="absolute inset-0 bg-gradient-to-r from-black/60 to-transparent flex items-center">
-              <div className="text-white p-8 max-w-lg">
-                <h1 className="text-3xl md:text-5xl font-black mb-4 leading-tight">{slide.title}</h1>
-                <p className="text-lg mb-6 hidden md:block">{slide.description}</p>
-                <Link to={slide.link || '#'} className="bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 px-6 rounded-md inline-block transition-colors shadow-lg">
-                  {slide.button_text || 'Découvrir'}
-                </Link>
-              </div>
-            </div>
-          </div>
-        ))}
-
-        {/* Navigation Arrows */}
-        <button 
-          onClick={prevSlide}
-          className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/30 hover:bg-black/50 text-white p-2 rounded-full z-20 opacity-0 group-hover:opacity-100 transition-opacity"
-        >
-          <ChevronLeft size={24} />
-        </button>
-        <button 
-          onClick={nextSlide}
-          className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/30 hover:bg-black/50 text-white p-2 rounded-full z-20 opacity-0 group-hover:opacity-100 transition-opacity"
-        >
-          <ChevronRight size={24} />
-        </button>
-
-        {/* Dots */}
-        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-20">
-          {slides.map((_, index) => (
-            <button
-              key={index}
-              onClick={() => setCurrentSlide(index)}
-              className={`w-3 h-3 rounded-full transition-colors ${
-                index === currentSlide ? 'bg-orange-500' : 'bg-white/50 hover:bg-white'
-              }`}
-            />
-          ))}
-        </div>
-      </div>
+        <Slider />
 
       {/* Trust Badges Section */}
       <motion.div 

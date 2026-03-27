@@ -27,8 +27,8 @@ router.get('/images/:table/:id/:field', async (req, res) => {
   const { table, id, field } = req.params;
   
   // Validate table and field to prevent SQL injection
-  const allowedTables = ['products', 'categories', 'subcategories', 'brands', 'slides', 'product_images', 'settings'];
-  const allowedFields = ['image', 'value'];
+  const allowedTables = ['products', 'categories', 'subcategories', 'brands', 'product_images', 'settings', 'slider_images'];
+  const allowedFields = ['image', 'value', 'image_url'];
   
   if (!allowedTables.includes(table) || !allowedFields.includes(field)) {
     return res.status(400).json({ error: 'Invalid table or field' });
@@ -290,17 +290,73 @@ router.get('/footer-links', async (req, res) => {
   }
 });
 
-router.get('/slides', async (req, res) => {
+router.get('/slider-images', async (req, res) => {
   try {
-    const slides = await sql`SELECT * FROM slides ORDER BY order_index ASC`;
+    const sliderImages = await sql`SELECT * FROM slider_images ORDER BY position ASC`;
     
-    slides.forEach((s: any) => {
-      s.image = processImage('slides', s.id, 'image', s.image);
+    sliderImages.forEach((s: any) => {
+      s.image_url = processImage('slider_images', s.id, 'image_url', s.image_url);
     });
-    res.json(slides);
+    res.json(sliderImages);
 
   } catch (err) {
-    res.status(500).json({ error: 'Failed to fetch slides' });
+    res.status(500).json({ error: 'Failed to fetch slider images' });
+  }
+});
+
+router.post('/slider-images', authenticate, async (req, res) => {
+  const { image_url, category_id, position, is_active } = req.body;
+  try {
+    const [newSliderImage] = await sql`
+      INSERT INTO slider_images (image_url, category_id, position, is_active)
+      VALUES (${image_url}, ${category_id || null}, ${position || 0}, ${is_active !== undefined ? is_active : true})
+      RETURNING *
+    `;
+    res.status(201).json(newSliderImage);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to create slider image' });
+  }
+});
+
+router.put('/slider-images/:id', authenticate, async (req, res) => {
+  const { id } = req.params;
+  const { image_url, category_id, position, is_active } = req.body;
+  try {
+    const [updatedSliderImage] = await sql`
+      UPDATE slider_images
+      SET image_url = COALESCE(${image_url}, image_url),
+          category_id = ${category_id !== undefined ? category_id : sql`category_id`},
+          position = COALESCE(${position}, position),
+          is_active = COALESCE(${is_active}, is_active)
+      WHERE id = ${id}
+      RETURNING *
+    `;
+    if (!updatedSliderImage) return res.status(404).json({ error: 'Slider image not found' });
+    res.json(updatedSliderImage);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to update slider image' });
+  }
+});
+
+router.delete('/slider-images/:id', authenticate, async (req, res) => {
+  const { id } = req.params;
+  try {
+    await sql`DELETE FROM slider_images WHERE id = ${id}`;
+    res.status(204).send();
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to delete slider image' });
+  }
+});
+
+router.put('/slider-images/reorder', authenticate, async (req, res) => {
+  const { items } = req.body; // Array of { id, position }
+  try {
+    for (const item of items) {
+      await sql`UPDATE slider_images SET position = ${item.position} WHERE id = ${item.id}`;
+    }
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to reorder slider images' });
   }
 });
 
@@ -797,53 +853,6 @@ router.post('/admin/upload', authenticate, upload.single('image'), async (req, r
   }
 });
 
-router.get('/admin/slides', authenticate, async (req, res) => {
-  try {
-    const slides = await sql`SELECT * FROM slides ORDER BY order_index ASC`;
-    
-    slides.forEach((s: any) => {
-      s.image = processImage('slides', s.id, 'image', s.image);
-    });
-    res.json(slides);
-
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to fetch slides' });
-  }
-});
-
-router.post('/admin/slides', authenticate, async (req, res) => {
-  const { title, description, image, link, button_text, order_index } = req.body;
-  try {
-    const [info] = await sql`INSERT INTO slides (title, description, image, link, button_text, order_index) VALUES (${title || ''}, ${description || null}, ${image || ''}, ${link || null}, ${button_text || null}, ${order_index || 0}) RETURNING id`;
-    res.status(201).json({ id: info.id, message: 'Slide created' });
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to create slide' });
-  }
-});
-
-router.put('/admin/slides/:id', authenticate, async (req, res) => {
-  const { title, description, image, link, button_text, order_index } = req.body;
-  try {
-    if (image && image.startsWith('/api/images/')) {
-      await sql`UPDATE slides SET title = ${title || ''}, description = ${description || null}, link = ${link || null}, button_text = ${button_text || null}, order_index = ${order_index || 0} WHERE id = ${req.params.id}`;
-    } else {
-      await sql`UPDATE slides SET title = ${title || ''}, description = ${description || null}, image = ${image || ''}, link = ${link || null}, button_text = ${button_text || null}, order_index = ${order_index || 0} WHERE id = ${req.params.id}`;
-    }
-    res.json({ message: 'Slide updated' });
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to update slide' });
-  }
-});
-
-router.delete('/admin/slides/:id', authenticate, async (req, res) => {
-  try {
-    await sql`DELETE FROM slides WHERE id = ${req.params.id}`;
-    res.json({ message: 'Slide deleted' });
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to delete slide' });
-  }
-});
-
 router.get('/admin/stats', authenticate, async (req, res) => {
   try {
     const [totalOrders] = await sql`SELECT COUNT(*) as count FROM orders`;
@@ -868,6 +877,30 @@ router.get('/admin/orders', authenticate, async (req, res) => {
   }
 });
 
+router.get('/admin/orders/:id', authenticate, async (req, res) => {
+  try {
+    const [order] = await sql`SELECT * FROM orders WHERE id = ${req.params.id}`;
+    if (!order) return res.status(404).json({ error: 'Order not found' });
+    
+    const items = await sql`
+      SELECT oi.*, p.name as product_name, p.image as product_image 
+      FROM order_items oi 
+      LEFT JOIN products p ON oi.product_id = p.id 
+      WHERE oi.order_id = ${req.params.id}
+    `;
+    
+    items.forEach((item: any) => {
+      if (item.product_image) {
+        item.product_image = processImage('products', item.product_id, 'image', item.product_image);
+      }
+    });
+    
+    res.json({ ...order, items });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch order details' });
+  }
+});
+
 router.put('/admin/orders/:id/status', authenticate, async (req, res) => {
   const { status } = req.body;
   if (!status) return res.status(400).json({ error: 'Status is required' });
@@ -876,6 +909,18 @@ router.put('/admin/orders/:id/status', authenticate, async (req, res) => {
     res.json({ message: 'Status updated' });
   } catch (err) {
     res.status(500).json({ error: 'Failed to update order status' });
+  }
+});
+
+router.delete('/admin/orders/:id', authenticate, async (req, res) => {
+  try {
+    await sql.begin(async (sql: any) => {
+      await sql`DELETE FROM order_items WHERE order_id = ${req.params.id}`;
+      await sql`DELETE FROM orders WHERE id = ${req.params.id}`;
+    });
+    res.json({ message: 'Order deleted' });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to delete order' });
   }
 });
 

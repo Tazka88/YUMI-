@@ -2,6 +2,7 @@ import React, { Suspense } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
 import { Toaster } from 'react-hot-toast';
+import { Analytics as VercelAnalytics } from '@vercel/analytics/react';
 import Layout from './components/Layout';
 import Analytics from './components/Analytics';
 
@@ -22,6 +23,7 @@ export default function App() {
       <BrowserRouter>
         <Toaster position="top-center" />
         <Analytics />
+        <VercelAnalytics />
         <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500"></div></div>}>
           <Routes>
         <Route path="/" element={<Layout />}>

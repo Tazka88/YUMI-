@@ -2,13 +2,13 @@ import express from 'express';
 import cors from 'cors';
 import compression from 'compression';
 import helmet from 'helmet';
-import { createServer as createViteServer } from 'vite';
-import { sql } from './src/db/setup.js';
-import apiRoutes from './src/api/routes.js';
+import { sql, setupDb } from './src/db/setup.ts';
+import apiRoutes from './src/api/routes.ts';
 import path from 'path';
 import fs from 'fs';
 
 async function startServer() {
+  await setupDb();
   const app = express();
   const PORT = 3000;
 
@@ -76,15 +76,17 @@ async function startServer() {
 
   // Vite middleware for development
   if (process.env.NODE_ENV !== 'production') {
+    const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: 'spa',
     });
     app.use(vite.middlewares);
   } else {
-    app.use(express.static('dist'));
+    const distPath = path.join(process.cwd(), 'dist');
+    app.use(express.static(distPath));
     app.get('*', (req, res) => {
-      res.sendFile('dist/index.html', { root: '.' });
+      res.sendFile(path.join(distPath, 'index.html'));
     });
   }
 

@@ -2,7 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import compression from 'compression';
 import helmet from 'helmet';
-import apiRoutes from '../src/api/routes.ts';
+import apiRoutes from '../src/api/routes';
 import path from 'path';
 import fs from 'fs';
 

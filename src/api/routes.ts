@@ -1,12 +1,11 @@
 import { Router } from 'express';
-import { sql } from '../db/setup.ts';
-import { getSupabase } from '../lib/supabase.ts';
+import { sql } from '../db/setup';
+import { getSupabase } from '../lib/supabase';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import multer from 'multer';
 import path from 'path';
 import rateLimit from 'express-rate-limit';
-import sharp from 'sharp';
 import fs from 'fs';
 
 const router = Router();
@@ -802,6 +801,7 @@ router.post('/admin/upload', authenticate, upload.single('image'), async (req, r
     let ext = req.file.originalname.split('.').pop() || 'bin';
 
     if (req.file.mimetype !== 'image/svg+xml') {
+      const sharp = (await import('sharp')).default;
       buffer = await sharp(req.file.buffer)
         .resize({ width: 1200, height: 1200, fit: 'inside', withoutEnlargement: true })
         .webp({ quality: 80 })

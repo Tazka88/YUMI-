@@ -1,6 +1,6 @@
 import { Router } from 'express';
-import { sql } from '../db/setup';
-import { getSupabase } from '../lib/supabase';
+import { sql } from '../db/setup.js';
+import { getSupabase } from '../lib/supabase.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import multer from 'multer';

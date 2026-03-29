@@ -60,14 +60,14 @@ export default function Slider({ categoryId = null }: SliderProps) {
 
   if (slides.length === 0) {
     return (
-      <div className="mb-8 rounded-xl overflow-hidden shadow-md relative h-[300px] md:h-[450px] lg:h-[500px] bg-gray-200 animate-pulse">
+      <div className="mb-8 rounded-xl overflow-hidden shadow-md relative h-[250px] sm:h-[300px] md:h-[450px] lg:h-[500px] bg-gray-200 animate-pulse">
         {/* Skeleton loader for the slider */}
       </div>
     );
   }
 
   return (
-    <div className="mb-8 rounded-xl overflow-hidden shadow-md relative h-[300px] md:h-[450px] lg:h-[500px] group">
+    <div className="mb-8 rounded-xl overflow-hidden shadow-md relative h-[250px] sm:h-[300px] md:h-[450px] lg:h-[500px] group">
       {slides.map((slide, index) => (
         <div
           key={slide.id}
@@ -84,14 +84,22 @@ export default function Slider({ categoryId = null }: SliderProps) {
             fetchPriority={index === 0 ? "high" : "auto"}
           />
           {(slide.title || slide.description || slide.button_text) && (
-            <div className="absolute inset-0 bg-black/40 flex items-center justify-center text-center p-6">
-              <div className="max-w-3xl text-white">
-                {slide.title && <h2 className="text-3xl md:text-5xl lg:text-6xl font-extrabold mb-4 drop-shadow-lg leading-tight">{slide.title}</h2>}
-                {slide.description && <p className="text-lg md:text-xl lg:text-2xl mb-8 drop-shadow-md font-medium opacity-90">{slide.description}</p>}
+            <div className="absolute inset-0 bg-black/40 flex items-center justify-center text-center p-4 sm:p-6 md:p-8">
+              <div className="w-full max-w-[90%] sm:max-w-lg md:max-w-2xl lg:max-w-3xl text-white mx-auto">
+                {slide.title && (
+                  <h2 className="text-2xl sm:text-3xl md:text-5xl lg:text-6xl font-extrabold mb-2 md:mb-4 drop-shadow-lg leading-tight line-clamp-2 md:line-clamp-none">
+                    {slide.title}
+                  </h2>
+                )}
+                {slide.description && (
+                  <p className="text-sm sm:text-base md:text-xl lg:text-2xl mb-4 md:mb-8 drop-shadow-md font-medium opacity-90 line-clamp-3 md:line-clamp-none">
+                    {slide.description}
+                  </p>
+                )}
                 {slide.button_text && (
                   <Link 
                     to={slide.button_link || '#'} 
-                    className="inline-block bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 px-8 md:px-10 rounded-full transition-transform hover:scale-105 shadow-xl text-lg"
+                    className="inline-block bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 px-6 sm:py-2.5 sm:px-8 md:py-3 md:px-10 rounded-full transition-transform hover:scale-105 shadow-xl text-sm sm:text-base md:text-lg"
                   >
                     {slide.button_text}
                   </Link>

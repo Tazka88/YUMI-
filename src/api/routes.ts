@@ -27,7 +27,7 @@ router.get('/images/:table/:id/:field', async (req, res) => {
   
   // Validate table and field to prevent SQL injection
   const allowedTables = ['products', 'categories', 'subcategories', 'brands', 'product_images', 'settings', 'slider_images'];
-  const allowedFields = ['image', 'value', 'image_url'];
+  const allowedFields = ['image', 'value', 'image_url', 'slide_image'];
   
   if (!allowedTables.includes(table) || !allowedFields.includes(field)) {
     return res.status(400).json({ error: 'Invalid table or field' });
@@ -397,6 +397,7 @@ router.get('/categories', async (req, res) => {
     
     categoriesWithSubcats.forEach((c: any) => {
       c.image = processImage('categories', c.id, 'image', c.image);
+      c.slide_image = processImage('categories', c.id, 'slide_image', c.slide_image);
       if (c.subcategories && Array.isArray(c.subcategories)) {
         c.subcategories.forEach((sub: any) => {
           sub.image = processImage('subcategories', sub.id, 'image', sub.image);
@@ -1053,9 +1054,9 @@ router.delete('/admin/products/:id', authenticate, async (req, res) => {
 });
 
 router.post('/admin/categories', authenticate, async (req, res) => {
-  const { name, slug, image } = req.body;
+  const { name, slug, image, slide_image } = req.body;
   try {
-    const [info] = await sql`INSERT INTO categories (name, slug, image) VALUES (${name || ''}, ${slug || ''}, ${image || null}) RETURNING id`;
+    const [info] = await sql`INSERT INTO categories (name, slug, image, slide_image) VALUES (${name || ''}, ${slug || ''}, ${image || null}, ${slide_image || null}) RETURNING id`;
     res.status(201).json({ id: info.id, message: 'Category created' });
   } catch (err) {
     res.status(500).json({ error: 'Failed to create category' });
@@ -1063,13 +1064,27 @@ router.post('/admin/categories', authenticate, async (req, res) => {
 });
 
 router.put('/admin/categories/:id', authenticate, async (req, res) => {
-  const { name, slug, image } = req.body;
+  const { name, slug, image, slide_image } = req.body;
   try {
-    if (image && image.startsWith('/api/images/')) {
-      await sql`UPDATE categories SET name = ${name || ''}, slug = ${slug || ''} WHERE id = ${req.params.id}`;
-    } else {
+    let updateQuery;
+    
+    // We update name and slug
+    // We only update image if it's not a local API URL (meaning it's a new upload or null)
+    // Same for slide_image
+    
+    const isImageNew = image && !image.startsWith('/api/images/');
+    const isSlideImageNew = slide_image && !slide_image.startsWith('/api/images/');
+    
+    if (isImageNew && isSlideImageNew) {
+      await sql`UPDATE categories SET name = ${name || ''}, slug = ${slug || ''}, image = ${image || null}, slide_image = ${slide_image || null} WHERE id = ${req.params.id}`;
+    } else if (isImageNew) {
       await sql`UPDATE categories SET name = ${name || ''}, slug = ${slug || ''}, image = ${image || null} WHERE id = ${req.params.id}`;
+    } else if (isSlideImageNew) {
+      await sql`UPDATE categories SET name = ${name || ''}, slug = ${slug || ''}, slide_image = ${slide_image || null} WHERE id = ${req.params.id}`;
+    } else {
+      await sql`UPDATE categories SET name = ${name || ''}, slug = ${slug || ''} WHERE id = ${req.params.id}`;
     }
+    
     res.json({ message: 'Category updated' });
   } catch (err) {
     res.status(500).json({ error: 'Failed to update category' });

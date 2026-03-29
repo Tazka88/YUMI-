@@ -62,7 +62,7 @@ export default function AdminDashboard() {
     name: '', slug: '', category_id: '', image: ''
   });
   const [categoryForm, setCategoryForm] = useState({
-    name: '', slug: '', image: ''
+    name: '', slug: '', image: '', slide_image: ''
   });
   const [brandForm, setBrandForm] = useState({
     name: '', slug: '', image: '', description: ''
@@ -707,12 +707,12 @@ export default function AdminDashboard() {
     if (category) {
       setEditingCategory(category);
       setCategoryForm({
-        name: category.name, slug: category.slug, image: category.image || ''
+        name: category.name, slug: category.slug, image: category.image || '', slide_image: category.slide_image || ''
       });
     } else {
       setEditingCategory(null);
       setCategoryForm({
-        name: '', slug: '', image: ''
+        name: '', slug: '', image: '', slide_image: ''
       });
     }
     setIsCategoryModalOpen(true);
@@ -2508,7 +2508,7 @@ export default function AdminDashboard() {
                   <input type="text" required className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500" value={categoryForm.slug} onChange={e => setCategoryForm({...categoryForm, slug: e.target.value})} />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Image</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Image d'accueil (Miniature)</label>
                   <div className="flex items-center gap-4">
                     {categoryForm.image && (
                       <img src={categoryForm.image} alt="Preview" className="w-16 h-16 object-cover rounded border" />
@@ -2519,6 +2519,22 @@ export default function AdminDashboard() {
                       <input type="file" className="hidden" accept="image/*" onChange={async (e) => {
                         const url = await handleFileUpload(e);
                         if (url) setCategoryForm({...categoryForm, image: url});
+                      }} />
+                    </label>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Image Slide (Bannière dédiée)</label>
+                  <div className="flex items-center gap-4">
+                    {categoryForm.slide_image && (
+                      <img src={categoryForm.slide_image} alt="Slide Preview" className="w-32 h-16 object-cover rounded border" />
+                    )}
+                    <label className="cursor-pointer bg-white border border-gray-300 px-4 py-2 rounded-md hover:bg-gray-50 flex items-center gap-2">
+                      <Upload size={18} />
+                      Télécharger une bannière
+                      <input type="file" className="hidden" accept="image/*" onChange={async (e) => {
+                        const url = await handleFileUpload(e);
+                        if (url) setCategoryForm({...categoryForm, slide_image: url});
                       }} />
                     </label>
                   </div>

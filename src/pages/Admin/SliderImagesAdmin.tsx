@@ -28,7 +28,7 @@ export default function SliderImagesAdmin() {
   const [zoom, setZoom] = useState(1);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
   const [isCropping, setIsCropping] = useState(false);
-  const [filterCategory, setFilterCategory] = useState<number | 'global'>('global');
+  const [filterCategory, setFilterCategory] = useState<'global'>('global');
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
@@ -252,23 +252,12 @@ export default function SliderImagesAdmin() {
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
       <div className="p-6 border-b border-gray-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <h2 className="text-lg font-bold text-gray-800">Gestion des Sliders (Global & Catégories)</h2>
+        <h2 className="text-lg font-bold text-gray-800">Gestion du Slider Principal (Accueil)</h2>
         
         <div className="flex items-center gap-4 w-full sm:w-auto">
-          <select
-            value={filterCategory}
-            onChange={(e) => setFilterCategory(e.target.value === 'global' ? 'global' : Number(e.target.value))}
-            className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
-          >
-            <option value="global">Slider Global (Accueil)</option>
-            {categories.map(cat => (
-              <option key={cat.id} value={cat.id}>Catégorie : {cat.name}</option>
-            ))}
-          </select>
-
           <button 
             onClick={() => {
-              setCurrentImage({ is_active: true, position: filteredImages.length, category_id: filterCategory === 'global' ? null : filterCategory });
+              setCurrentImage({ is_active: true, position: filteredImages.length, category_id: null });
               setPreviewUrl(null);
               setSelectedFile(null);
               setIsModalOpen(true);
@@ -286,9 +275,6 @@ export default function SliderImagesAdmin() {
           <div className="text-center py-12 text-gray-500 bg-gray-50 rounded-lg border border-dashed border-gray-200">
             <ImageIcon size={48} className="mx-auto mb-3 opacity-20" />
             <p>Aucune image pour ce slider.</p>
-            {filterCategory !== 'global' && (
-              <p className="text-sm mt-2 text-orange-600">Le slider global sera affiché en fallback pour cette catégorie.</p>
-            )}
           </div>
         ) : (
           <DragDropContext onDragEnd={onDragEnd}>
@@ -443,20 +429,6 @@ export default function SliderImagesAdmin() {
                         </label>
                       </div>
                     )}
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Assigner à</label>
-                    <select
-                      value={currentImage.category_id === null ? 'global' : currentImage.category_id}
-                      onChange={(e) => setCurrentImage({ ...currentImage, category_id: e.target.value === 'global' ? null : Number(e.target.value) })}
-                      className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-500"
-                    >
-                      <option value="global">Slider Global (Accueil)</option>
-                      {categories.map(cat => (
-                        <option key={cat.id} value={cat.id}>Catégorie : {cat.name}</option>
-                      ))}
-                    </select>
                   </div>
 
                   <div className="flex items-center gap-2">

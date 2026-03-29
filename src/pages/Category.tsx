@@ -55,7 +55,7 @@ export default function Category() {
               const subcat = subcats.find((s: any) => s.slug === slug);
               if (subcat) {
                 setCategoryName(getCategoryWithEmoji(subcat.name));
-                if (subcat.image) setCategoryImage(subcat.image);
+                setCategoryImage(null); // Do not reuse the subcategory thumbnail
                 setCategoryId(subcat.category_id); // Assuming subcategory has category_id
               }
             }
@@ -71,7 +71,11 @@ export default function Category() {
               const cat = cats.find((c: any) => c.slug === slug);
               if (cat) {
                 setCategoryName(getCategoryWithEmoji(cat.name));
-                if (cat.image) setCategoryImage(cat.image);
+                if (cat.slide_image) {
+                  setCategoryImage(cat.slide_image);
+                } else {
+                  setCategoryImage(null); // Do not reuse the home image
+                }
                 setCategoryId(cat.id);
               }
             }
@@ -179,11 +183,17 @@ export default function Category() {
 
         {/* Main Content */}
         <div className="flex-1">
-          <Slider categoryId={categoryId} />
-          {categoryImage && (
-            <div className="mb-6 rounded-xl overflow-hidden shadow-sm bg-gray-50 flex items-center justify-center">
-              <img src={categoryImage} alt={categoryName} className="w-full max-h-64 object-contain" referrerPolicy="no-referrer" />
+          {categoryImage ? (
+            <div className="mb-8 rounded-xl overflow-hidden shadow-md relative h-[200px] md:h-[400px] bg-gray-100 flex items-center justify-center">
+              <img 
+                src={categoryImage} 
+                alt={categoryName} 
+                className="w-full h-full object-cover object-center" 
+                referrerPolicy="no-referrer" 
+              />
             </div>
+          ) : (
+            <Slider categoryId={categoryId} />
           )}
           <div className="bg-white p-4 rounded-lg shadow-sm mb-6 flex justify-between items-center">
             <h1 className="text-xl font-bold text-gray-800">{categoryName}</h1>

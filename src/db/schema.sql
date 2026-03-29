@@ -16,8 +16,12 @@ CREATE TABLE IF NOT EXISTS categories (
   name VARCHAR(255) NOT NULL,
   slug VARCHAR(255) UNIQUE NOT NULL,
   image TEXT,
+  slide_image TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Add slide_image column if it doesn't exist (for existing databases)
+ALTER TABLE categories ADD COLUMN IF NOT EXISTS slide_image TEXT;
 
 CREATE TABLE IF NOT EXISTS slider_images (
   id SERIAL PRIMARY KEY,

@@ -365,7 +365,7 @@ export default function SliderImagesAdmin() {
                       image={previewUrl}
                       crop={crop}
                       zoom={zoom}
-                      aspect={16 / 9}
+                      aspect={21 / 9}
                       onCropChange={setCrop}
                       onCropComplete={onCropComplete}
                       onZoomChange={setZoom}
@@ -395,7 +395,7 @@ export default function SliderImagesAdmin() {
                       onClick={handleCropSave}
                       className="px-4 py-2 bg-orange-500 text-white rounded-md hover:bg-orange-600"
                     >
-                      Appliquer le recadrage (16:9)
+                      Appliquer le recadrage (21:9)
                     </button>
                   </div>
                 </div>

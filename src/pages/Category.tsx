@@ -35,81 +35,77 @@ export default function Category() {
   useEffect(() => {
     const controller = new AbortController();
     const signal = controller.signal;
+    const isSubcategory = searchParams.get('sub') === 'true';
 
-    setLoading(true);
-    setCategoryImage(null);
-    let url = '/api/products';
-    
-    const handleFetchError = (err: any) => {
-      if (err.name !== 'AbortError') console.error(err);
-    };
+    const loadData = async () => {
+      setLoading(true);
+      
+      let url = '/api/products';
+      let newCategoryName = 'Tous les produits';
+      let newCategoryImage = null;
+      let newCategoryId = null;
 
-    if (slug && slug !== 'all') {
-      const isSubcategory = searchParams.get('sub') === 'true';
-      if (isSubcategory) {
-        url += `?subcategory=${slug}`;
-        fetch('/api/subcategories', { signal })
-          .then(res => res.json())
-          .then(subcats => {
-            if (Array.isArray(subcats)) {
-              const subcat = subcats.find((s: any) => s.slug === slug);
-              if (subcat) {
-                setCategoryName(getCategoryWithEmoji(subcat.name));
-                setCategoryImage(null); // Do not reuse the subcategory thumbnail
-                setCategoryId(subcat.category_id); // Assuming subcategory has category_id
-              }
-            }
-          })
-          .catch(handleFetchError);
-      } else {
-        url += `?category=${slug}`;
-        // Fetch category name
-        fetch('/api/categories', { signal })
-          .then(res => res.json())
-          .then(cats => {
-            if (Array.isArray(cats)) {
-              const cat = cats.find((c: any) => c.slug === slug);
-              if (cat) {
-                setCategoryName(getCategoryWithEmoji(cat.name));
-                if (cat.slide_image) {
-                  setCategoryImage(cat.slide_image);
-                } else {
-                  setCategoryImage(null); // Do not reuse the home image
+      try {
+        if (slug && slug !== 'all') {
+          if (isSubcategory) {
+            url += `?subcategory=${slug}`;
+            const res = await fetch('/api/subcategories', { signal });
+            if (res.ok) {
+              const subcats = await res.json();
+              if (Array.isArray(subcats)) {
+                const subcat = subcats.find((s: any) => s.slug === slug);
+                if (subcat) {
+                  newCategoryName = getCategoryWithEmoji(subcat.name);
+                  newCategoryId = subcat.category_id;
                 }
-                setCategoryId(cat.id);
               }
             }
-          })
-          .catch(handleFetchError);
-      }
-    } else if (searchQuery) {
-      url += `?search=${encodeURIComponent(searchQuery)}`;
-      setCategoryName(`Résultats pour "${searchQuery}"`);
-      setCategoryId(null);
-    } else {
-      setCategoryName('Tous les produits');
-      setCategoryId(null);
-    }
-
-    fetch(url, { signal })
-      .then(res => res.json())
-      .then(data => {
-        if (Array.isArray(data)) {
-          setProducts(data);
-        } else {
-          setProducts([]);
+          } else {
+            url += `?category=${slug}`;
+            const res = await fetch('/api/categories', { signal });
+            if (res.ok) {
+              const cats = await res.json();
+              if (Array.isArray(cats)) {
+                const cat = cats.find((c: any) => c.slug === slug);
+                if (cat) {
+                  newCategoryName = getCategoryWithEmoji(cat.name);
+                  if (cat.slide_image) newCategoryImage = cat.slide_image;
+                  newCategoryId = cat.id;
+                }
+              }
+            }
+          }
+        } else if (searchQuery) {
+          url += `?search=${encodeURIComponent(searchQuery)}`;
+          newCategoryName = `Résultats pour "${searchQuery}"`;
         }
-        setLoading(false);
-      })
-      .catch(err => {
-        if (err.name !== 'AbortError') {
-          console.error(err);
+
+        const productsRes = await fetch(url, { signal });
+        let productsData = [];
+        if (productsRes.ok) {
+          const data = await productsRes.json();
+          if (Array.isArray(data)) productsData = data;
+        }
+
+        if (!signal.aborted) {
+          setCategoryName(newCategoryName);
+          setCategoryImage(newCategoryImage);
+          setCategoryId(newCategoryId);
+          setProducts(productsData);
           setLoading(false);
         }
-      });
+      } catch (err: any) {
+        if (err.name !== 'AbortError') {
+          console.error(err);
+          if (!signal.aborted) setLoading(false);
+        }
+      }
+    };
+
+    loadData();
       
     return () => controller.abort();
-  }, [slug, searchQuery]);
+  }, [slug, searchQuery, searchParams]);
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -183,7 +179,9 @@ export default function Category() {
 
         {/* Main Content */}
         <div className="flex-1">
-          {categoryImage ? (
+          {loading ? (
+            <div className="mb-8 rounded-xl overflow-hidden shadow-md relative h-[200px] md:h-[400px] bg-gray-200 animate-pulse"></div>
+          ) : categoryImage ? (
             <div className="mb-8 rounded-xl overflow-hidden shadow-md relative h-[200px] md:h-[400px] bg-gray-100 flex items-center justify-center">
               <img 
                 src={categoryImage} 

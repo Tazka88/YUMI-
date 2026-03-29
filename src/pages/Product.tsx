@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { ShoppingCart, Star, ShieldCheck, Truck, RotateCcw, ThumbsUp, Facebook, Instagram, MessageCircle, CreditCard, ArrowDown } from 'lucide-react';
 import { useCartStore, Product as ProductType } from '../store/cartStore';
 import { formatPrice } from '../utils/formatPrice';
@@ -20,6 +20,7 @@ export default function Product() {
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
   const [trackingIds, setTrackingIds] = useState({ ga: '', fb: '' });
   const addItem = useCartStore(state => state.addItem);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const controller = new AbortController();
@@ -145,6 +146,11 @@ export default function Product() {
         console.error('Failed to send FB add_to_cart event', e);
       }
     }
+  };
+
+  const handleBuyNow = () => {
+    handleAddToCart();
+    navigate('/checkout');
   };
 
   const handleReviewSubmit = async (e: React.FormEvent) => {
@@ -374,25 +380,35 @@ export default function Product() {
               </button>
             </div>
 
-            <div className="mt-auto flex flex-col sm:flex-row gap-4">
-              <div className="flex items-center border border-gray-300 rounded-md bg-white w-32">
+            <div className="mt-auto flex flex-col gap-3">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                <div className="flex items-center border border-gray-300 rounded-md bg-white h-12 w-full sm:w-32 shrink-0">
+                  <button 
+                    className="px-4 h-full text-gray-600 hover:bg-gray-100 disabled:opacity-50 flex items-center justify-center"
+                    onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                    disabled={quantity <= 1}
+                  >-</button>
+                  <span className="flex-1 text-center font-medium">{quantity}</span>
+                  <button 
+                    className="px-4 h-full text-gray-600 hover:bg-gray-100 disabled:opacity-50 flex items-center justify-center"
+                    onClick={() => setQuantity(Math.min(product.stock, quantity + 1))}
+                    disabled={quantity >= product.stock}
+                  >+</button>
+                </div>
+                
                 <button 
-                  className="px-4 py-3 text-gray-600 hover:bg-gray-100 disabled:opacity-50"
-                  onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                  disabled={quantity <= 1}
-                >-</button>
-                <span className="flex-1 text-center font-medium">{quantity}</span>
-                <button 
-                  className="px-4 py-3 text-gray-600 hover:bg-gray-100 disabled:opacity-50"
-                  onClick={() => setQuantity(Math.min(product.stock, quantity + 1))}
-                  disabled={quantity >= product.stock}
-                >+</button>
+                  onClick={handleBuyNow}
+                  disabled={product.stock === 0}
+                  className="flex-1 bg-orange-500 hover:bg-orange-600 text-white font-bold h-12 px-6 rounded-md flex items-center justify-center gap-2 transition-transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed shadow-md text-lg"
+                >
+                  Acheter maintenant
+                </button>
               </div>
               
               <button 
                 onClick={handleAddToCart}
                 disabled={product.stock === 0}
-                className="flex-1 bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 px-6 rounded-md flex items-center justify-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-md"
+                className="w-full bg-white border-2 border-orange-500 text-orange-600 hover:bg-orange-50 font-bold h-12 px-6 rounded-md flex items-center justify-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <ShoppingCart size={20} />
                 Ajouter au panier

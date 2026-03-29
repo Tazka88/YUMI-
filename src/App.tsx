@@ -6,7 +6,7 @@ import { SpeedInsights } from '@vercel/speed-insights/react';
 import Layout from './components/Layout';
 import Analytics from './components/Analytics';
 
-const Home = React.lazy(() => import('./pages/Home'));
+import Home from './pages/Home';
 const Category = React.lazy(() => import('./pages/Category'));
 const Product = React.lazy(() => import('./pages/Product'));
 const Cart = React.lazy(() => import('./pages/Cart'));

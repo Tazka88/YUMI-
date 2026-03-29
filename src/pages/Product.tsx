@@ -42,7 +42,7 @@ export default function Product() {
     const signal = controller.signal;
 
     setError(null);
-    fetch(`/api/products/${slug}`, { signal })
+    fetch(`/api/products/${slug}`, { signal, priority: 'high' } as any)
       .then(res => {
         if (!res.ok) throw new Error('Produit introuvable');
         return res.json();
@@ -241,6 +241,8 @@ export default function Product() {
                 alt={product.name}
                 className="w-full h-full object-contain"
                 referrerPolicy="no-referrer"
+                fetchPriority="high"
+                loading="eager"
               />
             </div>
             

@@ -23,7 +23,7 @@ export default function Category() {
 
   useEffect(() => {
     const controller = new AbortController();
-    fetch('/api/categories', { signal: controller.signal })
+    fetch('/api/categories', { signal: controller.signal, priority: 'high' } as any)
       .then(res => res.json())
       .then(data => { if (Array.isArray(data)) setCategories(data); })
       .catch(err => {
@@ -62,7 +62,7 @@ export default function Category() {
             }
           } else {
             url += `?category=${slug}`;
-            const res = await fetch('/api/categories', { signal });
+            const res = await fetch('/api/categories', { signal, priority: 'high' } as any);
             if (res.ok) {
               const cats = await res.json();
               if (Array.isArray(cats)) {
@@ -80,7 +80,7 @@ export default function Category() {
           newCategoryName = `Résultats pour "${searchQuery}"`;
         }
 
-        const productsRes = await fetch(url, { signal });
+        const productsRes = await fetch(url, { signal, priority: 'high' } as any);
         let productsData = [];
         if (productsRes.ok) {
           const data = await productsRes.json();
@@ -188,6 +188,8 @@ export default function Category() {
                 alt={categoryName} 
                 className="w-full h-full object-cover object-center" 
                 referrerPolicy="no-referrer" 
+                fetchPriority="high"
+                loading="eager"
               />
             </div>
           ) : (
@@ -204,7 +206,7 @@ export default function Category() {
             </div>
           ) : products.length > 0 ? (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {products.map(p => <ProductCard key={p.id} product={p} />)}
+              {products.map((p, i) => <ProductCard key={p.id} product={p} priority={i < 4} />)}
             </div>
           ) : (
             <div className="bg-white p-8 rounded-lg shadow-sm text-center">

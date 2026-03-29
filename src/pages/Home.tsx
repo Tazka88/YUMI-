@@ -28,6 +28,8 @@ const OVERLAY_INTENSITY = 0.60;
 // Options : "ramadan" | "aid" | "independance" | "yennayer" 
 //           | "mouloud" | "rentree" | "soldes" | "ete" | "normal"
 
+import { Helmet } from 'react-helmet-async';
+
 const ThemeBackground = ({ activeTheme, themeImages }: { activeTheme: string, themeImages: Record<string, any> }) => {
   if (activeTheme === "normal" || !activeTheme) return null;
 
@@ -150,6 +152,11 @@ const ThemeBackground = ({ activeTheme, themeImages }: { activeTheme: string, th
 
   return (
     <>
+      {theme.image && (
+        <Helmet>
+          <link rel="preload" as="image" href={theme.image} />
+        </Helmet>
+      )}
       <style>{`
         .min-h-screen.bg-gray-50 {
           background-color: transparent !important;
@@ -285,6 +292,7 @@ export default function Home() {
   const [themeImages, setThemeImages] = useState<Record<string, any>>({});
   const [categories, setCategories] = useState<any[]>([]);
   const [brands, setBrands] = useState<any[]>([]);
+  const [loadingBrands, setLoadingBrands] = useState(true);
   const [popularProducts, setPopularProducts] = useState<Product[]>([]);
   const [bestSellers, setBestSellers] = useState<Product[]>([]);
   const [newProducts, setNewProducts] = useState<Product[]>([]);
@@ -306,7 +314,7 @@ export default function Home() {
       if (err.name !== 'AbortError') console.error(err);
     };
 
-    fetch('/api/settings', { signal }).then(res => res.json()).then(data => {
+    fetch('/api/settings', { signal, priority: 'high' } as any).then(res => res.json()).then(data => {
       if (data.active_theme) setActiveTheme(data.active_theme);
       setThemeImages(data);
       if (data.home_sections) {
@@ -328,8 +336,8 @@ export default function Home() {
         } catch (e) {}
       }
     }).catch(handleFetchError);
-    fetch('/api/categories', { signal }).then(res => res.json()).then(data => { if (Array.isArray(data)) setCategories(data); }).catch(handleFetchError);
-    fetch('/api/brands', { signal }).then(res => res.json()).then(data => { if (Array.isArray(data)) setBrands(data); }).catch(handleFetchError);
+    fetch('/api/categories', { signal, priority: 'high' } as any).then(res => res.json()).then(data => { if (Array.isArray(data)) setCategories(data); }).catch(handleFetchError);
+    fetch('/api/brands', { signal }).then(res => res.json()).then(data => { if (Array.isArray(data)) setBrands(data); setLoadingBrands(false); }).catch(err => { handleFetchError(err); setLoadingBrands(false); });
     fetch('/api/products?popular=true', { signal }).then(res => res.json()).then(data => { if (Array.isArray(data)) setPopularProducts(data); }).catch(handleFetchError);
     fetch('/api/products?best_seller=true', { signal }).then(res => res.json()).then(data => { if (Array.isArray(data)) setBestSellers(data); }).catch(handleFetchError);
     fetch('/api/products?new=true', { signal }).then(res => res.json()).then(data => { if (Array.isArray(data)) setNewProducts(data); }).catch(handleFetchError);
@@ -430,7 +438,7 @@ export default function Home() {
               </div>
             ))
           ) : (
-            categories.slice(0, 12).map(cat => (
+            categories.slice(0, 12).map((cat, index) => (
               <Link key={cat.id} to={`/category/${cat.slug}`} className="flex flex-col items-center group">
                 <div className="w-full aspect-square max-w-[160px] rounded-2xl overflow-hidden mb-3 shadow-sm group-hover:shadow-md group-hover:scale-105 transition-all duration-300 border border-gray-100 bg-gray-50 flex items-center justify-center">
                   <img 
@@ -438,7 +446,8 @@ export default function Home() {
                     alt={cat.name}
                     width="200"
                     height="200"
-                    loading="lazy"
+                    loading={index < 6 ? "eager" : "lazy"}
+                    fetchPriority={index < 6 ? "high" : "auto"}
                     decoding="async"
                     className="w-full h-full object-contain p-2"
                     referrerPolicy="no-referrer"
@@ -454,8 +463,8 @@ export default function Home() {
       </div>
 
       {/* Brands Section */}
-      {brands.length > 0 && (
-        <div className="mb-8 bg-white p-6 rounded-xl shadow-sm border border-gray-100 relative">
+      {(loadingBrands || brands.length > 0) && (
+        <div className="mb-8 bg-white p-6 rounded-xl shadow-sm border border-gray-100 relative min-h-[200px]">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-xl font-bold text-gray-800">Nos Marques</h2>
             <Link to="/brands" className="text-orange-500 hover:text-orange-600 font-medium text-sm flex items-center gap-1">
@@ -464,40 +473,48 @@ export default function Home() {
           </div>
           
           <div className="overflow-hidden relative w-full py-2">
-            <div className="flex w-max animate-marquee hover:[animation-play-state:paused]">
-              {[...Array(4)].map((_, i) => (
-                <div key={i} className="flex gap-4 pr-4" aria-hidden={i > 0 ? "true" : "false"}>
-                  {brands.map(brand => (
-                    <Link 
-                      key={`${i}-${brand.id}`} 
-                      to={`/brands/${brand.slug}`} 
-                      className="relative w-[140px] h-[100px] sm:w-[180px] sm:h-[120px] shrink-0 rounded-xl overflow-hidden shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300 border border-gray-100 group/brand bg-white block"
-                      tabIndex={i > 0 ? -1 : 0}
-                    >
-                      {brand.image ? (
-                        <img 
-                          src={brand.image} 
-                          alt={brand.name} 
-                          width="200"
-                          height="120"
-                          loading="lazy"
-                          decoding="async"
-                          className="w-full h-full object-contain p-4 sm:p-6 group-hover/brand:scale-105 transition-transform duration-500" 
-                          referrerPolicy="no-referrer"
-                        />
-                      ) : (
-                        <div className="w-full h-full bg-gray-50 flex items-center justify-center text-gray-400 group-hover/brand:scale-105 transition-transform duration-500">
-                          <span className="font-bold text-4xl">{brand.name.charAt(0)}</span>
+            {loadingBrands ? (
+              <div className="flex gap-4">
+                {[...Array(6)].map((_, i) => (
+                  <div key={i} className="w-[140px] h-[100px] sm:w-[180px] sm:h-[120px] shrink-0 rounded-xl bg-gray-200 animate-pulse"></div>
+                ))}
+              </div>
+            ) : (
+              <div className="flex w-max animate-marquee hover:[animation-play-state:paused]">
+                {[...Array(4)].map((_, i) => (
+                  <div key={i} className="flex gap-4 pr-4" aria-hidden={i > 0 ? "true" : "false"}>
+                    {brands.map(brand => (
+                      <Link 
+                        key={`${i}-${brand.id}`} 
+                        to={`/brands/${brand.slug}`} 
+                        className="relative w-[140px] h-[100px] sm:w-[180px] sm:h-[120px] shrink-0 rounded-xl overflow-hidden shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300 border border-gray-100 group/brand bg-white block"
+                        tabIndex={i > 0 ? -1 : 0}
+                      >
+                        {brand.image ? (
+                          <img 
+                            src={brand.image} 
+                            alt={brand.name} 
+                            width="200"
+                            height="120"
+                            loading="lazy"
+                            decoding="async"
+                            className="w-full h-full object-contain p-4 sm:p-6 group-hover/brand:scale-105 transition-transform duration-500" 
+                            referrerPolicy="no-referrer"
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-gray-50 flex items-center justify-center text-gray-400 group-hover/brand:scale-105 transition-transform duration-500">
+                            <span className="font-bold text-4xl">{brand.name.charAt(0)}</span>
+                          </div>
+                        )}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent opacity-0 group-hover/brand:opacity-100 transition-opacity duration-300 flex items-end justify-center pb-3">
+                          <span className="text-white font-bold text-sm text-center px-2">{brand.name}</span>
                         </div>
-                      )}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent opacity-0 group-hover/brand:opacity-100 transition-opacity duration-300 flex items-end justify-center pb-3">
-                        <span className="text-white font-bold text-sm text-center px-2">{brand.name}</span>
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              ))}
-            </div>
+                      </Link>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -509,7 +526,7 @@ export default function Home() {
             <section key={section.id}>
               <FlashSalesHeader link="/category/all" />
               <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                {promotions.slice(0, 5).map(p => <ProductCard key={p.id} product={p} />)}
+                {promotions.slice(0, 5).map((p, i) => <ProductCard key={p.id} product={p} priority={i < 4} />)}
               </div>
             </section>
           );
@@ -519,7 +536,7 @@ export default function Home() {
             <section key={section.id}>
               <SectionHeader title={section.title || "Meilleures Ventes 🏆"} link="/category/all" />
               <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                {bestSellers.slice(0, 5).map(p => <ProductCard key={p.id} product={p} />)}
+                {bestSellers.slice(0, 5).map((p, i) => <ProductCard key={p.id} product={p} priority={i < 4} />)}
               </div>
             </section>
           );
@@ -529,7 +546,7 @@ export default function Home() {
             <section key={section.id}>
               <SectionHeader title={section.title || "Produits Populaires 🔥"} link="/category/all" />
               <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                {popularProducts.slice(0, 10).map(p => <ProductCard key={p.id} product={p} />)}
+                {popularProducts.slice(0, 10).map((p, i) => <ProductCard key={p.id} product={p} priority={i < 4} />)}
               </div>
             </section>
           );
@@ -539,7 +556,7 @@ export default function Home() {
             <section key={section.id}>
               <SectionHeader title={section.title || "Nouveautés 🆕"} link="/category/all" />
               <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                {newProducts.slice(0, 5).map(p => <ProductCard key={p.id} product={p} />)}
+                {newProducts.slice(0, 5).map((p, i) => <ProductCard key={p.id} product={p} priority={i < 4} />)}
               </div>
             </section>
           );
@@ -551,7 +568,7 @@ export default function Home() {
             <section key={section.id}>
               <SectionHeader title={`${section.title} ${section.emoji || ''}`} link="/category/all" />
               <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                {sectionProducts.map(p => <ProductCard key={`${section.id}-${p.id}`} product={p} />)}
+                {sectionProducts.map((p, i) => <ProductCard key={`${section.id}-${p.id}`} product={p} priority={i < 4} />)}
               </div>
             </section>
           );

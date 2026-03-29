@@ -17,7 +17,7 @@ interface Product {
   avg_rating?: number;
 }
 
-export const ProductCard: React.FC<{ product: Product }> = ({ product }) => {
+export const ProductCard: React.FC<{ product: Product; priority?: boolean }> = ({ product, priority = false }) => {
   const addItem = useCartStore((state) => state.addItem);
   const isPromo = product.promo_price !== null;
   const discount = isPromo ? Math.round(((product.price - product.promo_price!) / product.price) * 100) : 0;
@@ -45,7 +45,8 @@ export const ProductCard: React.FC<{ product: Product }> = ({ product }) => {
         <img 
           src={product.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(product.name)}&background=random&size=400`} 
           alt={product.name}
-          loading="lazy"
+          loading={priority ? "eager" : "lazy"}
+          fetchPriority={priority ? "high" : "auto"}
           decoding="async"
           width="400"
           height="400"

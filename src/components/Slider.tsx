@@ -21,7 +21,7 @@ export default function Slider({ categoryId = null }: SliderProps) {
   useEffect(() => {
     const fetchSlides = async () => {
       try {
-        const res = await fetch('/api/slider-images');
+        const res = await fetch('/api/slider-images', { priority: 'high' } as any);
         const data: SliderImage[] = await res.json();
         
         const activeSlides = data.filter(s => s.is_active);

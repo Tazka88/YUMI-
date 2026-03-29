@@ -86,14 +86,14 @@ export default function Layout() {
       if (err.name !== 'AbortError') console.error(err);
     };
 
-    fetch('/api/categories', { signal })
+    fetch('/api/categories', { signal, priority: 'high' } as any)
       .then(res => res.json())
       .then(data => {
         if (Array.isArray(data)) setCategories(data);
       })
       .catch(handleFetchError);
       
-    fetch('/api/settings', { signal })
+    fetch('/api/settings', { signal, priority: 'high' } as any)
       .then(res => res.json())
       .then(data => {
         if (data && typeof data === 'object' && !data.error) setSettings(data);
@@ -228,7 +228,7 @@ export default function Layout() {
               </button>
               <Link to="/" className="flex items-center hover:opacity-90 transition-opacity" aria-label="Yumi Accueil">
                 {settings.site_logo ? (
-                  <img src={settings.site_logo} alt="Yumi Logo" className="h-8 md:h-10 w-auto object-contain" />
+                  <img src={settings.site_logo} alt="Yumi Logo" className="h-8 md:h-10 w-auto object-contain" fetchPriority="high" loading="eager" />
                 ) : (
                   <svg width="130" height="36" viewBox="0 0 130 36" fill="none" xmlns="http://www.w3.org/2000/svg" className="h-8 w-auto">
                     <g transform="translate(2, 2)">

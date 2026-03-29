@@ -47,6 +47,8 @@ export const ProductCard: React.FC<{ product: Product }> = ({ product }) => {
           alt={product.name}
           loading="lazy"
           decoding="async"
+          width="400"
+          height="400"
           className={`w-full h-full object-contain p-4 bg-white group-hover:scale-110 transition-transform duration-500 ${isOutOfStock ? 'opacity-50 grayscale' : ''}`}
           referrerPolicy="no-referrer"
         />

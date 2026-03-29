@@ -418,24 +418,38 @@ export default function Home() {
       </motion.div>
 
       {/* Categories Grid */}
-      <div className="mb-8 bg-white p-4 rounded-lg shadow-sm">
+      <div className="mb-8 bg-white p-4 rounded-lg shadow-sm min-h-[200px]">
         <h2 className="text-lg font-bold text-gray-800 mb-4 text-center">Catégories Populaires</h2>
         <div className="grid grid-cols-3 md:grid-cols-6 gap-4">
-          {categories.slice(0, 12).map(cat => (
-            <Link key={cat.id} to={`/category/${cat.slug}`} className="flex flex-col items-center group">
-              <div className="w-full aspect-square max-w-[160px] rounded-2xl overflow-hidden mb-3 shadow-sm group-hover:shadow-md group-hover:scale-105 transition-all duration-300 border border-gray-100 bg-gray-50 flex items-center justify-center">
-                <img 
-                  src={cat.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(cat.name)}&background=random&color=fff&size=200`} 
-                  alt={cat.name}
-                  className="w-full h-full object-contain p-2"
-                  referrerPolicy="no-referrer"
-                />
+          {categories.length === 0 ? (
+            // Skeleton loader for categories
+            [...Array(6)].map((_, i) => (
+              <div key={i} className="flex flex-col items-center">
+                <div className="w-full aspect-square max-w-[160px] rounded-2xl mb-3 bg-gray-200 animate-pulse"></div>
+                <div className="h-4 w-20 bg-gray-200 animate-pulse rounded"></div>
               </div>
-              <span className="text-[14px] text-center text-gray-700 group-hover:text-orange-500 font-medium">
-                <CategoryNameDisplay name={cat.name} className="justify-center" />
-              </span>
-            </Link>
-          ))}
+            ))
+          ) : (
+            categories.slice(0, 12).map(cat => (
+              <Link key={cat.id} to={`/category/${cat.slug}`} className="flex flex-col items-center group">
+                <div className="w-full aspect-square max-w-[160px] rounded-2xl overflow-hidden mb-3 shadow-sm group-hover:shadow-md group-hover:scale-105 transition-all duration-300 border border-gray-100 bg-gray-50 flex items-center justify-center">
+                  <img 
+                    src={cat.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(cat.name)}&background=random&color=fff&size=200`} 
+                    alt={cat.name}
+                    width="200"
+                    height="200"
+                    loading="lazy"
+                    decoding="async"
+                    className="w-full h-full object-contain p-2"
+                    referrerPolicy="no-referrer"
+                  />
+                </div>
+                <span className="text-[14px] text-center text-gray-700 group-hover:text-orange-500 font-medium">
+                  <CategoryNameDisplay name={cat.name} className="justify-center" />
+                </span>
+              </Link>
+            ))
+          )}
         </div>
       </div>
 
@@ -464,6 +478,10 @@ export default function Home() {
                         <img 
                           src={brand.image} 
                           alt={brand.name} 
+                          width="200"
+                          height="120"
+                          loading="lazy"
+                          decoding="async"
                           className="w-full h-full object-contain p-4 sm:p-6 group-hover/brand:scale-105 transition-transform duration-500" 
                           referrerPolicy="no-referrer"
                         />

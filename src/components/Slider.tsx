@@ -54,7 +54,13 @@ export default function Slider({ categoryId = null }: SliderProps) {
   const nextSlide = () => setCurrentSlide((prev) => (prev === slides.length - 1 ? 0 : prev + 1));
   const prevSlide = () => setCurrentSlide((prev) => (prev === 0 ? slides.length - 1 : prev - 1));
 
-  if (slides.length === 0) return null;
+  if (slides.length === 0) {
+    return (
+      <div className="mb-8 rounded-xl overflow-hidden shadow-md relative h-[200px] md:h-[400px] bg-gray-200 animate-pulse">
+        {/* Skeleton loader for the slider */}
+      </div>
+    );
+  }
 
   return (
     <div className="mb-8 rounded-xl overflow-hidden shadow-md relative h-[200px] md:h-[400px] group">
@@ -70,6 +76,8 @@ export default function Slider({ categoryId = null }: SliderProps) {
             alt="Slide" 
             className="w-full h-full object-cover"
             referrerPolicy="no-referrer"
+            loading={index === 0 ? "eager" : "lazy"}
+            fetchPriority={index === 0 ? "high" : "auto"}
           />
         </div>
       ))}

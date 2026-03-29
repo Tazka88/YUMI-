@@ -14,6 +14,10 @@ interface SliderImage {
   category_id: number | null;
   position: number;
   is_active: boolean;
+  title?: string;
+  description?: string;
+  button_text?: string;
+  button_link?: string;
   created_at: string;
 }
 
@@ -299,10 +303,14 @@ export default function SliderImagesAdmin() {
                           </div>
                           
                           <div className="flex-1 flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <span className={`px-2 py-1 text-xs font-medium rounded-full ${image.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
-                                {image.is_active ? 'Actif' : 'Inactif'}
-                              </span>
+                            <div className="flex flex-col gap-1">
+                              <div className="flex items-center gap-2">
+                                <span className={`px-2 py-1 text-xs font-medium rounded-full ${image.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
+                                  {image.is_active ? 'Actif' : 'Inactif'}
+                                </span>
+                                {image.title && <span className="font-medium text-gray-800">{image.title}</span>}
+                              </div>
+                              {image.description && <span className="text-sm text-gray-500 line-clamp-1">{image.description}</span>}
                             </div>
                             
                             <div className="flex items-center gap-3">
@@ -429,6 +437,51 @@ export default function SliderImagesAdmin() {
                         </label>
                       </div>
                     )}
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Titre (Optionnel)</label>
+                      <input
+                        type="text"
+                        value={currentImage.title || ''}
+                        onChange={(e) => setCurrentImage({ ...currentImage, title: e.target.value })}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-orange-500 focus:border-orange-500"
+                        placeholder="Ex: Nouvelle Collection"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Texte du bouton (Optionnel)</label>
+                      <input
+                        type="text"
+                        value={currentImage.button_text || ''}
+                        onChange={(e) => setCurrentImage({ ...currentImage, button_text: e.target.value })}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-orange-500 focus:border-orange-500"
+                        placeholder="Ex: Découvrir"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Description (Optionnel)</label>
+                    <textarea
+                      value={currentImage.description || ''}
+                      onChange={(e) => setCurrentImage({ ...currentImage, description: e.target.value })}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-orange-500 focus:border-orange-500"
+                      placeholder="Ex: Profitez de nos offres exceptionnelles..."
+                      rows={2}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Lien du bouton (Optionnel)</label>
+                    <input
+                      type="text"
+                      value={currentImage.button_link || ''}
+                      onChange={(e) => setCurrentImage({ ...currentImage, button_link: e.target.value })}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-orange-500 focus:border-orange-500"
+                      placeholder="Ex: /category/nouveautes"
+                    />
                   </div>
 
                   <div className="flex items-center gap-2">

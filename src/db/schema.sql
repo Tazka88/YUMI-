@@ -29,6 +29,10 @@ CREATE TABLE IF NOT EXISTS slider_images (
   category_id INTEGER REFERENCES categories(id) ON DELETE CASCADE,
   position INTEGER DEFAULT 0,
   is_active BOOLEAN DEFAULT true,
+  title TEXT,
+  description TEXT,
+  button_text TEXT,
+  button_link TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 

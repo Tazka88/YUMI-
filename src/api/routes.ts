@@ -302,11 +302,11 @@ router.get('/slider-images', async (req, res) => {
 });
 
 router.post('/slider-images', authenticate, async (req, res) => {
-  const { image_url, category_id, position, is_active } = req.body;
+  const { image_url, category_id, position, is_active, title, description, button_text, button_link } = req.body;
   try {
     const [newSliderImage] = await sql`
-      INSERT INTO slider_images (image_url, category_id, position, is_active)
-      VALUES (${image_url}, ${category_id || null}, ${position || 0}, ${is_active !== undefined ? is_active : true})
+      INSERT INTO slider_images (image_url, category_id, position, is_active, title, description, button_text, button_link)
+      VALUES (${image_url}, ${category_id || null}, ${position || 0}, ${is_active !== undefined ? is_active : true}, ${title || null}, ${description || null}, ${button_text || null}, ${button_link || null})
       RETURNING *
     `;
     res.status(201).json(newSliderImage);
@@ -317,14 +317,18 @@ router.post('/slider-images', authenticate, async (req, res) => {
 
 router.put('/slider-images/:id', authenticate, async (req, res) => {
   const { id } = req.params;
-  const { image_url, category_id, position, is_active } = req.body;
+  const { image_url, category_id, position, is_active, title, description, button_text, button_link } = req.body;
   try {
     const [updatedSliderImage] = await sql`
       UPDATE slider_images
       SET image_url = COALESCE(${image_url}, image_url),
           category_id = ${category_id !== undefined ? category_id : sql`category_id`},
           position = COALESCE(${position}, position),
-          is_active = COALESCE(${is_active}, is_active)
+          is_active = COALESCE(${is_active}, is_active),
+          title = ${title !== undefined ? title : sql`title`},
+          description = ${description !== undefined ? description : sql`description`},
+          button_text = ${button_text !== undefined ? button_text : sql`button_text`},
+          button_link = ${button_link !== undefined ? button_link : sql`button_link`}
       WHERE id = ${id}
       RETURNING *
     `;

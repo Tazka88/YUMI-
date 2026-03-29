@@ -8,6 +8,10 @@ interface SliderImage {
   category_id: number | null;
   position: number;
   is_active: boolean;
+  title?: string;
+  description?: string;
+  button_text?: string;
+  button_link?: string;
 }
 
 interface SliderProps {
@@ -56,14 +60,14 @@ export default function Slider({ categoryId = null }: SliderProps) {
 
   if (slides.length === 0) {
     return (
-      <div className="mb-8 rounded-xl overflow-hidden shadow-md relative h-[200px] md:h-[400px] bg-gray-200 animate-pulse">
+      <div className="mb-8 rounded-xl overflow-hidden shadow-md relative h-[300px] md:h-[450px] lg:h-[500px] bg-gray-200 animate-pulse">
         {/* Skeleton loader for the slider */}
       </div>
     );
   }
 
   return (
-    <div className="mb-8 rounded-xl overflow-hidden shadow-md relative h-[200px] md:h-[400px] group">
+    <div className="mb-8 rounded-xl overflow-hidden shadow-md relative h-[300px] md:h-[450px] lg:h-[500px] group">
       {slides.map((slide, index) => (
         <div
           key={slide.id}
@@ -73,12 +77,28 @@ export default function Slider({ categoryId = null }: SliderProps) {
         >
           <img 
             src={slide.image_url} 
-            alt="Slide" 
+            alt={slide.title || "Slide"} 
             className="w-full h-full object-cover"
             referrerPolicy="no-referrer"
             loading={index === 0 ? "eager" : "lazy"}
             fetchPriority={index === 0 ? "high" : "auto"}
           />
+          {(slide.title || slide.description || slide.button_text) && (
+            <div className="absolute inset-0 bg-black/40 flex items-center justify-center text-center p-6">
+              <div className="max-w-3xl text-white">
+                {slide.title && <h2 className="text-3xl md:text-5xl lg:text-6xl font-extrabold mb-4 drop-shadow-lg leading-tight">{slide.title}</h2>}
+                {slide.description && <p className="text-lg md:text-xl lg:text-2xl mb-8 drop-shadow-md font-medium opacity-90">{slide.description}</p>}
+                {slide.button_text && (
+                  <Link 
+                    to={slide.button_link || '#'} 
+                    className="inline-block bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 px-8 md:px-10 rounded-full transition-transform hover:scale-105 shadow-xl text-lg"
+                  >
+                    {slide.button_text}
+                  </Link>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       ))}
 

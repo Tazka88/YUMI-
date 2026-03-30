@@ -44,6 +44,14 @@ app.use('/uploads', express.static(uploadsDir, { maxAge: '1y' }));
 // API Routes
 app.use('/api', apiRoutes);
 
+// SEO Routes (passed to apiRoutes)
+app.get('/sitemap.xml', (req, res, next) => {
+  apiRoutes(req, res, next);
+});
+app.get('/robots.txt', (req, res, next) => {
+  apiRoutes(req, res, next);
+});
+
 // Global error handler for debugging
 app.use((err: any, req: any, res: any, next: any) => {
   console.error('Global error:', err);

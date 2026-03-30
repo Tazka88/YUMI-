@@ -180,7 +180,7 @@ router.get('/sitemap.xml', async (req, res) => {
     const baseUrl = process.env.APP_URL || `https://${req.get('host')}`;
     
     const [products, categories, brands, pages] = await Promise.all([
-      sql`SELECT slug, updated_at FROM products WHERE is_active = true`,
+      sql`SELECT slug, created_at FROM products`,
       sql`SELECT slug FROM categories`,
       sql`SELECT slug FROM brands`,
       sql`SELECT slug, updated_at FROM pages`
@@ -198,7 +198,7 @@ router.get('/sitemap.xml', async (req, res) => {
       xml += `
   <url>
     <loc>${baseUrl}/product/${p.slug}</loc>
-    <lastmod>${new Date(p.updated_at || Date.now()).toISOString()}</lastmod>
+    <lastmod>${new Date(p.created_at || Date.now()).toISOString()}</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>`;

@@ -149,8 +149,7 @@ export default function Product() {
   };
 
   const handleBuyNow = () => {
-    handleAddToCart();
-    navigate('/checkout');
+    navigate('/checkout', { state: { directBuyItem: { ...product, quantity } } });
   };
 
   const handleReviewSubmit = async (e: React.FormEvent) => {

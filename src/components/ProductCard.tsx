@@ -98,8 +98,7 @@ export const ProductCard: React.FC<{ product: Product; priority?: boolean }> = (
             <button 
               onClick={(e) => {
                 e.preventDefault();
-                addItem(product as any, 1);
-                navigate('/checkout');
+                navigate('/checkout', { state: { directBuyItem: { ...product, quantity: 1 } } });
               }}
               className="w-full bg-orange-500 text-white py-2 rounded-md text-sm font-bold shadow-sm hover:bg-orange-600 transition-transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center"
             >

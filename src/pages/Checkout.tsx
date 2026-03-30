@@ -1,6 +1,6 @@
 import toast from 'react-hot-toast';
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useCartStore } from '../store/cartStore';
 import { CheckCircle, Truck, MapPin, Phone, User as UserIcon } from 'lucide-react';
 import { formatPrice } from '../utils/formatPrice';
@@ -18,6 +18,11 @@ interface Wilaya {
 export default function Checkout() {
   const { items, total, clearCart } = useCartStore();
   const navigate = useNavigate();
+  const location = useLocation();
+  
+  const directBuyItem = location.state?.directBuyItem;
+  const checkoutItems = directBuyItem ? [directBuyItem] : items;
+  const checkoutTotal = directBuyItem ? (directBuyItem.promo_price || directBuyItem.price) * directBuyItem.quantity : total();
   
   const [formData, setFormData] = useState({
     name: '',
@@ -69,10 +74,10 @@ export default function Checkout() {
   }, []);
 
   useEffect(() => {
-    if (items.length === 0 && !orderSuccess) {
+    if (!directBuyItem && items.length === 0 && !orderSuccess) {
       navigate('/cart');
     }
-  }, [items, navigate, orderSuccess]);
+  }, [items, navigate, orderSuccess, directBuyItem]);
 
   const handleWilayaChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const wilayaNumber = e.target.value;
@@ -98,9 +103,9 @@ export default function Checkout() {
       wilaya: wilayas.find(w => w.number === formData.wilaya)?.name || formData.wilaya,
       address: formData.address,
       note: formData.note,
-      total_amount: total() + deliveryCost,
+      total_amount: checkoutTotal + deliveryCost,
       delivery_cost: deliveryCost,
-      items: items.map(item => ({
+      items: checkoutItems.map(item => ({
         product_id: item.id,
         quantity: item.quantity,
         price: item.promo_price || item.price
@@ -118,10 +123,12 @@ export default function Checkout() {
         const responseData = await res.json();
         setCreatedOrderId(responseData.order_id || `#${responseData.id}`);
         setOrderSuccess(true);
-        clearCart();
+        if (!directBuyItem) {
+          clearCart();
+        }
         
         // Track Purchase
-        const finalTotal = total() + deliveryCost;
+        const finalTotal = checkoutTotal + deliveryCost;
         if (trackingIds.ga && ReactGA && typeof ReactGA.event === 'function') {
           try {
             ReactGA.event("purchase", {
@@ -129,7 +136,7 @@ export default function Checkout() {
               value: finalTotal,
               currency: "DZD",
               shipping: deliveryCost,
-              items: items.map(item => ({
+              items: checkoutItems.map(item => ({
                 item_id: item.id.toString(),
                 item_name: item.name,
                 price: item.promo_price || item.price,
@@ -148,7 +155,7 @@ export default function Checkout() {
               pixel.track('Purchase', {
                 value: finalTotal,
                 currency: 'DZD',
-                content_ids: items.map(item => item.id.toString()),
+                content_ids: checkoutItems.map(item => item.id.toString()),
                 content_type: 'product'
               });
             }
@@ -306,7 +313,7 @@ export default function Checkout() {
             <h2 className="text-lg font-bold text-gray-800 mb-4 border-b pb-4">Résumé de la commande</h2>
             
             <div className="space-y-4 mb-6 max-h-60 overflow-y-auto pr-2">
-              {items.map(item => (
+              {checkoutItems.map(item => (
                 <div key={item.id} className="flex justify-between text-sm">
                   <div className="flex gap-2">
                     <span className="font-medium text-gray-500">{item.quantity}x</span>
@@ -320,7 +327,7 @@ export default function Checkout() {
             <div className="border-t pt-4 space-y-3 mb-6">
               <div className="flex justify-between text-gray-600">
                 <span>Sous-total</span>
-                <span className="font-medium">{formatPrice(total())}</span>
+                <span className="font-medium">{formatPrice(checkoutTotal)}</span>
               </div>
               <div className="flex justify-between text-gray-600">
                 <span>Frais de livraison</span>
@@ -341,7 +348,7 @@ export default function Checkout() {
               <div className="flex justify-between items-end">
                 <span className="font-bold text-gray-800">Total à payer</span>
                 <div className="text-right">
-                  <span className="text-2xl font-black text-orange-600">{formatPrice(total() + deliveryCost)}</span>
+                  <span className="text-2xl font-black text-orange-600">{formatPrice(checkoutTotal + deliveryCost)}</span>
                 </div>
               </div>
             </div>

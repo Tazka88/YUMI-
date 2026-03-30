@@ -5,7 +5,6 @@ import { useCartStore, Product as ProductType } from '../store/cartStore';
 import { formatPrice } from '../utils/formatPrice';
 import { ProductCard } from '../components/ProductCard';
 import SEO from '../components/SEO';
-import ReactGA from 'react-ga4';
 import ReactPixel from 'react-facebook-pixel';
 
 export default function Product() {
@@ -113,9 +112,9 @@ export default function Product() {
     addItem(product, quantity);
     
     // Track Add to Cart
-    if (trackingIds.ga && ReactGA && typeof ReactGA.event === 'function') {
+    if (typeof window !== 'undefined' && typeof window.gtag === 'function') {
       try {
-        ReactGA.event("add_to_cart", {
+        window.gtag("event", "add_to_cart", {
           currency: "DZD",
           value: currentPrice * quantity,
           items: [{

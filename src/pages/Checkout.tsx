@@ -4,7 +4,6 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useCartStore } from '../store/cartStore';
 import { CheckCircle, Truck, MapPin, Phone, User as UserIcon } from 'lucide-react';
 import { formatPrice } from '../utils/formatPrice';
-import ReactGA from 'react-ga4';
 import ReactPixel from 'react-facebook-pixel';
 
 interface Wilaya {
@@ -129,9 +128,9 @@ export default function Checkout() {
         
         // Track Purchase
         const finalTotal = checkoutTotal + deliveryCost;
-        if (trackingIds.ga && ReactGA && typeof ReactGA.event === 'function') {
+        if (typeof window !== 'undefined' && typeof window.gtag === 'function') {
           try {
-            ReactGA.event("purchase", {
+            window.gtag("event", "purchase", {
               transaction_id: Date.now().toString(),
               value: finalTotal,
               currency: "DZD",

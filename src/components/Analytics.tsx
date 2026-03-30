@@ -1,7 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import ReactGA from 'react-ga4';
 import ReactPixel from 'react-facebook-pixel';
+
+declare global {
+  interface Window {
+    gtag: (...args: any[]) => void;
+  }
+}
 
 export default function Analytics() {
   const location = useLocation();
@@ -17,14 +22,8 @@ export default function Analytics() {
         const gaMeasurementId = data.ga_measurement_id || import.meta.env.VITE_GA_MEASUREMENT_ID;
         const fbPixelId = data.fb_pixel_id || import.meta.env.VITE_FB_PIXEL_ID;
 
-        if (gaMeasurementId && ReactGA && typeof ReactGA.initialize === 'function') {
-          try {
-            ReactGA.initialize(gaMeasurementId);
-            setGaId(gaMeasurementId);
-          } catch (e) {
-            console.error('Failed to initialize GA', e);
-          }
-        }
+        // GA is now initialized in index.html directly
+        setGaId('G-7JLYM1QX3C');
 
         if (fbPixelId) {
           try {
@@ -51,9 +50,11 @@ export default function Analytics() {
   useEffect(() => {
     if (!isInitialized) return;
 
-    if (gaId && ReactGA && typeof ReactGA.send === 'function') {
+    if (typeof window !== 'undefined' && typeof window.gtag === 'function') {
       try {
-        ReactGA.send({ hitType: "pageview", page: location.pathname + location.search });
+        window.gtag('event', 'page_view', {
+          page_path: location.pathname + location.search
+        });
       } catch (e) {
         console.error('Failed to send GA pageview', e);
       }

@@ -223,9 +223,10 @@ router.get('/sitemap.xml', async (req, res) => {
     });
 
     pages.forEach(p => {
+      const slug = p.slug.startsWith('/') ? p.slug.substring(1) : p.slug;
       xml += `
   <url>
-    <loc>${baseUrl}/${p.slug}</loc>
+    <loc>${baseUrl}/${slug}</loc>
     <lastmod>${new Date(p.updated_at || Date.now()).toISOString()}</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>

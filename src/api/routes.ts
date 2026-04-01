@@ -319,20 +319,43 @@ router.post('/slider-images', authenticate, async (req, res) => {
 router.put('/slider-images/:id', authenticate, async (req, res) => {
   const { id } = req.params;
   const { image_url, category_id, position, is_active, title, description, button_text, button_link } = req.body;
+  
+  const isImageNew = image_url && !image_url.startsWith('/api/images/');
+  
   try {
-    const [updatedSliderImage] = await sql`
-      UPDATE slider_images
-      SET image_url = COALESCE(${image_url}, image_url),
-          category_id = ${category_id !== undefined ? category_id : sql`category_id`},
-          position = COALESCE(${position}, position),
-          is_active = COALESCE(${is_active}, is_active),
-          title = ${title !== undefined ? title : sql`title`},
-          description = ${description !== undefined ? description : sql`description`},
-          button_text = ${button_text !== undefined ? button_text : sql`button_text`},
-          button_link = ${button_link !== undefined ? button_link : sql`button_link`}
-      WHERE id = ${id}
-      RETURNING *
-    `;
+    let updatedSliderImage;
+    
+    if (isImageNew) {
+      const [result] = await sql`
+        UPDATE slider_images
+        SET image_url = ${image_url},
+            category_id = ${category_id !== undefined ? category_id : sql`category_id`},
+            position = COALESCE(${position}, position),
+            is_active = COALESCE(${is_active}, is_active),
+            title = ${title !== undefined ? title : sql`title`},
+            description = ${description !== undefined ? description : sql`description`},
+            button_text = ${button_text !== undefined ? button_text : sql`button_text`},
+            button_link = ${button_link !== undefined ? button_link : sql`button_link`}
+        WHERE id = ${id}
+        RETURNING *
+      `;
+      updatedSliderImage = result;
+    } else {
+      const [result] = await sql`
+        UPDATE slider_images
+        SET category_id = ${category_id !== undefined ? category_id : sql`category_id`},
+            position = COALESCE(${position}, position),
+            is_active = COALESCE(${is_active}, is_active),
+            title = ${title !== undefined ? title : sql`title`},
+            description = ${description !== undefined ? description : sql`description`},
+            button_text = ${button_text !== undefined ? button_text : sql`button_text`},
+            button_link = ${button_link !== undefined ? button_link : sql`button_link`}
+        WHERE id = ${id}
+        RETURNING *
+      `;
+      updatedSliderImage = result;
+    }
+    
     if (!updatedSliderImage) return res.status(404).json({ error: 'Slider image not found' });
     res.json(updatedSliderImage);
   } catch (err) {

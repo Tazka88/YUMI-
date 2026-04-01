@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { ShoppingCart, Star, ShieldCheck, Truck, RotateCcw, ThumbsUp, Facebook, Instagram, MessageCircle, CreditCard, ArrowDown } from 'lucide-react';
+import { ShoppingCart, Star, ShieldCheck, Truck, RotateCcw, ThumbsUp, Facebook, Instagram, MessageCircle, CreditCard, ArrowDown, Phone } from 'lucide-react';
 import { useCartStore, Product as ProductType } from '../store/cartStore';
 import { formatPrice } from '../utils/formatPrice';
 import { ProductCard } from '../components/ProductCard';
@@ -18,6 +18,7 @@ export default function Product() {
   const [reviewForm, setReviewForm] = useState({ name: '', rating: 5, comment: '' });
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
   const [trackingIds, setTrackingIds] = useState({ ga: '', fb: '' });
+  const [settings, setSettings] = useState<any>({});
   const addItem = useCartStore(state => state.addItem);
   const navigate = useNavigate();
 
@@ -26,6 +27,7 @@ export default function Product() {
     fetch('/api/settings', { signal: controller.signal })
       .then(res => res.json())
       .then(data => {
+        setSettings(data);
         setTrackingIds({
           ga: data.ga_measurement_id || import.meta.env.VITE_GA_MEASUREMENT_ID || '',
           fb: data.fb_pixel_id || import.meta.env.VITE_FB_PIXEL_ID || ''
@@ -399,18 +401,26 @@ export default function Product() {
                   disabled={product.stock === 0}
                   className="flex-1 bg-orange-500 hover:bg-orange-600 text-white font-bold h-12 px-6 rounded-md flex items-center justify-center gap-2 transition-transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed shadow-md text-lg"
                 >
-                  Acheter maintenant
+                  J'achète
                 </button>
               </div>
               
-              <button 
-                onClick={handleAddToCart}
-                disabled={product.stock === 0}
-                className="w-full bg-white border-2 border-orange-500 text-orange-600 hover:bg-orange-50 font-bold h-12 px-6 rounded-md flex items-center justify-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <ShoppingCart size={20} />
-                Ajouter au panier
-              </button>
+              <div className="flex gap-3">
+                <a 
+                  href={`tel:${settings?.contact_phone?.replace(/\s/g, '') || ''}`}
+                  className="flex items-center justify-center w-12 h-12 rounded-md border-2 border-orange-500 text-orange-500 hover:bg-orange-50 transition-colors shrink-0"
+                >
+                  <Phone size={24} />
+                </a>
+                <button 
+                  onClick={handleAddToCart}
+                  disabled={product.stock === 0}
+                  className="flex-1 bg-white border-2 border-orange-500 text-orange-600 hover:bg-orange-50 font-bold h-12 px-6 rounded-md flex items-center justify-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <ShoppingCart size={20} />
+                  Ajouter au panier
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -586,17 +596,26 @@ export default function Product() {
       )}
 
       {/* Sticky Mobile Add to Cart */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 z-50 md:hidden flex items-center justify-between gap-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]">
-        <div className="flex flex-col">
-          <span className="text-xs text-gray-500">Total</span>
-          <span className="text-lg font-bold text-gray-900">{formatPrice(currentPrice * quantity)}</span>
-        </div>
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-3 z-50 md:hidden flex items-center justify-between gap-2 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]">
+        <a 
+          href={`tel:${settings?.contact_phone?.replace(/\s/g, '') || ''}`}
+          className="flex items-center justify-center w-12 h-12 rounded-md border-2 border-orange-500 text-orange-500 shrink-0"
+        >
+          <Phone size={24} />
+        </a>
         <button
           onClick={handleAddToCart}
-          className="flex-1 bg-orange-500 text-white py-3 rounded-xl font-bold shadow-md hover:bg-orange-600 transition-colors flex items-center justify-center gap-2"
+          disabled={product.stock === 0}
+          className="flex items-center justify-center w-12 h-12 rounded-md bg-orange-500 text-white shrink-0 disabled:opacity-50"
         >
-          <ShoppingCart size={20} />
-          Ajouter au panier
+          <ShoppingCart size={24} />
+        </button>
+        <button
+          onClick={handleBuyNow}
+          disabled={product.stock === 0}
+          className="flex-1 bg-orange-500 text-white h-12 rounded-md font-bold text-lg flex items-center justify-center disabled:opacity-50"
+        >
+          J'achète
         </button>
       </div>
     </div>

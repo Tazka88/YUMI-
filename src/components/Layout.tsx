@@ -71,6 +71,7 @@ export default function Layout() {
   const [showAnnouncement, setShowAnnouncement] = useState(true);
   const [currentMessageIndex, setCurrentMessageIndex] = useState(0);
   const [settings, setSettings] = useState<any>({});
+  const [isSettingsLoaded, setIsSettingsLoaded] = useState(false);
   const [footerLinks, setFooterLinks] = useState<any[]>([]);
 
   // Scroll to top on route change
@@ -97,8 +98,12 @@ export default function Layout() {
       .then(res => res.json())
       .then(data => {
         if (data && typeof data === 'object' && !data.error) setSettings(data);
+        setIsSettingsLoaded(true);
       })
-      .catch(handleFetchError);
+      .catch((err) => {
+        handleFetchError(err);
+        setIsSettingsLoaded(true);
+      });
 
     fetch('/api/footer-links', { signal })
       .then(res => res.json())
@@ -176,7 +181,7 @@ export default function Layout() {
   return (
     <div className="min-h-screen flex flex-col bg-gray-50 font-sans">
       {/* Announcement Bar */}
-      {showAnnouncement && (
+      {showAnnouncement && isSettingsLoaded && (
         <div 
           className="text-xs py-2 relative z-50"
           style={{ 
@@ -185,10 +190,12 @@ export default function Layout() {
           }}
         >
           <div className="container mx-auto px-8 sm:px-4 flex flex-col sm:flex-row items-center justify-center sm:justify-between gap-1 sm:gap-2">
-            <a href={`tel:${settings.announcement_phone?.replace(/\s/g, '')}`} className="flex items-center gap-1 hover:opacity-80 transition-opacity whitespace-nowrap order-2 sm:order-1 text-[10px] sm:text-xs opacity-80 sm:opacity-100">
-              <Phone size={10} className="sm:w-3 sm:h-3" />
-              {settings.announcement_phone || '+213 555 00 00 00'}
-            </a>
+            {settings.announcement_phone && (
+              <a href={`tel:${settings.announcement_phone.replace(/\s/g, '')}`} className="flex items-center gap-1 hover:opacity-80 transition-opacity whitespace-nowrap order-2 sm:order-1 text-[10px] sm:text-xs opacity-80 sm:opacity-100">
+                <Phone size={10} className="sm:w-3 sm:h-3" />
+                {settings.announcement_phone}
+              </a>
+            )}
             <div className="text-center flex-1 w-full min-h-[16px] flex items-center justify-center order-1 sm:order-2">
               <AnimatePresence mode="wait">
                 <motion.div
@@ -382,9 +389,14 @@ export default function Layout() {
 
       {/* Mobile Menu Overlay */}
       {isMenuOpen && (
-        <div className="fixed inset-0 bg-black/50 z-40 md:hidden" onClick={() => setIsMenuOpen(false)}>
+        <div className="fixed inset-0 bg-black/50 z-50 md:hidden" onClick={() => setIsMenuOpen(false)}>
           <div className="bg-white w-64 h-full overflow-y-auto p-4" onClick={e => e.stopPropagation()}>
-            <h3 className="font-bold text-lg mb-4 border-b pb-2">Catégories</h3>
+            <div className="flex justify-between items-center mb-4 border-b pb-2">
+              <h3 className="font-bold text-lg text-gray-900">Catégories</h3>
+              <button onClick={() => setIsMenuOpen(false)} className="p-1 text-gray-500 hover:text-gray-800">
+                <X size={20} />
+              </button>
+            </div>
             <ul className="space-y-4">
               {categories.map(cat => (
                 <li key={cat.id}>
@@ -517,18 +529,6 @@ export default function Layout() {
           {settings.copyright_text || `© ${new Date().getFullYear()} Yumi Algérie. Tous droits réservés.`}
         </div>
       </footer>
-
-      {/* Floating WhatsApp Button */}
-      {settings.whatsapp_number && (
-        <a 
-          href={`https://wa.me/${settings.whatsapp_number}?text=${encodeURIComponent("Bonjour, je vous contacte depuis votre site Yumi.")}`} 
-          target="_blank" 
-          rel="noopener noreferrer"
-          className="fixed bottom-6 right-6 bg-green-500 text-white p-4 rounded-full shadow-lg hover:bg-green-600 transition-colors z-50 flex items-center justify-center"
-        >
-          <MessageCircle size={28} />
-        </a>
-      )}
     </div>
   );
 }

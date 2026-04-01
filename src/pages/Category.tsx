@@ -19,7 +19,17 @@ export default function Category() {
   const [categoryId, setCategoryId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [categories, setCategories] = useState<any[]>([]);
+  const [currentSubcategories, setCurrentSubcategories] = useState<any[]>([]);
   const addItem = useCartStore(state => state.addItem);
+
+  useEffect(() => {
+    if (searchParams.get('sub') !== 'true' && slug && slug !== 'all' && categories.length > 0) {
+      const cat = categories.find(c => c.slug === slug);
+      setCurrentSubcategories(cat?.subcategories || []);
+    } else {
+      setCurrentSubcategories([]);
+    }
+  }, [categories, slug, searchParams]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -199,6 +209,30 @@ export default function Category() {
             <h1 className="text-xl font-bold text-gray-800">{categoryName}</h1>
             <span className="text-sm text-gray-500">{products.length} produits trouvés</span>
           </div>
+
+          {!loading && currentSubcategories.length > 0 && (
+            <div className="mb-8">
+              <h2 className="text-lg font-bold text-gray-800 mb-4">Sous-catégories</h2>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {currentSubcategories.map(sub => (
+                  <Link 
+                    key={sub.id} 
+                    to={`/category/${sub.slug}?sub=true`}
+                    className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 hover:shadow-md hover:border-orange-200 transition-all flex flex-col items-center justify-center gap-3 group"
+                  >
+                    <div className="w-16 h-16 rounded-full bg-orange-50 flex items-center justify-center overflow-hidden border-2 border-transparent group-hover:border-orange-500 transition-colors">
+                      {sub.image ? (
+                        <img src={sub.image} alt={sub.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                      ) : (
+                        <span className="text-2xl">{getCategoryWithEmoji(sub.name).split(' ')[0]}</span>
+                      )}
+                    </div>
+                    <span className="font-medium text-gray-800 text-center text-sm group-hover:text-orange-500 transition-colors">{sub.name}</span>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
 
           {loading ? (
             <div className="flex justify-center py-12">

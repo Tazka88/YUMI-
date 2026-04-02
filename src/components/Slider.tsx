@@ -60,14 +60,14 @@ export default function Slider({ categoryId = null }: SliderProps) {
 
   if (slides.length === 0) {
     return (
-      <div className="mb-8 rounded-xl overflow-hidden shadow-md relative h-[250px] sm:h-[300px] md:h-[450px] lg:h-[500px] bg-gray-200 animate-pulse">
+      <div className="mb-8 rounded-xl overflow-hidden shadow-md relative w-full h-[200px] sm:h-[250px] md:h-[350px] lg:h-[400px] bg-gray-200 animate-pulse">
         {/* Skeleton loader for the slider */}
       </div>
     );
   }
 
   return (
-    <div className="mb-8 rounded-xl overflow-hidden shadow-md relative h-[250px] sm:h-[300px] md:h-[450px] lg:h-[500px] group">
+    <div className="mb-8 rounded-xl overflow-hidden shadow-md relative w-full h-[200px] sm:h-[250px] md:h-[350px] lg:h-[400px] group bg-gray-100">
       {slides.map((slide, index) => (
         <div
           key={slide.id}
@@ -78,7 +78,7 @@ export default function Slider({ categoryId = null }: SliderProps) {
           <img 
             src={slide.image_url} 
             alt={slide.title || "Slide"} 
-            className="w-full h-full object-cover"
+            className="w-full h-full object-cover object-center"
             referrerPolicy="no-referrer"
             loading={index === 0 ? "eager" : "lazy"}
             fetchPriority={index === 0 ? "high" : "auto"}

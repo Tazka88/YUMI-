@@ -373,7 +373,7 @@ export default function SliderImagesAdmin() {
                       image={previewUrl}
                       crop={crop}
                       zoom={zoom}
-                      aspect={21 / 9}
+                      aspect={1920 / 600}
                       onCropChange={setCrop}
                       onCropComplete={onCropComplete}
                       onZoomChange={setZoom}
@@ -403,7 +403,7 @@ export default function SliderImagesAdmin() {
                       onClick={handleCropSave}
                       className="px-4 py-2 bg-orange-500 text-white rounded-md hover:bg-orange-600"
                     >
-                      Appliquer le recadrage (21:9)
+                      Appliquer le recadrage (1920x600)
                     </button>
                   </div>
                 </div>
@@ -412,7 +412,7 @@ export default function SliderImagesAdmin() {
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Image</label>
                     {currentImage.image_url ? (
-                      <div className="relative w-full aspect-video bg-gray-100 rounded-lg overflow-hidden border border-gray-200 mb-3">
+                      <div className="relative w-full aspect-[16/5] bg-gray-100 rounded-lg overflow-hidden border border-gray-200 mb-3">
                         <img src={currentImage.image_url} alt="Preview" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                         <button 
                           onClick={() => setCurrentImage({ ...currentImage, image_url: undefined })}

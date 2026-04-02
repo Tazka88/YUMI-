@@ -59,7 +59,7 @@ export default function Slider({ categoryId = null }: SliderProps) {
 
   if (isLoading) {
     return (
-      <div className="mb-8 rounded-xl overflow-hidden shadow-md relative w-full aspect-[2/1] md:aspect-[16/5] bg-gray-200 animate-pulse">
+      <div className="mb-8 rounded-xl overflow-hidden shadow-md relative w-full aspect-[16/5] bg-gray-200 animate-pulse">
         {/* Skeleton loader for the slider */}
       </div>
     );
@@ -70,7 +70,7 @@ export default function Slider({ categoryId = null }: SliderProps) {
   }
 
   return (
-    <div className="mb-8 rounded-xl overflow-hidden shadow-md relative w-full aspect-[2/1] md:aspect-[16/5] group bg-gray-100">
+    <div className="mb-8 rounded-xl overflow-hidden shadow-md relative w-full aspect-[16/5] group bg-gray-100">
       {slides.map((slide, index) => (
         <div
           key={slide.id}

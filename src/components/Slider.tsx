@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom';
 interface SliderImage {
   id: number;
   image_url: string;
+  mobile_image_url?: string;
   category_id: number | null;
   position: number;
   is_active: boolean;
@@ -59,7 +60,7 @@ export default function Slider({ categoryId = null }: SliderProps) {
 
   if (isLoading) {
     return (
-      <div className="mb-8 rounded-xl overflow-hidden shadow-md relative w-full aspect-[16/5] bg-gray-200 animate-pulse">
+      <div className="mb-8 rounded-xl overflow-hidden shadow-md relative w-full aspect-[4/5] sm:aspect-[1/1] md:aspect-[16/5] bg-gray-200 animate-pulse">
         {/* Skeleton loader for the slider */}
       </div>
     );
@@ -70,7 +71,7 @@ export default function Slider({ categoryId = null }: SliderProps) {
   }
 
   return (
-    <div className="mb-8 rounded-xl overflow-hidden shadow-md relative w-full aspect-[16/5] group bg-gray-100">
+    <div className="mb-8 rounded-xl overflow-hidden shadow-md relative w-full aspect-[4/5] sm:aspect-[1/1] md:aspect-[16/5] group bg-gray-100">
       {slides.map((slide, index) => (
         <div
           key={slide.id}
@@ -78,31 +79,36 @@ export default function Slider({ categoryId = null }: SliderProps) {
             index === currentSlide ? 'opacity-100 z-10' : 'opacity-0 z-0'
           }`}
         >
-          <img 
-            src={slide.image_url} 
-            alt={slide.title || "Slide"} 
-            className="w-full h-full object-cover object-center"
-            referrerPolicy="no-referrer"
-            loading={index === 0 ? "eager" : "lazy"}
-            fetchPriority={index === 0 ? "high" : "auto"}
-          />
+          <picture>
+            {slide.mobile_image_url && (
+              <source media="(max-width: 767px)" srcSet={slide.mobile_image_url} />
+            )}
+            <img 
+              src={slide.image_url} 
+              alt={slide.title || "Slide"} 
+              className="w-full h-full object-cover object-center"
+              referrerPolicy="no-referrer"
+              loading={index === 0 ? "eager" : "lazy"}
+              fetchPriority={index === 0 ? "high" : "auto"}
+            />
+          </picture>
           {(slide.title || slide.description || slide.button_text) && (
-            <div className="absolute inset-0 bg-black/30 flex items-center justify-center text-center p-4 md:p-8">
+            <div className="absolute inset-0 bg-black/30 flex items-center justify-center text-center p-2 md:p-8">
               <div className="w-full max-w-2xl text-white mx-auto">
                 {slide.title && (
-                  <h2 className="text-xl sm:text-2xl md:text-4xl font-bold mb-2 md:mb-3 drop-shadow-md leading-tight">
+                  <h2 className="text-lg sm:text-2xl md:text-4xl font-bold mb-1 md:mb-3 drop-shadow-md leading-tight">
                     {slide.title}
                   </h2>
                 )}
                 {slide.description && (
-                  <p className="text-xs sm:text-sm md:text-base mb-4 md:mb-5 drop-shadow font-medium opacity-90 max-w-xl mx-auto line-clamp-2">
+                  <p className="text-[10px] sm:text-sm md:text-base mb-2 md:mb-5 drop-shadow font-medium opacity-90 max-w-xl mx-auto line-clamp-2">
                     {slide.description}
                   </p>
                 )}
                 {slide.button_text && (
                   <Link 
                     to={slide.button_link || '#'} 
-                    className="inline-block bg-orange-500 hover:bg-orange-600 text-white font-medium py-2 px-5 md:py-2.5 md:px-8 rounded-full transition-all hover:scale-105 shadow-md text-xs md:text-sm"
+                    className="inline-block bg-orange-500 hover:bg-orange-600 text-white font-medium py-1.5 px-4 md:py-2.5 md:px-8 rounded-full transition-all hover:scale-105 shadow-md text-[11px] md:text-sm"
                   >
                     {slide.button_text}
                   </Link>
@@ -130,7 +136,7 @@ export default function Slider({ categoryId = null }: SliderProps) {
           </button>
 
           {/* Dots */}
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-20">
+          <div className="absolute bottom-2 md:bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-20">
             {slides.map((_, index) => (
               <button
                 key={index}

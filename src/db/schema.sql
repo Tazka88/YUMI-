@@ -17,15 +17,18 @@ CREATE TABLE IF NOT EXISTS categories (
   slug VARCHAR(255) UNIQUE NOT NULL,
   image TEXT,
   slide_image TEXT,
+  mobile_slide_image TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Add slide_image column if it doesn't exist (for existing databases)
 ALTER TABLE categories ADD COLUMN IF NOT EXISTS slide_image TEXT;
+ALTER TABLE categories ADD COLUMN IF NOT EXISTS mobile_slide_image TEXT;
 
 CREATE TABLE IF NOT EXISTS slider_images (
   id SERIAL PRIMARY KEY,
   image_url TEXT NOT NULL,
+  mobile_image_url TEXT,
   category_id INTEGER REFERENCES categories(id) ON DELETE CASCADE,
   position INTEGER DEFAULT 0,
   is_active BOOLEAN DEFAULT true,
@@ -35,6 +38,8 @@ CREATE TABLE IF NOT EXISTS slider_images (
   button_link TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+
+ALTER TABLE slider_images ADD COLUMN IF NOT EXISTS mobile_image_url TEXT;
 
 CREATE TABLE IF NOT EXISTS subcategories (
   id SERIAL PRIMARY KEY,

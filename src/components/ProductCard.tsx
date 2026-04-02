@@ -28,7 +28,7 @@ export const ProductCard: React.FC<{ product: Product; priority?: boolean }> = (
 
   return (
     <div className="bg-white rounded-lg shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden group flex flex-col h-full relative">
-      <Link to={`/product/${product.slug}`} className="relative block h-48 overflow-hidden">
+      <Link to={`/product/${product.slug}`} className="relative block h-36 sm:h-48 overflow-hidden">
         {/* Badges */}
         <div className="absolute top-2 left-2 flex flex-col gap-1 z-10">
           {isPromo && (
@@ -65,54 +65,55 @@ export const ProductCard: React.FC<{ product: Product; priority?: boolean }> = (
         )}
       </Link>
       
-      <div className="p-4 flex flex-col flex-grow">
-        <Link to={`/product/${product.slug}`} className="text-sm text-gray-800 hover:text-orange-500 line-clamp-2 mb-2 flex-grow font-medium">
+      <div className="p-3 sm:p-4 flex flex-col flex-grow">
+        <Link to={`/product/${product.slug}`} className="text-xs sm:text-sm text-gray-800 hover:text-orange-500 line-clamp-2 mb-1 sm:mb-2 flex-grow font-medium">
           {product.name}
         </Link>
-        <div className="flex items-center mb-2">
-          <div className="flex text-orange-400 text-xs">
+        <div className="flex items-center mb-1 sm:mb-2">
+          <div className="flex text-orange-400 text-[10px] sm:text-xs">
             {[1, 2, 3, 4, 5].map(star => (
-              <Star key={star} fill={star <= Math.round(avgRating) ? "currentColor" : "none"} size={14} />
+              <Star key={star} fill={star <= Math.round(avgRating) ? "currentColor" : "none"} size={12} className="sm:w-3.5 sm:h-3.5" />
             ))}
           </div>
-          <span className="text-xs text-gray-500 ml-1">({reviewsCount})</span>
+          <span className="text-[10px] sm:text-xs text-gray-500 ml-1">({reviewsCount})</span>
         </div>
-        <div className="flex flex-col mt-auto mb-3">
+        <div className="flex flex-col mt-auto mb-2 sm:mb-3">
           {isPromo ? (
             <>
-              <div className="flex items-end gap-2">
-                <div className="text-lg font-bold text-gray-900">{formatPrice(product.promo_price!)}</div>
-                <div className="text-xs text-gray-500 line-through mb-1">{formatPrice(product.price)}</div>
+              <div className="flex items-end gap-1.5 sm:gap-2">
+                <div className="text-base sm:text-lg font-bold text-gray-900">{formatPrice(product.promo_price!)}</div>
+                <div className="text-[10px] sm:text-xs text-gray-500 line-through mb-0.5 sm:mb-1">{formatPrice(product.price)}</div>
               </div>
-              <div className="text-xs text-green-600 font-medium mt-1">
+              <div className="text-[10px] sm:text-xs text-green-600 font-medium mt-0.5 sm:mt-1">
                 Vous économisez {discount}%
               </div>
             </>
           ) : (
-            <div className="text-lg font-bold text-gray-900">{formatPrice(product.price)}</div>
+            <div className="text-base sm:text-lg font-bold text-gray-900">{formatPrice(product.price)}</div>
           )}
         </div>
 
         {!isOutOfStock && (
-          <div className="flex flex-col gap-2 mt-auto">
+          <div className="flex flex-col gap-1.5 sm:gap-2 mt-auto">
             <button 
               onClick={(e) => {
                 e.preventDefault();
                 navigate('/checkout', { state: { directBuyItem: { ...product, quantity: 1 } } });
               }}
-              className="w-full bg-orange-500 text-white py-2 rounded-md text-sm font-bold shadow-sm hover:bg-orange-600 transition-transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center"
+              className="w-full bg-orange-500 text-white py-1.5 sm:py-2 rounded-md text-xs sm:text-sm font-bold shadow-sm hover:bg-orange-600 transition-transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center"
             >
-              Acheter maintenant
+              Acheter
             </button>
             <button 
               onClick={(e) => {
                 e.preventDefault();
                 addItem(product as any, 1);
               }}
-              className="w-full bg-white border border-orange-500 text-orange-600 hover:bg-orange-50 py-2 rounded-md text-sm font-bold transition-colors flex items-center justify-center gap-2"
+              className="w-full bg-white border border-orange-500 text-orange-600 hover:bg-orange-50 py-1.5 sm:py-2 rounded-md text-xs sm:text-sm font-bold transition-colors flex items-center justify-center gap-1.5"
             >
-              <ShoppingCart size={16} />
-              <span>Ajouter au panier</span>
+              <ShoppingCart size={14} className="sm:w-4 sm:h-4" />
+              <span className="hidden sm:inline">Ajouter au panier</span>
+              <span className="sm:hidden">Ajouter</span>
             </button>
           </div>
         )}

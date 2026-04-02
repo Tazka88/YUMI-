@@ -392,7 +392,7 @@ export default function Home() {
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
         transition={{ duration: 0.6 }}
-        className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-8"
+        className="flex overflow-x-auto pb-4 lg:grid lg:grid-cols-5 gap-3 sm:gap-4 mb-6 sm:mb-8 snap-x hide-scrollbar"
       >
         {[
           { icon: Truck, title: 'Livraison sur 58 Wilayas', desc: 'Partout en Algérie' },
@@ -406,17 +406,17 @@ export default function Home() {
             stars: true
           },
         ].map((badge, idx) => (
-          <div key={idx} className={`bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col sm:flex-row items-center sm:items-start gap-3 sm:gap-4 group hover:shadow-md hover:border-[#FF6B00]/30 transition-all duration-300 cursor-default text-center sm:text-left ${idx === 4 ? 'col-span-2 lg:col-span-1' : ''}`}>
-            <div className="w-12 h-12 rounded-full bg-[#FF6B00]/10 text-[#FF6B00] flex items-center justify-center group-hover:bg-[#1a1a2e] group-hover:text-white transition-all duration-300 shrink-0 group-hover:scale-110 transform">
-              <badge.icon size={24} />
+          <div key={idx} className={`min-w-[200px] sm:min-w-0 bg-white p-3 sm:p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col sm:flex-row items-center sm:items-start gap-2 sm:gap-4 group hover:shadow-md hover:border-[#FF6B00]/30 transition-all duration-300 cursor-default text-center sm:text-left snap-start`}>
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-[#FF6B00]/10 text-[#FF6B00] flex items-center justify-center group-hover:bg-[#1a1a2e] group-hover:text-white transition-all duration-300 shrink-0 group-hover:scale-110 transform">
+              <badge.icon size={20} className="sm:w-6 sm:h-6" />
             </div>
             <div className="flex flex-col justify-center h-full">
-              <h3 className="font-bold text-[#1a1a2e] text-sm leading-tight group-hover:text-[#FF6B00] transition-colors">{badge.title}</h3>
-              <p className="text-xs text-gray-500 mt-1">{badge.desc}</p>
+              <h3 className="font-bold text-[#1a1a2e] text-xs sm:text-sm leading-tight group-hover:text-[#FF6B00] transition-colors">{badge.title}</h3>
+              <p className="text-[10px] sm:text-xs text-gray-500 mt-0.5 sm:mt-1">{badge.desc}</p>
               {badge.stars && (
-                <div className="flex items-center justify-center sm:justify-start gap-0.5 mt-1.5 text-[#FF6B00]">
+                <div className="flex items-center justify-center sm:justify-start gap-0.5 mt-1 sm:mt-1.5 text-[#FF6B00]">
                   {[...Array(5)].map((_, i) => (
-                    <Star key={i} size={12} fill="currentColor" />
+                    <Star key={i} size={10} className="sm:w-3 sm:h-3" fill="currentColor" />
                   ))}
                 </div>
               )}
@@ -426,9 +426,9 @@ export default function Home() {
       </motion.div>
 
       {/* Categories Grid */}
-      <div className="mb-8 bg-white p-4 rounded-lg shadow-sm min-h-[200px]">
-        <h2 className="text-lg font-bold text-gray-800 mb-4 text-center">Catégories Populaires</h2>
-        <div className="grid grid-cols-3 md:grid-cols-6 gap-4">
+      <div className="mb-6 sm:mb-8 bg-white p-3 sm:p-4 rounded-lg shadow-sm min-h-[150px] sm:min-h-[200px]">
+        <h2 className="text-base sm:text-lg font-bold text-gray-800 mb-3 sm:mb-4 text-center">Catégories Populaires</h2>
+        <div className="grid grid-cols-3 md:grid-cols-6 gap-2 sm:gap-4">
           {categories.length === 0 ? (
             // Skeleton loader for categories
             [...Array(6)].map((_, i) => (
@@ -464,9 +464,9 @@ export default function Home() {
 
       {/* Brands Section */}
       {(loadingBrands || brands.length > 0) && (
-        <div className="mb-8 bg-white p-6 rounded-xl shadow-sm border border-gray-100 relative min-h-[200px]">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl font-bold text-gray-800">Nos Marques</h2>
+        <div className="mb-6 sm:mb-8 bg-white p-4 sm:p-6 rounded-xl shadow-sm border border-gray-100 relative min-h-[150px] sm:min-h-[200px]">
+          <div className="flex justify-between items-center mb-4 sm:mb-6">
+            <h2 className="text-lg sm:text-xl font-bold text-gray-800">Nos Marques</h2>
             <Link to="/brands" className="text-orange-500 hover:text-orange-600 font-medium text-sm flex items-center gap-1">
               Voir tout <ChevronRight size={16} />
             </Link>
@@ -525,7 +525,7 @@ export default function Home() {
           return (
             <section key={section.id}>
               <FlashSalesHeader link="/category/all" />
-              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-4">
                 {promotions.slice(0, 5).map((p, i) => <ProductCard key={p.id} product={p} priority={i < 4} />)}
               </div>
             </section>
@@ -535,7 +535,7 @@ export default function Home() {
           return (
             <section key={section.id}>
               <SectionHeader title={section.title || "Meilleures Ventes 🏆"} link="/category/all" />
-              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-4">
                 {bestSellers.slice(0, 5).map((p, i) => <ProductCard key={p.id} product={p} priority={i < 4} />)}
               </div>
             </section>
@@ -545,7 +545,7 @@ export default function Home() {
           return (
             <section key={section.id}>
               <SectionHeader title={section.title || "Produits Populaires 🔥"} link="/category/all" />
-              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-4">
                 {popularProducts.slice(0, 10).map((p, i) => <ProductCard key={p.id} product={p} priority={i < 4} />)}
               </div>
             </section>
@@ -555,7 +555,7 @@ export default function Home() {
           return (
             <section key={section.id}>
               <SectionHeader title={section.title || "Nouveautés 🆕"} link="/category/all" />
-              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-4">
                 {newProducts.slice(0, 5).map((p, i) => <ProductCard key={p.id} product={p} priority={i < 4} />)}
               </div>
             </section>
@@ -567,7 +567,7 @@ export default function Home() {
           return (
             <section key={section.id}>
               <SectionHeader title={`${section.title} ${section.emoji || ''}`} link="/category/all" />
-              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-4">
                 {sectionProducts.map((p, i) => <ProductCard key={`${section.id}-${p.id}`} product={p} priority={i < 4} />)}
               </div>
             </section>

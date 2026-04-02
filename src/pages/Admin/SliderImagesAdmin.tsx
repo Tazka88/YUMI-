@@ -11,6 +11,7 @@ interface Category {
 interface SliderImage {
   id: number;
   image_url: string;
+  mobile_image_url?: string;
   category_id: number | null;
   position: number;
   is_active: boolean;
@@ -27,11 +28,17 @@ export default function SliderImagesAdmin() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentImage, setCurrentImage] = useState<Partial<SliderImage>>({ is_active: true, position: 0 });
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedMobileFile, setSelectedMobileFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [mobilePreviewUrl, setMobilePreviewUrl] = useState<string | null>(null);
   const [crop, setCrop] = useState({ x: 0, y: 0 });
+  const [mobileCrop, setMobileCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
+  const [mobileZoom, setMobileZoom] = useState(1);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
+  const [mobileCroppedAreaPixels, setMobileCroppedAreaPixels] = useState(null);
   const [isCropping, setIsCropping] = useState(false);
+  const [isMobileCropping, setIsMobileCropping] = useState(false);
   const [filterCategory, setFilterCategory] = useState<'global'>('global');
   const [isLoading, setIsLoading] = useState(false);
 
@@ -60,17 +67,27 @@ export default function SliderImagesAdmin() {
     }
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, isMobile: boolean = false) => {
     if (e.target.files && e.target.files.length > 0) {
       const file = e.target.files[0];
-      setSelectedFile(file);
-      setPreviewUrl(URL.createObjectURL(file));
-      setIsCropping(true);
+      if (isMobile) {
+        setSelectedMobileFile(file);
+        setMobilePreviewUrl(URL.createObjectURL(file));
+        setIsMobileCropping(true);
+      } else {
+        setSelectedFile(file);
+        setPreviewUrl(URL.createObjectURL(file));
+        setIsCropping(true);
+      }
     }
   };
 
   const onCropComplete = useCallback((croppedArea: any, croppedAreaPixels: any) => {
     setCroppedAreaPixels(croppedAreaPixels);
+  }, []);
+
+  const onMobileCropComplete = useCallback((croppedArea: any, croppedAreaPixels: any) => {
+    setMobileCroppedAreaPixels(croppedAreaPixels);
   }, []);
 
   const getCroppedImg = async (imageSrc: string, pixelCrop: any): Promise<string> => {
@@ -100,14 +117,26 @@ export default function SliderImagesAdmin() {
     return canvas.toDataURL('image/jpeg');
   };
 
-  const handleCropSave = async () => {
-    if (previewUrl && croppedAreaPixels) {
-      try {
-        const croppedImageBase64 = await getCroppedImg(previewUrl, croppedAreaPixels);
-        setCurrentImage({ ...currentImage, image_url: croppedImageBase64 });
-        setIsCropping(false);
-      } catch (e) {
-        console.error(e);
+  const handleCropSave = async (isMobile: boolean = false) => {
+    if (isMobile) {
+      if (mobilePreviewUrl && mobileCroppedAreaPixels) {
+        try {
+          const croppedImageBase64 = await getCroppedImg(mobilePreviewUrl, mobileCroppedAreaPixels);
+          setCurrentImage({ ...currentImage, mobile_image_url: croppedImageBase64 });
+          setIsMobileCropping(false);
+        } catch (e) {
+          console.error(e);
+        }
+      }
+    } else {
+      if (previewUrl && croppedAreaPixels) {
+        try {
+          const croppedImageBase64 = await getCroppedImg(previewUrl, croppedAreaPixels);
+          setCurrentImage({ ...currentImage, image_url: croppedImageBase64 });
+          setIsCropping(false);
+        } catch (e) {
+          console.error(e);
+        }
       }
     }
   };
@@ -116,6 +145,7 @@ export default function SliderImagesAdmin() {
     setIsLoading(true);
     try {
       let finalImageUrl = currentImage.image_url;
+      let finalMobileImageUrl = currentImage.mobile_image_url;
       const token = localStorage.getItem('adminToken');
 
       // If it's a new image (base64 from cropper)
@@ -142,9 +172,33 @@ export default function SliderImagesAdmin() {
         }
       }
 
+      // If it's a new mobile image (base64 from cropper)
+      if (finalMobileImageUrl && finalMobileImageUrl.startsWith('data:image')) {
+        const res = await fetch(finalMobileImageUrl);
+        const blob = await res.blob();
+        const file = new File([blob], 'slider-mobile-image.jpg', { type: 'image/jpeg' });
+        
+        const formData = new FormData();
+        formData.append('image', file);
+
+        const uploadRes = await fetch('/api/admin/upload', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}` },
+          body: formData
+        });
+        
+        const data = await uploadRes.json();
+        if (data.url) {
+          finalMobileImageUrl = data.url;
+        } else {
+          throw new Error('Upload failed');
+        }
+      }
+
       const payload = {
         ...currentImage,
         image_url: finalImageUrl,
+        mobile_image_url: finalMobileImageUrl,
         category_id: currentImage.category_id === 0 ? null : currentImage.category_id
       };
 
@@ -165,7 +219,9 @@ export default function SliderImagesAdmin() {
         fetchImages();
         setCurrentImage({ is_active: true, position: 0 });
         setSelectedFile(null);
+        setSelectedMobileFile(null);
         setPreviewUrl(null);
+        setMobilePreviewUrl(null);
       } else {
         alert('Erreur lors de la sauvegarde');
       }
@@ -263,7 +319,9 @@ export default function SliderImagesAdmin() {
             onClick={() => {
               setCurrentImage({ is_active: true, position: filteredImages.length, category_id: null });
               setPreviewUrl(null);
+              setMobilePreviewUrl(null);
               setSelectedFile(null);
+              setSelectedMobileFile(null);
               setIsModalOpen(true);
             }}
             className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-md font-medium flex items-center gap-2 transition-colors whitespace-nowrap"
@@ -360,7 +418,7 @@ export default function SliderImagesAdmin() {
               <h3 className="text-xl font-bold text-gray-800">
                 {currentImage.id ? 'Modifier l\'image' : 'Ajouter une image'}
               </h3>
-              <button onClick={() => { setIsModalOpen(false); setIsCropping(false); }} className="text-gray-400 hover:text-gray-600">
+              <button onClick={() => { setIsModalOpen(false); setIsCropping(false); setIsMobileCropping(false); }} className="text-gray-400 hover:text-gray-600">
                 <X size={24} />
               </button>
             </div>
@@ -400,43 +458,116 @@ export default function SliderImagesAdmin() {
                       Annuler
                     </button>
                     <button
-                      onClick={handleCropSave}
+                      onClick={() => handleCropSave(false)}
                       className="px-4 py-2 bg-orange-500 text-white rounded-md hover:bg-orange-600"
                     >
                       Appliquer le recadrage (1920x600)
                     </button>
                   </div>
                 </div>
+              ) : isMobileCropping && mobilePreviewUrl ? (
+                <div className="space-y-4">
+                  <div className="relative h-[400px] w-full bg-gray-900 rounded-lg overflow-hidden">
+                    <Cropper
+                      image={mobilePreviewUrl}
+                      crop={mobileCrop}
+                      zoom={mobileZoom}
+                      aspect={4 / 5}
+                      onCropChange={setMobileCrop}
+                      onCropComplete={onMobileCropComplete}
+                      onZoomChange={setMobileZoom}
+                    />
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <span className="text-sm font-medium text-gray-700">Zoom</span>
+                    <input
+                      type="range"
+                      value={mobileZoom}
+                      min={1}
+                      max={3}
+                      step={0.1}
+                      aria-labelledby="Zoom"
+                      onChange={(e) => setMobileZoom(Number(e.target.value))}
+                      className="w-full"
+                    />
+                  </div>
+                  <div className="flex justify-end gap-3">
+                    <button
+                      onClick={() => { setIsMobileCropping(false); setMobilePreviewUrl(null); setSelectedMobileFile(null); }}
+                      className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+                    >
+                      Annuler
+                    </button>
+                    <button
+                      onClick={() => handleCropSave(true)}
+                      className="px-4 py-2 bg-orange-500 text-white rounded-md hover:bg-orange-600"
+                    >
+                      Appliquer le recadrage Mobile (4:5)
+                    </button>
+                  </div>
+                </div>
               ) : (
                 <>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Image</label>
-                    {currentImage.image_url ? (
-                      <div className="relative w-full aspect-[16/5] bg-gray-100 rounded-lg overflow-hidden border border-gray-200 mb-3">
-                        <img src={currentImage.image_url} alt="Preview" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                        <button 
-                          onClick={() => setCurrentImage({ ...currentImage, image_url: undefined })}
-                          className="absolute top-2 right-2 bg-white/80 hover:bg-white text-red-600 p-2 rounded-full shadow-sm"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:bg-gray-50 transition-colors">
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={handleFileChange}
-                          className="hidden"
-                          id="image-upload"
-                        />
-                        <label htmlFor="image-upload" className="cursor-pointer flex flex-col items-center">
-                          <ImageIcon size={32} className="text-gray-400 mb-2" />
-                          <span className="text-sm font-medium text-orange-600">Cliquez pour uploader</span>
-                          <span className="text-xs text-gray-500 mt-1">PNG, JPG jusqu'à 5MB</span>
-                        </label>
-                      </div>
-                    )}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Image Ordinateur (1920x600) *</label>
+                      {currentImage.image_url ? (
+                        <div className="relative w-full aspect-[16/5] bg-gray-100 rounded-lg overflow-hidden border border-gray-200 mb-3">
+                          <img src={currentImage.image_url} alt="Preview" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                          <button 
+                            onClick={() => setCurrentImage({ ...currentImage, image_url: undefined })}
+                            className="absolute top-2 right-2 bg-white/80 hover:bg-white text-red-600 p-2 rounded-full shadow-sm"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:bg-gray-50 transition-colors">
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => handleFileChange(e, false)}
+                            className="hidden"
+                            id="image-upload"
+                          />
+                          <label htmlFor="image-upload" className="cursor-pointer flex flex-col items-center">
+                            <ImageIcon size={32} className="text-gray-400 mb-2" />
+                            <span className="text-sm font-medium text-orange-600">Cliquez pour uploader</span>
+                            <span className="text-xs text-gray-500 mt-1">PNG, JPG jusqu'à 5MB</span>
+                          </label>
+                        </div>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Image Mobile (Optionnel, 4:5)</label>
+                      {currentImage.mobile_image_url ? (
+                        <div className="relative w-1/2 mx-auto aspect-[4/5] bg-gray-100 rounded-lg overflow-hidden border border-gray-200 mb-3">
+                          <img src={currentImage.mobile_image_url} alt="Preview Mobile" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                          <button 
+                            onClick={() => setCurrentImage({ ...currentImage, mobile_image_url: undefined })}
+                            className="absolute top-2 right-2 bg-white/80 hover:bg-white text-red-600 p-2 rounded-full shadow-sm"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:bg-gray-50 transition-colors h-full flex flex-col justify-center">
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => handleFileChange(e, true)}
+                            className="hidden"
+                            id="mobile-image-upload"
+                          />
+                          <label htmlFor="mobile-image-upload" className="cursor-pointer flex flex-col items-center">
+                            <ImageIcon size={32} className="text-gray-400 mb-2" />
+                            <span className="text-sm font-medium text-orange-600">Cliquez pour uploader</span>
+                            <span className="text-xs text-gray-500 mt-1">PNG, JPG jusqu'à 5MB</span>
+                          </label>
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

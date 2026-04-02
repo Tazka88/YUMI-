@@ -64,7 +64,7 @@ export default function AdminDashboard() {
     name: '', slug: '', category_id: '', image: ''
   });
   const [categoryForm, setCategoryForm] = useState({
-    name: '', slug: '', image: '', slide_image: ''
+    name: '', slug: '', image: '', slide_image: '', mobile_slide_image: ''
   });
   const [subSubcategoryForm, setSubSubcategoryForm] = useState({
     name: '', slug: '', subcategory_id: '', image: ''
@@ -728,12 +728,12 @@ export default function AdminDashboard() {
     if (category) {
       setEditingCategory(category);
       setCategoryForm({
-        name: category.name, slug: category.slug, image: category.image || '', slide_image: category.slide_image || ''
+        name: category.name, slug: category.slug, image: category.image || '', slide_image: category.slide_image || '', mobile_slide_image: category.mobile_slide_image || ''
       });
     } else {
       setEditingCategory(null);
       setCategoryForm({
-        name: '', slug: '', image: '', slide_image: ''
+        name: '', slug: '', image: '', slide_image: '', mobile_slide_image: ''
       });
     }
     setIsCategoryModalOpen(true);
@@ -2747,7 +2747,7 @@ export default function AdminDashboard() {
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Image Slide (Bannière dédiée)</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Image Slide (Bannière dédiée ordinateur)</label>
                   <div className="flex items-center gap-4">
                     {categoryForm.slide_image && (
                       <img src={categoryForm.slide_image} alt="Slide Preview" className="w-32 h-16 object-cover rounded border" />
@@ -2758,6 +2758,22 @@ export default function AdminDashboard() {
                       <input type="file" className="hidden" accept="image/*" onChange={async (e) => {
                         const url = await handleFileUpload(e);
                         if (url) setCategoryForm({...categoryForm, slide_image: url});
+                      }} />
+                    </label>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Image Slide Mobile (Optionnel, 4:5)</label>
+                  <div className="flex items-center gap-4">
+                    {categoryForm.mobile_slide_image && (
+                      <img src={categoryForm.mobile_slide_image} alt="Mobile Slide Preview" className="w-16 h-20 object-cover rounded border" />
+                    )}
+                    <label className="cursor-pointer bg-white border border-gray-300 px-4 py-2 rounded-md hover:bg-gray-50 flex items-center gap-2">
+                      <Upload size={18} />
+                      Télécharger une bannière mobile
+                      <input type="file" className="hidden" accept="image/*" onChange={async (e) => {
+                        const url = await handleFileUpload(e);
+                        if (url) setCategoryForm({...categoryForm, mobile_slide_image: url});
                       }} />
                     </label>
                   </div>

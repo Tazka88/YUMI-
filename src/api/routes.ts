@@ -294,6 +294,9 @@ router.get('/slider-images', async (req, res) => {
     
     sliderImages.forEach((s: any) => {
       s.image_url = processImage('slider_images', s.id, 'image_url', s.image_url);
+      if (s.mobile_image_url) {
+        s.mobile_image_url = processImage('slider_images', s.id, 'mobile_image_url', s.mobile_image_url);
+      }
     });
     res.json(sliderImages);
 
@@ -303,11 +306,11 @@ router.get('/slider-images', async (req, res) => {
 });
 
 router.post('/slider-images', authenticate, async (req, res) => {
-  const { image_url, category_id, position, is_active, title, description, button_text, button_link } = req.body;
+  const { image_url, mobile_image_url, category_id, position, is_active, title, description, button_text, button_link } = req.body;
   try {
     const [newSliderImage] = await sql`
-      INSERT INTO slider_images (image_url, category_id, position, is_active, title, description, button_text, button_link)
-      VALUES (${image_url}, ${category_id || null}, ${position || 0}, ${is_active !== undefined ? is_active : true}, ${title || null}, ${description || null}, ${button_text || null}, ${button_link || null})
+      INSERT INTO slider_images (image_url, mobile_image_url, category_id, position, is_active, title, description, button_text, button_link)
+      VALUES (${image_url}, ${mobile_image_url || null}, ${category_id || null}, ${position || 0}, ${is_active !== undefined ? is_active : true}, ${title || null}, ${description || null}, ${button_text || null}, ${button_link || null})
       RETURNING *
     `;
     res.status(201).json(newSliderImage);
@@ -318,17 +321,49 @@ router.post('/slider-images', authenticate, async (req, res) => {
 
 router.put('/slider-images/:id', authenticate, async (req, res) => {
   const { id } = req.params;
-  const { image_url, category_id, position, is_active, title, description, button_text, button_link } = req.body;
+  const { image_url, mobile_image_url, category_id, position, is_active, title, description, button_text, button_link } = req.body;
   
   const isImageNew = image_url && !image_url.startsWith('/api/images/');
+  const isMobileImageNew = mobile_image_url && !mobile_image_url.startsWith('/api/images/');
   
   try {
     let updatedSliderImage;
     
-    if (isImageNew) {
+    if (isImageNew && isMobileImageNew) {
       const [result] = await sql`
         UPDATE slider_images
         SET image_url = ${image_url},
+            mobile_image_url = ${mobile_image_url},
+            category_id = ${category_id !== undefined ? category_id : sql`category_id`},
+            position = COALESCE(${position}, position),
+            is_active = COALESCE(${is_active}, is_active),
+            title = ${title !== undefined ? title : sql`title`},
+            description = ${description !== undefined ? description : sql`description`},
+            button_text = ${button_text !== undefined ? button_text : sql`button_text`},
+            button_link = ${button_link !== undefined ? button_link : sql`button_link`}
+        WHERE id = ${id}
+        RETURNING *
+      `;
+      updatedSliderImage = result;
+    } else if (isImageNew) {
+      const [result] = await sql`
+        UPDATE slider_images
+        SET image_url = ${image_url},
+            category_id = ${category_id !== undefined ? category_id : sql`category_id`},
+            position = COALESCE(${position}, position),
+            is_active = COALESCE(${is_active}, is_active),
+            title = ${title !== undefined ? title : sql`title`},
+            description = ${description !== undefined ? description : sql`description`},
+            button_text = ${button_text !== undefined ? button_text : sql`button_text`},
+            button_link = ${button_link !== undefined ? button_link : sql`button_link`}
+        WHERE id = ${id}
+        RETURNING *
+      `;
+      updatedSliderImage = result;
+    } else if (isMobileImageNew) {
+      const [result] = await sql`
+        UPDATE slider_images
+        SET mobile_image_url = ${mobile_image_url},
             category_id = ${category_id !== undefined ? category_id : sql`category_id`},
             position = COALESCE(${position}, position),
             is_active = COALESCE(${is_active}, is_active),
@@ -430,6 +465,9 @@ router.get('/categories', async (req, res) => {
     categoriesWithSubcats.forEach((c: any) => {
       c.image = processImage('categories', c.id, 'image', c.image);
       c.slide_image = processImage('categories', c.id, 'slide_image', c.slide_image);
+      if (c.mobile_slide_image) {
+        c.mobile_slide_image = processImage('categories', c.id, 'mobile_slide_image', c.mobile_slide_image);
+      }
       if (c.subcategories && Array.isArray(c.subcategories)) {
         c.subcategories.forEach((sub: any) => {
           sub.image = processImage('subcategories', sub.id, 'image', sub.image);
@@ -1096,9 +1134,9 @@ router.delete('/admin/products/:id', authenticate, async (req, res) => {
 });
 
 router.post('/admin/categories', authenticate, async (req, res) => {
-  const { name, slug, image, slide_image } = req.body;
+  const { name, slug, image, slide_image, mobile_slide_image } = req.body;
   try {
-    const [info] = await sql`INSERT INTO categories (name, slug, image, slide_image) VALUES (${name || ''}, ${slug || ''}, ${image || null}, ${slide_image || null}) RETURNING id`;
+    const [info] = await sql`INSERT INTO categories (name, slug, image, slide_image, mobile_slide_image) VALUES (${name || ''}, ${slug || ''}, ${image || null}, ${slide_image || null}, ${mobile_slide_image || null}) RETURNING id`;
     res.status(201).json({ id: info.id, message: 'Category created' });
   } catch (err) {
     res.status(500).json({ error: 'Failed to create category' });
@@ -1106,26 +1144,25 @@ router.post('/admin/categories', authenticate, async (req, res) => {
 });
 
 router.put('/admin/categories/:id', authenticate, async (req, res) => {
-  const { name, slug, image, slide_image } = req.body;
+  const { name, slug, image, slide_image, mobile_slide_image } = req.body;
   try {
     let updateQuery;
     
     // We update name and slug
     // We only update image if it's not a local API URL (meaning it's a new upload or null)
-    // Same for slide_image
+    // Same for slide_image and mobile_slide_image
     
     const isImageNew = image && !image.startsWith('/api/images/');
     const isSlideImageNew = slide_image && !slide_image.startsWith('/api/images/');
+    const isMobileSlideImageNew = mobile_slide_image && !mobile_slide_image.startsWith('/api/images/');
     
-    if (isImageNew && isSlideImageNew) {
-      await sql`UPDATE categories SET name = ${name || ''}, slug = ${slug || ''}, image = ${image || null}, slide_image = ${slide_image || null} WHERE id = ${req.params.id}`;
-    } else if (isImageNew) {
-      await sql`UPDATE categories SET name = ${name || ''}, slug = ${slug || ''}, image = ${image || null} WHERE id = ${req.params.id}`;
-    } else if (isSlideImageNew) {
-      await sql`UPDATE categories SET name = ${name || ''}, slug = ${slug || ''}, slide_image = ${slide_image || null} WHERE id = ${req.params.id}`;
-    } else {
-      await sql`UPDATE categories SET name = ${name || ''}, slug = ${slug || ''} WHERE id = ${req.params.id}`;
-    }
+    // Build dynamic update query
+    let setClause = sql`name = ${name || ''}, slug = ${slug || ''}`;
+    if (isImageNew) setClause = sql`${setClause}, image = ${image || null}`;
+    if (isSlideImageNew) setClause = sql`${setClause}, slide_image = ${slide_image || null}`;
+    if (isMobileSlideImageNew) setClause = sql`${setClause}, mobile_slide_image = ${mobile_slide_image || null}`;
+
+    await sql`UPDATE categories SET ${setClause} WHERE id = ${req.params.id}`;
     
     res.json({ message: 'Category updated' });
   } catch (err) {

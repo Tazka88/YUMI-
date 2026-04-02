@@ -16,6 +16,7 @@ export default function Category() {
   const [products, setProducts] = useState<Product[]>([]);
   const [categoryName, setCategoryName] = useState('Tous les produits');
   const [categoryImage, setCategoryImage] = useState<string | null>(null);
+  const [mobileCategoryImage, setMobileCategoryImage] = useState<string | null>(null);
   const [categoryId, setCategoryId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [categories, setCategories] = useState<any[]>([]);
@@ -68,6 +69,7 @@ export default function Category() {
       let url = '/api/products';
       let newCategoryName = 'Tous les produits';
       let newCategoryImage = null;
+      let newMobileCategoryImage = null;
       let newCategoryId = null;
 
       try {
@@ -109,6 +111,7 @@ export default function Category() {
                 if (cat) {
                   newCategoryName = getCategoryWithEmoji(cat.name);
                   if (cat.slide_image) newCategoryImage = cat.slide_image;
+                  if (cat.mobile_slide_image) newMobileCategoryImage = cat.mobile_slide_image;
                   newCategoryId = cat.id;
                 }
               }
@@ -129,6 +132,7 @@ export default function Category() {
         if (!signal.aborted) {
           setCategoryName(newCategoryName);
           setCategoryImage(newCategoryImage);
+          setMobileCategoryImage(newMobileCategoryImage);
           setCategoryId(newCategoryId);
           setProducts(productsData);
           setLoading(false);
@@ -219,17 +223,22 @@ export default function Category() {
         {/* Main Content */}
         <div className="flex-1">
           {loading ? (
-            <div className="mb-8 rounded-xl overflow-hidden shadow-md relative w-full aspect-[16/5] bg-gray-200 animate-pulse"></div>
+            <div className="mb-8 rounded-xl overflow-hidden shadow-md relative w-full aspect-[4/5] sm:aspect-[1/1] md:aspect-[16/5] bg-gray-200 animate-pulse"></div>
           ) : categoryImage ? (
-            <div className="mb-8 rounded-xl overflow-hidden shadow-md relative w-full aspect-[16/5] bg-gray-100 flex items-center justify-center">
-              <img 
-                src={categoryImage} 
-                alt={categoryName} 
-                className="w-full h-full object-cover object-center" 
-                referrerPolicy="no-referrer" 
-                fetchPriority="high"
-                loading="eager"
-              />
+            <div className="mb-8 rounded-xl overflow-hidden shadow-md relative w-full aspect-[4/5] sm:aspect-[1/1] md:aspect-[16/5] bg-gray-100 flex items-center justify-center">
+              <picture className="w-full h-full">
+                {mobileCategoryImage && (
+                  <source media="(max-width: 767px)" srcSet={mobileCategoryImage} />
+                )}
+                <img 
+                  src={categoryImage} 
+                  alt={categoryName} 
+                  className="w-full h-full object-cover object-center" 
+                  referrerPolicy="no-referrer" 
+                  fetchPriority="high"
+                  loading="eager"
+                />
+              </picture>
             </div>
           ) : (
             <Slider categoryId={categoryId} />

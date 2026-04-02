@@ -21,9 +21,11 @@ interface SliderProps {
 export default function Slider({ categoryId = null }: SliderProps) {
   const [slides, setSlides] = useState<SliderImage[]>([]);
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const fetchSlides = async () => {
+      setIsLoading(true);
       try {
         const res = await fetch('/api/slider-images', { priority: 'high' } as any);
         const data: SliderImage[] = await res.json();
@@ -33,14 +35,11 @@ export default function Slider({ categoryId = null }: SliderProps) {
         // Filter by category
         let categorySlides = activeSlides.filter(s => s.category_id === categoryId);
         
-        // Fallback to global if no slides for this category
-        if (categorySlides.length === 0) {
-          categorySlides = activeSlides.filter(s => s.category_id === null);
-        }
-        
         setSlides(categorySlides.sort((a, b) => a.position - b.position));
       } catch (err) {
         console.error('Failed to fetch slides', err);
+      } finally {
+        setIsLoading(false);
       }
     };
 
@@ -58,12 +57,16 @@ export default function Slider({ categoryId = null }: SliderProps) {
   const nextSlide = () => setCurrentSlide((prev) => (prev === slides.length - 1 ? 0 : prev + 1));
   const prevSlide = () => setCurrentSlide((prev) => (prev === 0 ? slides.length - 1 : prev - 1));
 
-  if (slides.length === 0) {
+  if (isLoading) {
     return (
       <div className="mb-8 rounded-xl overflow-hidden shadow-md relative w-full h-[200px] sm:h-[250px] md:h-[350px] lg:h-[400px] bg-gray-200 animate-pulse">
         {/* Skeleton loader for the slider */}
       </div>
     );
+  }
+
+  if (slides.length === 0) {
+    return null;
   }
 
   return (

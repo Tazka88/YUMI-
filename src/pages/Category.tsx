@@ -20,14 +20,28 @@ export default function Category() {
   const [loading, setLoading] = useState(true);
   const [categories, setCategories] = useState<any[]>([]);
   const [currentSubcategories, setCurrentSubcategories] = useState<any[]>([]);
+  const [currentSubSubcategories, setCurrentSubSubcategories] = useState<any[]>([]);
   const addItem = useCartStore(state => state.addItem);
 
   useEffect(() => {
-    if (searchParams.get('sub') !== 'true' && slug && slug !== 'all' && categories.length > 0) {
+    if (searchParams.get('sub') !== 'true' && searchParams.get('subsub') !== 'true' && slug && slug !== 'all' && categories.length > 0) {
       const cat = categories.find(c => c.slug === slug);
       setCurrentSubcategories(cat?.subcategories || []);
+      setCurrentSubSubcategories([]);
+    } else if (searchParams.get('sub') === 'true' && slug && categories.length > 0) {
+      let foundSubcat = null;
+      for (const cat of categories) {
+        const sub = cat.subcategories?.find((s: any) => s.slug === slug);
+        if (sub) {
+          foundSubcat = sub;
+          break;
+        }
+      }
+      setCurrentSubcategories([]);
+      setCurrentSubSubcategories(foundSubcat?.sub_subcategories || []);
     } else {
       setCurrentSubcategories([]);
+      setCurrentSubSubcategories([]);
     }
   }, [categories, slug, searchParams]);
 
@@ -46,6 +60,7 @@ export default function Category() {
     const controller = new AbortController();
     const signal = controller.signal;
     const isSubcategory = searchParams.get('sub') === 'true';
+    const isSubSubcategory = searchParams.get('subsub') === 'true';
 
     const loadData = async () => {
       setLoading(true);
@@ -57,13 +72,27 @@ export default function Category() {
 
       try {
         if (slug && slug !== 'all') {
-          if (isSubcategory) {
+          if (isSubSubcategory) {
+            url += `?sub_subcategory=${slug}`;
+            // Find the sub-subcategory name from the categories state
+            let foundName = slug;
+            for (const cat of categories) {
+              for (const sub of (cat.subcategories || [])) {
+                const ss = (sub.sub_subcategories || []).find((s: any) => s.slug === slug || s.id.toString() === slug);
+                if (ss) {
+                  foundName = ss.name;
+                  break;
+                }
+              }
+            }
+            newCategoryName = getCategoryWithEmoji(foundName);
+          } else if (isSubcategory) {
             url += `?subcategory=${slug}`;
             const res = await fetch('/api/subcategories', { signal });
             if (res.ok) {
               const subcats = await res.json();
               if (Array.isArray(subcats)) {
-                const subcat = subcats.find((s: any) => s.slug === slug);
+                const subcat = subcats.find((s: any) => s.slug === slug || s.id.toString() === slug);
                 if (subcat) {
                   newCategoryName = getCategoryWithEmoji(subcat.name);
                   newCategoryId = subcat.category_id;
@@ -228,6 +257,30 @@ export default function Category() {
                       )}
                     </div>
                     <span className="font-medium text-gray-800 text-center text-sm group-hover:text-orange-500 transition-colors">{sub.name}</span>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {!loading && currentSubSubcategories.length > 0 && (
+            <div className="mb-8">
+              <h2 className="text-lg font-bold text-gray-800 mb-4">Sous-sous-catégories</h2>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {currentSubSubcategories.map(subsub => (
+                  <Link 
+                    key={subsub.id} 
+                    to={`/category/${subsub.slug}?subsub=true`}
+                    className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 hover:shadow-md hover:border-orange-200 transition-all flex flex-col items-center justify-center gap-3 group"
+                  >
+                    <div className="w-16 h-16 rounded-full bg-orange-50 flex items-center justify-center overflow-hidden border-2 border-transparent group-hover:border-orange-500 transition-colors">
+                      {subsub.image ? (
+                        <img src={subsub.image} alt={subsub.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                      ) : (
+                        <span className="text-2xl">{getCategoryWithEmoji(subsub.name).split(' ')[0]}</span>
+                      )}
+                    </div>
+                    <span className="font-medium text-gray-800 text-center text-sm group-hover:text-orange-500 transition-colors">{subsub.name}</span>
                   </Link>
                 ))}
               </div>

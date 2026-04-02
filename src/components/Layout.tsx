@@ -1,5 +1,5 @@
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
-import { ShoppingCart, Search, Menu, User, MessageCircle, X, Phone, LayoutDashboard, Facebook, Instagram, Youtube, Truck, MapPin } from 'lucide-react';
+import { ShoppingCart, Search, Menu, User, MessageCircle, X, Phone, LayoutDashboard, Facebook, Instagram, Youtube, Truck, MapPin, ChevronRight } from 'lucide-react';
 import { useCartStore } from '../store/cartStore';
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -368,13 +368,32 @@ export default function Layout() {
                     <div className="absolute left-0 top-full mt-0 hidden group-hover:block bg-white text-gray-800 shadow-lg rounded-b-md border border-gray-100 min-w-[200px] z-50">
                       <ul className="py-2">
                         {cat.subcategories.map((sub: any) => (
-                          <li key={sub.id}>
+                          <li key={sub.id} className="relative group/sub">
                             <Link 
                               to={`/category/${sub.slug}?sub=true`} 
-                              className="block px-4 py-2 hover:bg-orange-50 hover:text-orange-500 transition-colors whitespace-normal"
+                              className="block px-4 py-2 hover:bg-orange-50 hover:text-orange-500 transition-colors whitespace-normal flex justify-between items-center"
                             >
                               <CategoryNameDisplay name={sub.name} />
+                              {sub.sub_subcategories && sub.sub_subcategories.length > 0 && (
+                                <ChevronRight size={14} className="text-gray-400" />
+                              )}
                             </Link>
+                            {sub.sub_subcategories && sub.sub_subcategories.length > 0 && (
+                              <div className="absolute left-full top-0 hidden group-hover/sub:block bg-white text-gray-800 shadow-lg rounded-md border border-gray-100 min-w-[200px] z-50">
+                                <ul className="py-2">
+                                  {sub.sub_subcategories.map((subsub: any) => (
+                                    <li key={subsub.id}>
+                                      <Link 
+                                        to={`/category/${subsub.slug}?subsub=true`} 
+                                        className="block px-4 py-2 hover:bg-orange-50 hover:text-orange-500 transition-colors whitespace-normal"
+                                      >
+                                        <CategoryNameDisplay name={subsub.name} />
+                                      </Link>
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
                           </li>
                         ))}
                       </ul>
@@ -418,6 +437,21 @@ export default function Layout() {
                           >
                             <CategoryNameDisplay name={sub.name} />
                           </Link>
+                          {sub.sub_subcategories && sub.sub_subcategories.length > 0 && (
+                            <ul className="pl-4 mt-2 space-y-2 border-l-2 border-gray-100">
+                              {sub.sub_subcategories.map((subsub: any) => (
+                                <li key={subsub.id}>
+                                  <Link 
+                                    to={`/category/${subsub.slug}?subsub=true`} 
+                                    className="block text-xs text-gray-500 hover:text-orange-500"
+                                    onClick={() => setIsMenuOpen(false)}
+                                  >
+                                    <CategoryNameDisplay name={subsub.name} />
+                                  </Link>
+                                </li>
+                              ))}
+                            </ul>
+                          )}
                         </li>
                       ))}
                     </ul>

@@ -224,10 +224,22 @@ export default function Product() {
         schema={productSchema}
       />
       {/* Breadcrumb */}
-      <div className="text-sm text-gray-500 mb-6 flex items-center gap-2">
+      <div className="text-sm text-gray-500 mb-6 flex items-center gap-2 flex-wrap">
         <Link to="/" className="hover:text-orange-500">Accueil</Link>
         <span>/</span>
         <Link to={`/category/${product.category_id}`} className="hover:text-orange-500">{product.category_name || 'Catégorie'}</Link>
+        {product.subcategory_name && (
+          <>
+            <span>/</span>
+            <Link to={`/category/${product.subcategory_id}?sub=true`} className="hover:text-orange-500">{product.subcategory_name}</Link>
+          </>
+        )}
+        {product.sub_subcategory_name && (
+          <>
+            <span>/</span>
+            <Link to={`/category/${product.sub_subcategory_id}?subsub=true`} className="hover:text-orange-500">{product.sub_subcategory_name}</Link>
+          </>
+        )}
         <span>/</span>
         <span className="text-gray-800 font-medium truncate">{product.name}</span>
       </div>

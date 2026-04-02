@@ -41,9 +41,11 @@ export default function AdminDashboard() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubcategoryModalOpen, setIsSubcategoryModalOpen] = useState(false);
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
+  const [isSubSubcategoryModalOpen, setIsSubSubcategoryModalOpen] = useState(false);
   const [isBrandModalOpen, setIsBrandModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<any>(null);
   const [editingSubcategory, setEditingSubcategory] = useState<any>(null);
+  const [editingSubSubcategory, setEditingSubSubcategory] = useState<any>(null);
   const [editingCategory, setEditingCategory] = useState<any>(null);
   const [editingBrand, setEditingBrand] = useState<any>(null);
   
@@ -54,7 +56,7 @@ export default function AdminDashboard() {
   });
   
   const [productForm, setProductForm] = useState({
-    name: '', slug: '', category_id: '', subcategory_id: '', brand_id: '', brand_name: '', price: '', promo_price: '', stock: '', description: '', image: '',
+    name: '', slug: '', category_id: '', subcategory_id: '', sub_subcategory_id: '', brand_id: '', brand_name: '', price: '', promo_price: '', stock: '', description: '', image: '',
     is_popular: false, is_best_seller: false, is_new: false, is_recommended: false, is_fast_delivery: false, images: [] as any[],
     features: '', key_points: ''
   });
@@ -63,6 +65,9 @@ export default function AdminDashboard() {
   });
   const [categoryForm, setCategoryForm] = useState({
     name: '', slug: '', image: '', slide_image: ''
+  });
+  const [subSubcategoryForm, setSubSubcategoryForm] = useState({
+    name: '', slug: '', subcategory_id: '', image: ''
   });
   const [brandForm, setBrandForm] = useState({
     name: '', slug: '', image: '', description: ''
@@ -668,7 +673,7 @@ export default function AdminDashboard() {
     if (product) {
       setEditingProduct(product);
       setProductForm({
-        name: product.name, slug: product.slug, category_id: product.category_id, subcategory_id: product.subcategory_id || '', brand_id: product.brand_id || '', brand_name: product.brand_name || '',
+        name: product.name, slug: product.slug, category_id: product.category_id, subcategory_id: product.subcategory_id || '', sub_subcategory_id: product.sub_subcategory_id || '', brand_id: product.brand_id || '', brand_name: product.brand_name || '',
         price: product.price, promo_price: product.promo_price || '', stock: product.stock, 
         description: product.description || '', image: product.image || '',
         is_popular: !!product.is_popular, is_best_seller: !!product.is_best_seller, 
@@ -681,7 +686,7 @@ export default function AdminDashboard() {
     } else {
       setEditingProduct(null);
       setProductForm({
-        name: '', slug: '', category_id: categories[0]?.id || '', subcategory_id: '', brand_id: '', brand_name: '', price: '', promo_price: '', stock: '', description: '', image: '',
+        name: '', slug: '', category_id: categories[0]?.id || '', subcategory_id: '', sub_subcategory_id: '', brand_id: '', brand_name: '', price: '', promo_price: '', stock: '', description: '', image: '',
         is_popular: false, is_best_seller: false, is_new: false, is_recommended: false, is_fast_delivery: false, images: [], features: '', key_points: ''
       });
     }
@@ -701,6 +706,22 @@ export default function AdminDashboard() {
       });
     }
     setIsSubcategoryModalOpen(true);
+  };
+
+  const openSubSubcategoryModal = (subSubcategory: any = null) => {
+    if (subSubcategory) {
+      setEditingSubSubcategory(subSubcategory);
+      setSubSubcategoryForm({
+        name: subSubcategory.name, slug: subSubcategory.slug, subcategory_id: subSubcategory.subcategory_id, image: subSubcategory.image || ''
+      });
+    } else {
+      setEditingSubSubcategory(null);
+      const firstSubcat = categories.flatMap(c => c.subcategories || [])[0];
+      setSubSubcategoryForm({
+        name: '', slug: '', subcategory_id: firstSubcat?.id || '', image: ''
+      });
+    }
+    setIsSubSubcategoryModalOpen(true);
   };
 
   const openCategoryModal = (category: any = null) => {
@@ -757,6 +778,9 @@ export default function AdminDashboard() {
 
     const payload = {
       ...productForm,
+      subcategory_id: productForm.subcategory_id || null,
+      sub_subcategory_id: productForm.sub_subcategory_id || null,
+      brand_id: productForm.brand_id || null,
       price: parseFloat(productForm.price as string),
       promo_price: productForm.promo_price ? parseFloat(productForm.promo_price as string) : null,
       stock: parseInt(productForm.stock as string, 10),
@@ -843,6 +867,36 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleSubSubcategorySubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const token = localStorage.getItem('adminToken');
+    const url = editingSubSubcategory ? `/api/admin/sub_subcategories/${editingSubSubcategory.id}` : '/api/admin/sub_subcategories';
+    const method = editingSubSubcategory ? 'PUT' : 'POST';
+
+    try {
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify(subSubcategoryForm)
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        toast.error(`Erreur: ${errorData.error || 'Impossible de sauvegarder la sous-sous-catégorie'}`);
+        return;
+      }
+
+      setIsSubSubcategoryModalOpen(false);
+      fetch('/api/categories')
+        .then(res => res.json())
+        .then(data => { if (Array.isArray(data)) setCategories(data); })
+        .catch(console.error);
+    } catch (err) {
+      console.error(err);
+      toast.error('Erreur de connexion au serveur');
+    }
+  };
+
   const deleteSubcategory = async (id: number) => {
     setConfirmModal({
       isOpen: true,
@@ -851,6 +905,29 @@ export default function AdminDashboard() {
         const token = localStorage.getItem('adminToken');
         try {
           await fetch(`/api/admin/subcategories/${id}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          fetch('/api/categories')
+            .then(res => res.json())
+            .then(data => { if (Array.isArray(data)) setCategories(data); })
+            .catch(console.error);
+          setConfirmModal({ ...confirmModal, isOpen: false });
+        } catch (err) {
+          console.error(err);
+        }
+      }
+    });
+  };
+
+  const deleteSubSubcategory = async (id: number) => {
+    setConfirmModal({
+      isOpen: true,
+      message: 'Êtes-vous sûr de vouloir supprimer cette sous-sous-catégorie ?',
+      onConfirm: async () => {
+        const token = localStorage.getItem('adminToken');
+        try {
+          await fetch(`/api/admin/sub_subcategories/${id}`, {
             method: 'DELETE',
             headers: { 'Authorization': `Bearer ${token}` }
           });
@@ -1523,6 +1600,12 @@ export default function AdminDashboard() {
               >
                 Sous-catégories
               </button>
+              <button 
+                onClick={() => setProductSubTab('sub_subcategories')} 
+                className={`pb-2 px-2 font-medium text-sm transition-colors ${productSubTab === 'sub_subcategories' ? 'border-b-2 border-orange-500 text-orange-600' : 'text-gray-500 hover:text-gray-800'}`}
+              >
+                Sous-sous-catégories
+              </button>
             </div>
 
             {productSubTab === 'products' && (
@@ -1545,6 +1628,7 @@ export default function AdminDashboard() {
                         <th className="px-6 py-3">Nom du produit</th>
                         <th className="px-6 py-3">Catégorie</th>
                         <th className="px-6 py-3">Sous-catégorie</th>
+                        <th className="px-6 py-3">Sous-sous-catégorie</th>
                         <th className="px-6 py-3">Marque</th>
                         <th className="px-6 py-3">Prix</th>
                         <th className="px-6 py-3">Stock</th>
@@ -1560,6 +1644,7 @@ export default function AdminDashboard() {
                           <td className="px-6 py-4 font-medium text-gray-900">{product.name}</td>
                           <td className="px-6 py-4">{product.category_name}</td>
                           <td className="px-6 py-4 text-gray-500">{product.subcategory_name || '-'}</td>
+                          <td className="px-6 py-4 text-gray-500">{product.sub_subcategory_name || '-'}</td>
                           <td className="px-6 py-4 text-gray-500">{product.brand_name || '-'}</td>
                           <td className="px-6 py-4">
                             <div className="font-bold text-gray-900">{formatPrice(product.price)}</div>
@@ -1685,6 +1770,62 @@ export default function AdminDashboard() {
                             </td>
                           </tr>
                         ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {productSubTab === 'sub_subcategories' && (
+              <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                <div className="p-6 border-b border-gray-100 flex justify-between items-center">
+                  <h2 className="text-lg font-bold text-gray-800">Gestion des sous-sous-catégories</h2>
+                  <button 
+                    onClick={() => openSubSubcategoryModal()}
+                    className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-md font-medium flex items-center gap-2 transition-colors"
+                  >
+                    <Plus size={18} />
+                    Ajouter une sous-sous-catégorie
+                  </button>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-sm text-gray-600">
+                    <thead className="bg-gray-50 text-gray-700 font-medium">
+                      <tr>
+                        <th className="px-6 py-3">Image</th>
+                        <th className="px-6 py-3">ID</th>
+                        <th className="px-6 py-3">Nom</th>
+                        <th className="px-6 py-3">Slug</th>
+                        <th className="px-6 py-3">Sous-catégorie Parente</th>
+                        <th className="px-6 py-3">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {categories.flatMap(cat => 
+                        (cat.subcategories || []).flatMap((sub: any) => 
+                          (sub.sub_subcategories || []).map((ss: any) => (
+                            <tr key={ss.id} className="hover:bg-gray-50">
+                              <td className="px-6 py-4">
+                                <img src={ss.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(ss.name)}&background=random&size=50`} alt={ss.name} className="w-10 h-10 rounded object-cover" referrerPolicy="no-referrer" />
+                              </td>
+                              <td className="px-6 py-4 font-medium text-gray-900">#{ss.id}</td>
+                              <td className="px-6 py-4 font-medium text-gray-900">{ss.name}</td>
+                              <td className="px-6 py-4 text-gray-500">{ss.slug}</td>
+                              <td className="px-6 py-4">{sub.name}</td>
+                              <td className="px-6 py-4">
+                                <div className="flex items-center gap-3">
+                                  <button onClick={() => openSubSubcategoryModal(ss)} className="text-blue-500 hover:text-blue-700" title="Modifier">
+                                    <Edit size={18} />
+                                  </button>
+                                  <button onClick={() => deleteSubSubcategory(ss.id)} className="text-red-500 hover:text-red-700" title="Supprimer">
+                                    <Trash2 size={18} />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))
+                        )
                       )}
                     </tbody>
                   </table>
@@ -2304,10 +2445,19 @@ export default function AdminDashboard() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Sous-catégorie</label>
-                  <select className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500" value={productForm.subcategory_id} onChange={e => setProductForm({...productForm, subcategory_id: e.target.value})}>
+                  <select className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500" value={productForm.subcategory_id} onChange={e => setProductForm({...productForm, subcategory_id: e.target.value, sub_subcategory_id: ''})}>
                     <option value="">Aucune</option>
                     {categories.find(c => c.id.toString() === productForm.category_id.toString())?.subcategories?.map((s: any) => (
                       <option key={s.id} value={s.id}>{s.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Sous-sous-catégorie</label>
+                  <select className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500" value={productForm.sub_subcategory_id} onChange={e => setProductForm({...productForm, sub_subcategory_id: e.target.value})}>
+                    <option value="">Aucune</option>
+                    {categories.find(c => c.id.toString() === productForm.category_id.toString())?.subcategories?.find((s: any) => s.id.toString() === productForm.subcategory_id.toString())?.sub_subcategories?.map((ss: any) => (
+                      <option key={ss.id} value={ss.id}>{ss.name}</option>
                     ))}
                   </select>
                 </div>
@@ -2480,6 +2630,66 @@ export default function AdminDashboard() {
                 </button>
                 <button type="submit" className="px-6 py-2 bg-orange-500 text-white rounded-md hover:bg-orange-600 font-medium transition-colors">
                   {editingSubcategory ? 'Enregistrer' : 'Créer'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Sub-subcategory Modal */}
+      {isSubSubcategoryModalOpen && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md max-h-[90vh] flex flex-col">
+            <div className="flex justify-between items-center p-6 border-b border-gray-100 shrink-0">
+              <h2 className="text-xl font-bold text-gray-800">{editingSubSubcategory ? 'Modifier la sous-sous-catégorie' : 'Ajouter une sous-sous-catégorie'}</h2>
+              <button onClick={() => setIsSubSubcategoryModalOpen(false)} className="text-gray-400 hover:text-gray-600">
+                <X size={24} />
+              </button>
+            </div>
+            <form onSubmit={handleSubSubcategorySubmit} className="flex flex-col overflow-hidden">
+              <div className="p-6 overflow-y-auto">
+                <div className="space-y-4 mb-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Nom de la sous-sous-catégorie *</label>
+                  <input type="text" required className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500" value={subSubcategoryForm.name} onChange={e => setSubSubcategoryForm({...subSubcategoryForm, name: e.target.value})} />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Slug (URL) *</label>
+                  <input type="text" required className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500" value={subSubcategoryForm.slug} onChange={e => setSubSubcategoryForm({...subSubcategoryForm, slug: e.target.value})} />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Sous-catégorie Parente *</label>
+                  <select required className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500" value={subSubcategoryForm.subcategory_id} onChange={e => setSubSubcategoryForm({...subSubcategoryForm, subcategory_id: e.target.value})}>
+                    <option value="" disabled>Sélectionner une sous-catégorie</option>
+                    {categories.flatMap(c => c.subcategories || []).map(sub => <option key={sub.id} value={sub.id}>{sub.name}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Image</label>
+                  <div className="flex items-center gap-4">
+                    {subSubcategoryForm.image && (
+                      <img src={subSubcategoryForm.image} alt="Preview" className="w-16 h-16 object-cover rounded-md border border-gray-200" referrerPolicy="no-referrer" />
+                    )}
+                    <label className="cursor-pointer bg-white border border-gray-300 px-4 py-2 rounded-md hover:bg-gray-50 flex items-center gap-2">
+                      <Upload size={18} />
+                      Télécharger une image
+                      <input type="file" className="hidden" accept="image/*" onChange={async (e) => {
+                        const url = await handleFileUpload(e);
+                        if (url) setSubSubcategoryForm({...subSubcategoryForm, image: url});
+                      }} />
+                    </label>
+                  </div>
+                </div>
+              </div>
+              </div>
+
+              <div className="flex justify-end gap-4 border-t border-gray-100 p-6 shrink-0 bg-gray-50 rounded-b-xl">
+                <button type="button" onClick={() => setIsSubSubcategoryModalOpen(false)} className="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 font-medium transition-colors bg-white">
+                  Annuler
+                </button>
+                <button type="submit" className="px-6 py-2 bg-orange-500 text-white rounded-md hover:bg-orange-600 font-medium transition-colors">
+                  {editingSubSubcategory ? 'Enregistrer' : 'Créer'}
                 </button>
               </div>
             </form>

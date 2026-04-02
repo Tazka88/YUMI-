@@ -2463,13 +2463,26 @@ export default function AdminDashboard() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Marque</label>
-                  <input 
-                    type="text" 
-                    placeholder="Saisissez la marque"
+                  <select 
                     className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500"
-                    value={productForm.brand_name}
-                    onChange={e => setProductForm({...productForm, brand_name: e.target.value, brand_id: ''})}
-                  />
+                    value={productForm.brand_id}
+                    onChange={e => {
+                      const selectedBrand = brands.find(b => b.id.toString() === e.target.value);
+                      setProductForm({
+                        ...productForm, 
+                        brand_id: e.target.value, 
+                        brand_name: selectedBrand ? selectedBrand.name : ''
+                      });
+                    }}
+                  >
+                    <option value="">Aucune marque</option>
+                    {brands.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                  </select>
+                  {!productForm.brand_id && productForm.brand_name && (
+                    <p className="text-xs text-orange-500 mt-1">
+                      Marque actuelle (texte libre) : {productForm.brand_name}. Veuillez sélectionner une marque dans la liste pour la lier à la page de la marque.
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Prix (DA) *</label>

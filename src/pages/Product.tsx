@@ -289,9 +289,15 @@ export default function Product() {
           {/* Product Info */}
           <div className="w-full md:w-1/2 p-6 md:p-8 flex flex-col">
             {product.brand_name && (
-              <Link to={`/brands/${product.brand_slug}`} className="text-orange-600 font-semibold hover:underline mb-2 inline-block">
-                Visiter la boutique {product.brand_name}
-              </Link>
+              product.brand_slug ? (
+                <Link to={`/brands/${product.brand_slug}`} className="text-orange-600 font-semibold hover:underline mb-2 inline-block">
+                  Visiter la boutique {product.brand_name}
+                </Link>
+              ) : (
+                <span className="text-gray-500 font-medium mb-2 inline-block">
+                  Marque : {product.brand_name}
+                </span>
+              )
             )}
             <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">{product.name}</h1>
             

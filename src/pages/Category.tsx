@@ -219,9 +219,9 @@ export default function Category() {
         {/* Main Content */}
         <div className="flex-1">
           {loading ? (
-            <div className="mb-8 rounded-xl overflow-hidden shadow-md relative h-[200px] md:h-[400px] bg-gray-200 animate-pulse"></div>
+            <div className="mb-8 rounded-xl overflow-hidden shadow-md relative w-full aspect-[16/5] bg-gray-200 animate-pulse"></div>
           ) : categoryImage ? (
-            <div className="mb-8 rounded-xl overflow-hidden shadow-md relative h-[200px] md:h-[400px] bg-gray-100 flex items-center justify-center">
+            <div className="mb-8 rounded-xl overflow-hidden shadow-md relative w-full aspect-[16/5] bg-gray-100 flex items-center justify-center">
               <img 
                 src={categoryImage} 
                 alt={categoryName} 

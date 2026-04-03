@@ -455,9 +455,9 @@ router.get('/categories', async (req, res) => {
     
     const categoriesWithSubcats = categories.map((cat: any) => ({
       ...cat,
-      subcategories: subcategories.filter((sub: any) => sub.category_id === cat.id).map((sub: any) => ({
+      subcategories: subcategories.filter((sub: any) => sub.category_id?.toString() === cat.id?.toString()).map((sub: any) => ({
         ...sub,
-        sub_subcategories: sub_subcategories.filter((ss: any) => ss.subcategory_id === sub.id)
+        sub_subcategories: sub_subcategories.filter((ss: any) => ss.subcategory_id?.toString() === sub.id?.toString())
       }))
     }));
     

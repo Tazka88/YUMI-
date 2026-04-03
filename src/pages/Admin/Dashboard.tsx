@@ -756,6 +756,20 @@ export default function AdminDashboard() {
 
   const handleProductSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!productForm.name) {
+      toast.error('Le nom du produit est requis');
+      return;
+    }
+    if (!productForm.slug) {
+      toast.error('Le slug est requis');
+      return;
+    }
+    if (!productForm.price) {
+      toast.error('Le prix est requis');
+      return;
+    }
+
     const token = localStorage.getItem('adminToken');
     const url = editingProduct ? `/api/admin/products/${editingProduct.id}` : '/api/admin/products';
     const method = editingProduct ? 'PUT' : 'POST';
@@ -803,6 +817,7 @@ export default function AdminDashboard() {
         return;
       }
 
+      toast.success(editingProduct ? 'Produit modifié avec succès' : 'Produit créé avec succès');
       setIsModalOpen(false);
       fetch('/api/admin/products', { headers: { 'Authorization': `Bearer ${token}` } })
         .then(res => res.json())
@@ -839,6 +854,20 @@ export default function AdminDashboard() {
 
   const handleSubcategorySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!subcategoryForm.name) {
+      toast.error('Le nom est requis');
+      return;
+    }
+    if (!subcategoryForm.slug) {
+      toast.error('Le slug est requis');
+      return;
+    }
+    if (!subcategoryForm.category_id) {
+      toast.error('Veuillez sélectionner une catégorie parente');
+      return;
+    }
+
     const token = localStorage.getItem('adminToken');
     const url = editingSubcategory ? `/api/admin/subcategories/${editingSubcategory.id}` : '/api/admin/subcategories';
     const method = editingSubcategory ? 'PUT' : 'POST';
@@ -856,6 +885,7 @@ export default function AdminDashboard() {
         return;
       }
 
+      toast.success(editingSubcategory ? 'Sous-catégorie modifiée avec succès' : 'Sous-catégorie créée avec succès');
       setIsSubcategoryModalOpen(false);
       fetch('/api/categories')
         .then(res => res.json())
@@ -869,6 +899,20 @@ export default function AdminDashboard() {
 
   const handleSubSubcategorySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!subSubcategoryForm.name) {
+      toast.error('Le nom est requis');
+      return;
+    }
+    if (!subSubcategoryForm.slug) {
+      toast.error('Le slug est requis');
+      return;
+    }
+    if (!subSubcategoryForm.subcategory_id) {
+      toast.error('Veuillez sélectionner une sous-catégorie parente');
+      return;
+    }
+
     const token = localStorage.getItem('adminToken');
     const url = editingSubSubcategory ? `/api/admin/sub_subcategories/${editingSubSubcategory.id}` : '/api/admin/sub_subcategories';
     const method = editingSubSubcategory ? 'PUT' : 'POST';
@@ -886,6 +930,7 @@ export default function AdminDashboard() {
         return;
       }
 
+      toast.success(editingSubSubcategory ? 'Sous-sous-catégorie modifiée avec succès' : 'Sous-sous-catégorie créée avec succès');
       setIsSubSubcategoryModalOpen(false);
       fetch('/api/categories')
         .then(res => res.json())
@@ -945,6 +990,16 @@ export default function AdminDashboard() {
 
   const handleCategorySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!categoryForm.name) {
+      toast.error('Le nom est requis');
+      return;
+    }
+    if (!categoryForm.slug) {
+      toast.error('Le slug est requis');
+      return;
+    }
+
     const token = localStorage.getItem('adminToken');
     const url = editingCategory ? `/api/admin/categories/${editingCategory.id}` : '/api/admin/categories';
     const method = editingCategory ? 'PUT' : 'POST';
@@ -962,6 +1017,7 @@ export default function AdminDashboard() {
         return;
       }
 
+      toast.success(editingCategory ? 'Catégorie modifiée avec succès' : 'Catégorie créée avec succès');
       setIsCategoryModalOpen(false);
       fetch('/api/categories')
         .then(res => res.json())
@@ -998,6 +1054,16 @@ export default function AdminDashboard() {
 
   const handleBrandSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!brandForm.name) {
+      toast.error('Le nom est requis');
+      return;
+    }
+    if (!brandForm.slug) {
+      toast.error('Le slug est requis');
+      return;
+    }
+
     const token = localStorage.getItem('adminToken');
     const url = editingBrand ? `/api/admin/brands/${editingBrand.id}` : '/api/admin/brands';
     const method = editingBrand ? 'PUT' : 'POST';
@@ -1015,6 +1081,7 @@ export default function AdminDashboard() {
         return;
       }
 
+      toast.success(editingBrand ? 'Marque modifiée avec succès' : 'Marque créée avec succès');
       setIsBrandModalOpen(false);
       fetch('/api/brands')
         .then(res => res.json())
@@ -2422,7 +2489,6 @@ export default function AdminDashboard() {
                   <label className="block text-sm font-medium text-gray-700 mb-2">Nom du produit *</label>
                   <input 
                     type="text" 
-                    required 
                     className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500" 
                     value={productForm.name} 
                     onChange={e => {
@@ -2434,11 +2500,11 @@ export default function AdminDashboard() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Slug (URL) *</label>
-                  <input type="text" required className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500" value={productForm.slug} onChange={e => setProductForm({...productForm, slug: e.target.value})} />
+                  <input type="text" className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500" value={productForm.slug} onChange={e => setProductForm({...productForm, slug: e.target.value})} />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Catégorie *</label>
-                  <select required className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500" value={productForm.category_id} onChange={e => setProductForm({...productForm, category_id: e.target.value, subcategory_id: ''})}>
+                  <select className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500" value={productForm.category_id} onChange={e => setProductForm({...productForm, category_id: e.target.value, subcategory_id: ''})}>
                     <option value="" disabled>Sélectionner une catégorie</option>
                     {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
@@ -2486,7 +2552,7 @@ export default function AdminDashboard() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Prix (DA) *</label>
-                  <input type="number" required min="0" className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500" value={productForm.price} onChange={e => setProductForm({...productForm, price: e.target.value})} />
+                  <input type="number" min="0" className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500" value={productForm.price} onChange={e => setProductForm({...productForm, price: e.target.value})} />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Prix Promo (DA)</label>
@@ -2494,7 +2560,7 @@ export default function AdminDashboard() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Stock *</label>
-                  <input type="number" required min="0" className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500" value={productForm.stock} onChange={e => setProductForm({...productForm, stock: e.target.value})} />
+                  <input type="number" min="0" className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500" value={productForm.stock} onChange={e => setProductForm({...productForm, stock: e.target.value})} />
                 </div>
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-2">Image Principale</label>
@@ -2607,7 +2673,6 @@ export default function AdminDashboard() {
                   <label className="block text-sm font-medium text-gray-700 mb-2">Nom de la sous-catégorie *</label>
                   <input 
                     type="text" 
-                    required 
                     className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500" 
                     value={subcategoryForm.name} 
                     onChange={e => {
@@ -2619,11 +2684,11 @@ export default function AdminDashboard() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Slug (URL) *</label>
-                  <input type="text" required className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500" value={subcategoryForm.slug} onChange={e => setSubcategoryForm({...subcategoryForm, slug: e.target.value})} />
+                  <input type="text" className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500" value={subcategoryForm.slug} onChange={e => setSubcategoryForm({...subcategoryForm, slug: e.target.value})} />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Catégorie Parente *</label>
-                  <select required className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500" value={subcategoryForm.category_id} onChange={e => setSubcategoryForm({...subcategoryForm, category_id: e.target.value})}>
+                  <select className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500" value={subcategoryForm.category_id} onChange={e => setSubcategoryForm({...subcategoryForm, category_id: e.target.value})}>
                     <option value="" disabled>Sélectionner une catégorie</option>
                     {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
@@ -2677,7 +2742,6 @@ export default function AdminDashboard() {
                   <label className="block text-sm font-medium text-gray-700 mb-2">Nom de la sous-sous-catégorie *</label>
                   <input 
                     type="text" 
-                    required 
                     className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500" 
                     value={subSubcategoryForm.name} 
                     onChange={e => {
@@ -2689,11 +2753,11 @@ export default function AdminDashboard() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Slug (URL) *</label>
-                  <input type="text" required className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500" value={subSubcategoryForm.slug} onChange={e => setSubSubcategoryForm({...subSubcategoryForm, slug: e.target.value})} />
+                  <input type="text" className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500" value={subSubcategoryForm.slug} onChange={e => setSubSubcategoryForm({...subSubcategoryForm, slug: e.target.value})} />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Sous-catégorie Parente *</label>
-                  <select required className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500" value={subSubcategoryForm.subcategory_id} onChange={e => setSubSubcategoryForm({...subSubcategoryForm, subcategory_id: e.target.value})}>
+                  <select className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500" value={subSubcategoryForm.subcategory_id} onChange={e => setSubSubcategoryForm({...subSubcategoryForm, subcategory_id: e.target.value})}>
                     <option value="" disabled>Sélectionner une sous-catégorie</option>
                     {categories.flatMap(c => c.subcategories || []).map(sub => <option key={sub.id} value={sub.id}>{sub.name}</option>)}
                   </select>
@@ -2746,7 +2810,6 @@ export default function AdminDashboard() {
                   <label className="block text-sm font-medium text-gray-700 mb-2">Nom de la catégorie *</label>
                   <input 
                     type="text" 
-                    required 
                     className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500" 
                     value={categoryForm.name} 
                     onChange={e => {
@@ -2758,7 +2821,7 @@ export default function AdminDashboard() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Slug (URL) *</label>
-                  <input type="text" required className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500" value={categoryForm.slug} onChange={e => setCategoryForm({...categoryForm, slug: e.target.value})} />
+                  <input type="text" className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500" value={categoryForm.slug} onChange={e => setCategoryForm({...categoryForm, slug: e.target.value})} />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Image d'accueil (Miniature)</label>
@@ -2841,7 +2904,6 @@ export default function AdminDashboard() {
                   <label className="block text-sm font-medium text-gray-700 mb-2">Nom de la marque</label>
                   <input 
                     type="text" 
-                    required 
                     className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500"
                     value={brandForm.name}
                     onChange={e => setBrandForm({...brandForm, name: e.target.value, slug: e.target.value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '')})}
@@ -2851,7 +2913,6 @@ export default function AdminDashboard() {
                   <label className="block text-sm font-medium text-gray-700 mb-2">Slug (URL)</label>
                   <input 
                     type="text" 
-                    required 
                     className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500 bg-gray-50"
                     value={brandForm.slug}
                     onChange={e => setBrandForm({...brandForm, slug: e.target.value})}

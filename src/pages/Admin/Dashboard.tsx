@@ -2605,7 +2605,17 @@ export default function AdminDashboard() {
                 <div className="space-y-4 mb-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Nom de la sous-catégorie *</label>
-                  <input type="text" required className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500" value={subcategoryForm.name} onChange={e => setSubcategoryForm({...subcategoryForm, name: e.target.value})} />
+                  <input 
+                    type="text" 
+                    required 
+                    className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500" 
+                    value={subcategoryForm.name} 
+                    onChange={e => {
+                      const name = e.target.value;
+                      const slug = name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
+                      setSubcategoryForm({...subcategoryForm, name, slug});
+                    }} 
+                  />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Slug (URL) *</label>
@@ -2665,7 +2675,17 @@ export default function AdminDashboard() {
                 <div className="space-y-4 mb-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Nom de la sous-sous-catégorie *</label>
-                  <input type="text" required className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500" value={subSubcategoryForm.name} onChange={e => setSubSubcategoryForm({...subSubcategoryForm, name: e.target.value})} />
+                  <input 
+                    type="text" 
+                    required 
+                    className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500" 
+                    value={subSubcategoryForm.name} 
+                    onChange={e => {
+                      const name = e.target.value;
+                      const slug = name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
+                      setSubSubcategoryForm({...subSubcategoryForm, name, slug});
+                    }} 
+                  />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Slug (URL) *</label>
@@ -2724,7 +2744,17 @@ export default function AdminDashboard() {
                 <div className="space-y-4 mb-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Nom de la catégorie *</label>
-                  <input type="text" required className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500" value={categoryForm.name} onChange={e => setCategoryForm({...categoryForm, name: e.target.value})} />
+                  <input 
+                    type="text" 
+                    required 
+                    className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500" 
+                    value={categoryForm.name} 
+                    onChange={e => {
+                      const name = e.target.value;
+                      const slug = name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
+                      setCategoryForm({...categoryForm, name, slug});
+                    }} 
+                  />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Slug (URL) *</label>

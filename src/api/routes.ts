@@ -1262,8 +1262,9 @@ router.post('/admin/sub_subcategories', authenticate, async (req, res) => {
   try {
     const [info] = await sql`INSERT INTO sub_subcategories (subcategory_id, name, slug, image) VALUES (${subcategory_id || null}, ${name || ''}, ${slug || ''}, ${image || null}) RETURNING id`;
     res.status(201).json({ id: info.id, message: 'Sub-subcategory created' });
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to create sub-subcategory' });
+  } catch (err: any) {
+    console.error('Error creating sub-subcategory:', err);
+    res.status(500).json({ error: err.message || 'Failed to create sub-subcategory' });
   }
 });
 

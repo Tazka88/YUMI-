@@ -392,7 +392,7 @@ export default function Home() {
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
         transition={{ duration: 0.6 }}
-        className="flex overflow-x-auto pb-4 lg:grid lg:grid-cols-5 gap-3 sm:gap-4 mb-6 sm:mb-8 snap-x hide-scrollbar"
+        className="flex overflow-x-auto pb-4 lg:grid lg:grid-cols-5 gap-2 sm:gap-4 mb-6 sm:mb-8 snap-x hide-scrollbar"
       >
         {[
           { icon: Truck, title: 'Livraison sur 58 Wilayas', desc: 'Partout en Algérie' },
@@ -406,17 +406,17 @@ export default function Home() {
             stars: true
           },
         ].map((badge, idx) => (
-          <div key={idx} className={`min-w-[200px] sm:min-w-0 bg-white p-3 sm:p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col sm:flex-row items-center sm:items-start gap-2 sm:gap-4 group hover:shadow-md hover:border-[#FF6B00]/30 transition-all duration-300 cursor-default text-center sm:text-left snap-start`}>
-            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-[#FF6B00]/10 text-[#FF6B00] flex items-center justify-center group-hover:bg-[#1a1a2e] group-hover:text-white transition-all duration-300 shrink-0 group-hover:scale-110 transform">
-              <badge.icon size={20} className="sm:w-6 sm:h-6" />
+          <div key={idx} className={`min-w-[140px] sm:min-w-0 bg-white p-2 sm:p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col sm:flex-row items-center sm:items-start gap-1.5 sm:gap-4 group hover:shadow-md hover:border-[#FF6B00]/30 transition-all duration-300 cursor-default text-center sm:text-left snap-start`}>
+            <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-full bg-[#FF6B00]/10 text-[#FF6B00] flex items-center justify-center group-hover:bg-[#1a1a2e] group-hover:text-white transition-all duration-300 shrink-0 group-hover:scale-110 transform">
+              <badge.icon size={16} className="sm:w-6 sm:h-6" />
             </div>
             <div className="flex flex-col justify-center h-full">
-              <h3 className="font-bold text-[#1a1a2e] text-xs sm:text-sm leading-tight group-hover:text-[#FF6B00] transition-colors">{badge.title}</h3>
-              <p className="text-[10px] sm:text-xs text-gray-500 mt-0.5 sm:mt-1">{badge.desc}</p>
+              <h3 className="font-bold text-[#1a1a2e] text-[10px] sm:text-sm leading-tight group-hover:text-[#FF6B00] transition-colors">{badge.title}</h3>
+              <p className="text-[9px] sm:text-xs text-gray-500 mt-0.5 sm:mt-1">{badge.desc}</p>
               {badge.stars && (
-                <div className="flex items-center justify-center sm:justify-start gap-0.5 mt-1 sm:mt-1.5 text-[#FF6B00]">
+                <div className="flex items-center justify-center sm:justify-start gap-0.5 mt-0.5 sm:mt-1.5 text-[#FF6B00]">
                   {[...Array(5)].map((_, i) => (
-                    <Star key={i} size={10} className="sm:w-3 sm:h-3" fill="currentColor" />
+                    <Star key={i} size={8} className="sm:w-3 sm:h-3" fill="currentColor" />
                   ))}
                 </div>
               )}

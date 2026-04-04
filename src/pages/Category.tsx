@@ -225,7 +225,7 @@ export default function Category() {
           {loading ? (
             <div className="mb-8 rounded-xl overflow-hidden shadow-md relative w-full aspect-[4/5] sm:aspect-[1/1] md:aspect-[16/5] bg-gray-200 animate-pulse"></div>
           ) : categoryImage ? (
-            <div className="mb-8 rounded-xl overflow-hidden shadow-md relative w-full aspect-[4/5] sm:aspect-[1/1] md:aspect-[16/5] bg-gray-100 flex items-center justify-center">
+            <div className={`mb-8 rounded-xl overflow-hidden shadow-md relative w-full aspect-[4/5] sm:aspect-[1/1] md:aspect-[16/5] bg-gray-100 items-center justify-center ${!mobileCategoryImage ? 'hidden md:flex' : 'flex'}`}>
               <picture className="w-full h-full">
                 {mobileCategoryImage && (
                   <source media="(max-width: 767px)" srcSet={mobileCategoryImage} />

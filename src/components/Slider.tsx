@@ -23,6 +23,17 @@ export default function Slider({ categoryId = null }: SliderProps) {
   const [slides, setSlides] = useState<SliderImage[]>([]);
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   useEffect(() => {
     const fetchSlides = async () => {
@@ -47,16 +58,30 @@ export default function Slider({ categoryId = null }: SliderProps) {
     fetchSlides();
   }, [categoryId]);
 
+  const visibleSlides = slides.filter(slide => {
+    if (isMobile) {
+      return !!slide.mobile_image_url;
+    }
+    return !!slide.image_url;
+  });
+
   useEffect(() => {
-    if (slides.length <= 1) return;
+    if (visibleSlides.length <= 1) return;
     const timer = setInterval(() => {
-      setCurrentSlide((prev) => (prev === slides.length - 1 ? 0 : prev + 1));
+      setCurrentSlide((prev) => (prev === visibleSlides.length - 1 ? 0 : prev + 1));
     }, 4000);
     return () => clearInterval(timer);
-  }, [slides.length]);
+  }, [visibleSlides.length]);
 
-  const nextSlide = () => setCurrentSlide((prev) => (prev === slides.length - 1 ? 0 : prev + 1));
-  const prevSlide = () => setCurrentSlide((prev) => (prev === 0 ? slides.length - 1 : prev - 1));
+  const nextSlide = () => setCurrentSlide((prev) => (prev === visibleSlides.length - 1 ? 0 : prev + 1));
+  const prevSlide = () => setCurrentSlide((prev) => (prev === 0 ? visibleSlides.length - 1 : prev - 1));
+
+  // Reset current slide if it exceeds visible slides length
+  useEffect(() => {
+    if (currentSlide >= visibleSlides.length) {
+      setCurrentSlide(0);
+    }
+  }, [visibleSlides.length, currentSlide]);
 
   if (isLoading) {
     return (
@@ -66,13 +91,13 @@ export default function Slider({ categoryId = null }: SliderProps) {
     );
   }
 
-  if (slides.length === 0) {
+  if (visibleSlides.length === 0) {
     return null;
   }
 
   return (
     <div className="mb-8 rounded-xl overflow-hidden shadow-md relative w-full aspect-[4/5] sm:aspect-[1/1] md:aspect-[16/5] group bg-gray-100">
-      {slides.map((slide, index) => (
+      {visibleSlides.map((slide, index) => (
         <div
           key={slide.id}
           className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
@@ -119,7 +144,7 @@ export default function Slider({ categoryId = null }: SliderProps) {
         </div>
       ))}
 
-      {slides.length > 1 && (
+      {visibleSlides.length > 1 && (
         <>
           {/* Navigation Arrows */}
           <button 
@@ -137,7 +162,7 @@ export default function Slider({ categoryId = null }: SliderProps) {
 
           {/* Dots */}
           <div className="absolute bottom-2 md:bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-20">
-            {slides.map((_, index) => (
+            {visibleSlides.map((_, index) => (
               <button
                 key={index}
                 onClick={() => setCurrentSlide(index)}

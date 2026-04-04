@@ -515,7 +515,7 @@ export default function SliderImagesAdmin() {
                         <div className="relative w-full aspect-[16/5] bg-gray-100 rounded-lg overflow-hidden border border-gray-200 mb-3">
                           <img src={currentImage.image_url} alt="Preview" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                           <button 
-                            onClick={() => setCurrentImage({ ...currentImage, image_url: undefined })}
+                            onClick={() => setCurrentImage({ ...currentImage, image_url: '' })}
                             className="absolute top-2 right-2 bg-white/80 hover:bg-white text-red-600 p-2 rounded-full shadow-sm"
                           >
                             <Trash2 size={16} />
@@ -545,7 +545,7 @@ export default function SliderImagesAdmin() {
                         <div className="relative w-1/2 mx-auto aspect-[4/5] bg-gray-100 rounded-lg overflow-hidden border border-gray-200 mb-3">
                           <img src={currentImage.mobile_image_url} alt="Preview Mobile" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                           <button 
-                            onClick={() => setCurrentImage({ ...currentImage, mobile_image_url: undefined })}
+                            onClick={() => setCurrentImage({ ...currentImage, mobile_image_url: '' })}
                             className="absolute top-2 right-2 bg-white/80 hover:bg-white text-red-600 p-2 rounded-full shadow-sm"
                           >
                             <Trash2 size={16} />

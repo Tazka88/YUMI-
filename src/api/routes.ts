@@ -327,69 +327,34 @@ router.put('/slider-images/:id', authenticate, async (req, res) => {
   const isMobileImageNew = mobile_image_url && !mobile_image_url.startsWith('/api/images/');
   
   try {
-    let updatedSliderImage;
-    
-    if (isImageNew && isMobileImageNew) {
-      const [result] = await sql`
-        UPDATE slider_images
-        SET image_url = ${image_url},
-            mobile_image_url = ${mobile_image_url},
-            category_id = ${category_id !== undefined ? category_id : sql`category_id`},
-            position = COALESCE(${position}, position),
-            is_active = COALESCE(${is_active}, is_active),
-            title = ${title !== undefined ? title : sql`title`},
-            description = ${description !== undefined ? description : sql`description`},
-            button_text = ${button_text !== undefined ? button_text : sql`button_text`},
-            button_link = ${button_link !== undefined ? button_link : sql`button_link`}
-        WHERE id = ${id}
-        RETURNING *
-      `;
-      updatedSliderImage = result;
-    } else if (isImageNew) {
-      const [result] = await sql`
-        UPDATE slider_images
-        SET image_url = ${image_url},
-            category_id = ${category_id !== undefined ? category_id : sql`category_id`},
-            position = COALESCE(${position}, position),
-            is_active = COALESCE(${is_active}, is_active),
-            title = ${title !== undefined ? title : sql`title`},
-            description = ${description !== undefined ? description : sql`description`},
-            button_text = ${button_text !== undefined ? button_text : sql`button_text`},
-            button_link = ${button_link !== undefined ? button_link : sql`button_link`}
-        WHERE id = ${id}
-        RETURNING *
-      `;
-      updatedSliderImage = result;
-    } else if (isMobileImageNew) {
-      const [result] = await sql`
-        UPDATE slider_images
-        SET mobile_image_url = ${mobile_image_url},
-            category_id = ${category_id !== undefined ? category_id : sql`category_id`},
-            position = COALESCE(${position}, position),
-            is_active = COALESCE(${is_active}, is_active),
-            title = ${title !== undefined ? title : sql`title`},
-            description = ${description !== undefined ? description : sql`description`},
-            button_text = ${button_text !== undefined ? button_text : sql`button_text`},
-            button_link = ${button_link !== undefined ? button_link : sql`button_link`}
-        WHERE id = ${id}
-        RETURNING *
-      `;
-      updatedSliderImage = result;
-    } else {
-      const [result] = await sql`
-        UPDATE slider_images
-        SET category_id = ${category_id !== undefined ? category_id : sql`category_id`},
-            position = COALESCE(${position}, position),
-            is_active = COALESCE(${is_active}, is_active),
-            title = ${title !== undefined ? title : sql`title`},
-            description = ${description !== undefined ? description : sql`description`},
-            button_text = ${button_text !== undefined ? button_text : sql`button_text`},
-            button_link = ${button_link !== undefined ? button_link : sql`button_link`}
-        WHERE id = ${id}
-        RETURNING *
-      `;
-      updatedSliderImage = result;
+    let setClause = sql`
+      category_id = ${category_id !== undefined ? category_id : sql`category_id`},
+      position = COALESCE(${position}, position),
+      is_active = COALESCE(${is_active}, is_active),
+      title = ${title !== undefined ? title : sql`title`},
+      description = ${description !== undefined ? description : sql`description`},
+      button_text = ${button_text !== undefined ? button_text : sql`button_text`},
+      button_link = ${button_link !== undefined ? button_link : sql`button_link`}
+    `;
+
+    if (isImageNew) {
+      setClause = sql`${setClause}, image_url = ${image_url}`;
     }
+    
+    // If mobile_image_url is explicitly provided (even as null or empty string), update it
+    // if it's a new image or if it's being removed.
+    if (mobile_image_url === null || mobile_image_url === '') {
+      setClause = sql`${setClause}, mobile_image_url = NULL`;
+    } else if (isMobileImageNew) {
+      setClause = sql`${setClause}, mobile_image_url = ${mobile_image_url}`;
+    }
+
+    const [updatedSliderImage] = await sql`
+      UPDATE slider_images
+      SET ${setClause}
+      WHERE id = ${id}
+      RETURNING *
+    `;
     
     if (!updatedSliderImage) return res.status(404).json({ error: 'Slider image not found' });
     res.json(updatedSliderImage);
@@ -1146,21 +1111,30 @@ router.post('/admin/categories', authenticate, async (req, res) => {
 router.put('/admin/categories/:id', authenticate, async (req, res) => {
   const { name, slug, image, slide_image, mobile_slide_image } = req.body;
   try {
-    let updateQuery;
-    
-    // We update name and slug
-    // We only update image if it's not a local API URL (meaning it's a new upload or null)
-    // Same for slide_image and mobile_slide_image
-    
     const isImageNew = image && !image.startsWith('/api/images/');
     const isSlideImageNew = slide_image && !slide_image.startsWith('/api/images/');
     const isMobileSlideImageNew = mobile_slide_image && !mobile_slide_image.startsWith('/api/images/');
     
     // Build dynamic update query
     let setClause = sql`name = ${name || ''}, slug = ${slug || ''}`;
-    if (isImageNew) setClause = sql`${setClause}, image = ${image || null}`;
-    if (isSlideImageNew) setClause = sql`${setClause}, slide_image = ${slide_image || null}`;
-    if (isMobileSlideImageNew) setClause = sql`${setClause}, mobile_slide_image = ${mobile_slide_image || null}`;
+    
+    if (image === null || image === '') {
+      setClause = sql`${setClause}, image = NULL`;
+    } else if (isImageNew) {
+      setClause = sql`${setClause}, image = ${image}`;
+    }
+
+    if (slide_image === null || slide_image === '') {
+      setClause = sql`${setClause}, slide_image = NULL`;
+    } else if (isSlideImageNew) {
+      setClause = sql`${setClause}, slide_image = ${slide_image}`;
+    }
+
+    if (mobile_slide_image === null || mobile_slide_image === '') {
+      setClause = sql`${setClause}, mobile_slide_image = NULL`;
+    } else if (isMobileSlideImageNew) {
+      setClause = sql`${setClause}, mobile_slide_image = ${mobile_slide_image}`;
+    }
 
     await sql`UPDATE categories SET ${setClause} WHERE id = ${req.params.id}`;
     

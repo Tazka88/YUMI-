@@ -2827,7 +2827,12 @@ export default function AdminDashboard() {
                   <label className="block text-sm font-medium text-gray-700 mb-2">Image d'accueil (Miniature)</label>
                   <div className="flex items-center gap-4">
                     {categoryForm.image && (
-                      <img src={categoryForm.image} alt="Preview" className="w-16 h-16 object-cover rounded border" />
+                      <div className="relative">
+                        <img src={categoryForm.image} alt="Preview" className="w-16 h-16 object-cover rounded border" />
+                        <button type="button" onClick={() => setCategoryForm({...categoryForm, image: ''})} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600">
+                          <Trash2 size={12} />
+                        </button>
+                      </div>
                     )}
                     <label className="cursor-pointer bg-white border border-gray-300 px-4 py-2 rounded-md hover:bg-gray-50 flex items-center gap-2">
                       <Upload size={18} />
@@ -2843,7 +2848,12 @@ export default function AdminDashboard() {
                   <label className="block text-sm font-medium text-gray-700 mb-2">Image Slide (Bannière dédiée ordinateur)</label>
                   <div className="flex items-center gap-4">
                     {categoryForm.slide_image && (
-                      <img src={categoryForm.slide_image} alt="Slide Preview" className="w-32 h-16 object-cover rounded border" />
+                      <div className="relative">
+                        <img src={categoryForm.slide_image} alt="Slide Preview" className="w-32 h-16 object-cover rounded border" />
+                        <button type="button" onClick={() => setCategoryForm({...categoryForm, slide_image: ''})} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600">
+                          <Trash2 size={12} />
+                        </button>
+                      </div>
                     )}
                     <label className="cursor-pointer bg-white border border-gray-300 px-4 py-2 rounded-md hover:bg-gray-50 flex items-center gap-2">
                       <Upload size={18} />
@@ -2859,7 +2869,12 @@ export default function AdminDashboard() {
                   <label className="block text-sm font-medium text-gray-700 mb-2">Image Slide Mobile (Optionnel, 4:5)</label>
                   <div className="flex items-center gap-4">
                     {categoryForm.mobile_slide_image && (
-                      <img src={categoryForm.mobile_slide_image} alt="Mobile Slide Preview" className="w-16 h-20 object-cover rounded border" />
+                      <div className="relative">
+                        <img src={categoryForm.mobile_slide_image} alt="Mobile Slide Preview" className="w-16 h-20 object-cover rounded border" />
+                        <button type="button" onClick={() => setCategoryForm({...categoryForm, mobile_slide_image: ''})} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600">
+                          <Trash2 size={12} />
+                        </button>
+                      </div>
                     )}
                     <label className="cursor-pointer bg-white border border-gray-300 px-4 py-2 rounded-md hover:bg-gray-50 flex items-center gap-2">
                       <Upload size={18} />

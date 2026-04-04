@@ -27,8 +27,8 @@ async function startServer() {
   }));
   // Removed helmet to prevent iframe blocking in AI Studio preview
   app.use(compression()); // Compress all HTTP responses (Gzip/Brotli)
-  app.use(express.json({ limit: '5mb' })); // Reduced from 50mb to prevent DoS
-  app.use(express.urlencoded({ limit: '5mb', extended: true }));
+  app.use(express.json({ limit: '15mb' })); // Increased to 15mb for larger base64 images
+  app.use(express.urlencoded({ limit: '15mb', extended: true }));
 
   // Serve uploads statically with Cache-Control (1 year)
   app.use('/uploads', express.static(uploadsDir, { maxAge: '1y' }));

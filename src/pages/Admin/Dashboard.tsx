@@ -256,6 +256,8 @@ export default function AdminDashboard() {
         body: formData
       });
 
+      e.target.value = ''; // Reset input
+
       if (res.ok) {
         const data = await res.json();
         toast.success('Image téléchargée avec succès', { id: toastId });

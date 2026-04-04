@@ -27,7 +27,7 @@ router.get('/images/:table/:id/:field', async (req, res) => {
   
   // Validate table and field to prevent SQL injection
   const allowedTables = ['products', 'categories', 'subcategories', 'sub_subcategories', 'brands', 'product_images', 'settings', 'slider_images'];
-  const allowedFields = ['image', 'value', 'image_url', 'slide_image'];
+  const allowedFields = ['image', 'value', 'image_url', 'slide_image', 'mobile_slide_image', 'mobile_image_url'];
   
   if (!allowedTables.includes(table) || !allowedFields.includes(field)) {
     return res.status(400).json({ error: 'Invalid table or field' });
@@ -98,9 +98,9 @@ const orderLimiter = rateLimit({
 const storage = multer.memoryStorage();
 const upload = multer({ 
   storage: storage,
-  limits: { fileSize: 5 * 1024 * 1024 },
+  limits: { fileSize: 15 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
-    const allowedTypes = /jpeg|jpg|png|webp|gif|svg|avif/i;
+    const allowedTypes = /jpeg|jpg|png|webp|gif|svg|avif|heic|heif/i;
     const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
     const mimetype = allowedTypes.test(file.mimetype);
     if (extname && mimetype) return cb(null, true);

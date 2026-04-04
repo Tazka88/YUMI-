@@ -79,6 +79,7 @@ export default function SliderImagesAdmin() {
         setPreviewUrl(URL.createObjectURL(file));
         setIsCropping(true);
       }
+      e.target.value = '';
     }
   };
 
@@ -533,7 +534,7 @@ export default function SliderImagesAdmin() {
                           <label htmlFor="image-upload" className="cursor-pointer flex flex-col items-center">
                             <ImageIcon size={32} className="text-gray-400 mb-2" />
                             <span className="text-sm font-medium text-orange-600">Cliquez pour uploader</span>
-                            <span className="text-xs text-gray-500 mt-1">PNG, JPG jusqu'à 5MB</span>
+                            <span className="text-xs text-gray-500 mt-1">PNG, JPG jusqu'à 15MB</span>
                           </label>
                         </div>
                       )}
@@ -563,7 +564,7 @@ export default function SliderImagesAdmin() {
                           <label htmlFor="mobile-image-upload" className="cursor-pointer flex flex-col items-center">
                             <ImageIcon size={32} className="text-gray-400 mb-2" />
                             <span className="text-sm font-medium text-orange-600">Cliquez pour uploader</span>
-                            <span className="text-xs text-gray-500 mt-1">PNG, JPG jusqu'à 5MB</span>
+                            <span className="text-xs text-gray-500 mt-1">PNG, JPG jusqu'à 15MB</span>
                           </label>
                         </div>
                       )}
@@ -631,7 +632,7 @@ export default function SliderImagesAdmin() {
               )}
             </div>
             
-            {!isCropping && (
+            {!isCropping && !isMobileCropping && (
               <div className="p-6 border-t border-gray-100 flex justify-end gap-3 bg-gray-50 rounded-b-xl">
                 <button
                   onClick={() => setIsModalOpen(false)}

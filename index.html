@@ -26,6 +26,42 @@
     <meta name="twitter:description" content="Découvrez Yumi (YUMIDZ), votre boutique en ligne de confiance en Algérie. Achetez des produits de qualité : électroménager, mode, beauté, maison, informatique et plus au meilleur prix." />
     <meta name="twitter:image" content="https://files.catbox.moe/skhho6.jpg" />
 
+    <!-- Preload Hero Banner Image for LCP Optimization -->
+    <script>
+      (function() {
+        try {
+          fetch('/api/hero-banners')
+            .then(function(res) { return res.json(); })
+            .then(function(data) {
+              if (!Array.isArray(data)) return;
+              var activeSlides = data.filter(function(s) { return s.is_active && s.category_id === null; });
+              if (activeSlides.length > 0) {
+                activeSlides.sort(function(a, b) { return a.position - b.position; });
+                var firstSlide = activeSlides[0];
+                var isMobile = window.innerWidth < 768;
+                var url = isMobile && firstSlide.mobile_image_url ? firstSlide.mobile_image_url : firstSlide.image_url;
+                
+                if (url) {
+                  if (url.indexOf('/api/images/') === 0) {
+                    url = url + (url.indexOf('?') !== -1 ? '&' : '?') + 'w=' + (isMobile ? 800 : 1600);
+                  }
+                  var link = document.createElement('link');
+                  link.rel = 'preload';
+                  link.as = 'image';
+                  link.href = url;
+                  link.fetchPriority = 'high';
+                  if (isMobile && firstSlide.mobile_image_url) {
+                    link.media = '(max-width: 767px)';
+                  }
+                  document.head.appendChild(link);
+                }
+              }
+            })
+            .catch(function(e) { console.error('Preload error', e); });
+        } catch (e) {}
+      })();
+    </script>
+
     <!-- Google tag (gtag.js) - Lazy loaded -->
     <script>
       window.dataLayer = window.dataLayer || [];

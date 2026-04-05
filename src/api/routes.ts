@@ -321,6 +321,8 @@ router.get('/hero-banners', async (req, res) => {
         s.mobile_image_url = processImage('slider_images', s.id, 'mobile_image_url', s.mobile_image_url);
       }
     });
+    
+    res.setHeader('Cache-Control', 'public, max-age=60, stale-while-revalidate=600');
     res.json(sliderImages);
 
   } catch (err) {
@@ -467,6 +469,8 @@ router.get('/categories', async (req, res) => {
         });
       }
     });
+    
+    res.setHeader('Cache-Control', 'public, max-age=300, stale-while-revalidate=3600');
     res.json(categoriesWithSubcats);
 
   } catch (err) {
@@ -548,6 +552,8 @@ router.get('/products', async (req, res) => {
         });
       }
     });
+    
+    res.setHeader('Cache-Control', 'public, max-age=60, stale-while-revalidate=300');
     res.json(products);
 
   } catch (err) {

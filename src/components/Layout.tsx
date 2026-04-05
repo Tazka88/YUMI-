@@ -68,11 +68,20 @@ export default function Layout() {
   const location = useLocation();
   const [categories, setCategories] = useState<any[]>([]);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [expandedSubcategories, setExpandedSubcategories] = useState<number[]>([]);
   const [showAnnouncement, setShowAnnouncement] = useState(true);
   const [currentMessageIndex, setCurrentMessageIndex] = useState(0);
   const [settings, setSettings] = useState<any>({});
   const [isSettingsLoaded, setIsSettingsLoaded] = useState(false);
   const [footerLinks, setFooterLinks] = useState<any[]>([]);
+
+  const toggleSubcategory = (id: number, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setExpandedSubcategories(prev => 
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    );
+  };
 
   // Scroll to top on route change
   useEffect(() => {
@@ -430,20 +439,30 @@ export default function Layout() {
                     <ul className="pl-4 space-y-2 border-l-2 border-gray-100">
                       {cat.subcategories.map((sub: any) => (
                         <li key={sub.id}>
-                          <Link 
-                            to={`/category/${sub.slug}?sub=true`} 
-                            className="block text-sm text-gray-600 hover:text-orange-500"
-                            onClick={() => setIsMenuOpen(false)}
-                          >
-                            <CategoryNameDisplay name={sub.name} />
-                          </Link>
-                          {sub.sub_subcategories && sub.sub_subcategories.length > 0 && (
-                            <ul className="pl-4 mt-2 space-y-2 border-l-2 border-gray-100">
+                          <div className="flex items-center justify-between">
+                            <Link 
+                              to={`/category/${sub.slug}?sub=true`} 
+                              className="block text-sm text-gray-600 hover:text-orange-500 py-1 flex-1"
+                              onClick={() => setIsMenuOpen(false)}
+                            >
+                              <CategoryNameDisplay name={sub.name} />
+                            </Link>
+                            {sub.sub_subcategories && sub.sub_subcategories.length > 0 && (
+                              <button 
+                                onClick={(e) => toggleSubcategory(sub.id, e)}
+                                className="p-2 text-gray-400 hover:text-orange-500"
+                              >
+                                <ChevronRight size={16} className={`transition-transform duration-200 ${expandedSubcategories.includes(sub.id) ? 'rotate-90' : ''}`} />
+                              </button>
+                            )}
+                          </div>
+                          {sub.sub_subcategories && sub.sub_subcategories.length > 0 && expandedSubcategories.includes(sub.id) && (
+                            <ul className="pl-4 mt-1 space-y-2 border-l-2 border-gray-100">
                               {sub.sub_subcategories.map((subsub: any) => (
                                 <li key={subsub.id}>
                                   <Link 
                                     to={`/category/${subsub.slug}?subsub=true`} 
-                                    className="block text-xs text-gray-500 hover:text-orange-500"
+                                    className="block text-xs text-gray-500 hover:text-orange-500 py-1"
                                     onClick={() => setIsMenuOpen(false)}
                                   >
                                     <CategoryNameDisplay name={subsub.name} />

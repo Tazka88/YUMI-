@@ -59,7 +59,15 @@ router.get('/images/:table/:id/:field', async (req, res) => {
           // Auto compress and convert to WebP on the fly for non-SVG images
           if (ext !== 'svg+xml' && ext !== 'svg') {
             const sharp = (await import('sharp')).default;
-            buffer = await sharp(buffer)
+            let sharpInstance = sharp(buffer);
+            
+            // Support resizing via 'w' query parameter
+            const width = parseInt(req.query.w as string);
+            if (!isNaN(width) && width > 0 && width <= 2000) {
+              sharpInstance = sharpInstance.resize({ width, withoutEnlargement: true });
+            }
+            
+            buffer = await sharpInstance
               .webp({ quality: 80, effort: 4 })
               .toBuffer();
             res.setHeader('Content-Type', 'image/webp');

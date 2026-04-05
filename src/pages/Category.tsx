@@ -150,6 +150,14 @@ export default function Category() {
     return () => controller.abort();
   }, [slug, searchQuery, searchParams]);
 
+  const getResizedImageUrl = (url: string | null, width: number) => {
+    if (!url) return '';
+    if (url.startsWith('/api/images/')) {
+      return `${url}${url.includes('?') ? '&' : '?'}w=${width}`;
+    }
+    return url;
+  };
+
   return (
     <div className="container mx-auto px-4 py-8">
       <SEO 
@@ -228,10 +236,10 @@ export default function Category() {
             <div className={`mb-8 rounded-xl overflow-hidden shadow-md relative w-full aspect-[4/5] sm:aspect-[1/1] md:aspect-[16/5] bg-gray-100 items-center justify-center ${!mobileCategoryImage ? 'hidden md:flex' : 'flex'}`}>
               <picture className="w-full h-full">
                 {mobileCategoryImage && (
-                  <source media="(max-width: 767px)" srcSet={mobileCategoryImage} />
+                  <source media="(max-width: 767px)" srcSet={getResizedImageUrl(mobileCategoryImage, 800)} />
                 )}
                 <img 
-                  src={categoryImage} 
+                  src={getResizedImageUrl(categoryImage, 1200)} 
                   alt={categoryName} 
                   className="w-full h-full object-cover object-center" 
                   referrerPolicy="no-referrer" 
@@ -260,7 +268,16 @@ export default function Category() {
                   >
                     <div className="w-16 h-16 rounded-full bg-orange-50 flex items-center justify-center overflow-hidden border-2 border-transparent group-hover:border-orange-500 transition-colors">
                       {sub.image ? (
-                        <img src={sub.image} alt={sub.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                        <img 
+                          src={getResizedImageUrl(sub.image, 128)} 
+                          alt={sub.name} 
+                          className="w-full h-full object-cover" 
+                          referrerPolicy="no-referrer"
+                          width="64"
+                          height="64"
+                          loading="lazy"
+                          decoding="async"
+                        />
                       ) : (
                         <span className="text-2xl">{getCategoryWithEmoji(sub.name).split(' ')[0]}</span>
                       )}
@@ -284,7 +301,16 @@ export default function Category() {
                   >
                     <div className="w-16 h-16 rounded-full bg-orange-50 flex items-center justify-center overflow-hidden border-2 border-transparent group-hover:border-orange-500 transition-colors">
                       {subsub.image ? (
-                        <img src={subsub.image} alt={subsub.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                        <img 
+                          src={getResizedImageUrl(subsub.image, 128)} 
+                          alt={subsub.name} 
+                          className="w-full h-full object-cover" 
+                          referrerPolicy="no-referrer"
+                          width="64"
+                          height="64"
+                          loading="lazy"
+                          decoding="async"
+                        />
                       ) : (
                         <span className="text-2xl">{getCategoryWithEmoji(subsub.name).split(' ')[0]}</span>
                       )}

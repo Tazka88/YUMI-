@@ -3,10 +3,24 @@ import react from '@vitejs/plugin-react';
 import path from 'path';
 import {defineConfig, loadEnv} from 'vite';
 
+// Plugin to make CSS non-blocking
+const asyncCssPlugin = () => {
+  return {
+    name: 'async-css',
+    transformIndexHtml(html: string) {
+      return html.replace(
+        /<link([^>]*?)rel="stylesheet"([^>]*?)href="([^"]+\.css)"([^>]*?)>/g,
+        `<link$1rel="preload" as="style"$2href="$3"$4 onload="this.onload=null;this.rel='stylesheet'">
+    <noscript><link$1rel="stylesheet"$2href="$3"$4></noscript>`
+      );
+    },
+  };
+};
+
 export default defineConfig(({mode}) => {
   const env = loadEnv(mode, '.', '');
   return {
-    plugins: [react(), tailwindcss()],
+    plugins: [react(), tailwindcss(), asyncCssPlugin()],
     define: {
       'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),
     },

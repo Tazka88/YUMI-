@@ -374,6 +374,14 @@ export default function Home() {
     };
   }, []);
 
+  const getResizedImageUrl = (url: string | null, width: number) => {
+    if (!url) return '';
+    if (url.startsWith('/api/images/')) {
+      return `${url}${url.includes('?') ? '&' : '?'}w=${width}`;
+    }
+    return url;
+  };
+
   return (
     <>
       <SEO 
@@ -442,10 +450,12 @@ export default function Home() {
               <Link key={cat.id} to={`/category/${cat.slug}`} className="flex flex-col items-center group">
                 <div className="w-full aspect-square max-w-[160px] rounded-2xl overflow-hidden mb-3 shadow-sm group-hover:shadow-md group-hover:scale-105 transition-all duration-300 border border-gray-100 bg-gray-50 flex items-center justify-center">
                   <img 
-                    src={cat.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(cat.name)}&background=random&color=fff&size=200`} 
+                    src={getResizedImageUrl(cat.image, 200) || `https://ui-avatars.com/api/?name=${encodeURIComponent(cat.name)}&background=random&color=fff&size=200`} 
+                    srcSet={cat.image && cat.image.startsWith('/api/images/') ? `${getResizedImageUrl(cat.image, 167)} 167w, ${getResizedImageUrl(cat.image, 334)} 334w` : undefined}
+                    sizes="(max-width: 768px) 167px, 160px"
                     alt={cat.name}
-                    width="200"
-                    height="200"
+                    width="167"
+                    height="167"
                     loading={index < 6 ? "eager" : "lazy"}
                     fetchPriority={index < 6 ? "high" : "auto"}
                     decoding="async"

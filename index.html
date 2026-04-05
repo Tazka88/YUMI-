@@ -26,14 +26,22 @@
     <meta name="twitter:description" content="Découvrez Yumi (YUMIDZ), votre boutique en ligne de confiance en Algérie. Achetez des produits de qualité : électroménager, mode, beauté, maison, informatique et plus au meilleur prix." />
     <meta name="twitter:image" content="https://files.catbox.moe/skhho6.jpg" />
 
-    <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-7JLYM1QX3C"></script>
+    <!-- Google tag (gtag.js) - Lazy loaded -->
     <script>
       window.dataLayer = window.dataLayer || [];
       function gtag(){dataLayer.push(arguments);}
       gtag('js', new Date());
-
       gtag('config', 'G-7JLYM1QX3C');
+
+      // Equivalent to Next.js strategy="lazyOnload"
+      window.addEventListener('load', function() {
+        setTimeout(function() {
+          var script = document.createElement('script');
+          script.src = 'https://www.googletagmanager.com/gtag/js?id=G-7JLYM1QX3C';
+          script.async = true;
+          document.head.appendChild(script);
+        }, 100);
+      });
     </script>
   </head>
   <body>

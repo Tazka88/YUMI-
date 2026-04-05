@@ -59,7 +59,7 @@ export default function SliderImagesAdmin() {
 
   const fetchImages = async () => {
     try {
-      const res = await fetch('/api/slider-images');
+      const res = await fetch('/api/hero-banners');
       const data = await res.json();
       setImages(data);
     } catch (err) {
@@ -203,7 +203,7 @@ export default function SliderImagesAdmin() {
         category_id: currentImage.category_id === 0 ? null : currentImage.category_id
       };
 
-      const url = currentImage.id ? `/api/slider-images/${currentImage.id}` : '/api/slider-images';
+      const url = currentImage.id ? `/api/hero-banners/${currentImage.id}` : '/api/hero-banners';
       const method = currentImage.id ? 'PUT' : 'POST';
 
       const response = await fetch(url, {
@@ -238,7 +238,7 @@ export default function SliderImagesAdmin() {
     if (!window.confirm('Êtes-vous sûr de vouloir supprimer cette image ?')) return;
     try {
       const token = localStorage.getItem('adminToken');
-      await fetch(`/api/slider-images/${id}`, {
+      await fetch(`/api/hero-banners/${id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -251,7 +251,7 @@ export default function SliderImagesAdmin() {
   const toggleActive = async (image: SliderImage) => {
     try {
       const token = localStorage.getItem('adminToken');
-      await fetch(`/api/slider-images/${image.id}`, {
+      await fetch(`/api/hero-banners/${image.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -296,7 +296,7 @@ export default function SliderImagesAdmin() {
     // Save to backend
     try {
       const token = localStorage.getItem('adminToken');
-      await fetch('/api/slider-images/reorder', {
+      await fetch('/api/hero-banners/reorder', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

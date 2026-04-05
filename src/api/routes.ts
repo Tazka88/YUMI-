@@ -311,7 +311,7 @@ router.get('/footer-links', async (req, res) => {
   }
 });
 
-router.get('/slider-images', async (req, res) => {
+router.get('/hero-banners', async (req, res) => {
   try {
     const sliderImages = await sql`SELECT * FROM slider_images ORDER BY position ASC`;
     
@@ -328,7 +328,7 @@ router.get('/slider-images', async (req, res) => {
   }
 });
 
-router.post('/slider-images', authenticate, async (req, res) => {
+router.post('/hero-banners', authenticate, async (req, res) => {
   const { image_url, mobile_image_url, category_id, position, is_active, title, description, button_text, button_link } = req.body;
   try {
     const [newSliderImage] = await sql`
@@ -342,7 +342,7 @@ router.post('/slider-images', authenticate, async (req, res) => {
   }
 });
 
-router.put('/slider-images/:id', authenticate, async (req, res) => {
+router.put('/hero-banners/:id', authenticate, async (req, res) => {
   const { id } = req.params;
   const { image_url, mobile_image_url, category_id, position, is_active, title, description, button_text, button_link } = req.body;
   
@@ -386,7 +386,7 @@ router.put('/slider-images/:id', authenticate, async (req, res) => {
   }
 });
 
-router.delete('/slider-images/:id', authenticate, async (req, res) => {
+router.delete('/hero-banners/:id', authenticate, async (req, res) => {
   const { id } = req.params;
   try {
     await sql`DELETE FROM slider_images WHERE id = ${id}`;
@@ -396,7 +396,7 @@ router.delete('/slider-images/:id', authenticate, async (req, res) => {
   }
 });
 
-router.put('/slider-images/reorder', authenticate, async (req, res) => {
+router.put('/hero-banners/reorder', authenticate, async (req, res) => {
   const { items } = req.body; // Array of { id, position }
   try {
     for (const item of items) {
@@ -498,7 +498,7 @@ router.get('/products', async (req, res) => {
   const best_seller = req.query.best_seller as string | undefined;
   const isNew = req.query.new as string | undefined;
   const recommended = req.query.recommended as string | undefined;
-  const promotions = req.query.promotions as string | undefined;
+  const special_offers = req.query.special_offers as string | undefined;
   const ids = req.query.ids as string | undefined;
   
   try {
@@ -520,7 +520,7 @@ router.get('/products', async (req, res) => {
         AND (${best_seller === 'true' ? true : null}::boolean IS NULL OR p.is_best_seller = true)
         AND (${isNew === 'true' ? true : null}::boolean IS NULL OR p.is_new = true)
         AND (${recommended === 'true' ? true : null}::boolean IS NULL OR p.is_recommended = true)
-        AND (${promotions === 'true' ? true : null}::boolean IS NULL OR p.promo_price IS NOT NULL)
+        AND (${special_offers === 'true' ? true : null}::boolean IS NULL OR p.promo_price IS NOT NULL)
         AND (${idArray.length > 0 ? sql`p.id = ANY(${idArray})` : sql`true`})
       LIMIT 100
     `;

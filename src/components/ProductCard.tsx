@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { ShoppingCart, Star } from 'lucide-react';
 import { useCartStore } from '../store/cartStore';
 import { formatPrice } from '../utils/formatPrice';
+import { getResizedImageUrl } from '../lib/utils';
 
 interface Product {
   id: number;
@@ -44,7 +45,9 @@ export const ProductCard: React.FC<{ product: Product; priority?: boolean }> = (
         </div>
         
         <img 
-          src={product.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(product.name)}&background=random&size=400`} 
+          src={getResizedImageUrl(product.image, 400) || `https://ui-avatars.com/api/?name=${encodeURIComponent(product.name)}&background=random&size=400`} 
+          srcSet={product.image && product.image.startsWith('/api/images/') ? `${getResizedImageUrl(product.image, 200)} 200w, ${getResizedImageUrl(product.image, 400)} 400w` : undefined}
+          sizes="(max-width: 640px) 200px, 400px"
           alt={product.name}
           loading={priority ? "eager" : "lazy"}
           fetchPriority={priority ? "high" : "auto"}

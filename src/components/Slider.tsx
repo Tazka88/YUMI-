@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { getResizedImageUrl } from '../lib/utils';
 
 interface SliderImage {
   id: number;
@@ -39,7 +40,7 @@ export default function Slider({ categoryId = null }: SliderProps) {
     const fetchSlides = async () => {
       setIsLoading(true);
       try {
-        const res = await fetch('/api/slider-images', { priority: 'high' } as any);
+        const res = await fetch('/api/hero-banners');
         const data: SliderImage[] = await res.json();
         
         const activeSlides = data.filter(s => s.is_active);
@@ -106,10 +107,10 @@ export default function Slider({ categoryId = null }: SliderProps) {
         >
           <picture>
             {slide.mobile_image_url && (
-              <source media="(max-width: 767px)" srcSet={slide.mobile_image_url} />
+              <source media="(max-width: 767px)" srcSet={getResizedImageUrl(slide.mobile_image_url, 800)} />
             )}
             <img 
-              src={slide.image_url} 
+              src={getResizedImageUrl(slide.image_url, 1600)} 
               alt={slide.title || "Slide"} 
               className="w-full h-full object-cover object-center"
               referrerPolicy="no-referrer"

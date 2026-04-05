@@ -341,7 +341,7 @@ export default function Home() {
     fetch('/api/products?popular=true', { signal }).then(res => res.json()).then(data => { if (Array.isArray(data)) setPopularProducts(data); }).catch(handleFetchError);
     fetch('/api/products?best_seller=true', { signal }).then(res => res.json()).then(data => { if (Array.isArray(data)) setBestSellers(data); }).catch(handleFetchError);
     fetch('/api/products?new=true', { signal }).then(res => res.json()).then(data => { if (Array.isArray(data)) setNewProducts(data); }).catch(handleFetchError);
-    fetch('/api/products?promotions=true', { signal }).then(res => res.json()).then(data => { if (Array.isArray(data)) setPromotions(data); }).catch(handleFetchError);
+    fetch('/api/products?special_offers=true', { signal }).then(res => res.json()).then(data => { if (Array.isArray(data)) setPromotions(data); }).catch(handleFetchError);
 
     const loadSections = () => {
       fetch('/api/settings')

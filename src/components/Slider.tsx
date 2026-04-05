@@ -118,7 +118,7 @@ export default function Slider({ categoryId = null }: SliderProps) {
             />
           </picture>
           {(slide.title || slide.description || slide.button_text) && (
-            <div className="absolute inset-0 bg-black/30 flex items-center justify-center text-center p-2 md:p-8">
+            <div className="absolute inset-0 flex items-center justify-center text-center p-2 md:p-8">
               <div className="w-full max-w-2xl text-white mx-auto">
                 {slide.title && (
                   <h2 className="text-lg sm:text-2xl md:text-4xl font-bold mb-1 md:mb-3 drop-shadow-md leading-tight">

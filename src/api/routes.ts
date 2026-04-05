@@ -53,9 +53,24 @@ router.get('/images/:table/:id/:field', async (req, res) => {
       if (matches && matches.length === 3) {
         const ext = matches[1];
         const base64Data = matches[2];
-        const buffer = Buffer.from(base64Data, 'base64');
+        let buffer = Buffer.from(base64Data, 'base64');
         
-        res.setHeader('Content-Type', `image/${ext}`);
+        try {
+          // Auto compress and convert to WebP on the fly for non-SVG images
+          if (ext !== 'svg+xml' && ext !== 'svg') {
+            const sharp = (await import('sharp')).default;
+            buffer = await sharp(buffer)
+              .webp({ quality: 80, effort: 4 })
+              .toBuffer();
+            res.setHeader('Content-Type', 'image/webp');
+          } else {
+            res.setHeader('Content-Type', `image/${ext}`);
+          }
+        } catch (e) {
+          console.error('Sharp compression error on display:', e);
+          res.setHeader('Content-Type', `image/${ext}`);
+        }
+        
         res.setHeader('Cache-Control', 'public, max-age=31536000'); // Cache for 1 year
         return res.send(buffer);
       }

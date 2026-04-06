@@ -21,6 +21,50 @@ const processImage = (table: string, id: number | string, field: string, image: 
   return image;
 };
 
+// Helper to serve image data directly
+const serveImageData = async (res: any, imageData: string, targetWidth?: number, cacheControl = 'public, max-age=31536000') => {
+  if (imageData.startsWith('data:image/')) {
+    const matches = imageData.match(/^data:image\/([a-zA-Z0-9+]+);base64,(.+)$/);
+    if (matches && matches.length === 3) {
+      const ext = matches[1];
+      const base64Data = matches[2];
+      let buffer = Buffer.from(base64Data, 'base64');
+      
+      try {
+        // Auto compress and convert to WebP on the fly for non-SVG images
+        if (ext !== 'svg+xml' && ext !== 'svg') {
+          const sharp = (await import('sharp')).default;
+          let sharpInstance = sharp(buffer);
+          
+          if (targetWidth && targetWidth > 0 && targetWidth <= 2000) {
+            sharpInstance = sharpInstance.resize({ width: targetWidth, withoutEnlargement: true });
+          }
+          
+          buffer = await sharpInstance
+            .webp({ quality: 80, effort: 4 })
+            .toBuffer();
+          res.setHeader('Content-Type', 'image/webp');
+        } else {
+          res.setHeader('Content-Type', `image/${ext}`);
+        }
+      } catch (e) {
+        console.error('Sharp compression error on display:', e);
+        res.setHeader('Content-Type', `image/${ext}`);
+      }
+      
+      res.setHeader('Cache-Control', cacheControl);
+      return res.send(buffer);
+    }
+  }
+  
+  // If it's a regular URL, redirect
+  if (imageData.startsWith('http')) {
+    return res.redirect(imageData);
+  }
+  
+  res.status(404).json({ error: 'Invalid image format' });
+};
+
 // Route to serve images from the database
 router.get('/images/:table/:id/:field', async (req, res) => {
   const { table, id, field } = req.params;
@@ -47,52 +91,40 @@ router.get('/images/:table/:id/:field', async (req, res) => {
     }
     
     const imageData = result[0][field];
+    const width = parseInt(req.query.w as string);
     
-    if (imageData.startsWith('data:image/')) {
-      const matches = imageData.match(/^data:image\/([a-zA-Z0-9+]+);base64,(.+)$/);
-      if (matches && matches.length === 3) {
-        const ext = matches[1];
-        const base64Data = matches[2];
-        let buffer = Buffer.from(base64Data, 'base64');
-        
-        try {
-          // Auto compress and convert to WebP on the fly for non-SVG images
-          if (ext !== 'svg+xml' && ext !== 'svg') {
-            const sharp = (await import('sharp')).default;
-            let sharpInstance = sharp(buffer);
-            
-            // Support resizing via 'w' query parameter
-            const width = parseInt(req.query.w as string);
-            if (!isNaN(width) && width > 0 && width <= 2000) {
-              sharpInstance = sharpInstance.resize({ width, withoutEnlargement: true });
-            }
-            
-            buffer = await sharpInstance
-              .webp({ quality: 80, effort: 4 })
-              .toBuffer();
-            res.setHeader('Content-Type', 'image/webp');
-          } else {
-            res.setHeader('Content-Type', `image/${ext}`);
-          }
-        } catch (e) {
-          console.error('Sharp compression error on display:', e);
-          res.setHeader('Content-Type', `image/${ext}`);
-        }
-        
-        res.setHeader('Cache-Control', 'public, max-age=31536000'); // Cache for 1 year
-        return res.send(buffer);
-      }
-    }
-    
-    // If it's a regular URL, redirect
-    if (imageData.startsWith('http')) {
-      return res.redirect(imageData);
-    }
-    
-    res.status(404).json({ error: 'Invalid image format' });
+    await serveImageData(res, imageData, width);
+
   } catch (err) {
     console.error('Error serving image:', err);
     res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Route to get the first hero banner image directly (for LCP optimization)
+router.get('/hero-banners/first-image/:type', async (req, res) => {
+  const { type } = req.params;
+  try {
+    const sliderImages = await sql`SELECT * FROM slider_images WHERE is_active = true AND category_id IS NULL ORDER BY position ASC LIMIT 1`;
+    if (!sliderImages || sliderImages.length === 0) {
+      return res.status(404).send('Not found');
+    }
+    
+    const firstSlide = sliderImages[0];
+    const field = type === 'mobile' && firstSlide.mobile_image_url ? 'mobile_image_url' : 'image_url';
+    const imageData = firstSlide[field];
+    
+    if (!imageData) {
+      return res.status(404).send('Not found');
+    }
+    
+    const width = type === 'mobile' ? 800 : 1600;
+    // Use a shorter cache time so updates to the slider reflect quickly
+    await serveImageData(res, imageData, width, 'public, max-age=60, stale-while-revalidate=600');
+    
+  } catch (err) {
+    console.error('Error serving first hero banner:', err);
+    res.status(500).send('Error');
   }
 });
 

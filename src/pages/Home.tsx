@@ -390,6 +390,7 @@ export default function Home() {
       />
       <ThemeBackground activeTheme={activeTheme} themeImages={themeImages} />
       <div className="container mx-auto px-4 py-6">
+        <h1 className="sr-only">Yumi - Boutique en ligne en Algérie</h1>
         {/* Hero Banner Carousel */}
         <Slider />
 

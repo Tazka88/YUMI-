@@ -216,6 +216,7 @@ export default function Product() {
 
   return (
     <div className="container mx-auto px-4 py-8 pb-24 md:pb-8">
+      <h1 className="sr-only">{product.name}</h1>
       <SEO 
         title={product.name} 
         description={product.description.substring(0, 150) + '...'} 

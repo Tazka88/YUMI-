@@ -158,6 +158,7 @@ export default function Category() {
 
   return (
     <div className="container mx-auto px-4 py-8">
+      <h1 className="sr-only">{categoryName}</h1>
       <SEO 
         title={categoryName} 
         description={`Découvrez notre sélection de produits dans la catégorie ${categoryName}. Achetez au meilleur prix sur Yumi.`} 

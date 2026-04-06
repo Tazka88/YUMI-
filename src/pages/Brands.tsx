@@ -36,6 +36,7 @@ export default function Brands() {
 
   return (
     <div className="container mx-auto px-4 py-8">
+      <h1 className="sr-only">Nos Marques</h1>
       <SEO 
         title="Toutes les marques" 
         description="Découvrez toutes les marques de produits disponibles sur Yumi."

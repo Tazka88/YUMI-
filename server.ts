@@ -43,6 +43,7 @@ async function startServer() {
     try {
       const products = await sql`SELECT slug FROM products`;
       const categories = await sql`SELECT slug FROM categories`;
+      const brands = await sql`SELECT slug FROM brands`;
       
       const baseUrl = `https://${req.get('host')}`;
       
@@ -54,6 +55,12 @@ async function startServer() {
       // Categories
       categories.forEach(cat => {
         xml += `  <url>\n    <loc>${baseUrl}/category/${cat.slug}</loc>\n    <changefreq>weekly</changefreq>\n    <priority>0.8</priority>\n  </url>\n`;
+      });
+
+      // Brands
+      xml += `  <url>\n    <loc>${baseUrl}/brands</loc>\n    <changefreq>weekly</changefreq>\n    <priority>0.8</priority>\n  </url>\n`;
+      brands.forEach(brand => {
+        xml += `  <url>\n    <loc>${baseUrl}/brands/${brand.slug}</loc>\n    <changefreq>weekly</changefreq>\n    <priority>0.8</priority>\n  </url>\n`;
       });
       
       // Products

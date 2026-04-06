@@ -42,6 +42,16 @@ app.use(express.urlencoded({ limit: '5mb', extended: true }));
 app.use('/uploads', express.static(uploadsDir, { maxAge: '1y' }));
 
 // API Routes
+app.get('/api/sitemap.xml', (req, res, next) => {
+  req.url = '/sitemap.xml';
+  apiRoutes(req, res, next);
+});
+
+app.get('/api/robots.txt', (req, res, next) => {
+  req.url = '/robots.txt';
+  apiRoutes(req, res, next);
+});
+
 app.use('/api', apiRoutes);
 
 // SEO Routes (passed to apiRoutes)

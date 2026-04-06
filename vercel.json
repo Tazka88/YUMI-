@@ -31,11 +31,11 @@
   "rewrites": [
     {
       "source": "/sitemap.xml",
-      "destination": "/api"
+      "destination": "/api?seo=sitemap"
     },
     {
       "source": "/robots.txt",
-      "destination": "/api"
+      "destination": "/api?seo=robots"
     },
     {
       "source": "/api/(.*)",

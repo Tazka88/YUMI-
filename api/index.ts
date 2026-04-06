@@ -45,11 +45,23 @@ app.use('/uploads', express.static(uploadsDir, { maxAge: '1y' }));
 app.use('/api', apiRoutes);
 
 // SEO Routes (passed to apiRoutes)
-app.get('/sitemap.xml', (req, res, next) => {
-  apiRoutes(req, res, next);
-});
-app.get('/robots.txt', (req, res, next) => {
-  apiRoutes(req, res, next);
+app.use((req, res, next) => {
+  if (req.query.seo === 'sitemap') {
+    req.url = '/sitemap.xml';
+    return apiRoutes(req, res, next);
+  }
+  
+  if (req.query.seo === 'robots') {
+    req.url = '/robots.txt';
+    return apiRoutes(req, res, next);
+  }
+  
+  // If it's just /api and no other route matched, return 404 JSON instead of HTML
+  if (req.url === '/' || req.url === '/api') {
+    return res.status(404).json({ error: 'Not found' });
+  }
+  
+  next();
 });
 
 // Global error handler for debugging

@@ -8,6 +8,7 @@ import { ProductCard } from '../components/ProductCard';
 import SEO from '../components/SEO';
 import { getCategoryWithEmoji, CategoryNameDisplay } from '../components/Layout';
 import Slider from '../components/Slider';
+import { fetchWithCache } from '../lib/utils';
 
 const THEME_IMAGES: Record<string, string> = {
   ramadan:      "/images/themes/ramadan.jpg",
@@ -314,7 +315,7 @@ export default function Home() {
       if (err.name !== 'AbortError') console.error(err);
     };
 
-    fetch('/api/settings', { signal, priority: 'high' } as any).then(res => res.json()).then(data => {
+    fetchWithCache('/api/settings', { signal, priority: 'high' } as any).then(data => {
       if (data.active_theme) setActiveTheme(data.active_theme);
       setThemeImages(data);
       if (data.home_sections) {
@@ -324,8 +325,7 @@ export default function Home() {
           
           // Fetch products for custom sections
           sections.filter((s: any) => s.type === 'custom' && s.isVisible && s.productIds?.length > 0).forEach((section: any) => {
-            fetch(`/api/products?ids=${section.productIds.join(',')}`, { signal })
-              .then(res => res.json())
+            fetchWithCache(`/api/products?ids=${section.productIds.join(',')}`, { signal })
               .then(products => {
                 if (Array.isArray(products)) {
                   setCustomProducts(prev => ({ ...prev, [section.id]: products }));
@@ -336,16 +336,15 @@ export default function Home() {
         } catch (e) {}
       }
     }).catch(handleFetchError);
-    fetch('/api/categories', { signal, priority: 'high' } as any).then(res => res.json()).then(data => { if (Array.isArray(data)) setCategories(data); }).catch(handleFetchError);
-    fetch('/api/brands', { signal }).then(res => res.json()).then(data => { if (Array.isArray(data)) setBrands(data); setLoadingBrands(false); }).catch(err => { handleFetchError(err); setLoadingBrands(false); });
-    fetch('/api/products?popular=true', { signal }).then(res => res.json()).then(data => { if (Array.isArray(data)) setPopularProducts(data); }).catch(handleFetchError);
-    fetch('/api/products?best_seller=true', { signal }).then(res => res.json()).then(data => { if (Array.isArray(data)) setBestSellers(data); }).catch(handleFetchError);
-    fetch('/api/products?new=true', { signal }).then(res => res.json()).then(data => { if (Array.isArray(data)) setNewProducts(data); }).catch(handleFetchError);
-    fetch('/api/products?special_offers=true', { signal }).then(res => res.json()).then(data => { if (Array.isArray(data)) setPromotions(data); }).catch(handleFetchError);
+    fetchWithCache('/api/categories', { signal, priority: 'high' } as any).then(data => { if (Array.isArray(data)) setCategories(data); }).catch(handleFetchError);
+    fetchWithCache('/api/brands', { signal }).then(data => { if (Array.isArray(data)) setBrands(data); setLoadingBrands(false); }).catch(err => { handleFetchError(err); setLoadingBrands(false); });
+    fetchWithCache('/api/products?popular=true', { signal }).then(data => { if (Array.isArray(data)) setPopularProducts(data); }).catch(handleFetchError);
+    fetchWithCache('/api/products?best_seller=true', { signal }).then(data => { if (Array.isArray(data)) setBestSellers(data); }).catch(handleFetchError);
+    fetchWithCache('/api/products?new=true', { signal }).then(data => { if (Array.isArray(data)) setNewProducts(data); }).catch(handleFetchError);
+    fetchWithCache('/api/products?special_offers=true', { signal }).then(data => { if (Array.isArray(data)) setPromotions(data); }).catch(handleFetchError);
 
     const loadSections = () => {
-      fetch('/api/settings')
-        .then(res => res.json())
+      fetchWithCache('/api/settings')
         .then(data => {
           if (data.home_sections) {
             try {

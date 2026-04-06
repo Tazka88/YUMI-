@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import ReactPixel from 'react-facebook-pixel';
+import { fetchWithCache } from '../lib/utils';
 
 declare global {
   interface Window {
@@ -16,8 +17,7 @@ export default function Analytics() {
 
   useEffect(() => {
     const controller = new AbortController();
-    fetch('/api/settings', { signal: controller.signal })
-      .then(res => res.json())
+    fetchWithCache('/api/settings', { signal: controller.signal })
       .then(data => {
         const gaMeasurementId = data.ga_measurement_id || import.meta.env.VITE_GA_MEASUREMENT_ID;
         const fbPixelId = data.fb_pixel_id || import.meta.env.VITE_FB_PIXEL_ID;

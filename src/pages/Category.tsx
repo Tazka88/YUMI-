@@ -7,6 +7,7 @@ import { ProductCard } from '../components/ProductCard';
 import SEO from '../components/SEO';
 import { getCategoryWithEmoji, CategoryNameDisplay } from '../components/Layout';
 import Slider from '../components/Slider';
+import { fetchWithCache } from '../lib/utils';
 
 export default function Category() {
   const { slug } = useParams();
@@ -48,8 +49,7 @@ export default function Category() {
 
   useEffect(() => {
     const controller = new AbortController();
-    fetch('/api/categories', { signal: controller.signal, priority: 'high' } as any)
-      .then(res => res.json())
+    fetchWithCache('/api/categories', { signal: controller.signal, priority: 'high' } as any)
       .then(data => { if (Array.isArray(data)) setCategories(data); })
       .catch(err => {
         if (err.name !== 'AbortError') console.error(err);
@@ -90,9 +90,8 @@ export default function Category() {
             newCategoryName = getCategoryWithEmoji(foundName);
           } else if (isSubcategory) {
             url += `?subcategory=${slug}`;
-            const res = await fetch('/api/subcategories', { signal });
-            if (res.ok) {
-              const subcats = await res.json();
+            try {
+              const subcats = await fetchWithCache('/api/subcategories', { signal });
               if (Array.isArray(subcats)) {
                 const subcat = subcats.find((s: any) => s.slug === slug || s.id.toString() === slug);
                 if (subcat) {
@@ -100,12 +99,11 @@ export default function Category() {
                   newCategoryId = subcat.category_id;
                 }
               }
-            }
+            } catch (e) {}
           } else {
             url += `?category=${slug}`;
-            const res = await fetch('/api/categories', { signal, priority: 'high' } as any);
-            if (res.ok) {
-              const cats = await res.json();
+            try {
+              const cats = await fetchWithCache('/api/categories', { signal, priority: 'high' } as any);
               if (Array.isArray(cats)) {
                 const cat = cats.find((c: any) => c.slug === slug);
                 if (cat) {
@@ -115,7 +113,7 @@ export default function Category() {
                   newCategoryId = cat.id;
                 }
               }
-            }
+            } catch (e) {}
           }
         } else if (searchQuery) {
           url += `?search=${encodeURIComponent(searchQuery)}`;

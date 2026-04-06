@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { getResizedImageUrl } from '../lib/utils';
+import { getResizedImageUrl, fetchWithCache } from '../lib/utils';
 
 interface SliderImage {
   id: number;
@@ -40,8 +40,7 @@ export default function Slider({ categoryId = null }: SliderProps) {
     const fetchSlides = async () => {
       setIsLoading(true);
       try {
-        const res = await fetch('/api/hero-banners');
-        const data: SliderImage[] = await res.json();
+        const data: SliderImage[] = await fetchWithCache('/api/hero-banners');
         
         const activeSlides = data.filter(s => s.is_active);
         

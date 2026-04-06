@@ -5,6 +5,7 @@ import { useCartStore } from '../store/cartStore';
 import { CheckCircle, Truck, MapPin, Phone, User as UserIcon } from 'lucide-react';
 import { formatPrice } from '../utils/formatPrice';
 import ReactPixel from 'react-facebook-pixel';
+import { fetchWithCache } from '../lib/utils';
 
 interface Wilaya {
   id: number;
@@ -42,12 +43,9 @@ export default function Checkout() {
   useEffect(() => {
     const fetchWilayas = async () => {
       try {
-        const res = await fetch('/api/wilayas');
-        if (res.ok) {
-          const data = await res.json();
-          if (Array.isArray(data)) {
-            setWilayas(data.filter((w: any) => w.is_active === true || w.is_active === 1));
-          }
+        const data = await fetchWithCache('/api/wilayas');
+        if (Array.isArray(data)) {
+          setWilayas(data.filter((w: any) => w.is_active === true || w.is_active === 1));
         }
       } catch (error) {
         console.error('Failed to fetch wilayas:', error);
@@ -58,8 +56,7 @@ export default function Checkout() {
 
   useEffect(() => {
     const controller = new AbortController();
-    fetch('/api/settings', { signal: controller.signal })
-      .then(res => res.json())
+    fetchWithCache('/api/settings', { signal: controller.signal })
       .then(data => {
         setTrackingIds({
           ga: data.ga_measurement_id || import.meta.env.VITE_GA_MEASUREMENT_ID || '',

@@ -3,6 +3,7 @@ import { ShoppingCart, Search, Menu, User, MessageCircle, X, Phone, LayoutDashbo
 import { useCartStore } from '../store/cartStore';
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { fetchWithCache } from '../lib/utils';
 
 const categoryEmojis: Record<string, string> = {
   "Mode & Vêtements": "👗",
@@ -96,15 +97,13 @@ export default function Layout() {
       if (err.name !== 'AbortError') console.error(err);
     };
 
-    fetch('/api/categories', { signal, priority: 'high' } as any)
-      .then(res => res.json())
+    fetchWithCache('/api/categories', { signal, priority: 'high' } as any)
       .then(data => {
         if (Array.isArray(data)) setCategories(data);
       })
       .catch(handleFetchError);
       
-    fetch('/api/settings', { signal, priority: 'high' } as any)
-      .then(res => res.json())
+    fetchWithCache('/api/settings', { signal, priority: 'high' } as any)
       .then(data => {
         if (data && typeof data === 'object' && !data.error) setSettings(data);
         setIsSettingsLoaded(true);
@@ -114,8 +113,7 @@ export default function Layout() {
         setIsSettingsLoaded(true);
       });
 
-    fetch('/api/footer-links', { signal })
-      .then(res => res.json())
+    fetchWithCache('/api/footer-links', { signal })
       .then(data => {
         if (Array.isArray(data)) setFooterLinks(data);
       })

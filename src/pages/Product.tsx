@@ -6,6 +6,7 @@ import { formatPrice } from '../utils/formatPrice';
 import { ProductCard } from '../components/ProductCard';
 import SEO from '../components/SEO';
 import ReactPixel from 'react-facebook-pixel';
+import { fetchWithCache } from '../lib/utils';
 
 export default function Product() {
   const { slug } = useParams();
@@ -24,8 +25,7 @@ export default function Product() {
 
   useEffect(() => {
     const controller = new AbortController();
-    fetch('/api/settings', { signal: controller.signal })
-      .then(res => res.json())
+    fetchWithCache('/api/settings', { signal: controller.signal })
       .then(data => {
         setSettings(data);
         setTrackingIds({

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ImageIcon } from 'lucide-react';
 import SEO from '../components/SEO';
+import { fetchWithCache } from '../lib/utils';
 
 export default function Brands() {
   const [brands, setBrands] = useState<any[]>([]);
@@ -9,8 +10,7 @@ export default function Brands() {
 
   useEffect(() => {
     const controller = new AbortController();
-    fetch('/api/brands', { signal: controller.signal })
-      .then(res => res.json())
+    fetchWithCache('/api/brands', { signal: controller.signal })
       .then(data => {
         if (Array.isArray(data)) {
           setBrands(data);

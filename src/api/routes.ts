@@ -119,8 +119,8 @@ router.get('/hero-banners/first-image/:type', async (req, res) => {
     }
     
     const width = type === 'mobile' ? 800 : 1600;
-    // Use a shorter cache time so updates to the slider reflect quickly
-    await serveImageData(res, imageData, width, 'public, max-age=60, stale-while-revalidate=600');
+    // Use a long cache time (1 year) for better performance and to fix PageSpeed Insights warning
+    await serveImageData(res, imageData, width, 'public, max-age=31536000, immutable');
     
   } catch (err) {
     console.error('Error serving first hero banner:', err);

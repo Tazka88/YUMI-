@@ -368,7 +368,7 @@ export default function Layout() {
             <ul className="flex items-center gap-x-6 gap-y-2 py-2 text-sm font-medium flex-wrap">
               {categories.map(cat => (
                 <li key={cat.id} className="group relative">
-                  <Link to={`/category/${cat.slug}`} className="hover:text-black transition-colors py-2 block whitespace-nowrap">
+                  <Link to={`/category/${cat.slug}`} className="hover:text-black transition-colors py-2 block whitespace-nowrap font-bold text-[15px]">
                     <CategoryNameDisplay name={cat.name} />
                   </Link>
                   {cat.subcategories && cat.subcategories.length > 0 && (
@@ -378,7 +378,7 @@ export default function Layout() {
                           <li key={sub.id} className="relative group/sub">
                             <Link 
                               to={`/category/${sub.slug}?sub=true`} 
-                              className="block px-4 py-2 hover:bg-orange-50 hover:text-orange-500 transition-colors whitespace-normal flex justify-between items-center"
+                              className="block px-4 py-2 hover:bg-orange-50 hover:text-orange-500 transition-colors whitespace-normal flex justify-between items-center font-semibold text-[14px] text-gray-700"
                             >
                               <CategoryNameDisplay name={sub.name} />
                               {sub.sub_subcategories && sub.sub_subcategories.length > 0 && (
@@ -392,7 +392,7 @@ export default function Layout() {
                                     <li key={subsub.id}>
                                       <Link 
                                         to={`/category/${subsub.slug}?subsub=true`} 
-                                        className="block px-4 py-2 hover:bg-orange-50 hover:text-orange-500 transition-colors whitespace-normal"
+                                        className="block px-4 py-2 hover:bg-orange-50 hover:text-orange-500 transition-colors whitespace-normal font-normal text-[13px] font-sans text-gray-500"
                                       >
                                         <CategoryNameDisplay name={subsub.name} />
                                       </Link>
@@ -428,7 +428,7 @@ export default function Layout() {
                 <li key={cat.id}>
                   <Link 
                     to={`/category/${cat.slug}`} 
-                    className="block font-bold text-gray-800 hover:text-orange-500 mb-2"
+                    className="block font-bold text-[15px] text-gray-800 hover:text-orange-500 mb-2"
                     onClick={() => setIsMenuOpen(false)}
                   >
                     <CategoryNameDisplay name={cat.name} />
@@ -440,7 +440,7 @@ export default function Layout() {
                           <div className="flex items-center justify-between">
                             <Link 
                               to={`/category/${sub.slug}?sub=true`} 
-                              className="block text-sm text-gray-600 hover:text-orange-500 py-1 flex-1"
+                              className="block font-semibold text-[14px] text-gray-700 hover:text-orange-500 py-1 flex-1"
                               onClick={() => setIsMenuOpen(false)}
                             >
                               <CategoryNameDisplay name={sub.name} />
@@ -460,7 +460,7 @@ export default function Layout() {
                                 <li key={subsub.id}>
                                   <Link 
                                     to={`/category/${subsub.slug}?subsub=true`} 
-                                    className="block text-xs text-gray-500 hover:text-orange-500 py-1"
+                                    className="block font-normal text-[13px] font-sans text-gray-500 hover:text-orange-500 py-1"
                                     onClick={() => setIsMenuOpen(false)}
                                   >
                                     <CategoryNameDisplay name={subsub.name} />

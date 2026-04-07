@@ -182,7 +182,7 @@ export default function Category() {
                 <li key={cat.id}>
                   <Link 
                     to={`/category/${cat.slug}`} 
-                    className={`block font-medium ${slug === cat.slug && searchParams.get('sub') !== 'true' ? 'text-orange-500' : 'text-gray-700 hover:text-orange-500'}`}
+                    className={`block font-bold text-[15px] ${slug === cat.slug && searchParams.get('sub') !== 'true' ? 'text-orange-500' : 'text-gray-800 hover:text-orange-500'}`}
                   >
                     <CategoryNameDisplay name={cat.name} />
                   </Link>
@@ -192,7 +192,7 @@ export default function Category() {
                         <li key={sub.id}>
                           <Link 
                             to={`/category/${sub.slug}?sub=true`} 
-                            className={`block text-sm ${slug === sub.slug && searchParams.get('sub') === 'true' ? 'text-orange-500 font-bold' : 'text-gray-600 hover:text-orange-500'}`}
+                            className={`block font-semibold text-[14px] ${slug === sub.slug && searchParams.get('sub') === 'true' ? 'text-orange-500' : 'text-gray-700 hover:text-orange-500'}`}
                           >
                             <CategoryNameDisplay name={sub.name} />
                           </Link>

@@ -354,7 +354,7 @@ router.get('/hero-banners', async (req, res) => {
       }
     });
     
-    res.setHeader('Cache-Control', 'public, max-age=60, stale-while-revalidate=600');
+    res.setHeader('Cache-Control', 'public, max-age=10, stale-while-revalidate=60');
     res.json(sliderImages);
 
   } catch (err) {
@@ -502,7 +502,7 @@ router.get('/categories', async (req, res) => {
       }
     });
     
-    res.setHeader('Cache-Control', 'public, max-age=300, stale-while-revalidate=3600');
+    res.setHeader('Cache-Control', 'public, max-age=10, stale-while-revalidate=60');
     res.json(categoriesWithSubcats);
 
   } catch (err) {
@@ -585,7 +585,7 @@ router.get('/products', async (req, res) => {
       }
     });
     
-    res.setHeader('Cache-Control', 'public, max-age=60, stale-while-revalidate=300');
+    res.setHeader('Cache-Control', 'public, max-age=10, stale-while-revalidate=60');
     res.json(products);
 
   } catch (err) {

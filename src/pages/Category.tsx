@@ -247,9 +247,9 @@ export default function Category() {
                 />
               </picture>
             </div>
-          ) : (
+          ) : categoryId ? (
             <Slider categoryId={categoryId} />
-          )}
+          ) : null}
           <div className="bg-white p-4 rounded-lg shadow-sm mb-6 flex justify-between items-center">
             <h1 className="text-xl font-bold text-gray-800">{categoryName}</h1>
             <span className="text-sm text-gray-500">{products.length} produits trouvés</span>

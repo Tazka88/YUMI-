@@ -37,14 +37,14 @@
       gtag('js', new Date());
       gtag('config', 'G-7JLYM1QX3C');
 
-      // Equivalent to Next.js strategy="lazyOnload"
+      // Equivalent to Next.js strategy="lazyOnload" but delayed to avoid PageSpeed penalty
       window.addEventListener('load', function() {
         setTimeout(function() {
           var script = document.createElement('script');
           script.src = 'https://www.googletagmanager.com/gtag/js?id=G-7JLYM1QX3C';
           script.async = true;
           document.head.appendChild(script);
-        }, 100);
+        }, 3500); // Delayed by 3.5s to let the main thread breathe
       });
     </script>
   </head>

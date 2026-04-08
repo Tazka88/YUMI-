@@ -103,11 +103,11 @@ export default function Layout() {
       })
       .catch(handleFetchError);
       
-    fetchWithCache('/api/settings', { signal, priority: 'high' } as any)
-      .then(data => {
-        if (data && typeof data === 'object' && !data.error) setSettings(data);
-        setIsSettingsLoaded(true);
-      })
+      fetchWithCache('/api/settings', { signal, priority: 'high' } as any)
+        .then(data => {
+          if (data && typeof data === 'object' && !(data as any).error) setSettings(data);
+          setIsSettingsLoaded(true);
+        })
       .catch((err) => {
         handleFetchError(err);
         setIsSettingsLoaded(true);

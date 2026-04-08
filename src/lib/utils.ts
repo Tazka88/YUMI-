@@ -16,7 +16,7 @@ export const fetchWithCache = (url: string, options?: RequestInit) => {
   const cached = fetchCache.get(cacheKey);
   if (!cached || (now - cached.timestamp > CACHE_TTL)) {
     // Strip signal to prevent one component from aborting a shared request
-    const fetchOptions = { ...options };
+    const fetchOptions: any = { ...options };
     delete fetchOptions.skipCache; // Custom option we can use to force bypass
     delete fetchOptions.signal;
     

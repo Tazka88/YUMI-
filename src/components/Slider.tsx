@@ -40,7 +40,7 @@ export default function Slider({ categoryId = null }: SliderProps) {
     const fetchSlides = async () => {
       setIsLoading(true);
       try {
-        const data: SliderImage[] = await fetchWithCache('/api/hero-banners');
+        const data: any = await fetchWithCache('/api/hero-banners');
         
         const activeSlides = data.filter(s => s.is_active);
         

@@ -29,8 +29,8 @@ export default function Product() {
       .then(data => {
         setSettings(data);
         setTrackingIds({
-          ga: data.ga_measurement_id || import.meta.env.VITE_GA_MEASUREMENT_ID || '',
-          fb: data.fb_pixel_id || import.meta.env.VITE_FB_PIXEL_ID || ''
+          ga: (data as any).ga_measurement_id || import.meta.env.VITE_GA_MEASUREMENT_ID || '',
+          fb: (data as any).fb_pixel_id || import.meta.env.VITE_FB_PIXEL_ID || ''
         });
       })
       .catch(err => {

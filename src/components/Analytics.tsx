@@ -22,7 +22,7 @@ export default function Analytics() {
     const controller = new AbortController();
     fetchWithCache('/api/settings', { signal: controller.signal })
       .then(data => {
-        const gaMeasurementId = data.ga_measurement_id || import.meta.env.VITE_GA_MEASUREMENT_ID;
+        const gaMeasurementId = (data as any).ga_measurement_id || import.meta.env.VITE_GA_MEASUREMENT_ID;
         // Always use the provided Pixel ID
         const fbPixelId = '2110613746362191';
 

@@ -316,11 +316,11 @@ export default function Home() {
     };
 
     fetchWithCache('/api/settings', { signal, priority: 'high' } as any).then(data => {
-      if (data.active_theme) setActiveTheme(data.active_theme);
+      if ((data as any).active_theme) setActiveTheme((data as any).active_theme);
       setThemeImages(data);
-      if (data.home_sections) {
+      if ((data as any).home_sections) {
         try {
-          const sections = JSON.parse(data.home_sections);
+          const sections = JSON.parse((data as any).home_sections);
           setHomeSections(sections);
           
           // Fetch products for custom sections
@@ -346,9 +346,9 @@ export default function Home() {
     const loadSections = () => {
       fetchWithCache('/api/settings')
         .then(data => {
-          if (data.home_sections) {
+          if ((data as any).home_sections) {
             try {
-              const sections = JSON.parse(data.home_sections);
+              const sections = JSON.parse((data as any).home_sections);
               setHomeSections(sections);
               
               sections.filter((s: any) => s.type === 'custom' && s.isVisible && s.productIds?.length > 0).forEach((section: any) => {

@@ -59,8 +59,8 @@ export default function Checkout() {
     fetchWithCache('/api/settings', { signal: controller.signal })
       .then(data => {
         setTrackingIds({
-          ga: data.ga_measurement_id || import.meta.env.VITE_GA_MEASUREMENT_ID || '',
-          fb: data.fb_pixel_id || import.meta.env.VITE_FB_PIXEL_ID || ''
+          ga: (data as any).ga_measurement_id || import.meta.env.VITE_GA_MEASUREMENT_ID || '',
+          fb: (data as any).fb_pixel_id || import.meta.env.VITE_FB_PIXEL_ID || ''
         });
       })
       .catch(err => {
@@ -68,6 +68,36 @@ export default function Checkout() {
       });
     return () => controller.abort();
   }, []);
+
+  const initiateCheckoutTrackedRef = React.useRef(false);
+
+  useEffect(() => {
+    if (trackingIds.fb && checkoutItems.length > 0 && !initiateCheckoutTrackedRef.current) {
+      initiateCheckoutTrackedRef.current = true;
+      const eventId = generateEventId();
+      
+      if (typeof window !== 'undefined' && (window as any).fbq) {
+        (window as any).fbq('track', 'InitiateCheckout', {
+          value: checkoutTotal,
+          currency: 'DZD',
+          content_ids: checkoutItems.map(item => item.id.toString()),
+          content_type: 'product',
+          num_items: checkoutItems.reduce((acc, item) => acc + item.quantity, 0)
+        }, { eventID: eventId });
+      }
+      
+      sendCapiEvent({
+        eventName: 'InitiateCheckout',
+        eventId: eventId,
+        customData: {
+          value: checkoutTotal,
+          content_ids: checkoutItems.map(item => item.id.toString()),
+          content_type: 'product',
+          num_items: checkoutItems.reduce((acc, item) => acc + item.quantity, 0)
+        }
+      });
+    }
+  }, [trackingIds.fb, checkoutItems, checkoutTotal]);
 
   useEffect(() => {
     if (!directBuyItem && items.length === 0 && !orderSuccess) {

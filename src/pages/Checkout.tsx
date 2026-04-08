@@ -6,6 +6,7 @@ import { CheckCircle, Truck, MapPin, Phone, User as UserIcon } from 'lucide-reac
 import { formatPrice } from '../utils/formatPrice';
 import ReactPixel from 'react-facebook-pixel';
 import { fetchWithCache } from '../lib/utils';
+import { sendCapiEvent, generateEventId } from '../lib/capi';
 
 interface Wilaya {
   id: number;
@@ -146,6 +147,7 @@ export default function Checkout() {
         
         if (trackingIds.fb) {
           try {
+            const eventId = generateEventId();
             const pixel = (ReactPixel && (ReactPixel as any).default) || ReactPixel;
             if (pixel && typeof pixel.track === 'function') {
               pixel.track('Purchase', {
@@ -153,8 +155,28 @@ export default function Checkout() {
                 currency: 'DZD',
                 content_ids: checkoutItems.map(item => item.id.toString()),
                 content_type: 'product'
-              });
+              }, { eventID: eventId });
             }
+            
+            // Extract first and last name from full name
+            const nameParts = formData.name.trim().split(' ');
+            const firstName = nameParts[0] || '';
+            const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
+
+            sendCapiEvent({
+              eventName: 'Purchase',
+              eventId: eventId,
+              userData: {
+                phone: formData.phone,
+                firstName: firstName,
+                lastName: lastName
+              },
+              customData: {
+                value: finalTotal,
+                content_ids: checkoutItems.map(item => item.id.toString()),
+                content_type: 'product'
+              }
+            });
           } catch (e) {
             console.error('Failed to send FB purchase event', e);
           }

@@ -7,8 +7,12 @@ import multer from 'multer';
 import path from 'path';
 import rateLimit from 'express-rate-limit';
 import fs from 'fs';
+import capiRoutes from './capi.ts';
 
 const router = Router();
+
+// Mount CAPI routes
+router.use('/capi', capiRoutes);
 
 // Helper to process images to avoid Vercel 4.5MB payload limit
 const processImage = (table: string, id: number | string, field: string, image: string | null) => {

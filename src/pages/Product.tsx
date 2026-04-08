@@ -7,6 +7,7 @@ import { ProductCard } from '../components/ProductCard';
 import SEO from '../components/SEO';
 import ReactPixel from 'react-facebook-pixel';
 import { fetchWithCache } from '../lib/utils';
+import { sendCapiEvent, generateEventId } from '../lib/capi';
 
 export default function Product() {
   const { slug } = useParams();
@@ -86,6 +87,39 @@ export default function Product() {
     return () => controller.abort();
   }, [slug]);
 
+  useEffect(() => {
+    if (product && trackingIds.fb) {
+      const eventId = generateEventId();
+      const currentPrice = product.promo_price !== null ? product.promo_price : product.price;
+      
+      try {
+        const pixel = (ReactPixel && (ReactPixel as any).default) || ReactPixel;
+        if (pixel && typeof pixel.track === 'function') {
+          pixel.track('ViewContent', {
+            content_name: product.name,
+            content_ids: [product.id.toString()],
+            content_type: 'product',
+            value: currentPrice,
+            currency: 'DZD'
+          }, { eventID: eventId });
+        }
+        
+        sendCapiEvent({
+          eventName: 'ViewContent',
+          eventId: eventId,
+          customData: {
+            content_name: product.name,
+            content_ids: [product.id.toString()],
+            content_type: 'product',
+            value: currentPrice
+          }
+        });
+      } catch (e) {
+        console.error('Failed to send ViewContent event', e);
+      }
+    }
+  }, [product?.id, trackingIds.fb]);
+
   if (error) {
     return (
       <div className="container mx-auto px-4 py-16 text-center">
@@ -133,6 +167,7 @@ export default function Product() {
     
     if (trackingIds.fb) {
       try {
+        const eventId = generateEventId();
         const pixel = (ReactPixel && (ReactPixel as any).default) || ReactPixel;
         if (pixel && typeof pixel.track === 'function') {
           pixel.track('AddToCart', {
@@ -141,8 +176,19 @@ export default function Product() {
             content_type: 'product',
             value: currentPrice * quantity,
             currency: 'DZD'
-          });
+          }, { eventID: eventId });
         }
+        
+        sendCapiEvent({
+          eventName: 'AddToCart',
+          eventId: eventId,
+          customData: {
+            content_name: product.name,
+            content_ids: [product.id.toString()],
+            content_type: 'product',
+            value: currentPrice * quantity
+          }
+        });
       } catch (e) {
         console.error('Failed to send FB add_to_cart event', e);
       }

@@ -7,7 +7,7 @@ import multer from 'multer';
 import path from 'path';
 import rateLimit from 'express-rate-limit';
 import fs from 'fs';
-import capiRoutes from './capi.ts';
+import capiRoutes from './capi.js';
 
 const router = Router();
 

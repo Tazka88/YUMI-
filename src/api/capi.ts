@@ -3,8 +3,8 @@ import crypto from 'crypto';
 
 const router = Router();
 
-const PIXEL_ID = '2110613746362191';
-const ACCESS_TOKEN = 'EAASOnBbYKrMBRNu5n9efjeiSC34KVBiJyYV7OMAXgZBGJh34IJFkXG2oAWZAoaVOTVRdD7jEDFZAFZCZApzej0kXl6NZCwUhvBPNOOkZAxldsdtLN22C7SjhWa6xQzMjfLQQDiogwITTo1nFj3KV9k0X8SZBZAJwAU0KMu8R5exGJwCRH39z1lZBWx8CNg79Pg3seNnQZDZD';
+const PIXEL_ID = process.env.FB_PIXEL_ID || '2110613746362191';
+const ACCESS_TOKEN = process.env.FB_ACCESS_TOKEN || 'EAASOnBbYKrMBRNu5n9efjeiSC34KVBiJyYV7OMAXgZBGJh34IJFkXG2oAWZAoaVOTVRdD7jEDFZAFZCZApzej0kXl6NZCwUhvBPNOOkZAxldsdtLN22C7SjhWa6xQzMjfLQQDiogwITTo1nFj3KV9k0X8SZBZAJwAU0KMu8R5exGJwCRH39z1lZBWx8CNg79Pg3seNnQZDZD';
 
 function hashData(data: string | undefined | null): string | undefined {
   if (!data) return undefined;

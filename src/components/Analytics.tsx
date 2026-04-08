@@ -54,6 +54,7 @@ export default function Analytics() {
             }
             
             // Initialize without sending PageView automatically
+            window.fbq('set', 'autoConfig', false, fbPixelId);
             window.fbq('init', fbPixelId);
             setFbId(fbPixelId);
           } catch (e) {

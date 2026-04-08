@@ -1,12 +1,13 @@
 import { useEffect, useState, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
-import ReactPixel from 'react-facebook-pixel';
 import { fetchWithCache } from '../lib/utils';
 import { sendCapiEvent, generateEventId } from '../lib/capi';
 
 declare global {
   interface Window {
     gtag: (...args: any[]) => void;
+    fbq: any;
+    _fbq: any;
   }
 }
 
@@ -28,14 +29,33 @@ export default function Analytics() {
         // GA is now initialized in index.html directly
         setGaId('G-7JLYM1QX3C');
 
-        if (fbPixelId) {
+        if (fbPixelId && typeof window !== 'undefined') {
           try {
-            // Handle different import resolutions for CommonJS in Vite
-            const pixel = (ReactPixel && (ReactPixel as any).default) || ReactPixel;
-            if (pixel && typeof pixel.init === 'function') {
-              pixel.init(fbPixelId);
-              setFbId(fbPixelId);
+            // Manually inject FB Pixel to have full control over initialization and prevent auto-PageView
+            if (!window.fbq) {
+              window.fbq = function() {
+                window.fbq.callMethod ?
+                window.fbq.callMethod.apply(window.fbq, arguments) : window.fbq.queue.push(arguments)
+              };
+              if (!window._fbq) window._fbq = window.fbq;
+              window.fbq.push = window.fbq;
+              window.fbq.loaded = !0;
+              window.fbq.version = '2.0';
+              window.fbq.queue = [];
+              const t = document.createElement('script');
+              t.async = !0;
+              t.src = 'https://connect.facebook.net/en_US/fbevents.js';
+              const s = document.getElementsByTagName('script')[0];
+              if (s && s.parentNode) {
+                s.parentNode.insertBefore(t, s);
+              } else {
+                document.head.appendChild(t);
+              }
             }
+            
+            // Initialize without sending PageView automatically
+            window.fbq('init', fbPixelId);
+            setFbId(fbPixelId);
           } catch (e) {
             console.error('Failed to initialize FB Pixel', e);
           }
@@ -70,12 +90,9 @@ export default function Analytics() {
     if (fbId) {
       try {
         const eventId = generateEventId();
-        const pixel = (ReactPixel && (ReactPixel as any).default) || ReactPixel;
-        if (pixel && typeof pixel.pageView === 'function') {
-          // ReactPixel.pageView() doesn't accept eventID directly in this library version, 
-          // but we can use trackCustom or track with eventID if supported.
-          // The library might not support eventID on pageView, so we use track('PageView')
-          pixel.track('PageView', {}, { eventID: eventId });
+        
+        if (typeof window !== 'undefined' && window.fbq) {
+          window.fbq('track', 'PageView', {}, { eventID: eventId });
         }
         
         // Send to CAPI

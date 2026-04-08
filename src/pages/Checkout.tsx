@@ -4,7 +4,6 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useCartStore } from '../store/cartStore';
 import { CheckCircle, Truck, MapPin, Phone, User as UserIcon } from 'lucide-react';
 import { formatPrice } from '../utils/formatPrice';
-import ReactPixel from 'react-facebook-pixel';
 import { fetchWithCache } from '../lib/utils';
 import { sendCapiEvent, generateEventId } from '../lib/capi';
 
@@ -148,9 +147,8 @@ export default function Checkout() {
         if (trackingIds.fb) {
           try {
             const eventId = generateEventId();
-            const pixel = (ReactPixel && (ReactPixel as any).default) || ReactPixel;
-            if (pixel && typeof pixel.track === 'function') {
-              pixel.track('Purchase', {
+            if (typeof window !== 'undefined' && (window as any).fbq) {
+              (window as any).fbq('track', 'Purchase', {
                 value: finalTotal,
                 currency: 'DZD',
                 content_ids: checkoutItems.map(item => item.id.toString()),

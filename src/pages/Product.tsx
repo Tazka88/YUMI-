@@ -5,7 +5,6 @@ import { useCartStore, Product as ProductType } from '../store/cartStore';
 import { formatPrice } from '../utils/formatPrice';
 import { ProductCard } from '../components/ProductCard';
 import SEO from '../components/SEO';
-import ReactPixel from 'react-facebook-pixel';
 import { fetchWithCache } from '../lib/utils';
 import { sendCapiEvent, generateEventId } from '../lib/capi';
 
@@ -87,15 +86,18 @@ export default function Product() {
     return () => controller.abort();
   }, [slug]);
 
+  const viewContentTrackedRef = React.useRef<string | null>(null);
+
   useEffect(() => {
-    if (product && trackingIds.fb) {
+    if (product && trackingIds.fb && viewContentTrackedRef.current !== product.id.toString()) {
+      viewContentTrackedRef.current = product.id.toString();
       const eventId = generateEventId();
       const currentPrice = product.promo_price !== null ? product.promo_price : product.price;
       
       try {
-        const pixel = (ReactPixel && (ReactPixel as any).default) || ReactPixel;
-        if (pixel && typeof pixel.track === 'function') {
-          pixel.track('ViewContent', {
+        // Use window.fbq directly to ensure eventID is passed correctly (ReactPixel wrapper sometimes drops the 3rd argument)
+        if (typeof window !== 'undefined' && (window as any).fbq) {
+          (window as any).fbq('track', 'ViewContent', {
             content_name: product.name,
             content_ids: [product.id.toString()],
             content_type: 'product',
@@ -168,9 +170,8 @@ export default function Product() {
     if (trackingIds.fb) {
       try {
         const eventId = generateEventId();
-        const pixel = (ReactPixel && (ReactPixel as any).default) || ReactPixel;
-        if (pixel && typeof pixel.track === 'function') {
-          pixel.track('AddToCart', {
+        if (typeof window !== 'undefined' && (window as any).fbq) {
+          (window as any).fbq('track', 'AddToCart', {
             content_name: product.name,
             content_ids: [product.id.toString()],
             content_type: 'product',

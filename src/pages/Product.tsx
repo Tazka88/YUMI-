@@ -92,7 +92,7 @@ export default function Product() {
     if (product && trackingIds.fb && viewContentTrackedRef.current !== product.id.toString()) {
       viewContentTrackedRef.current = product.id.toString();
       const eventId = generateEventId();
-      const currentPrice = product.promo_price !== null ? product.promo_price : product.price;
+      const currentPrice = (product.promo_price !== null && product.promo_price !== undefined) ? Number(product.promo_price) : Number(product.price);
       
       try {
         // Use window.fbq directly to ensure eventID is passed correctly (ReactPixel wrapper sometimes drops the 3rd argument)

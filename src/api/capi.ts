@@ -40,7 +40,8 @@ router.post('/event', async (req, res) => {
       user_data: hashedUserData,
       custom_data: {
         currency: 'DZD',
-        ...customData
+        ...customData,
+        ...(customData?.value ? { value: Number(customData.value) } : {})
       }
     };
 

@@ -55,6 +55,7 @@ export default function Analytics() {
             
             // Initialize without sending PageView automatically
             window.fbq('set', 'autoConfig', false, fbPixelId);
+            window.fbq('set', 'disablePushState', true); // Prevent automatic PageView on React route changes
             window.fbq('init', fbPixelId);
             setFbId(fbPixelId);
           } catch (e) {

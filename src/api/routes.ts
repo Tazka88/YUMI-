@@ -674,7 +674,7 @@ router.post('/products/:slug/reviews', async (req, res) => {
 });
 
 router.post('/orders', orderLimiter, async (req, res) => {
-  const { customer_name, customer_phone, wilaya, address, note, items, delivery_cost: clientDeliveryCost } = req.body;
+  const { customer_name, customer_email, customer_phone, wilaya, address, note, items, delivery_cost: clientDeliveryCost } = req.body;
   
   if (!items || !Array.isArray(items) || items.length === 0) {
     return res.status(400).json({ error: 'La commande doit contenir au moins un article' });
@@ -701,8 +701,8 @@ router.post('/orders', orderLimiter, async (req, res) => {
 
     const orderData = await sql.begin(async (sql: any) => {
       const [order] = await sql`
-        INSERT INTO orders (customer_name, customer_phone, wilaya, address, note, total_amount, delivery_cost)
-        VALUES (${customer_name || ''}, ${customer_phone || ''}, ${wilaya || ''}, ${address || ''}, ${note || null}, ${calculatedTotal}, ${delivery_cost})
+        INSERT INTO orders (customer_name, customer_email, customer_phone, wilaya, address, note, total_amount, delivery_cost)
+        VALUES (${customer_name || ''}, ${customer_email || null}, ${customer_phone || ''}, ${wilaya || ''}, ${address || ''}, ${note || null}, ${calculatedTotal}, ${delivery_cost})
         RETURNING id
       `;
       
@@ -727,6 +727,12 @@ router.post('/orders', orderLimiter, async (req, res) => {
     const [adminEmailSetting] = await sql`SELECT value FROM settings WHERE key = 'admin_email'`;
     if (adminEmailSetting && adminEmailSetting.value) {
       console.log(`[EMAIL SIMULATION] Nouvelle commande ${orderData.order_id} envoyée à l'administrateur : ${adminEmailSetting.value}`);
+    }
+
+    if (customer_email) {
+      import('../lib/email.js').then(({ sendOrderConfirmationEmail }) => {
+        sendOrderConfirmationEmail(orderData.order_id, customer_name, customer_email, calculatedTotal);
+      }).catch(err => console.error('Failed to load email module:', err));
     }
     
     res.status(201).json({ id: orderData.id, order_id: orderData.order_id, message: 'Order created successfully' });
@@ -1013,7 +1019,17 @@ router.put('/admin/orders/:id/status', authenticate, async (req, res) => {
   const { status } = req.body;
   if (!status) return res.status(400).json({ error: 'Status is required' });
   try {
-    await sql`UPDATE orders SET status = ${status} WHERE id = ${req.params.id}`;
+    const [order] = await sql`
+      UPDATE orders SET status = ${status} WHERE id = ${req.params.id}
+      RETURNING order_id, customer_name, customer_email
+    `;
+    
+    if (order && order.customer_email) {
+      import('../lib/email.js').then(({ sendOrderStatusEmail }) => {
+        sendOrderStatusEmail(order.order_id, order.customer_name, order.customer_email, status);
+      }).catch(err => console.error('Failed to load email module:', err));
+    }
+    
     res.json({ message: 'Status updated' });
   } catch (err) {
     res.status(500).json({ error: 'Failed to update order status' });

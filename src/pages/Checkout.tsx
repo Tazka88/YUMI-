@@ -26,6 +26,7 @@ export default function Checkout() {
   
   const [formData, setFormData] = useState({
     name: '',
+    email: '',
     phone: '',
     wilaya: '',
     address: '',
@@ -125,6 +126,7 @@ export default function Checkout() {
 
     const orderData = {
       customer_name: formData.name,
+      customer_email: formData.email,
       customer_phone: formData.phone,
       wilaya: wilayas.find(w => w.number === formData.wilaya)?.name || formData.wilaya,
       address: formData.address,
@@ -195,6 +197,7 @@ export default function Checkout() {
               eventName: 'Purchase',
               eventId: eventId,
               userData: {
+                email: formData.email,
                 phone: formData.phone,
                 firstName: firstName,
                 lastName: lastName
@@ -291,6 +294,21 @@ export default function Checkout() {
                     onChange={e => setFormData({...formData, phone: e.target.value})}
                   />
                 </div>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Email (Optionnel - pour le suivi)</label>
+              <input 
+                type="email" 
+                className="w-full px-4 py-3 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-shadow"
+                placeholder="Ex: amine@gmail.com"
+                value={formData.email}
+                onChange={e => setFormData({...formData, email: e.target.value})}
+              />
+              <div className="mt-2 text-xs text-gray-500 flex flex-col gap-1">
+                <span className="flex items-center gap-1">📧 Pour recevoir la confirmation de votre commande</span>
+                <span className="flex items-center gap-1">🔒 Données confidentielles</span>
               </div>
             </div>
 

@@ -29,7 +29,9 @@ export default function Analytics() {
         // GA is now initialized in index.html directly
         setGaId('G-7JLYM1QX3C');
 
-        if (fbPixelId && typeof window !== 'undefined') {
+        const isProduction = typeof window !== 'undefined' && window.location.hostname === 'yumidz.vercel.app';
+        
+        if (fbPixelId && typeof window !== 'undefined' && isProduction) {
           try {
             // Manually inject FB Pixel to have full control over initialization and prevent auto-PageView
             if (!window.fbq) {

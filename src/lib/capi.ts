@@ -26,6 +26,12 @@ interface CapiEventData {
 }
 
 export async function sendCapiEvent({ eventName, eventId, customData, userData }: CapiEventData) {
+  // Only send CAPI events from the production domain
+  if (typeof window !== 'undefined' && window.location.hostname !== 'yumidz.vercel.app') {
+    console.log(`[CAPI] Skipped ${eventName} event (non-production environment)`);
+    return;
+  }
+
   try {
     const fbc = getCookie('_fbc');
     const fbp = getCookie('_fbp');

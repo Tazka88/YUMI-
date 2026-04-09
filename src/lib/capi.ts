@@ -34,6 +34,19 @@ function getFbc(): string | undefined {
   return undefined;
 }
 
+// Helper to get or create external_id
+function getExternalId(): string | undefined {
+  if (typeof window === 'undefined') return undefined;
+  
+  let extId = getCookie('_yumi_ext_id');
+  if (!extId) {
+    extId = 'usr_' + Math.random().toString(36).substring(2, 15) + Date.now().toString(36);
+    // Save it to cookie for 6 months
+    document.cookie = `_yumi_ext_id=${extId}; path=/; max-age=15552000; SameSite=Lax`;
+  }
+  return extId;
+}
+
 // Generate a random event ID for deduplication
 export function generateEventId(): string {
   return 'evt_' + Math.random().toString(36).substring(2, 15) + Date.now().toString(36);
@@ -69,7 +82,8 @@ export async function sendCapiEvent({ eventName, eventId, customData, userData }
       userData: {
         ...userData,
         fbc,
-        fbp
+        fbp,
+        external_id: getExternalId()
       },
       customData
     };

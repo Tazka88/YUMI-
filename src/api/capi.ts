@@ -30,6 +30,7 @@ router.post('/event', async (req, res) => {
     if (userData?.phone) hashedUserData.ph = hashData(userData.phone);
     if (userData?.firstName) hashedUserData.fn = hashData(userData.firstName);
     if (userData?.lastName) hashedUserData.ln = hashData(userData.lastName);
+    if (userData?.external_id) hashedUserData.external_id = hashData(userData.external_id);
 
     const event = {
       event_name: eventName,

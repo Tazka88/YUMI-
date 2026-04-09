@@ -2,9 +2,35 @@
 
 // Helper to get cookie by name
 function getCookie(name: string): string | undefined {
+  if (typeof document === 'undefined') return undefined;
   const value = `; ${document.cookie}`;
   const parts = value.split(`; ${name}=`);
   if (parts.length === 2) return parts.pop()?.split(';').shift();
+  return undefined;
+}
+
+// Helper to get or create fbc (click id)
+function getFbc(): string | undefined {
+  if (typeof window === 'undefined') return undefined;
+  
+  // 1. Try to get from cookie first
+  const fbcCookie = getCookie('_fbc');
+  if (fbcCookie) return fbcCookie;
+
+  // 2. Try to get from URL (fbclid)
+  const urlParams = new URLSearchParams(window.location.search);
+  const fbclid = urlParams.get('fbclid');
+  
+  if (fbclid) {
+    // Format: version.subdomainIndex.creationTime.fbclid
+    const creationTime = Date.now();
+    const newFbc = `fb.1.${creationTime}.${fbclid}`;
+    
+    // Save it to cookie for future events
+    document.cookie = `_fbc=${newFbc}; path=/; max-age=7776000; SameSite=Lax`; // 90 days
+    return newFbc;
+  }
+
   return undefined;
 }
 
@@ -33,7 +59,7 @@ export async function sendCapiEvent({ eventName, eventId, customData, userData }
   }
 
   try {
-    const fbc = getCookie('_fbc');
+    const fbc = getFbc();
     const fbp = getCookie('_fbp');
 
     const payload = {

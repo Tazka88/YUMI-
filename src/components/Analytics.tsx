@@ -57,7 +57,13 @@ export default function Analytics() {
             
             // Initialize without sending PageView automatically
             window.fbq('set', 'autoConfig', false, fbPixelId);
-            window.fbq('set', 'disablePushState', true); // Prevent automatic PageView on React route changes
+            
+            // CRITICAL: Prevent Facebook from automatically tracking PageViews on initialization
+            // and on History API changes (React Router)
+            window.fbq.disablePushState = true;
+            
+            // Initialize the pixel but DO NOT send a PageView here.
+            // We handle PageView manually in the second useEffect.
             window.fbq('init', fbPixelId);
             setFbId(fbPixelId);
           } catch (e) {

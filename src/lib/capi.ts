@@ -71,8 +71,7 @@ export async function sendCapiEvent({ eventName, eventId, customData, userData }
     return;
   }
 
-  // Delay slightly to allow FB Pixel to set the _fbp cookie on first load
-  setTimeout(async () => {
+  const executeEvent = async () => {
     try {
       const fbc = getFbc();
       const fbp = getCookie('_fbp');
@@ -90,12 +89,14 @@ export async function sendCapiEvent({ eventName, eventId, customData, userData }
         customData
       };
 
+      // Use keepalive to ensure the request completes even if the page unloads
       const response = await fetch('/api/capi/event', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
+        keepalive: true
       });
 
       if (!response.ok) {
@@ -104,5 +105,13 @@ export async function sendCapiEvent({ eventName, eventId, customData, userData }
     } catch (error) {
       console.error('Error sending CAPI event:', error);
     }
-  }, 500); // 500ms delay
+  };
+
+  // Delay slightly for PageView to allow FB Pixel to set the _fbp cookie on first load
+  if (eventName === 'PageView') {
+    setTimeout(executeEvent, 500);
+  } else {
+    // Execute immediately for other events (like Purchase) to prevent loss on navigation
+    executeEvent();
+  }
 }

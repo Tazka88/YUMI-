@@ -66,40 +66,43 @@ interface CapiEventData {
 
 export async function sendCapiEvent({ eventName, eventId, customData, userData }: CapiEventData) {
   // Only send CAPI events from the production domain
-  if (typeof window !== 'undefined' && window.location.hostname !== 'yumidz.vercel.app') {
+  if (typeof window !== 'undefined' && !window.location.hostname.includes('yumidz.vercel.app')) {
     console.log(`[CAPI] Skipped ${eventName} event (non-production environment)`);
     return;
   }
 
-  try {
-    const fbc = getFbc();
-    const fbp = getCookie('_fbp');
+  // Delay slightly to allow FB Pixel to set the _fbp cookie on first load
+  setTimeout(async () => {
+    try {
+      const fbc = getFbc();
+      const fbp = getCookie('_fbp');
 
-    const payload = {
-      eventName,
-      eventId,
-      eventSourceUrl: window.location.href,
-      userData: {
-        ...userData,
-        fbc,
-        fbp,
-        external_id: getExternalId()
-      },
-      customData
-    };
+      const payload = {
+        eventName,
+        eventId,
+        eventSourceUrl: window.location.href,
+        userData: {
+          ...userData,
+          fbc,
+          fbp,
+          external_id: getExternalId()
+        },
+        customData
+      };
 
-    const response = await fetch('/api/capi/event', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(payload)
-    });
+      const response = await fetch('/api/capi/event', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      });
 
-    if (!response.ok) {
-      console.error('Failed to send CAPI event', await response.text());
+      if (!response.ok) {
+        console.error('Failed to send CAPI event', await response.text());
+      }
+    } catch (error) {
+      console.error('Error sending CAPI event:', error);
     }
-  } catch (error) {
-    console.error('Error sending CAPI event:', error);
-  }
+  }, 500); // 500ms delay
 }

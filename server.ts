@@ -97,12 +97,17 @@ async function startServer() {
       try {
         let template = fs.readFileSync(path.join(distPath, 'index.html'), 'utf-8');
         let seoHtml = '';
+        let headHtml = '';
         let title = 'Yumi - Boutique en ligne';
         let description = 'Découvrez Yumi (YUMIDZ), votre boutique en ligne de confiance en Algérie.';
 
         if (req.path === '/' || req.path === '/index.html') {
           const categories = await sql`SELECT name, slug FROM categories`;
           const brands = await sql`SELECT name, slug FROM brands`;
+          headHtml = `
+            <link rel="preload" as="image" href="/api/hero-banners/first-image/mobile" media="(max-width: 767px)" fetchpriority="high">
+            <link rel="preload" as="image" href="/api/hero-banners/first-image/desktop" media="(min-width: 768px)" fetchpriority="high">
+          `;
           seoHtml = `
             <div id="seo-content" style="display:none;">
               <h1>Bienvenue sur Yumi - Boutique en ligne en Algérie</h1>
@@ -229,6 +234,7 @@ async function startServer() {
         }
 
         let finalHtml = template.replace('<!--seo-injection-->', seoHtml);
+        finalHtml = finalHtml.replace('<!--head-injection-->', headHtml);
         finalHtml = finalHtml.replace(/<title>.*?<\/title>/, `<title>${title}</title>`);
         finalHtml = finalHtml.replace(/<meta name="description" content=".*?" \/>/, `<meta name="description" content="${description}" />`);
         

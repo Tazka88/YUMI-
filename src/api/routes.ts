@@ -229,7 +229,6 @@ router.get('/robots.txt', (req, res) => {
   res.send(`User-agent: *
 Allow: /
 Disallow: /admin/
-Disallow: /api/
 
 Sitemap: ${baseUrl}/sitemap.xml`);
 });

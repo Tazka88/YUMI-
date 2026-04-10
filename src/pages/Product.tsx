@@ -93,6 +93,7 @@ export default function Product() {
       viewContentTrackedRef.current = product.id.toString();
       const eventId = generateEventId();
       const currentPrice = (product.promo_price !== null && product.promo_price !== undefined) ? Number(product.promo_price) : Number(product.price);
+      const safeValue = isNaN(currentPrice) || currentPrice <= 0 ? 1 : Number(currentPrice.toFixed(2));
       
       try {
         // Use window.fbq directly to ensure eventID is passed correctly (ReactPixel wrapper sometimes drops the 3rd argument)
@@ -101,7 +102,7 @@ export default function Product() {
             content_name: product.name,
             content_ids: [product.id.toString()],
             content_type: 'product',
-            value: currentPrice,
+            value: safeValue,
             currency: 'DZD'
           }, { eventID: eventId });
         }
@@ -113,7 +114,8 @@ export default function Product() {
             content_name: product.name,
             content_ids: [product.id.toString()],
             content_type: 'product',
-            value: currentPrice
+            value: safeValue,
+            currency: 'DZD'
           }
         });
       } catch (e) {
@@ -149,12 +151,14 @@ export default function Product() {
   const handleAddToCart = () => {
     addItem(product, quantity);
     
+    const safeValue = isNaN(currentPrice * quantity) || (currentPrice * quantity) <= 0 ? 1 : Number(Number(currentPrice * quantity).toFixed(2));
+
     // Track Add to Cart
     if (typeof window !== 'undefined' && typeof window.gtag === 'function') {
       try {
         window.gtag("event", "add_to_cart", {
           currency: "DZD",
-          value: currentPrice * quantity,
+          value: safeValue,
           items: [{
             item_id: product.id.toString(),
             item_name: product.name,
@@ -175,7 +179,7 @@ export default function Product() {
             content_name: product.name,
             content_ids: [product.id.toString()],
             content_type: 'product',
-            value: currentPrice * quantity,
+            value: safeValue,
             currency: 'DZD'
           }, { eventID: eventId });
         }
@@ -187,7 +191,8 @@ export default function Product() {
             content_name: product.name,
             content_ids: [product.id.toString()],
             content_type: 'product',
-            value: currentPrice * quantity
+            value: safeValue,
+            currency: 'DZD'
           }
         });
       } catch (e) {

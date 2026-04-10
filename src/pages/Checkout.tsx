@@ -77,9 +77,11 @@ export default function Checkout() {
       initiateCheckoutTrackedRef.current = true;
       const eventId = generateEventId();
       
+      const safeValue = isNaN(checkoutTotal) || checkoutTotal <= 0 ? 1 : Number(Number(checkoutTotal).toFixed(2));
+      
       if (typeof window !== 'undefined' && (window as any).fbq) {
         (window as any).fbq('track', 'InitiateCheckout', {
-          value: checkoutTotal,
+          value: safeValue,
           currency: 'DZD',
           content_ids: checkoutItems.map(item => item.id.toString()),
           content_type: 'product',
@@ -91,7 +93,8 @@ export default function Checkout() {
         eventName: 'InitiateCheckout',
         eventId: eventId,
         customData: {
-          value: checkoutTotal,
+          value: safeValue,
+          currency: 'DZD',
           content_ids: checkoutItems.map(item => item.id.toString()),
           content_type: 'product',
           num_items: checkoutItems.reduce((acc, item) => acc + item.quantity, 0)
@@ -157,11 +160,13 @@ export default function Checkout() {
         
         // Track Purchase
         const finalTotal = checkoutTotal + deliveryCost;
+        const safeValue = isNaN(finalTotal) || finalTotal <= 0 ? 1 : Number(Number(finalTotal).toFixed(2));
+
         if (typeof window !== 'undefined' && typeof window.gtag === 'function') {
           try {
             window.gtag("event", "purchase", {
               transaction_id: Date.now().toString(),
-              value: finalTotal,
+              value: safeValue,
               currency: "DZD",
               shipping: deliveryCost,
               items: checkoutItems.map(item => ({
@@ -181,7 +186,7 @@ export default function Checkout() {
             const eventId = generateEventId();
             if (typeof window !== 'undefined' && (window as any).fbq) {
               (window as any).fbq('track', 'Purchase', {
-                value: finalTotal,
+                value: safeValue,
                 currency: 'DZD',
                 content_ids: checkoutItems.map(item => item.id.toString()),
                 content_type: 'product'
@@ -203,7 +208,8 @@ export default function Checkout() {
                 lastName: lastName
               },
               customData: {
-                value: finalTotal,
+                value: safeValue,
+                currency: 'DZD',
                 content_ids: checkoutItems.map(item => item.id.toString()),
                 content_type: 'product'
               }

@@ -17,7 +17,13 @@ function getFbc(): string | undefined {
   const fbcCookie = getCookie('_fbc');
   if (fbcCookie) return fbcCookie;
 
-  // 2. Try to get from URL (fbclid)
+  // 2. Try to get from sessionStorage (in case cookie is blocked but session is not)
+  try {
+    const sessionFbc = sessionStorage.getItem('_fbc');
+    if (sessionFbc) return sessionFbc;
+  } catch (e) {}
+
+  // 3. Try to get from URL (fbclid)
   const urlParams = new URLSearchParams(window.location.search);
   const fbclid = urlParams.get('fbclid');
   
@@ -27,7 +33,13 @@ function getFbc(): string | undefined {
     const newFbc = `fb.1.${creationTime}.${fbclid}`;
     
     // Save it to cookie for future events
-    document.cookie = `_fbc=${newFbc}; path=/; max-age=7776000; SameSite=Lax`; // 90 days
+    const domain = window.location.hostname.replace('www.', '');
+    document.cookie = `_fbc=${newFbc}; path=/; domain=${domain}; max-age=7776000; SameSite=Lax`; // 90 days
+    
+    try {
+      sessionStorage.setItem('_fbc', newFbc);
+    } catch (e) {}
+    
     return newFbc;
   }
 

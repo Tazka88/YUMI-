@@ -1,4 +1,4 @@
-import React, { Suspense } from 'react';
+import React, { Suspense, useEffect } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
 import { Toaster } from 'react-hot-toast';
@@ -17,10 +17,30 @@ const Brands = React.lazy(() => import('./pages/Brands'));
 const BrandProducts = React.lazy(() => import('./pages/BrandProducts'));
 const Page = React.lazy(() => import('./pages/Page'));
 
+// Global fbclid catcher
+const GlobalFbclidCatcher = () => {
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const urlParams = new URLSearchParams(window.location.search);
+    const fbclid = urlParams.get('fbclid');
+    if (fbclid) {
+      const creationTime = Date.now();
+      const newFbc = `fb.1.${creationTime}.${fbclid}`;
+      const domain = window.location.hostname.replace('www.', '');
+      document.cookie = `_fbc=${newFbc}; path=/; domain=${domain}; max-age=7776000; SameSite=Lax`;
+      try {
+        sessionStorage.setItem('_fbc', newFbc);
+      } catch (e) {}
+    }
+  }, []);
+  return null;
+};
+
 export default function App() {
   return (
     <HelmetProvider>
       <BrowserRouter>
+        <GlobalFbclidCatcher />
         <Toaster position="top-center" />
         <Analytics />
         <SpeedInsights />

@@ -288,6 +288,76 @@ const SectionHeader = ({ title, link, children }: { title: string, link?: string
   </div>
 );
 
+const getResizedImageUrl = (url: string | null, width: number) => {
+  if (!url) return '';
+  if (url.startsWith('/api/images/')) {
+    return `${url}${url.includes('?') ? '&' : '?'}w=${width}`;
+  }
+  return url;
+};
+
+const MasonryCategoryCard = ({ cat, index }: { cat: any, index: number }) => {
+  const [orientation, setOrientation] = useState<'portrait' | 'landscape' | 'square'>('square');
+  const [isLoaded, setIsLoaded] = useState(false);
+
+  useEffect(() => {
+    if (!cat.image) {
+      setIsLoaded(true);
+      return;
+    }
+    const img = new Image();
+    img.onload = () => {
+      const ratio = img.width / img.height;
+      if (ratio > 1.1) setOrientation('landscape');
+      else if (ratio < 0.9) setOrientation('portrait');
+      else setOrientation('square');
+      setIsLoaded(true);
+    };
+    img.src = getResizedImageUrl(cat.image, 400) || cat.image;
+  }, [cat.image]);
+
+  let spanClasses = '';
+  let aspectClass = '';
+  
+  if (orientation === 'portrait') {
+    spanClasses = 'col-span-1 row-span-2';
+    aspectClass = 'aspect-[9/16]';
+  } else if (orientation === 'landscape') {
+    spanClasses = 'col-span-2 row-span-1';
+    aspectClass = 'aspect-[16/9]';
+  } else {
+    spanClasses = 'col-span-1 row-span-1';
+    aspectClass = 'aspect-square';
+  }
+
+  return (
+    <Link 
+      to={`/category/${cat.slug}`} 
+      className={`group relative overflow-hidden rounded-2xl bg-gray-50 block ${spanClasses} ${!isLoaded ? 'opacity-0' : 'opacity-100 transition-opacity duration-500'}`}
+    >
+      <div className={`w-full h-full relative overflow-hidden bg-white ${aspectClass}`}>
+        <img 
+          src={getResizedImageUrl(cat.image, orientation === 'landscape' ? 800 : 400) || `https://ui-avatars.com/api/?name=${encodeURIComponent(cat.name)}&background=random&color=fff&size=400`} 
+          alt={cat.name}
+          loading={index < 4 ? "eager" : "lazy"}
+          className="w-full h-full object-cover object-center transition-transform duration-700 group-hover:scale-105"
+          referrerPolicy="no-referrer"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-80 group-hover:opacity-90 transition-opacity"></div>
+        
+        <div className="absolute bottom-0 left-0 w-full p-4 sm:p-6 lg:p-8">
+          <h3 className={`font-bold text-white tracking-tight leading-tight ${orientation === 'landscape' ? 'text-xl md:text-2xl lg:text-3xl' : 'text-base md:text-lg lg:text-xl'}`}>
+            <CategoryNameDisplay name={cat.name} className="justify-start text-white" />
+          </h3>
+          <div className="mt-2 sm:mt-3 flex items-center text-white/90 text-xs sm:text-sm font-semibold opacity-0 translate-y-4 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300">
+            Découvrir <ChevronRight className="w-3 h-3 sm:w-4 sm:h-4 ml-1" />
+          </div>
+        </div>
+      </div>
+    </Link>
+  );
+};
+
 export default function Home() {
   const [activeTheme, setActiveTheme] = useState<string>("normal");
   const [themeImages, setThemeImages] = useState<Record<string, any>>({});
@@ -456,63 +526,18 @@ export default function Home() {
           </Link>
         </div>
         
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6 px-2 sm:px-0">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6 px-2 sm:px-0 grid-flow-row-dense">
           {categories.length === 0 ? (
             // Skeleton loader for categories
             [...Array(6)].map((_, i) => {
-              const isFeaturedMobile = i === 0;
-              const isFeaturedDesktop = i < 2;
               return (
-                <div key={i} className={`rounded-2xl bg-gray-100 animate-pulse ${isFeaturedMobile ? 'col-span-2' : 'col-span-1'} ${isFeaturedDesktop ? 'md:col-span-2' : 'md:col-span-1'}`}>
-                  <div className={`w-full ${isFeaturedMobile ? 'aspect-[21/9]' : 'aspect-square'} ${isFeaturedDesktop ? 'md:aspect-[21/9] lg:aspect-[16/7]' : 'md:aspect-[4/3] lg:aspect-[16/10]'}`}></div>
-                </div>
+                <div key={i} className="rounded-2xl bg-gray-100 animate-pulse aspect-square col-span-1 row-span-1"></div>
               );
             })
           ) : (
-            categories.slice(0, 6).map((cat, index) => {
-              const isFeaturedMobile = index === 0;
-              const isFeaturedDesktop = index < 2;
-              const hideOnMobile = index === 5; // Hide 6th item on mobile to keep 2-column grid balanced (1 full + 4 half)
-              
-              return (
-                <Link 
-                  key={cat.id} 
-                  to={`/category/${cat.slug}`} 
-                  className={`group relative overflow-hidden rounded-2xl bg-gray-50 
-                    ${isFeaturedMobile ? 'col-span-2' : 'col-span-1'} 
-                    ${isFeaturedDesktop ? 'md:col-span-2' : 'md:col-span-1'}
-                    ${hideOnMobile ? 'hidden md:block' : 'block'}
-                  `}
-                >
-                  <div className={`w-full relative overflow-hidden bg-white 
-                    ${isFeaturedMobile ? 'aspect-[21/9]' : 'aspect-square'} 
-                    ${isFeaturedDesktop ? 'md:aspect-[21/9] lg:aspect-[16/7]' : 'md:aspect-[4/3] lg:aspect-[16/10]'}
-                  `}>
-                    <img 
-                      src={getResizedImageUrl(cat.image, isFeaturedDesktop ? 800 : 400) || `https://ui-avatars.com/api/?name=${encodeURIComponent(cat.name)}&background=random&color=fff&size=400`} 
-                      alt={cat.name}
-                      loading={index < 4 ? "eager" : "lazy"}
-                      className="w-full h-full object-cover object-center transition-transform duration-700 group-hover:scale-105"
-                      referrerPolicy="no-referrer"
-                    />
-                    {/* Gradient overlay for text readability */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-80 group-hover:opacity-90 transition-opacity"></div>
-                    
-                    <div className={`absolute bottom-0 left-0 w-full ${isFeaturedMobile ? 'p-4' : 'p-3'} sm:p-6 lg:p-8`}>
-                      <h3 className={`font-bold text-white tracking-tight leading-tight
-                        ${isFeaturedMobile ? 'text-xl' : 'text-base'} 
-                        ${isFeaturedDesktop ? 'md:text-2xl lg:text-3xl' : 'md:text-lg lg:text-xl'}
-                      `}>
-                        <CategoryNameDisplay name={cat.name} className="justify-start text-white" />
-                      </h3>
-                      <div className="mt-2 sm:mt-3 flex items-center text-white/90 text-xs sm:text-sm font-semibold opacity-0 translate-y-4 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300">
-                        Découvrir <ChevronRight className="w-3 h-3 sm:w-4 sm:h-4 ml-1" />
-                      </div>
-                    </div>
-                  </div>
-                </Link>
-              );
-            })
+            categories.map((cat, index) => (
+              <MasonryCategoryCard key={cat.id} cat={cat} index={index} />
+            ))
           )}
         </div>
       </div>

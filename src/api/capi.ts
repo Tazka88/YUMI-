@@ -11,12 +11,12 @@ function hashData(data: string | undefined | null): string | undefined {
   return crypto.createHash('sha256').update(data.trim().toLowerCase()).digest('hex');
 }
 
-router.post('/event', async (req, res) => {
+router.post('/', async (req, res) => {
   try {
     const { eventName, eventId, eventSourceUrl, userData, customData } = req.body;
 
     // Get IP and User Agent from request headers
-    const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+    const clientIp = req.headers['x-real-ip'] || req.headers['x-forwarded-for'] || req.socket.remoteAddress;
     const userAgent = req.headers['user-agent'];
 
     const hashedUserData: any = {

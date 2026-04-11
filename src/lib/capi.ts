@@ -34,6 +34,21 @@ function getFbc(): string | undefined {
   return undefined;
 }
 
+// Helper to get or create fbp (browser id)
+function getFbp(): string | undefined {
+  if (typeof window === 'undefined') return undefined;
+  
+  let fbp = getCookie('_fbp');
+  if (!fbp) {
+    const creationTime = Date.now();
+    const randomNum = Math.floor(Math.random() * 10000000000);
+    fbp = `fb.1.${creationTime}.${randomNum}`;
+    // Save it to cookie so the Facebook Pixel uses the same one
+    document.cookie = `_fbp=${fbp}; path=/; max-age=7776000; SameSite=Lax`;
+  }
+  return fbp;
+}
+
 // Helper to get or create external_id
 function getExternalId(): string | undefined {
   if (typeof window === 'undefined') return undefined;
@@ -49,7 +64,8 @@ function getExternalId(): string | undefined {
 
 // Generate a random event ID for deduplication
 export function generateEventId(): string {
-  return 'evt_' + Math.random().toString(36).substring(2, 15) + Date.now().toString(36);
+  // Never use 'evt_' prefix as Facebook uses it for auto-generated events
+  return 'req_' + Math.random().toString(36).substring(2, 15) + Date.now().toString(36);
 }
 
 interface CapiEventData {
@@ -74,7 +90,7 @@ export async function sendCapiEvent({ eventName, eventId, customData, userData }
   const executeEvent = async () => {
     try {
       const fbc = getFbc();
-      const fbp = getCookie('_fbp');
+      const fbp = getFbp();
 
       const payload = {
         eventName,
@@ -90,7 +106,7 @@ export async function sendCapiEvent({ eventName, eventId, customData, userData }
       };
 
       // Use keepalive to ensure the request completes even if the page unloads
-      const response = await fetch('/api/capi/event', {
+      const response = await fetch('/api/metrics/v1', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

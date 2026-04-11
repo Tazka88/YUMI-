@@ -11,8 +11,8 @@ import capiRoutes from './capi.js';
 
 const router = Router();
 
-// Mount CAPI routes
-router.use('/capi', capiRoutes);
+// Mount CAPI routes (renamed to metrics to bypass adblockers)
+router.use('/metrics/v1', capiRoutes);
 
 // Helper to process images to avoid Vercel 4.5MB payload limit
 const processImage = (table: string, id: number | string, field: string, image: string | null) => {

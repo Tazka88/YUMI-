@@ -52,6 +52,10 @@ export default function Product() {
       .then(data => {
         setProduct(data);
         setSelectedImage(data.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(data.name)}&background=random&size=800`);
+        
+        // Increment view count
+        fetch(`/api/products/${data.id}/view`, { method: 'POST', signal }).catch(console.error);
+
         // Fetch related
         fetch(`/api/products?category=${data.category_id}`, { signal })
           .then(res => res.json())

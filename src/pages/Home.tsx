@@ -298,12 +298,14 @@ export default function Home() {
   const [bestSellers, setBestSellers] = useState<Product[]>([]);
   const [newProducts, setNewProducts] = useState<Product[]>([]);
   const [promotions, setPromotions] = useState<Product[]>([]);
+  const [randomProducts, setRandomProducts] = useState<Product[]>([]);
   const [customProducts, setCustomProducts] = useState<Record<string, Product[]>>({});
   const [homeSections, setHomeSections] = useState<any[]>([
     { id: 'flash_sales', type: 'flash_sales', title: 'Ventes Flash', isVisible: true },
     { id: 'best_sellers', type: 'best_sellers', title: 'Meilleures Ventes 🏆', isVisible: true },
     { id: 'popular', type: 'popular', title: 'Produits Populaires 🔥', isVisible: true },
     { id: 'new', type: 'new', title: 'Nouveautés 🆕', isVisible: true },
+    { id: 'random', type: 'random', title: 'Découverte Aléatoire 🎲', isVisible: true },
   ]);
   const addItem = useCartStore(state => state.addItem);
 
@@ -315,17 +317,24 @@ export default function Home() {
       if (err.name !== 'AbortError') console.error(err);
     };
 
+    // Use standard fetch with a cache-busting query parameter to ensure real-time updates
+    const fetchDynamic = (url: string) => fetch(`${url}&_t=${Date.now()}`, { signal, cache: 'no-store' }).then(res => res.json());
+
     fetchWithCache('/api/settings', { signal, priority: 'high' } as any).then(data => {
       if ((data as any).active_theme) setActiveTheme((data as any).active_theme);
       setThemeImages(data);
       if ((data as any).home_sections) {
         try {
           const sections = JSON.parse((data as any).home_sections);
+          // If random section is missing from saved settings, add it
+          if (!sections.find((s: any) => s.type === 'random')) {
+            sections.push({ id: 'random', type: 'random', title: 'Découverte Aléatoire 🎲', isVisible: true });
+          }
           setHomeSections(sections);
           
           // Fetch products for custom sections
           sections.filter((s: any) => s.type === 'custom' && s.isVisible && s.productIds?.length > 0).forEach((section: any) => {
-            fetchWithCache(`/api/products?ids=${section.productIds.join(',')}`, { signal })
+            fetchDynamic(`/api/products?ids=${section.productIds.join(',')}`)
               .then(products => {
                 if (Array.isArray(products)) {
                   setCustomProducts(prev => ({ ...prev, [section.id]: products }));
@@ -338,10 +347,12 @@ export default function Home() {
     }).catch(handleFetchError);
     fetchWithCache('/api/categories', { signal, priority: 'high' } as any).then(data => { if (Array.isArray(data)) setCategories(data); }).catch(handleFetchError);
     fetchWithCache('/api/brands', { signal }).then(data => { if (Array.isArray(data)) setBrands(data); setLoadingBrands(false); }).catch(err => { handleFetchError(err); setLoadingBrands(false); });
-    fetchWithCache('/api/products?popular=true', { signal }).then(data => { if (Array.isArray(data)) setPopularProducts(data); }).catch(handleFetchError);
-    fetchWithCache('/api/products?best_seller=true', { signal }).then(data => { if (Array.isArray(data)) setBestSellers(data); }).catch(handleFetchError);
-    fetchWithCache('/api/products?new=true', { signal }).then(data => { if (Array.isArray(data)) setNewProducts(data); }).catch(handleFetchError);
-    fetchWithCache('/api/products?special_offers=true', { signal }).then(data => { if (Array.isArray(data)) setPromotions(data); }).catch(handleFetchError);
+    
+    fetchDynamic('/api/products?sort=popular&limit=12').then(data => { if (Array.isArray(data)) setPopularProducts(data); }).catch(handleFetchError);
+    fetchDynamic('/api/products?sort=bestsellers&limit=12').then(data => { if (Array.isArray(data)) setBestSellers(data); }).catch(handleFetchError);
+    fetchDynamic('/api/products?sort=newest&limit=12').then(data => { if (Array.isArray(data)) setNewProducts(data); }).catch(handleFetchError);
+    fetchDynamic('/api/products?sort=random&limit=12').then(data => { if (Array.isArray(data)) setRandomProducts(data); }).catch(handleFetchError);
+    fetchDynamic('/api/products?special_offers=true&limit=12').then(data => { if (Array.isArray(data)) setPromotions(data); }).catch(handleFetchError);
 
     const loadSections = () => {
       fetchWithCache('/api/settings')
@@ -567,6 +578,16 @@ export default function Home() {
               <SectionHeader title={section.title || "Nouveautés 🆕"} link="/category/all" />
               <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-4">
                 {newProducts.slice(0, 5).map((p, i) => <ProductCard key={p.id} product={p} priority={i < 4} />)}
+              </div>
+            </section>
+          );
+        }
+        if (section.type === 'random' && randomProducts.length > 0) {
+          return (
+            <section key={section.id}>
+              <SectionHeader title={section.title || "Découverte Aléatoire 🎲"} link="/category/all" />
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-4">
+                {randomProducts.slice(0, 5).map((p, i) => <ProductCard key={p.id} product={p} priority={i < 4} />)}
               </div>
             </section>
           );

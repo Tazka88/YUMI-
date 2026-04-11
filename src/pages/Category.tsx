@@ -120,7 +120,13 @@ export default function Category() {
           newCategoryName = `Résultats pour "${searchQuery}"`;
         }
 
-        const productsRes = await fetch(url, { signal, priority: 'high' } as any);
+        if (url.includes('?')) {
+          url += `&_t=${Date.now()}`;
+        } else {
+          url += `?_t=${Date.now()}`;
+        }
+
+        const productsRes = await fetch(url, { signal, priority: 'high', cache: 'no-store' } as any);
         let productsData = [];
         if (productsRes.ok) {
           const data = await productsRes.json();

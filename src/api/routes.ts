@@ -539,10 +539,23 @@ router.get('/products', async (req, res) => {
   const recommended = req.query.recommended as string | undefined;
   const special_offers = req.query.special_offers as string | undefined;
   const ids = req.query.ids as string | undefined;
+  const sort = req.query.sort as string | undefined;
+  const limit = req.query.limit ? Number(req.query.limit) : 100;
   
   try {
     const idArray = ids ? ids.split(',').map(id => Number(id)).filter(id => !isNaN(id)) : [];
     
+    let orderClause = sql`ORDER BY p.created_at DESC`;
+    if (sort === 'newest') {
+      orderClause = sql`ORDER BY p.created_at DESC`;
+    } else if (sort === 'bestsellers') {
+      orderClause = sql`ORDER BY p.sales_count DESC NULLS LAST, p.created_at DESC`;
+    } else if (sort === 'popular') {
+      orderClause = sql`ORDER BY p.views_count DESC NULLS LAST, p.created_at DESC`;
+    } else if (sort === 'random') {
+      orderClause = sql`ORDER BY RANDOM()`;
+    }
+
     const products = await sql`
       SELECT p.*, COALESCE(p.brand_name, b.name) as brand_name, b.slug as brand_slug, b.image as brand_image,
       (SELECT COUNT(*) FROM reviews r WHERE r.product_id = p.id) as reviews_count,
@@ -561,7 +574,8 @@ router.get('/products', async (req, res) => {
         AND (${recommended === 'true' ? true : null}::boolean IS NULL OR p.is_recommended = true)
         AND (${special_offers === 'true' ? true : null}::boolean IS NULL OR p.promo_price IS NOT NULL)
         AND (${idArray.length > 0 ? sql`p.id = ANY(${idArray})` : sql`true`})
-      LIMIT 100
+      ${orderClause}
+      LIMIT ${limit}
     `;
     
     products.forEach(p => {
@@ -594,6 +608,16 @@ router.get('/products', async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to fetch products' });
+  }
+});
+
+router.post('/products/:id/view', async (req, res) => {
+  try {
+    await sql`UPDATE products SET views_count = COALESCE(views_count, 0) + 1 WHERE id = ${req.params.id}`;
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error incrementing view count:', error);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
@@ -710,7 +734,7 @@ router.post('/orders', orderLimiter, async (req, res) => {
       
       for (const item of validatedItems) {
         const result = await sql`
-          UPDATE products SET stock = stock - ${item.quantity} WHERE id = ${item.product_id} AND stock >= ${item.quantity}
+          UPDATE products SET stock = stock - ${item.quantity}, sales_count = COALESCE(sales_count, 0) + ${item.quantity} WHERE id = ${item.product_id} AND stock >= ${item.quantity}
         `;
         if (result.count === 0) {
           throw new Error(`Stock insuffisant pour le produit ID: ${item.product_id}`);

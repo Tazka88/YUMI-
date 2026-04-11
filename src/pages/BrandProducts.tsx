@@ -23,7 +23,7 @@ export default function BrandProducts() {
       .then(data => {
         setBrand(data);
         // Fetch products for this brand
-        return fetch(`/api/products?brand=${data.id}`, { signal });
+        return fetch(`/api/products?brand=${data.id}&_t=${Date.now()}`, { signal, cache: 'no-store' });
       })
       .then(res => res.json())
       .then(data => {

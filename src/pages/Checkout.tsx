@@ -184,7 +184,7 @@ export default function Checkout() {
         
         if (trackingIds.fb) {
           try {
-            const eventId = generateEventId();
+            const eventId = responseData.order_id || responseData.id.toString();
             const isProduction = typeof window !== 'undefined' && window.location.hostname.includes('yumidz.vercel.app');
             
             if (isProduction && typeof window !== 'undefined' && (window as any).fbq) {

@@ -100,12 +100,13 @@ export default function Analytics() {
     if (fbId) {
       try {
         const eventId = generateEventId();
+        const isProduction = typeof window !== 'undefined' && window.location.hostname.includes('yumidz.vercel.app');
         
-        if (typeof window !== 'undefined' && window.fbq) {
+        if (isProduction && typeof window !== 'undefined' && window.fbq) {
           window.fbq('track', 'PageView', {}, { eventID: eventId });
         }
         
-        // Send to CAPI
+        // Send to CAPI (sendCapiEvent already checks for production)
         sendCapiEvent({
           eventName: 'PageView',
           eventId: eventId

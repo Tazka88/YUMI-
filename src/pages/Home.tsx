@@ -343,11 +343,11 @@ const MasonryCategoryCard: React.FC<{ cat: any, index: number }> = ({ cat, index
           className="w-full h-full object-cover object-center transition-transform duration-700 group-hover:scale-105"
           referrerPolicy="no-referrer"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-80 group-hover:opacity-90 transition-opacity"></div>
+        <div className="absolute inset-0 bg-black/40 group-hover:bg-black/50 transition-colors duration-300"></div>
         
-        <div className="absolute bottom-0 left-0 w-full p-4 sm:p-6 lg:p-8">
+        <div className="absolute inset-0 p-4 sm:p-6 lg:p-8 flex flex-col items-center justify-center text-center">
           <h3 className={`font-bold text-white tracking-tight leading-tight ${orientation === 'landscape' ? 'text-xl md:text-2xl lg:text-3xl' : 'text-base md:text-lg lg:text-xl'}`}>
-            <CategoryNameDisplay name={cat.name} className="justify-start text-white" />
+            {cat.name.replace(/^[\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF]\s*/g, '').trim()}
           </h3>
           <div className="mt-2 sm:mt-3 flex items-center text-white/90 text-xs sm:text-sm font-semibold opacity-0 translate-y-4 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300">
             Découvrir <ChevronRight className="w-3 h-3 sm:w-4 sm:h-4 ml-1" />

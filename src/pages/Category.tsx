@@ -23,6 +23,11 @@ export default function Category() {
   const [categories, setCategories] = useState<any[]>([]);
   const [currentSubcategories, setCurrentSubcategories] = useState<any[]>([]);
   const [currentSubSubcategories, setCurrentSubSubcategories] = useState<any[]>([]);
+  const [priceFilters, setPriceFilters] = useState({
+    under5k: false,
+    between5kAnd15k: false,
+    over15k: false,
+  });
   const addItem = useCartStore(state => state.addItem);
 
   useEffect(() => {
@@ -162,6 +167,19 @@ export default function Category() {
     return url;
   };
 
+  const filteredProducts = products.filter(product => {
+    if (!priceFilters.under5k && !priceFilters.between5kAnd15k && !priceFilters.over15k) {
+      return true;
+    }
+    
+    const price = product.price;
+    if (priceFilters.under5k && price < 5000) return true;
+    if (priceFilters.between5kAnd15k && price >= 5000 && price <= 15000) return true;
+    if (priceFilters.over15k && price > 15000) return true;
+    
+    return false;
+  });
+
   return (
     <div className="container mx-auto px-4 py-8">
       <h1 className="sr-only">{categoryName}</h1>
@@ -217,15 +235,30 @@ export default function Category() {
               <h4 className="font-medium mb-2">Prix</h4>
               <div className="space-y-2">
                 <label className="flex items-center gap-2 text-sm">
-                  <input type="checkbox" className="rounded text-orange-500 focus:ring-orange-500" />
+                  <input 
+                    type="checkbox" 
+                    className="rounded text-orange-500 focus:ring-orange-500" 
+                    checked={priceFilters.under5k}
+                    onChange={(e) => setPriceFilters(prev => ({ ...prev, under5k: e.target.checked }))}
+                  />
                   Moins de 5 000 DA
                 </label>
                 <label className="flex items-center gap-2 text-sm">
-                  <input type="checkbox" className="rounded text-orange-500 focus:ring-orange-500" />
+                  <input 
+                    type="checkbox" 
+                    className="rounded text-orange-500 focus:ring-orange-500" 
+                    checked={priceFilters.between5kAnd15k}
+                    onChange={(e) => setPriceFilters(prev => ({ ...prev, between5kAnd15k: e.target.checked }))}
+                  />
                   5 000 - 15 000 DA
                 </label>
                 <label className="flex items-center gap-2 text-sm">
-                  <input type="checkbox" className="rounded text-orange-500 focus:ring-orange-500" />
+                  <input 
+                    type="checkbox" 
+                    className="rounded text-orange-500 focus:ring-orange-500" 
+                    checked={priceFilters.over15k}
+                    onChange={(e) => setPriceFilters(prev => ({ ...prev, over15k: e.target.checked }))}
+                  />
                   Plus de 15 000 DA
                 </label>
               </div>
@@ -258,7 +291,7 @@ export default function Category() {
           ) : null}
           <div className="bg-white p-4 rounded-lg shadow-sm mb-6 flex justify-between items-center">
             <h1 className="text-xl font-bold text-gray-800">{categoryName}</h1>
-            <span className="text-sm text-gray-500">{products.length} produits trouvés</span>
+            <span className="text-sm text-gray-500">{filteredProducts.length} produits trouvés</span>
           </div>
 
           {!loading && currentSubcategories.length > 0 && (
@@ -331,9 +364,9 @@ export default function Category() {
             <div className="flex justify-center py-12">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500"></div>
             </div>
-          ) : products.length > 0 ? (
+          ) : filteredProducts.length > 0 ? (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {products.map((p, i) => <ProductCard key={p.id} product={p} priority={i < 4} />)}
+              {filteredProducts.map((p, i) => <ProductCard key={p.id} product={p} priority={i < 4} />)}
             </div>
           ) : (
             <div className="bg-white p-8 rounded-lg shadow-sm text-center">

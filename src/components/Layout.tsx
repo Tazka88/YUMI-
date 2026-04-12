@@ -235,7 +235,7 @@ export default function Layout() {
             {/* Mobile Menu Toggle & Logo */}
             <div className="flex items-center gap-3">
               <button 
-                className="md:hidden p-1"
+                className="lg:hidden p-1"
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
               >
                 <Menu size={24} />
@@ -362,60 +362,12 @@ export default function Layout() {
           </div>
         </div>
 
-        {/* Categories Nav (Desktop) */}
-        <nav className="hidden md:block bg-orange-600">
-          <div className="container mx-auto px-4 relative flex items-center">
-            <ul className="flex items-center gap-x-6 gap-y-2 py-2 text-sm font-medium flex-wrap">
-              {categories.map(cat => (
-                <li key={cat.id} className="group relative">
-                  <Link to={`/category/${cat.slug}`} className="hover:text-black transition-colors py-2 block whitespace-nowrap font-bold text-[15px]">
-                    <CategoryNameDisplay name={cat.name} />
-                  </Link>
-                  {cat.subcategories && cat.subcategories.length > 0 && (
-                    <div className="absolute left-0 top-full mt-0 hidden group-hover:block bg-white text-gray-800 shadow-lg rounded-b-md border border-gray-100 min-w-[200px] z-50">
-                      <ul className="py-2">
-                        {cat.subcategories.map((sub: any) => (
-                          <li key={sub.id} className="relative group/sub">
-                            <Link 
-                              to={`/category/${sub.slug}?sub=true`} 
-                              className="block px-4 py-2 hover:bg-orange-50 hover:text-orange-500 transition-colors whitespace-normal flex justify-between items-center font-semibold text-[14px] text-gray-700"
-                            >
-                              <CategoryNameDisplay name={sub.name} />
-                              {sub.sub_subcategories && sub.sub_subcategories.length > 0 && (
-                                <ChevronRight size={14} className="text-gray-400" />
-                              )}
-                            </Link>
-                            {sub.sub_subcategories && sub.sub_subcategories.length > 0 && (
-                              <div className="absolute left-full top-0 hidden group-hover/sub:block bg-white text-gray-800 shadow-lg rounded-md border border-gray-100 min-w-[200px] z-50">
-                                <ul className="py-2">
-                                  {sub.sub_subcategories.map((subsub: any) => (
-                                    <li key={subsub.id}>
-                                      <Link 
-                                        to={`/category/${subsub.slug}?subsub=true`} 
-                                        className="block px-4 py-2 hover:bg-orange-50 hover:text-orange-500 transition-colors whitespace-normal font-normal text-[13px] font-sans text-gray-500"
-                                      >
-                                        <CategoryNameDisplay name={subsub.name} />
-                                      </Link>
-                                    </li>
-                                  ))}
-                                </ul>
-                              </div>
-                            )}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                </li>
-              ))}
-            </ul>
-          </div>
-        </nav>
+        {/* Categories Nav (Desktop) Removed */}
       </header>
 
       {/* Mobile Menu Overlay */}
       {isMenuOpen && (
-        <div className="fixed inset-0 bg-black/50 z-50 md:hidden" onClick={() => setIsMenuOpen(false)}>
+        <div className="fixed inset-0 bg-black/50 z-50 lg:hidden" onClick={() => setIsMenuOpen(false)}>
           <div className="bg-white w-64 h-full overflow-y-auto p-4" onClick={e => e.stopPropagation()}>
             <div className="flex justify-between items-center mb-4 border-b pb-2">
               <h3 className="font-bold text-lg text-gray-900">Catégories</h3>

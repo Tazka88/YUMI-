@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { ShoppingCart, Star, ChevronRight, ChevronLeft, Truck, ShieldCheck, RefreshCcw, Headset, Users, Moon, Map, Mountain, TreePine, Sun, BookOpen, Pencil, Ruler, Backpack, Apple, Tag, Percent, ArrowDown, ShoppingBag, Umbrella, Waves, Flame } from 'lucide-react';
+import { ShoppingCart, Star, ChevronRight, ChevronLeft, Truck, ShieldCheck, RefreshCcw, Headset, Users, Moon, Map, Mountain, TreePine, Sun, BookOpen, Pencil, Ruler, Backpack, Apple, Tag, Percent, ArrowDown, ShoppingBag, Umbrella, Waves, Flame, Shirt, Sparkles, Smartphone, Refrigerator, Sofa, Laptop, Dumbbell, Gamepad2, Car } from 'lucide-react';
 import { motion, useInView } from 'motion/react';
 import { useCartStore, Product } from '../store/cartStore';
 import { formatPrice } from '../utils/formatPrice';
@@ -358,6 +358,98 @@ const MasonryCategoryCard = ({ cat, index }: { cat: any, index: number }) => {
   );
 };
 
+const CATEGORY_ICONS: Record<string, React.ElementType> = {
+  "Mode & Vêtements": Shirt,
+  "Beauté & Santé": Sparkles,
+  "Téléphone & Tablette": Smartphone,
+  "Électroménager": Refrigerator,
+  "Maison, cuisine & bureau": Sofa,
+  "Informatique": Laptop,
+  "Sports & Loisirs": Dumbbell,
+  "Jouets et Jeux": Gamepad2,
+  "Accessoire Auto Moto": Car
+};
+
+const CategorySidebar = ({ categories }: { categories: any[] }) => {
+  // Sort categories to match Jumia's order
+  const orderedNames = [
+    "Mode & Vêtements",
+    "Beauté & Santé",
+    "Téléphone & Tablette",
+    "Électroménager",
+    "Maison, cuisine & bureau",
+    "Informatique",
+    "Sports & Loisirs",
+    "Jouets et Jeux",
+    "Accessoire Auto Moto"
+  ];
+
+  const sortedCategories = [...categories].sort((a, b) => {
+    const indexA = orderedNames.indexOf(a.name);
+    const indexB = orderedNames.indexOf(b.name);
+    if (indexA === -1 && indexB === -1) return 0;
+    if (indexA === -1) return 1;
+    if (indexB === -1) return -1;
+    return indexA - indexB;
+  });
+
+  return (
+    <div className="hidden lg:flex flex-col w-[240px] shrink-0 bg-white rounded shadow-[0_2px_5px_rgba(0,0,0,0.1)] py-2 h-[384px] relative z-30">
+      {sortedCategories.map((cat) => {
+        const Icon = CATEGORY_ICONS[cat.name] || Shirt;
+        // Strip emoji if it's at the start of the name (some DB entries might have it)
+        const cleanName = cat.name.replace(/^[\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF]\s*/g, '').trim();
+        
+        return (
+          <div key={cat.id} className="group static">
+            <Link
+              to={`/category/${cat.slug}`}
+              className="flex items-center gap-2 px-4 py-2 hover:bg-[#f5f5f5] cursor-pointer transition-colors"
+            >
+              <Icon size={20} className="text-[#757575] shrink-0" />
+              <span className="text-[#282828] font-['Roboto',sans-serif] text-[14px] font-normal truncate">
+                {cleanName}
+              </span>
+            </Link>
+            
+            {/* Mega Menu */}
+            {cat.subcategories && cat.subcategories.length > 0 && (
+              <div className="absolute left-full top-0 w-[700px] h-full bg-white shadow-[0_2px_5px_rgba(0,0,0,0.1)] border-l border-gray-100 hidden group-hover:flex p-6 z-50 overflow-y-auto">
+                <div className="columns-3 gap-8 w-full">
+                  {cat.subcategories.map((sub: any) => (
+                    <div key={sub.id} className="break-inside-avoid mb-6">
+                      <Link 
+                        to={`/category/${sub.slug}?sub=true`}
+                        className="block font-bold text-[#282828] uppercase text-[13px] mb-2 hover:text-[#f68b1e] transition-colors border-b border-gray-200 pb-1"
+                      >
+                        {sub.name.replace(/^[\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF]\s*/g, '').trim()}
+                      </Link>
+                      {sub.sub_subcategories && sub.sub_subcategories.length > 0 && (
+                        <ul className="space-y-1">
+                          {sub.sub_subcategories.map((subsub: any) => (
+                            <li key={subsub.id}>
+                              <Link 
+                                to={`/category/${subsub.slug}?subsub=true`}
+                                className="block text-[#757575] text-[13px] hover:text-[#f68b1e] transition-colors py-1"
+                              >
+                                {subsub.name.replace(/^[\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF]\s*/g, '').trim()}
+                              </Link>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
 export default function Home() {
   const [activeTheme, setActiveTheme] = useState<string>("normal");
   const [themeImages, setThemeImages] = useState<Record<string, any>>({});
@@ -472,8 +564,13 @@ export default function Home() {
       <ThemeBackground activeTheme={activeTheme} themeImages={themeImages} />
       <div className="container mx-auto px-4 py-6">
         <h1 className="sr-only">Yumi - Boutique en ligne en Algérie</h1>
-        {/* Hero Banner Carousel */}
-        <Slider />
+        {/* Hero Section with Sidebar and Carousel */}
+        <div className="flex gap-4 lg:h-[384px] mb-6">
+          <CategorySidebar categories={categories} />
+          <div className="flex-1 min-w-0 h-full">
+            <Slider />
+          </div>
+        </div>
 
       {/* Trust Badges Section */}
       <motion.div 

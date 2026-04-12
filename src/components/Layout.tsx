@@ -4,6 +4,7 @@ import { useCartStore } from '../store/cartStore';
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { fetchWithCache } from '../lib/utils';
+import TopBar from './TopBar';
 
 const categoryEmojis: Record<string, string> = {
   "Mode & Vêtements": "👗",
@@ -165,18 +166,6 @@ export default function Layout() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const announcementMessages = (settings.announcement_text || '🚚 Livraison gratuite à partir de 5 000 DA | Paiement à la livraison partout en Algérie')
-    .split('\n')
-    .filter((msg: string) => msg.trim() !== '');
-
-  useEffect(() => {
-    if (announcementMessages.length <= 1) return;
-    const interval = setInterval(() => {
-      setCurrentMessageIndex(prev => (prev + 1) % announcementMessages.length);
-    }, 3000);
-    return () => clearInterval(interval);
-  }, [announcementMessages.length]);
-
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
@@ -187,46 +176,7 @@ export default function Layout() {
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50 font-sans">
-      {/* Announcement Bar */}
-      {showAnnouncement && isSettingsLoaded && (
-        <div 
-          className="text-xs py-2 relative z-50"
-          style={{ 
-            backgroundColor: settings.announcement_bg_color || '#000000',
-            color: settings.announcement_text_color || '#ffffff'
-          }}
-        >
-          <div className="container mx-auto px-8 sm:px-4 flex flex-col sm:flex-row items-center justify-center sm:justify-between gap-1 sm:gap-2">
-            {settings.announcement_phone && (
-              <a href={`tel:${settings.announcement_phone.replace(/\s/g, '')}`} className="flex items-center gap-1 hover:opacity-80 transition-opacity whitespace-nowrap order-2 sm:order-1 text-[10px] sm:text-xs opacity-80 sm:opacity-100">
-                <Phone size={10} className="sm:w-3 sm:h-3" />
-                {settings.announcement_phone}
-              </a>
-            )}
-            <div className="text-center flex-1 w-full min-h-[16px] flex items-center justify-center order-1 sm:order-2">
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={currentMessageIndex}
-                  initial={{ opacity: 0, y: 5 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -5 }}
-                  transition={{ duration: 0.2 }}
-                  className="w-full text-center line-clamp-2 sm:truncate"
-                >
-                  {announcementMessages[currentMessageIndex]}
-                </motion.div>
-              </AnimatePresence>
-            </div>
-            <button 
-              onClick={() => setShowAnnouncement(false)}
-              className="absolute right-2 top-1/2 -translate-y-1/2 sm:static sm:translate-y-0 p-2 sm:p-0 flex items-center justify-center opacity-70 hover:opacity-100 order-3"
-              aria-label="Fermer"
-            >
-              <X size={16} />
-            </button>
-          </div>
-        </div>
-      )}
+      <TopBar />
 
       {/* Header */}
       <header className="bg-orange-500 text-white sticky top-0 z-40 shadow-md">

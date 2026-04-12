@@ -296,7 +296,7 @@ const getResizedImageUrl = (url: string | null, width: number) => {
   return url;
 };
 
-const MasonryCategoryCard = ({ cat, index }: { cat: any, index: number }) => {
+const MasonryCategoryCard: React.FC<{ cat: any, index: number }> = ({ cat, index }) => {
   const [orientation, setOrientation] = useState<'portrait' | 'landscape' | 'square'>('square');
   const [isLoaded, setIsLoaded] = useState(false);
 

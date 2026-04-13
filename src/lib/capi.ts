@@ -117,6 +117,13 @@ export async function sendCapiEvent({ eventName, eventId, customData, userData }
         customData
       };
 
+      // Preuve visuelle pour le client que le fbc est bien envoyé
+      if (eventName === 'ViewContent' || eventName === 'InitiateCheckout' || eventName === 'Purchase') {
+        console.log(`✅ [Meta Pixel & CAPI] Événement ${eventName} envoyé !`);
+        console.log(`📊 ID du clic (fbc) : ${fbc ? fbc : 'Non détecté (pas de clic depuis une pub Facebook)'}`);
+        console.log(`📊 ID du navigateur (fbp) : ${fbp}`);
+      }
+
       // Use keepalive to ensure the request completes even if the page unloads
       const response = await fetch('/api/metrics/v1', {
         method: 'POST',

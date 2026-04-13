@@ -1121,14 +1121,70 @@ router.get('/admin/products', authenticate, async (req, res) => {
   }
 });
 
+router.get('/admin/export-meta-catalog', authenticate, async (req, res) => {
+  try {
+    const products = await sql`
+      SELECT p.*, COALESCE(p.brand_name, b.name) as brand_name 
+      FROM products p 
+      LEFT JOIN brands b ON p.brand_id = b.id
+    `;
+
+    const exportedProducts = products.filter((p: any) => p.sku && p.sku.trim() !== '');
+    const ignoredCount = products.length - exportedProducts.length;
+
+    // CSV Header
+    const columns = ['id', 'title', 'description', 'availability', 'condition', 'price', 'link', 'image_link', 'brand'];
+    
+    // Helper to escape CSV fields
+    const escapeCSV = (field: any) => {
+      if (field === null || field === undefined) return '';
+      const str = String(field);
+      if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+        return `"${str.replace(/"/g, '""')}"`;
+      }
+      return str;
+    };
+
+    const baseUrl = req.protocol + '://' + req.get('host');
+    
+    const rows = exportedProducts.map((p: any) => {
+      const id = p.sku;
+      const title = p.name;
+      const description = p.description || p.name;
+      const availability = p.stock > 0 ? 'in stock' : 'out of stock';
+      const condition = 'new';
+      const price = `${Number(p.promo_price || p.price).toFixed(2)} DZD`;
+      const link = `${baseUrl}/product/${p.slug}`;
+      const image_link = p.image && p.image.startsWith('http') ? p.image : `${baseUrl}${p.image}`;
+      const brand = p.brand_name || 'Yumi';
+
+      return [id, title, description, availability, condition, price, link, image_link, brand]
+        .map(escapeCSV)
+        .join(',');
+    });
+
+    const csvContent = [columns.join(','), ...rows].join('\n');
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', 'attachment; filename="meta-catalog.csv"');
+    res.setHeader('X-Exported-Count', exportedProducts.length.toString());
+    res.setHeader('X-Ignored-Count', ignoredCount.toString());
+    res.setHeader('Access-Control-Expose-Headers', 'X-Exported-Count, X-Ignored-Count');
+    res.send(csvContent);
+  } catch (err) {
+    console.error('Failed to export meta catalog:', err);
+    res.status(500).json({ error: 'Failed to export meta catalog' });
+  }
+});
+
 router.post('/admin/products', authenticate, async (req, res) => {
-  const { category_id, subcategory_id, sub_subcategory_id, brand_id, brand_name, name, slug, description, price, promo_price, stock, image, is_popular, is_best_seller, is_new, is_recommended, is_fast_delivery, images, features, key_points } = req.body;
+  const { category_id, subcategory_id, sub_subcategory_id, brand_id, brand_name, name, slug, sku, description, price, promo_price, stock, image, is_popular, is_best_seller, is_new, is_recommended, is_fast_delivery, images, features, key_points } = req.body;
   
   try {
     const productId = await sql.begin(async (sql: any) => {
       const [info] = await sql`
-        INSERT INTO products (category_id, subcategory_id, sub_subcategory_id, brand_id, brand_name, name, slug, description, price, promo_price, stock, image, is_popular, is_best_seller, is_new, is_recommended, is_fast_delivery, features, key_points)
-        VALUES (${category_id || null}, ${subcategory_id || null}, ${sub_subcategory_id || null}, ${brand_id || null}, ${brand_name || null}, ${name || ''}, ${slug || ''}, ${description || null}, ${price || 0}, ${promo_price || null}, ${stock || 0}, ${image || null}, ${is_popular ? true : false}, ${is_best_seller ? true : false}, ${is_new ? true : false}, ${is_recommended ? true : false}, ${is_fast_delivery ? true : false}, ${features ? JSON.stringify(features) : null}::jsonb, ${key_points ? JSON.stringify(key_points) : null}::jsonb)
+        INSERT INTO products (category_id, subcategory_id, sub_subcategory_id, brand_id, brand_name, name, slug, sku, description, price, promo_price, stock, image, is_popular, is_best_seller, is_new, is_recommended, is_fast_delivery, features, key_points)
+        VALUES (${category_id || null}, ${subcategory_id || null}, ${sub_subcategory_id || null}, ${brand_id || null}, ${brand_name || null}, ${name || ''}, ${slug || ''}, ${sku || null}, ${description || null}, ${price || 0}, ${promo_price || null}, ${stock || 0}, ${image || null}, ${is_popular ? true : false}, ${is_best_seller ? true : false}, ${is_new ? true : false}, ${is_recommended ? true : false}, ${is_fast_delivery ? true : false}, ${features ? JSON.stringify(features) : null}::jsonb, ${key_points ? JSON.stringify(key_points) : null}::jsonb)
         RETURNING id
       `;
       
@@ -1147,20 +1203,20 @@ router.post('/admin/products', authenticate, async (req, res) => {
 });
 
 router.put('/admin/products/:id', authenticate, async (req, res) => {
-  const { category_id, subcategory_id, sub_subcategory_id, brand_id, brand_name, name, slug, description, price, promo_price, stock, image, is_popular, is_best_seller, is_new, is_recommended, is_fast_delivery, images, features, key_points } = req.body;
+  const { category_id, subcategory_id, sub_subcategory_id, brand_id, brand_name, name, slug, sku, description, price, promo_price, stock, image, is_popular, is_best_seller, is_new, is_recommended, is_fast_delivery, images, features, key_points } = req.body;
   
   try {
     await sql.begin(async (sql: any) => {
       if (image && image.startsWith('/api/images/')) {
         await sql`
           UPDATE products 
-          SET category_id = ${category_id || null}, subcategory_id = ${subcategory_id || null}, sub_subcategory_id = ${sub_subcategory_id || null}, brand_id = ${brand_id || null}, brand_name = ${brand_name || null}, name = ${name || ''}, slug = ${slug || ''}, description = ${description || null}, price = ${price || 0}, promo_price = ${promo_price || null}, stock = ${stock || 0}, is_popular = ${is_popular ? true : false}, is_best_seller = ${is_best_seller ? true : false}, is_new = ${is_new ? true : false}, is_recommended = ${is_recommended ? true : false}, is_fast_delivery = ${is_fast_delivery ? true : false}, features = ${features ? JSON.stringify(features) : null}::jsonb, key_points = ${key_points ? JSON.stringify(key_points) : null}::jsonb
+          SET category_id = ${category_id || null}, subcategory_id = ${subcategory_id || null}, sub_subcategory_id = ${sub_subcategory_id || null}, brand_id = ${brand_id || null}, brand_name = ${brand_name || null}, name = ${name || ''}, slug = ${slug || ''}, sku = ${sku || null}, description = ${description || null}, price = ${price || 0}, promo_price = ${promo_price || null}, stock = ${stock || 0}, is_popular = ${is_popular ? true : false}, is_best_seller = ${is_best_seller ? true : false}, is_new = ${is_new ? true : false}, is_recommended = ${is_recommended ? true : false}, is_fast_delivery = ${is_fast_delivery ? true : false}, features = ${features ? JSON.stringify(features) : null}::jsonb, key_points = ${key_points ? JSON.stringify(key_points) : null}::jsonb
           WHERE id = ${req.params.id}
         `;
       } else {
         await sql`
           UPDATE products 
-          SET category_id = ${category_id || null}, subcategory_id = ${subcategory_id || null}, sub_subcategory_id = ${sub_subcategory_id || null}, brand_id = ${brand_id || null}, brand_name = ${brand_name || null}, name = ${name || ''}, slug = ${slug || ''}, description = ${description || null}, price = ${price || 0}, promo_price = ${promo_price || null}, stock = ${stock || 0}, image = ${image || null}, is_popular = ${is_popular ? true : false}, is_best_seller = ${is_best_seller ? true : false}, is_new = ${is_new ? true : false}, is_recommended = ${is_recommended ? true : false}, is_fast_delivery = ${is_fast_delivery ? true : false}, features = ${features ? JSON.stringify(features) : null}::jsonb, key_points = ${key_points ? JSON.stringify(key_points) : null}::jsonb
+          SET category_id = ${category_id || null}, subcategory_id = ${subcategory_id || null}, sub_subcategory_id = ${sub_subcategory_id || null}, brand_id = ${brand_id || null}, brand_name = ${brand_name || null}, name = ${name || ''}, slug = ${slug || ''}, sku = ${sku || null}, description = ${description || null}, price = ${price || 0}, promo_price = ${promo_price || null}, stock = ${stock || 0}, image = ${image || null}, is_popular = ${is_popular ? true : false}, is_best_seller = ${is_best_seller ? true : false}, is_new = ${is_new ? true : false}, is_recommended = ${is_recommended ? true : false}, is_fast_delivery = ${is_fast_delivery ? true : false}, features = ${features ? JSON.stringify(features) : null}::jsonb, key_points = ${key_points ? JSON.stringify(key_points) : null}::jsonb
           WHERE id = ${req.params.id}
         `;
       }

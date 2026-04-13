@@ -6,7 +6,7 @@ import { formatPrice } from '../../utils/formatPrice';
 import FooterSettings from './FooterSettings';
 import PageSettings from './PageSettings';
 import WilayasSettings from './WilayasSettings';
-import { FileText, MapPin, Search, LayoutGrid, List, Printer } from 'lucide-react';
+import { FileText, MapPin, Search, LayoutGrid, List, Printer, Download } from 'lucide-react';
 import OrderKanban from './OrderKanban';
 import SliderImagesAdmin from './SliderImagesAdmin';
 
@@ -56,7 +56,7 @@ export default function AdminDashboard() {
   });
   
   const [productForm, setProductForm] = useState({
-    name: '', slug: '', category_id: '', subcategory_id: '', sub_subcategory_id: '', brand_id: '', brand_name: '', price: '', promo_price: '', stock: '', description: '', image: '',
+    name: '', slug: '', sku: '', category_id: '', subcategory_id: '', sub_subcategory_id: '', brand_id: '', brand_name: '', price: '', promo_price: '', stock: '', description: '', image: '',
     is_popular: false, is_best_seller: false, is_new: false, is_recommended: false, is_fast_delivery: false, images: [] as any[],
     features: '', key_points: ''
   });
@@ -675,7 +675,7 @@ export default function AdminDashboard() {
     if (product) {
       setEditingProduct(product);
       setProductForm({
-        name: product.name, slug: product.slug, category_id: product.category_id, subcategory_id: product.subcategory_id || '', sub_subcategory_id: product.sub_subcategory_id || '', brand_id: product.brand_id || '', brand_name: product.brand_name || '',
+        name: product.name, slug: product.slug, sku: product.sku || '', category_id: product.category_id, subcategory_id: product.subcategory_id || '', sub_subcategory_id: product.sub_subcategory_id || '', brand_id: product.brand_id || '', brand_name: product.brand_name || '',
         price: product.price, promo_price: product.promo_price || '', stock: product.stock, 
         description: product.description || '', image: product.image || '',
         is_popular: !!product.is_popular, is_best_seller: !!product.is_best_seller, 
@@ -688,7 +688,7 @@ export default function AdminDashboard() {
     } else {
       setEditingProduct(null);
       setProductForm({
-        name: '', slug: '', category_id: categories[0]?.id || '', subcategory_id: '', sub_subcategory_id: '', brand_id: '', brand_name: '', price: '', promo_price: '', stock: '', description: '', image: '',
+        name: '', slug: '', sku: '', category_id: categories[0]?.id || '', subcategory_id: '', sub_subcategory_id: '', brand_id: '', brand_name: '', price: '', promo_price: '', stock: '', description: '', image: '',
         is_popular: false, is_best_seller: false, is_new: false, is_recommended: false, is_fast_delivery: false, images: [], features: '', key_points: ''
       });
     }
@@ -1222,6 +1222,37 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleExportMetaCatalog = async () => {
+    try {
+      const token = localStorage.getItem('adminToken');
+      const response = await fetch('/api/admin/export-meta-catalog', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (!response.ok) throw new Error('Export failed');
+      
+      const exportedCount = response.headers.get('X-Exported-Count') || '0';
+      const ignoredCount = response.headers.get('X-Ignored-Count') || '0';
+      
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'meta-catalog.csv';
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      
+      toast.success(`${exportedCount} produits exportés. ${ignoredCount} produits ignorés car SKU manquant.`, { autoClose: 5000 });
+    } catch (error) {
+      console.error('Export error:', error);
+      toast.error('Erreur lors de l\'export du catalogue');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col md:flex-row">
       {/* Sidebar */}
@@ -1681,13 +1712,22 @@ export default function AdminDashboard() {
               <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
                 <div className="p-6 border-b border-gray-100 flex justify-between items-center">
                   <h2 className="text-lg font-bold text-gray-800">Gestion des produits</h2>
-                  <button 
-                    onClick={() => openModal()}
-                    className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-md font-medium flex items-center gap-2 transition-colors"
-                  >
-                    <Plus size={18} />
-                    Ajouter un produit
-                  </button>
+                  <div className="flex gap-2">
+                    <button 
+                      onClick={handleExportMetaCatalog}
+                      className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md font-medium flex items-center gap-2 transition-colors"
+                    >
+                      <Download size={18} />
+                      Catalogue Meta
+                    </button>
+                    <button 
+                      onClick={() => openModal()}
+                      className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-md font-medium flex items-center gap-2 transition-colors"
+                    >
+                      <Plus size={18} />
+                      Ajouter un produit
+                    </button>
+                  </div>
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-sm text-gray-600">
@@ -2503,6 +2543,19 @@ export default function AdminDashboard() {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Slug (URL) *</label>
                   <input type="text" className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500" value={productForm.slug} onChange={e => setProductForm({...productForm, slug: e.target.value})} />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">SKU / ID Produit Meta</label>
+                  <input 
+                    type="text" 
+                    className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500" 
+                    value={productForm.sku} 
+                    onChange={e => {
+                      const val = e.target.value.replace(/[^a-zA-Z0-9_-]/g, '');
+                      setProductForm({...productForm, sku: val});
+                    }} 
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Code unique pour Meta Ads. Ex: CUISINE-001. Obligatoire pour la pub.</p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Catégorie *</label>

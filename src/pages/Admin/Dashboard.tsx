@@ -1247,7 +1247,7 @@ export default function AdminDashboard() {
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
       
-      toast.success(`${exportedCount} produits exportés. ${ignoredCount} produits ignorés car SKU manquant.`, { duration: 5000 });
+      toast.success(`${exportedCount} produits exportés. ${ignoredCount} produits ignorés car image manquante.`, { duration: 5000 });
     } catch (error) {
       console.error('Export error:', error);
       toast.error('Erreur lors de l\'export du catalogue');

@@ -1130,8 +1130,8 @@ router.get('/admin/export-meta-catalog', authenticate, async (req, res) => {
       LEFT JOIN brands b ON p.brand_id = b.id
     `;
 
-    const exportedProducts = products;
-    const ignoredCount = 0;
+    const exportedProducts = products.filter((p: any) => p.image && p.image.trim() !== '' && !p.image.startsWith('data:image'));
+    const ignoredCount = products.length - exportedProducts.length;
 
     // CSV Header
     const columns = ['id', 'title', 'description', 'availability', 'condition', 'price', 'link', 'image_link', 'brand'];
@@ -1164,11 +1164,10 @@ router.get('/admin/export-meta-catalog', authenticate, async (req, res) => {
       
       const link = `${baseUrl}/product/${p.slug}`;
       
-      // Image: no base64
-      let image_link = '';
-      if (p.image && !p.image.startsWith('data:image')) {
-        image_link = p.image.startsWith('http') ? p.image : `${baseUrl}${p.image}`;
-      }
+      // Image: no base64, specific format
+      const vMatch = p.image.match(/(\?v=[^&]+)/);
+      const vParam = vMatch ? vMatch[1] : '';
+      const image_link = `https://yumidz.vercel.app/api/images/products/${p.id}/image${vParam}`;
       
       const brand = p.brand_name || 'Generic';
 

@@ -57,7 +57,7 @@ export default function AdminDashboard() {
   
   const [productForm, setProductForm] = useState({
     name: '', slug: '', sku: '', category_id: '', subcategory_id: '', sub_subcategory_id: '', brand_id: '', brand_name: '', price: '', promo_price: '', stock: '', description: '', image: '',
-    is_popular: false, is_best_seller: false, is_new: false, is_recommended: false, is_fast_delivery: false, images: [] as any[],
+    is_popular: false, is_best_seller: false, is_new: false, is_recommended: false, is_fast_delivery: false, is_active: true, images: [] as any[],
     features: '', key_points: ''
   });
   const [subcategoryForm, setSubcategoryForm] = useState({
@@ -681,6 +681,7 @@ export default function AdminDashboard() {
         is_popular: !!product.is_popular, is_best_seller: !!product.is_best_seller, 
         is_new: !!product.is_new, is_recommended: !!product.is_recommended,
         is_fast_delivery: !!product.is_fast_delivery,
+        is_active: product.is_active !== false,
         images: product.images || [],
         features: typeof product.features === 'string' ? product.features : (Array.isArray(product.features) ? product.features.map((f: any) => `${f.key}: ${f.value}`).join('\n') : ''),
         key_points: typeof product.key_points === 'string' ? product.key_points : (Array.isArray(product.key_points) ? product.key_points.join('\n') : '')
@@ -689,7 +690,7 @@ export default function AdminDashboard() {
       setEditingProduct(null);
       setProductForm({
         name: '', slug: '', sku: '', category_id: categories[0]?.id || '', subcategory_id: '', sub_subcategory_id: '', brand_id: '', brand_name: '', price: '', promo_price: '', stock: '', description: '', image: '',
-        is_popular: false, is_best_seller: false, is_new: false, is_recommended: false, is_fast_delivery: false, images: [], features: '', key_points: ''
+        is_popular: false, is_best_seller: false, is_new: false, is_recommended: false, is_fast_delivery: false, is_active: false, images: [], features: '', key_points: ''
       });
     }
     setIsModalOpen(true);
@@ -1246,7 +1247,7 @@ export default function AdminDashboard() {
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
       
-      toast.success(`${exportedCount} produits exportés. ${ignoredCount} produits ignorés car SKU manquant.`, { autoClose: 5000 });
+      toast.success(`${exportedCount} produits exportés. ${ignoredCount} produits ignorés car SKU manquant.`, { duration: 5000 });
     } catch (error) {
       console.error('Export error:', error);
       toast.error('Erreur lors de l\'export du catalogue');
@@ -1735,6 +1736,7 @@ export default function AdminDashboard() {
                       <tr>
                         <th className="px-6 py-3">Image</th>
                         <th className="px-6 py-3">Nom du produit</th>
+                        <th className="px-6 py-3">Statut</th>
                         <th className="px-6 py-3">Catégorie</th>
                         <th className="px-6 py-3">Sous-catégorie</th>
                         <th className="px-6 py-3">Sous-sous-catégorie</th>
@@ -1751,6 +1753,13 @@ export default function AdminDashboard() {
                             <img src={product.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(product.name)}&background=random&size=50`} alt={product.name} className="w-10 h-10 rounded object-cover" referrerPolicy="no-referrer" />
                           </td>
                           <td className="px-6 py-4 font-medium text-gray-900">{product.name}</td>
+                          <td className="px-6 py-4">
+                            {product.is_active !== false ? (
+                              <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full font-medium">Actif</span>
+                            ) : (
+                              <span className="px-2 py-1 bg-gray-100 text-gray-800 text-xs rounded-full font-medium">Inactif</span>
+                            )}
+                          </td>
                           <td className="px-6 py-4">{product.category_name}</td>
                           <td className="px-6 py-4 text-gray-500">{product.subcategory_name || '-'}</td>
                           <td className="px-6 py-4 text-gray-500">{product.sub_subcategory_name || '-'}</td>
@@ -2548,14 +2557,11 @@ export default function AdminDashboard() {
                   <label className="block text-sm font-medium text-gray-700 mb-2">SKU / ID Produit Meta</label>
                   <input 
                     type="text" 
-                    className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500" 
-                    value={productForm.sku} 
-                    onChange={e => {
-                      const val = e.target.value.replace(/[^a-zA-Z0-9_-]/g, '');
-                      setProductForm({...productForm, sku: val});
-                    }} 
+                    className="w-full px-4 py-2 rounded-md border border-gray-300 bg-gray-100 text-gray-500 cursor-not-allowed" 
+                    value={productForm.sku || 'Généré automatiquement'} 
+                    disabled
                   />
-                  <p className="text-xs text-gray-500 mt-1">Code unique pour Meta Ads. Ex: CUISINE-001. Obligatoire pour la pub.</p>
+                  <p className="text-xs text-gray-500 mt-1">Code unique pour Meta Ads généré automatiquement.</p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Catégorie *</label>
@@ -2696,6 +2702,17 @@ export default function AdminDashboard() {
                   <input type="checkbox" className="rounded text-orange-500 focus:ring-orange-500" checked={productForm.is_fast_delivery} onChange={e => setProductForm({...productForm, is_fast_delivery: e.target.checked})} />
                   Livraison Rapide
                 </label>
+                <div className="flex flex-col">
+                  <label className="flex items-center gap-2 text-sm font-bold text-green-600">
+                    <input 
+                      type="checkbox" 
+                      className="rounded text-green-500 focus:ring-green-500" 
+                      checked={productForm.is_active} 
+                      onChange={e => setProductForm({...productForm, is_active: e.target.checked})} 
+                    />
+                    Actif (En ligne)
+                  </label>
+                </div>
               </div>
               </div>
 

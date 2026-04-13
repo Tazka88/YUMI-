@@ -17,6 +17,7 @@ export interface Product {
   is_new: boolean;
   is_recommended: boolean;
   is_fast_delivery?: boolean;
+  is_active?: boolean;
   sku?: string;
   features?: string | { key: string; value: string }[];
   key_points?: string[];

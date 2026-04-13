@@ -1128,7 +1128,6 @@ router.get('/admin/export-meta-catalog', authenticate, async (req, res) => {
       SELECT p.*, COALESCE(p.brand_name, b.name) as brand_name 
       FROM products p 
       LEFT JOIN brands b ON p.brand_id = b.id
-      WHERE p.is_active = true
     `;
 
     const exportedProducts = products;
@@ -1151,14 +1150,27 @@ router.get('/admin/export-meta-catalog', authenticate, async (req, res) => {
     
     const rows = exportedProducts.map((p: any) => {
       const id = p.sku || p.id;
-      const title = p.name;
-      const description = p.description || p.name;
-      const availability = p.stock > 0 ? 'in stock' : 'out of stock';
+      const title = String(p.name).substring(0, 200);
+      
+      // Description: normal text, no ALL CAPS
+      let rawDesc = p.description || p.name || '';
+      const description = rawDesc.toLowerCase().replace(/(^\w|\.\s+\w)/g, (letter: string) => letter.toUpperCase());
+      
+      const availability = p.is_active ? 'in stock' : 'out of stock';
       const condition = 'new';
-      const price = `${Number(p.promo_price || p.price).toFixed(2)} DZD`;
+      
+      const priceVal = p.promo_price > 0 ? p.promo_price : p.price;
+      const price = `${Number(priceVal).toFixed(2)} DZD`;
+      
       const link = `${baseUrl}/product/${p.slug}`;
-      const image_link = p.image && p.image.startsWith('http') ? p.image : `${baseUrl}${p.image}`;
-      const brand = p.brand_name || 'Yumi';
+      
+      // Image: no base64
+      let image_link = '';
+      if (p.image && !p.image.startsWith('data:image')) {
+        image_link = p.image.startsWith('http') ? p.image : `${baseUrl}${p.image}`;
+      }
+      
+      const brand = p.brand_name || 'Generic';
 
       return [id, title, description, availability, condition, price, link, image_link, brand]
         .map(escapeCSV)

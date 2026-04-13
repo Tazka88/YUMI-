@@ -1130,7 +1130,7 @@ router.get('/admin/export-meta-catalog', authenticate, async (req, res) => {
       LEFT JOIN brands b ON p.brand_id = b.id
     `;
 
-    const exportedProducts = products.filter((p: any) => p.image && p.image.trim() !== '' && !p.image.startsWith('data:image'));
+    const exportedProducts = products.filter((p: any) => p.image && typeof p.image === 'string' && p.image.trim() !== '');
     const ignoredCount = products.length - exportedProducts.length;
 
     // CSV Header

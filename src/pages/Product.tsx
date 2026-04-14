@@ -358,7 +358,7 @@ export default function Product() {
                     
                     return (
                       <div 
-                        className={`absolute bottom-4 right-4 w-1/3 max-w-[120px] ${isShort ? 'aspect-[9/16]' : 'aspect-video'} rounded-lg overflow-hidden shadow-xl border-2 border-white cursor-pointer z-20 group`}
+                        className={`absolute bottom-4 right-4 md:bottom-6 md:right-6 ${isShort ? 'w-[30%] max-w-[140px]' : 'w-[40%] max-w-[200px]'} md:w-[25%] md:max-w-[280px] ${isShort ? 'aspect-[9/16]' : 'aspect-video'} rounded-xl overflow-hidden shadow-2xl border-2 md:border-4 border-white cursor-pointer z-20 group transition-transform hover:scale-[1.02]`}
                         onClick={() => setSelectedMedia({type: 'video', url: `https://www.youtube.com/embed/${videoId}?autoplay=1`})}
                       >
                         <iframe
@@ -367,9 +367,9 @@ export default function Product() {
                           className="w-full h-full pointer-events-none"
                           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                         ></iframe>
-                        <div className="absolute inset-0 flex items-center justify-center bg-black/10 group-hover:bg-black/30 transition-colors">
-                          <div className="w-8 h-8 bg-white/90 rounded-full flex items-center justify-center backdrop-blur-sm shadow-sm scale-90 group-hover:scale-100 transition-transform">
-                            <Play size={14} className="text-gray-900 ml-0.5" />
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/10 group-hover:bg-black/20 transition-colors">
+                          <div className="w-8 h-8 md:w-12 md:h-12 bg-white/90 rounded-full flex items-center justify-center backdrop-blur-sm shadow-lg scale-90 group-hover:scale-100 transition-transform">
+                            <Play size={16} className="text-gray-900 ml-0.5 md:ml-1 md:w-5 md:h-5" />
                           </div>
                         </div>
                       </div>

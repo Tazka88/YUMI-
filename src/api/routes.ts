@@ -1136,11 +1136,14 @@ router.get('/admin/export-meta-catalog', authenticate, async (req, res) => {
     // CSV Header
     const columns = ['id', 'title', 'description', 'availability', 'condition', 'price', 'link', 'image_link', 'brand'];
     
-    // Helper to escape CSV fields
-    const escapeCSV = (field: any) => {
-      if (field === null || field === undefined) return '';
-      const str = String(field);
-      if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+    // Helper to format CSV fields strictly
+    const formatField = (field: any, forceQuote = false) => {
+      if (field === null || field === undefined) return forceQuote ? '""' : '';
+      let str = String(field).trim();
+      // Remove all newlines and replace with space, remove multiple spaces
+      str = str.replace(/\r?\n|\r/g, ' ').replace(/\s+/g, ' ');
+      
+      if (forceQuote || str.includes(',') || str.includes('"')) {
         return `"${str.replace(/"/g, '""')}"`;
       }
       return str;
@@ -1149,14 +1152,15 @@ router.get('/admin/export-meta-catalog', authenticate, async (req, res) => {
     const baseUrl = req.protocol + '://' + req.get('host');
     
     const rows = exportedProducts.map((p: any) => {
-      const id = p.sku || p.id;
-      const title = String(p.name).substring(0, 200);
+      const id = formatField(p.sku || p.id);
+      const title = formatField(String(p.name).substring(0, 200), true);
       
       // Description: normal text, no ALL CAPS
       let rawDesc = p.description || p.name || '';
-      const description = rawDesc.toLowerCase().replace(/(^\w|\.\s+\w)/g, (letter: string) => letter.toUpperCase());
+      let descriptionText = rawDesc.toLowerCase().replace(/(^\w|\.\s+\w)/g, (letter: string) => letter.toUpperCase());
+      const description = formatField(descriptionText, true);
       
-      const availability = p.is_active ? 'in stock' : 'out of stock';
+      const availability = p.is_active !== false ? 'in stock' : 'out of stock';
       const condition = 'new';
       
       const priceVal = p.promo_price > 0 ? p.promo_price : p.price;
@@ -1169,11 +1173,9 @@ router.get('/admin/export-meta-catalog', authenticate, async (req, res) => {
       const vParam = vMatch ? vMatch[1] : '';
       const image_link = `https://yumidz.vercel.app/api/images/products/${p.id}/image${vParam}`;
       
-      const brand = p.brand_name || 'Generic';
+      const brand = formatField(p.brand_name || 'Generic');
 
-      return [id, title, description, availability, condition, price, link, image_link, brand]
-        .map(escapeCSV)
-        .join(',');
+      return [id, title, description, availability, condition, price, link, image_link, brand].join(',');
     });
 
     const csvContent = [columns.join(','), ...rows].join('\n');

@@ -358,10 +358,21 @@ export default function Product() {
                 {product.video_url && (() => {
                   let videoId = '';
                   const url = product.video_url;
-                  if (url.includes('youtube.com/watch?v=')) {
-                    videoId = url.split('v=')[1]?.split('&')[0];
-                  } else if (url.includes('youtu.be/')) {
-                    videoId = url.split('youtu.be/')[1]?.split('?')[0];
+                  
+                  try {
+                    // Handle different YouTube URL formats
+                    if (url.includes('youtube.com/watch')) {
+                      const urlObj = new URL(url);
+                      videoId = urlObj.searchParams.get('v') || '';
+                    } else if (url.includes('youtu.be/')) {
+                      videoId = url.split('youtu.be/')[1]?.split('?')[0] || '';
+                    } else if (url.includes('youtube.com/shorts/')) {
+                      videoId = url.split('youtube.com/shorts/')[1]?.split('?')[0] || '';
+                    } else if (url.includes('youtube.com/embed/')) {
+                      videoId = url.split('youtube.com/embed/')[1]?.split('?')[0] || '';
+                    }
+                  } catch (e) {
+                    console.error('Invalid video URL:', e);
                   }
                   
                   if (!videoId) return null;

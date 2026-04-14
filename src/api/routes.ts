@@ -61,8 +61,8 @@ const serveImageData = async (res: any, imageData: string, targetWidth?: number,
     }
   }
   
-  // If it's a regular URL, redirect
-  if (imageData.startsWith('http')) {
+  // If it's a regular URL or a local path, redirect
+  if (imageData.startsWith('http') || imageData.startsWith('/')) {
     return res.redirect(imageData);
   }
   
@@ -1240,17 +1240,30 @@ router.put('/admin/products/:id', authenticate, async (req, res) => {
       }
 
       if (images && Array.isArray(images)) {
-        const existingImages = await sql`SELECT id, image FROM product_images WHERE product_id = ${req.params.id}`;
-        await sql`DELETE FROM product_images WHERE product_id = ${req.params.id}`;
+        const imagesToKeep: string[] = [];
+        const imagesToInsert: any[] = [];
+        
         for (const img of images) {
           let imgData = img.url || img.image;
           if (imgData && imgData.startsWith('/api/images/product_images/')) {
             const imgId = imgData.split('/')[4];
-            const existing = existingImages.find((e: any) => e.id.toString() === imgId);
-            if (existing) {
-              imgData = existing.image;
+            if (imgId) {
+              imagesToKeep.push(imgId);
+              await sql`UPDATE product_images SET is_main = ${img.is_main ? true : false} WHERE id = ${imgId}`;
             }
+          } else if (imgData) {
+            imagesToInsert.push(img);
           }
+        }
+        
+        if (imagesToKeep.length > 0) {
+          await sql`DELETE FROM product_images WHERE product_id = ${req.params.id} AND id NOT IN ${sql(imagesToKeep)}`;
+        } else {
+          await sql`DELETE FROM product_images WHERE product_id = ${req.params.id}`;
+        }
+        
+        for (const img of imagesToInsert) {
+          let imgData = img.url || img.image;
           await sql`INSERT INTO product_images (product_id, image, is_main) VALUES (${req.params.id}, ${imgData}, ${img.is_main ? true : false})`;
         }
       }

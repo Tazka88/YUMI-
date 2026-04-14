@@ -690,7 +690,7 @@ export default function AdminDashboard() {
       setEditingProduct(null);
       setProductForm({
         name: '', slug: '', sku: '', category_id: categories[0]?.id || '', subcategory_id: '', sub_subcategory_id: '', brand_id: '', brand_name: '', price: '', promo_price: '', stock: '', description: '', image: '', video_url: '',
-        is_popular: false, is_best_seller: false, is_new: false, is_recommended: false, is_fast_delivery: false, is_active: false, images: [], features: '', key_points: ''
+        is_popular: false, is_best_seller: false, is_new: false, is_recommended: false, is_fast_delivery: false, is_active: true, images: [], features: '', key_points: ''
       });
     }
     setIsModalOpen(true);

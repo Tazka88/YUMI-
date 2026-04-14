@@ -358,7 +358,7 @@ export default function Product() {
                     
                     return (
                       <div 
-                        className={`absolute bottom-4 right-4 md:bottom-6 md:right-6 ${isShort ? 'w-[30%] max-w-[140px]' : 'w-[40%] max-w-[200px]'} md:w-[25%] md:max-w-[280px] ${isShort ? 'aspect-[9/16]' : 'aspect-video'} rounded-xl overflow-hidden shadow-2xl border-2 md:border-4 border-white cursor-pointer z-20 group transition-transform hover:scale-[1.02]`}
+                        className={`absolute bottom-4 right-4 md:bottom-6 md:right-6 ${isShort ? 'w-[30%] max-w-[140px] md:w-[25%] md:max-w-[240px]' : 'w-[40%] max-w-[200px] md:w-[40%] md:max-w-[380px]'} ${isShort ? 'aspect-[9/16]' : 'aspect-video'} rounded-xl overflow-hidden shadow-2xl border-2 md:border-4 border-white cursor-pointer z-20 group transition-transform hover:scale-[1.02]`}
                         onClick={() => setSelectedMedia({type: 'video', url: `https://www.youtube.com/embed/${videoId}?autoplay=1`})}
                       >
                         <iframe

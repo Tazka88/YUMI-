@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { ShoppingCart, Star, ShieldCheck, Truck, RotateCcw, ThumbsUp, Facebook, Instagram, MessageCircle, CreditCard, ArrowDown, Phone } from 'lucide-react';
+import { ShoppingCart, Star, ShieldCheck, Truck, RotateCcw, ThumbsUp, Facebook, Instagram, MessageCircle, CreditCard, ArrowDown, Phone, Play } from 'lucide-react';
 import { useCartStore, Product as ProductType } from '../store/cartStore';
 import { formatPrice } from '../utils/formatPrice';
 import { ProductCard } from '../components/ProductCard';
@@ -326,14 +326,56 @@ export default function Product() {
                   allowFullScreen
                 ></iframe>
               ) : (
-                <img 
-                  src={selectedMedia.url} 
-                  alt={product.name}
-                  className="w-full h-full object-contain"
-                  referrerPolicy="no-referrer"
-                  fetchPriority="high"
-                  loading="eager"
-                />
+                <>
+                  <img 
+                    src={selectedMedia.url} 
+                    alt={product.name}
+                    className="w-full h-full object-contain"
+                    referrerPolicy="no-referrer"
+                    fetchPriority="high"
+                    loading="eager"
+                  />
+                  {product.video_url && (() => {
+                    let videoId = '';
+                    const url = product.video_url;
+                    try {
+                      if (url.includes('youtube.com/watch')) {
+                        const urlObj = new URL(url);
+                        videoId = urlObj.searchParams.get('v') || '';
+                      } else if (url.includes('youtu.be/')) {
+                        videoId = url.split('youtu.be/')[1]?.split('?')[0] || '';
+                      } else if (url.includes('youtube.com/shorts/')) {
+                        videoId = url.split('youtube.com/shorts/')[1]?.split('?')[0] || '';
+                      } else if (url.includes('youtube.com/embed/')) {
+                        videoId = url.split('youtube.com/embed/')[1]?.split('?')[0] || '';
+                      }
+                    } catch (e) {}
+                    
+                    if (!videoId) return null;
+                    
+                    const isShort = url.includes('youtube.com/shorts/');
+                    const embedUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&loop=1&playlist=${videoId}&controls=0&showinfo=0&rel=0`;
+                    
+                    return (
+                      <div 
+                        className={`absolute bottom-4 right-4 w-1/3 max-w-[120px] ${isShort ? 'aspect-[9/16]' : 'aspect-video'} rounded-lg overflow-hidden shadow-xl border-2 border-white cursor-pointer z-20 group`}
+                        onClick={() => setSelectedMedia({type: 'video', url: `https://www.youtube.com/embed/${videoId}?autoplay=1`})}
+                      >
+                        <iframe
+                          src={embedUrl}
+                          title="Product Video Preview"
+                          className="w-full h-full pointer-events-none"
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        ></iframe>
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/10 group-hover:bg-black/30 transition-colors">
+                          <div className="w-8 h-8 bg-white/90 rounded-full flex items-center justify-center backdrop-blur-sm shadow-sm scale-90 group-hover:scale-100 transition-transform">
+                            <Play size={14} className="text-gray-900 ml-0.5" />
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </>
               )}
             </div>
             
@@ -355,44 +397,6 @@ export default function Product() {
                     <img src={img.image} alt="Thumbnail" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
                   </button>
                 ))}
-                {product.video_url && (() => {
-                  let videoId = '';
-                  const url = product.video_url;
-                  
-                  try {
-                    // Handle different YouTube URL formats
-                    if (url.includes('youtube.com/watch')) {
-                      const urlObj = new URL(url);
-                      videoId = urlObj.searchParams.get('v') || '';
-                    } else if (url.includes('youtu.be/')) {
-                      videoId = url.split('youtu.be/')[1]?.split('?')[0] || '';
-                    } else if (url.includes('youtube.com/shorts/')) {
-                      videoId = url.split('youtube.com/shorts/')[1]?.split('?')[0] || '';
-                    } else if (url.includes('youtube.com/embed/')) {
-                      videoId = url.split('youtube.com/embed/')[1]?.split('?')[0] || '';
-                    }
-                  } catch (e) {
-                    console.error('Invalid video URL:', e);
-                  }
-                  
-                  if (!videoId) return null;
-                  
-                  const embedUrl = `https://www.youtube.com/embed/${videoId}`;
-                  
-                  return (
-                    <button 
-                      onClick={() => setSelectedMedia({type: 'video', url: embedUrl})}
-                      className={`w-20 h-20 flex-shrink-0 rounded-md overflow-hidden border-2 transition-colors bg-gray-100 p-1 flex items-center justify-center relative ${selectedMedia.url === embedUrl ? 'border-orange-500' : 'border-transparent'}`}
-                    >
-                      <div className="absolute inset-0 flex items-center justify-center bg-black/10 z-10">
-                        <div className="w-8 h-8 bg-red-600 rounded-full flex items-center justify-center shadow-md">
-                          <div className="w-0 h-0 border-t-4 border-t-transparent border-l-6 border-l-white border-b-4 border-b-transparent ml-1"></div>
-                        </div>
-                      </div>
-                      <img src={`https://img.youtube.com/vi/${videoId}/default.jpg`} alt="Video Thumbnail" className="w-full h-full object-cover opacity-80" />
-                    </button>
-                  );
-                })()}
               </div>
             )}
           </div>

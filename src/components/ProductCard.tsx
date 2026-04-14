@@ -18,7 +18,7 @@ interface Product {
   avg_rating?: number;
 }
 
-export const ProductCard: React.FC<{ product: Product; priority?: boolean }> = ({ product, priority = false }) => {
+export const ProductCard: React.FC<{ product: Product; priority?: boolean; isFlashSale?: boolean }> = ({ product, priority = false, isFlashSale = false }) => {
   const addItem = useCartStore((state) => state.addItem);
   const navigate = useNavigate();
   const isPromo = product.promo_price !== null;
@@ -95,6 +95,20 @@ export const ProductCard: React.FC<{ product: Product; priority?: boolean }> = (
             <div className="text-base sm:text-lg font-bold text-gray-900">{formatPrice(product.price)}</div>
           )}
         </div>
+
+        {isFlashSale && !isOutOfStock && (
+          <div className="mb-2 sm:mb-3">
+            <div className="text-[10px] sm:text-xs text-gray-700 mb-1 font-medium">
+              {product.stock} articles restants
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-1.5 sm:h-2">
+              <div 
+                className="bg-red-600 h-1.5 sm:h-2 rounded-full transition-all duration-500" 
+                style={{ width: `${Math.max(5, Math.min(100, (product.stock / 50) * 100))}%` }}
+              ></div>
+            </div>
+          </div>
+        )}
 
         {!isOutOfStock && (
           <div className="flex flex-col gap-1.5 sm:gap-2 mt-auto">

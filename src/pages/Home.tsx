@@ -703,7 +703,7 @@ export default function Home() {
             <section key={section.id}>
               <FlashSalesHeader link="/category/all" />
               <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-4">
-                {promotions.slice(0, 5).map((p, i) => <ProductCard key={p.id} product={p} priority={i < 4} />)}
+                {promotions.slice(0, 5).map((p, i) => <ProductCard key={p.id} product={p} priority={i < 4} isFlashSale={true} />)}
               </div>
             </section>
           );

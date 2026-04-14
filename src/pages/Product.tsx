@@ -13,6 +13,7 @@ export default function Product() {
   const [product, setProduct] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
   const [selectedImage, setSelectedImage] = useState<string>('');
+  const [selectedMedia, setSelectedMedia] = useState<{type: 'image' | 'video', url: string}>({type: 'image', url: ''});
   const [relatedProducts, setRelatedProducts] = useState<ProductType[]>([]);
   const [reviews, setReviews] = useState<any[]>([]);
   const [quantity, setQuantity] = useState(1);
@@ -51,7 +52,9 @@ export default function Product() {
       })
       .then(data => {
         setProduct(data);
-        setSelectedImage(data.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(data.name)}&background=random&size=800`);
+        const mainImage = data.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(data.name)}&background=random&size=800`;
+        setSelectedImage(mainImage);
+        setSelectedMedia({type: 'image', url: mainImage});
         
         // Increment view count
         fetch(`/api/products/${data.id}/view`, { method: 'POST', signal }).catch(console.error);
@@ -314,34 +317,71 @@ export default function Product() {
                   -{discount}%
                 </div>
               )}
-              <img 
-                src={selectedImage} 
-                alt={product.name}
-                className="w-full h-full object-contain"
-                referrerPolicy="no-referrer"
-                fetchPriority="high"
-                loading="eager"
-              />
+              {selectedMedia.type === 'video' ? (
+                <iframe
+                  src={selectedMedia.url}
+                  title="Product Video"
+                  className="w-full h-full rounded-md"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                ></iframe>
+              ) : (
+                <img 
+                  src={selectedMedia.url} 
+                  alt={product.name}
+                  className="w-full h-full object-contain"
+                  referrerPolicy="no-referrer"
+                  fetchPriority="high"
+                  loading="eager"
+                />
+              )}
             </div>
             
             {/* Thumbnails */}
-            {product.images && product.images.length > 0 && (
+            {(product.images?.length > 0 || product.video_url) && (
               <div className="flex gap-2 overflow-x-auto pb-2">
                 <button 
-                  onClick={() => setSelectedImage(product.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(product.name)}&background=random&size=800`)}
-                  className={`w-20 h-20 flex-shrink-0 rounded-md overflow-hidden border-2 transition-colors bg-white p-1 ${selectedImage === (product.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(product.name)}&background=random&size=800`) ? 'border-orange-500' : 'border-transparent'}`}
+                  onClick={() => setSelectedMedia({type: 'image', url: product.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(product.name)}&background=random&size=800`})}
+                  className={`w-20 h-20 flex-shrink-0 rounded-md overflow-hidden border-2 transition-colors bg-white p-1 ${selectedMedia.url === (product.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(product.name)}&background=random&size=800`) ? 'border-orange-500' : 'border-transparent'}`}
                 >
                   <img src={product.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(product.name)}&background=random&size=800`} alt="Main" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
                 </button>
-                {product.images.map((img: any) => (
+                {product.images?.map((img: any) => (
                   <button 
                     key={img.id}
-                    onClick={() => setSelectedImage(img.image)}
-                    className={`w-20 h-20 flex-shrink-0 rounded-md overflow-hidden border-2 transition-colors bg-white p-1 ${selectedImage === img.image ? 'border-orange-500' : 'border-transparent'}`}
+                    onClick={() => setSelectedMedia({type: 'image', url: img.image})}
+                    className={`w-20 h-20 flex-shrink-0 rounded-md overflow-hidden border-2 transition-colors bg-white p-1 ${selectedMedia.url === img.image ? 'border-orange-500' : 'border-transparent'}`}
                   >
                     <img src={img.image} alt="Thumbnail" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
                   </button>
                 ))}
+                {product.video_url && (() => {
+                  let videoId = '';
+                  const url = product.video_url;
+                  if (url.includes('youtube.com/watch?v=')) {
+                    videoId = url.split('v=')[1]?.split('&')[0];
+                  } else if (url.includes('youtu.be/')) {
+                    videoId = url.split('youtu.be/')[1]?.split('?')[0];
+                  }
+                  
+                  if (!videoId) return null;
+                  
+                  const embedUrl = `https://www.youtube.com/embed/${videoId}`;
+                  
+                  return (
+                    <button 
+                      onClick={() => setSelectedMedia({type: 'video', url: embedUrl})}
+                      className={`w-20 h-20 flex-shrink-0 rounded-md overflow-hidden border-2 transition-colors bg-gray-100 p-1 flex items-center justify-center relative ${selectedMedia.url === embedUrl ? 'border-orange-500' : 'border-transparent'}`}
+                    >
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/10 z-10">
+                        <div className="w-8 h-8 bg-red-600 rounded-full flex items-center justify-center shadow-md">
+                          <div className="w-0 h-0 border-t-4 border-t-transparent border-l-6 border-l-white border-b-4 border-b-transparent ml-1"></div>
+                        </div>
+                      </div>
+                      <img src={`https://img.youtube.com/vi/${videoId}/default.jpg`} alt="Video Thumbnail" className="w-full h-full object-cover opacity-80" />
+                    </button>
+                  );
+                })()}
               </div>
             )}
           </div>

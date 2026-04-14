@@ -56,7 +56,7 @@ export default function AdminDashboard() {
   });
   
   const [productForm, setProductForm] = useState({
-    name: '', slug: '', sku: '', category_id: '', subcategory_id: '', sub_subcategory_id: '', brand_id: '', brand_name: '', price: '', promo_price: '', stock: '', description: '', image: '',
+    name: '', slug: '', sku: '', category_id: '', subcategory_id: '', sub_subcategory_id: '', brand_id: '', brand_name: '', price: '', promo_price: '', stock: '', description: '', image: '', video_url: '',
     is_popular: false, is_best_seller: false, is_new: false, is_recommended: false, is_fast_delivery: false, is_active: true, images: [] as any[],
     features: '', key_points: ''
   });
@@ -677,7 +677,7 @@ export default function AdminDashboard() {
       setProductForm({
         name: product.name, slug: product.slug, sku: product.sku || '', category_id: product.category_id, subcategory_id: product.subcategory_id || '', sub_subcategory_id: product.sub_subcategory_id || '', brand_id: product.brand_id || '', brand_name: product.brand_name || '',
         price: product.price, promo_price: product.promo_price || '', stock: product.stock, 
-        description: product.description || '', image: product.image || '',
+        description: product.description || '', image: product.image || '', video_url: product.video_url || '',
         is_popular: !!product.is_popular, is_best_seller: !!product.is_best_seller, 
         is_new: !!product.is_new, is_recommended: !!product.is_recommended,
         is_fast_delivery: !!product.is_fast_delivery,
@@ -689,7 +689,7 @@ export default function AdminDashboard() {
     } else {
       setEditingProduct(null);
       setProductForm({
-        name: '', slug: '', sku: '', category_id: categories[0]?.id || '', subcategory_id: '', sub_subcategory_id: '', brand_id: '', brand_name: '', price: '', promo_price: '', stock: '', description: '', image: '',
+        name: '', slug: '', sku: '', category_id: categories[0]?.id || '', subcategory_id: '', sub_subcategory_id: '', brand_id: '', brand_name: '', price: '', promo_price: '', stock: '', description: '', image: '', video_url: '',
         is_popular: false, is_best_seller: false, is_new: false, is_recommended: false, is_fast_delivery: false, is_active: false, images: [], features: '', key_points: ''
       });
     }
@@ -2622,6 +2622,16 @@ export default function AdminDashboard() {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Stock *</label>
                   <input type="number" min="0" className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500" value={productForm.stock} onChange={e => setProductForm({...productForm, stock: e.target.value})} />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">URL Vidéo YouTube (Optionnel)</label>
+                  <input
+                    type="url"
+                    value={productForm.video_url}
+                    onChange={(e) => setProductForm({...productForm, video_url: e.target.value})}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                    placeholder="https://www.youtube.com/watch?v=..."
+                  />
                 </div>
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-2">Image Principale</label>

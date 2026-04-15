@@ -98,8 +98,8 @@ async function startServer() {
         let template = fs.readFileSync(path.join(distPath, 'index.html'), 'utf-8');
         let seoHtml = '';
         let headHtml = '';
-        let title = 'Yumi - Boutique en ligne';
-        let description = 'Découvrez Yumi (YUMIDZ), votre boutique en ligne de confiance en Algérie.';
+        let title = 'ZORANDO - Boutique en ligne';
+        let description = 'Découvrez ZORANDO (ZORANDODZ), votre boutique en ligne de confiance en Algérie.';
 
         if (req.path === '/' || req.path === '/index.html') {
           const categories = await sql`SELECT name, slug FROM categories`;
@@ -110,7 +110,7 @@ async function startServer() {
           `;
           seoHtml = `
             <div id="seo-content" style="display:none;">
-              <h1>Bienvenue sur Yumi - Boutique en ligne en Algérie</h1>
+              <h1>Bienvenue sur ZORANDO - Boutique en ligne en Algérie</h1>
               <p>${description}</p>
               <h2>Nos Catégories</h2>
               <ul>
@@ -129,7 +129,7 @@ async function startServer() {
             </div>
           `;
         } else if (req.path === '/brands') {
-          title = 'Toutes nos marques - Yumi';
+          title = 'Toutes nos marques - ZORANDO';
           const brands = await sql`SELECT name, slug FROM brands`;
           seoHtml = `
             <div id="seo-content" style="display:none;">
@@ -144,8 +144,8 @@ async function startServer() {
           const [brand] = await sql`SELECT id, name, description FROM brands WHERE slug = ${slug}`;
           
           if (brand) {
-            title = `${brand.name} - Yumi`;
-            description = brand.description || `Découvrez tous les produits de la marque ${brand.name} sur Yumi.`;
+            title = `${brand.name} - ZORANDO`;
+            description = brand.description || `Découvrez tous les produits de la marque ${brand.name} sur ZORANDO.`;
             const products = await sql`SELECT name, slug FROM products WHERE brand_id = ${brand.id}`;
             seoHtml = `
               <div id="seo-content" style="display:none;">
@@ -162,7 +162,7 @@ async function startServer() {
           const [category] = await sql`SELECT id, name, description FROM categories WHERE slug = ${slug}`;
           
           if (category) {
-            title = `${category.name} - Yumi`;
+            title = `${category.name} - ZORANDO`;
             description = category.description || `Découvrez nos produits dans la catégorie ${category.name}.`;
             const products = await sql`SELECT name, slug FROM products WHERE category_id = ${category.id}`;
             seoHtml = `
@@ -177,7 +177,7 @@ async function startServer() {
           } else {
             const [subcat] = await sql`SELECT id, name FROM subcategories WHERE slug = ${slug}`;
             if (subcat) {
-              title = `${subcat.name} - Yumi`;
+              title = `${subcat.name} - ZORANDO`;
               const products = await sql`SELECT name, slug FROM products WHERE subcategory_id = ${subcat.id}`;
               seoHtml = `
                 <div id="seo-content" style="display:none;">
@@ -190,7 +190,7 @@ async function startServer() {
             } else {
               const [subSubcat] = await sql`SELECT id, name FROM sub_subcategories WHERE slug = ${slug}`;
               if (subSubcat) {
-                title = `${subSubcat.name} - Yumi`;
+                title = `${subSubcat.name} - ZORANDO`;
                 const products = await sql`SELECT name, slug FROM products WHERE sub_subcategory_id = ${subSubcat.id}`;
                 seoHtml = `
                   <div id="seo-content" style="display:none;">
@@ -208,8 +208,8 @@ async function startServer() {
           const [product] = await sql`SELECT name, description, price, promo_price FROM products WHERE slug = ${slug}`;
           
           if (product) {
-            title = `${product.name} - Yumi`;
-            description = product.description ? product.description.substring(0, 160) : `Achetez ${product.name} au meilleur prix sur Yumi.`;
+            title = `${product.name} - ZORANDO`;
+            description = product.description ? product.description.substring(0, 160) : `Achetez ${product.name} au meilleur prix sur ZORANDO.`;
             const displayPrice = product.promo_price || product.price;
             seoHtml = `
               <div id="seo-content" style="display:none;">
@@ -220,17 +220,17 @@ async function startServer() {
             `;
           }
         } else if (req.path === '/about') {
-          title = 'À propos de nous - Yumi';
-          description = 'Découvrez l\'histoire de Yumi, votre boutique en ligne de confiance en Algérie.';
+          title = 'À propos de nous - ZORANDO';
+          description = 'Découvrez l\'histoire de ZORANDO, votre boutique en ligne de confiance en Algérie.';
         } else if (req.path === '/programme-fidelite') {
-          title = 'Programme de fidélité - Yumi';
-          description = 'Rejoignez le programme de fidélité Yumi et profitez de récompenses exclusives.';
+          title = 'Programme de fidélité - ZORANDO';
+          description = 'Rejoignez le programme de fidélité ZORANDO et profitez de récompenses exclusives.';
         } else if (req.path === '/retours') {
-          title = 'Politique de retours - Yumi';
+          title = 'Politique de retours - ZORANDO';
           description = 'Consultez notre politique de retours et remboursements.';
         } else if (req.path === '/track-order') {
-          title = 'Suivre ma commande - Yumi';
-          description = 'Suivez l\'état de votre commande Yumi en temps réel.';
+          title = 'Suivre ma commande - ZORANDO';
+          description = 'Suivez l\'état de votre commande ZORANDO en temps réel.';
         }
 
         let finalHtml = template.replace('<!--seo-injection-->', seoHtml);

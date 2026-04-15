@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { ShoppingCart, Star, ShieldCheck, Truck, RotateCcw, ThumbsUp, Facebook, Instagram, MessageCircle, CreditCard, ArrowDown, Phone, Play } from 'lucide-react';
+import { ShoppingCart, Star, ShieldCheck, Truck, RotateCcw, ThumbsUp, Facebook, Instagram, MessageCircle, CreditCard, ArrowDown, Phone, Play, ChevronDown, HelpCircle } from 'lucide-react';
 import { useCartStore, Product as ProductType } from '../store/cartStore';
 import { formatPrice } from '../utils/formatPrice';
 import { ProductCard } from '../components/ProductCard';
@@ -17,6 +17,7 @@ export default function Product() {
   const [relatedProducts, setRelatedProducts] = useState<ProductType[]>([]);
   const [reviews, setReviews] = useState<any[]>([]);
   const [quantity, setQuantity] = useState(1);
+  const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [reviewForm, setReviewForm] = useState({ name: '', rating: 5, comment: '' });
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
   const [trackingIds, setTrackingIds] = useState({ ga: '', fb: '' });
@@ -142,6 +143,36 @@ export default function Product() {
         </Link>
       </div>
     );
+  }
+
+  const toggleFaq = (index: number) => {
+    setOpenFaq(openFaq === index ? null : index);
+  };
+
+  const faqItems = [
+    {
+      q: "Est-ce qu'il y a une garantie ?",
+      a: "Oui, tous nos produits sont testés avant l'envoi et couverts par une garantie contre les défauts de fabrication. Vous achetez en toute tranquillité."
+    },
+    {
+      q: "Puis-je retourner le produit ?",
+      a: "Absolument. Si le produit ne correspond pas à la description ou présente un défaut, vous pouvez le retourner ou l'échanger facilement."
+    },
+    {
+      q: "C'est un produit original ?",
+      a: "Oui, nous garantissons l'authenticité de tous nos articles. Vous recevrez le produit exact présenté sur nos photos et vidéos."
+    },
+    {
+      q: "Mes informations personnelles sont-elles en sécurité ?",
+      a: "Totalement. Vos données servent uniquement à la livraison et ne sont jamais partagées. De plus, vous ne payez qu'à la réception de votre commande (main à main)."
+    }
+  ];
+
+  if (product?.faq_q1 && product?.faq_a1) {
+    faqItems.push({ q: product.faq_q1, a: product.faq_a1 });
+  }
+  if (product?.faq_q2 && product?.faq_a2) {
+    faqItems.push({ q: product.faq_q2, a: product.faq_a2 });
   }
 
   if (!product) {
@@ -626,6 +657,39 @@ export default function Product() {
           )}
         </div>
       )}
+
+      {/* FAQ Section */}
+      <div className="bg-white rounded-lg shadow-sm p-6 mb-12">
+        <h2 className="text-xl font-bold text-gray-800 mb-6 border-b pb-4 flex items-center gap-2">
+          <HelpCircle className="text-orange-500" size={24} />
+          Questions Fréquentes
+        </h2>
+        <div className="space-y-4">
+          {faqItems.map((faq, index) => (
+            <div key={index} className="border border-gray-200 rounded-lg overflow-hidden">
+              <button
+                onClick={() => toggleFaq(index)}
+                className="w-full flex items-center justify-between p-4 text-left bg-gray-50 hover:bg-gray-100 transition-colors"
+              >
+                <span className="font-bold text-gray-800">{faq.q}</span>
+                <ChevronDown 
+                  className={`text-gray-500 transition-transform duration-300 ${openFaq === index ? 'rotate-180' : ''}`} 
+                  size={20} 
+                />
+              </button>
+              <div 
+                className={`overflow-hidden transition-all duration-300 ease-in-out ${
+                  openFaq === index ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
+                }`}
+              >
+                <div className="p-4 bg-white text-gray-600 text-sm leading-relaxed border-t border-gray-100">
+                  {faq.a}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
 
       {/* Reviews Section */}
       <div className="bg-white rounded-lg shadow-sm p-6 mb-12">

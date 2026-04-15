@@ -58,7 +58,7 @@ export default function AdminDashboard() {
   const [productForm, setProductForm] = useState({
     name: '', slug: '', sku: '', category_id: '', subcategory_id: '', sub_subcategory_id: '', brand_id: '', brand_name: '', price: '', promo_price: '', stock: '', description: '', image: '', video_url: '',
     is_popular: false, is_best_seller: false, is_new: false, is_recommended: false, is_fast_delivery: false, is_active: true, images: [] as any[],
-    features: '', key_points: ''
+    features: '', key_points: '', faq_q1: '', faq_a1: '', faq_q2: '', faq_a2: ''
   });
   const [subcategoryForm, setSubcategoryForm] = useState({
     name: '', slug: '', category_id: '', image: ''
@@ -684,13 +684,15 @@ export default function AdminDashboard() {
         is_active: product.is_active !== false,
         images: product.images || [],
         features: typeof product.features === 'string' ? product.features : (Array.isArray(product.features) ? product.features.map((f: any) => `${f.key}: ${f.value}`).join('\n') : ''),
-        key_points: typeof product.key_points === 'string' ? product.key_points : (Array.isArray(product.key_points) ? product.key_points.join('\n') : '')
+        key_points: typeof product.key_points === 'string' ? product.key_points : (Array.isArray(product.key_points) ? product.key_points.join('\n') : ''),
+        faq_q1: product.faq_q1 || '', faq_a1: product.faq_a1 || '', faq_q2: product.faq_q2 || '', faq_a2: product.faq_a2 || ''
       });
     } else {
       setEditingProduct(null);
       setProductForm({
         name: '', slug: '', sku: '', category_id: categories[0]?.id || '', subcategory_id: '', sub_subcategory_id: '', brand_id: '', brand_name: '', price: '', promo_price: '', stock: '', description: '', image: '', video_url: '',
-        is_popular: false, is_best_seller: false, is_new: false, is_recommended: false, is_fast_delivery: false, is_active: true, images: [], features: '', key_points: ''
+        is_popular: false, is_best_seller: false, is_new: false, is_recommended: false, is_fast_delivery: false, is_active: true, images: [], features: '', key_points: '',
+        faq_q1: '', faq_a1: '', faq_q2: '', faq_a2: ''
       });
     }
     setIsModalOpen(true);
@@ -2688,6 +2690,26 @@ export default function AdminDashboard() {
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-2">Points clés (un par ligne)</label>
                   <textarea rows={5} placeholder="Entrez les points clés ici..." className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500" value={productForm.key_points as string} onChange={e => setProductForm({...productForm, key_points: e.target.value})}></textarea>
+                </div>
+
+                <div className="md:col-span-2 border-t pt-4 mt-2">
+                  <h4 className="font-bold text-gray-800 mb-4">FAQ Spécifique au Produit (Optionnel)</h4>
+                  <p className="text-sm text-gray-500 mb-4">Les 4 premières questions (Garantie, Retour, Original, Sécurité) sont ajoutées automatiquement. Vous pouvez ajouter ici 2 questions spécifiques à ce produit.</p>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Question 5</label>
+                      <input type="text" placeholder="Ex: Est-ce que la tondeuse coupe à zéro ?" className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500 mb-2" value={productForm.faq_q1} onChange={e => setProductForm({...productForm, faq_q1: e.target.value})} />
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Réponse 5</label>
+                      <textarea rows={3} placeholder="Ex: Oui, sa lame en T permet une coupe très près..." className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500" value={productForm.faq_a1} onChange={e => setProductForm({...productForm, faq_a1: e.target.value})}></textarea>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Question 6</label>
+                      <input type="text" placeholder="Ex: Combien de temps dure la batterie ?" className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500 mb-2" value={productForm.faq_q2} onChange={e => setProductForm({...productForm, faq_q2: e.target.value})} />
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Réponse 6</label>
+                      <textarea rows={3} placeholder="Ex: La batterie offre une autonomie de 180 minutes..." className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500" value={productForm.faq_a2} onChange={e => setProductForm({...productForm, faq_a2: e.target.value})}></textarea>
+                    </div>
+                  </div>
                 </div>
               </div>
               

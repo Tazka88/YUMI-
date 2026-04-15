@@ -41,6 +41,26 @@ export default function Checkout() {
   const [trackingIds, setTrackingIds] = useState({ ga: '', fb: '' });
   const [wilayas, setWilayas] = useState<Wilaya[]>([]);
 
+  // Shipping discount state
+  const [isShippingDiscountApplied, setIsShippingDiscountApplied] = useState(false);
+  const [discountEmail, setDiscountEmail] = useState('');
+  const [showDiscountOffer, setShowDiscountOffer] = useState(true);
+
+  const effectiveDeliveryCost = isShippingDiscountApplied ? deliveryCost * 0.7 : deliveryCost;
+  const finalTotal = checkoutTotal + effectiveDeliveryCost;
+
+  const handleApplyDiscount = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (!discountEmail || !/^\S+@\S+\.\S+$/.test(discountEmail)) {
+      toast.error('Veuillez entrer une adresse email valide');
+      return;
+    }
+    setFormData({ ...formData, email: discountEmail });
+    setIsShippingDiscountApplied(true);
+    setShowDiscountOffer(false);
+    toast.success('Réduction appliquée avec succès !');
+  };
+
   useEffect(() => {
     const fetchWilayas = async () => {
       try {
@@ -135,8 +155,8 @@ export default function Checkout() {
       wilaya: wilayas.find(w => w.number === formData.wilaya)?.name || formData.wilaya,
       address: formData.address,
       note: formData.note,
-      total_amount: checkoutTotal + deliveryCost,
-      delivery_cost: deliveryCost,
+      total_amount: finalTotal,
+      delivery_cost: effectiveDeliveryCost,
       items: checkoutItems.map(item => ({
         product_id: item.id,
         quantity: item.quantity,
@@ -405,7 +425,16 @@ export default function Checkout() {
               <div className="flex justify-between text-gray-600">
                 <span>Frais de livraison</span>
                 {deliveryCost > 0 ? (
-                  <span className="font-medium text-orange-500">+{formatPrice(deliveryCost)}</span>
+                  <div className="text-right">
+                    {isShippingDiscountApplied ? (
+                      <div className="flex flex-col items-end">
+                        <span className="text-xs text-gray-400 line-through">{formatPrice(deliveryCost)}</span>
+                        <span className="font-medium text-green-600">+{formatPrice(effectiveDeliveryCost)}</span>
+                      </div>
+                    ) : (
+                      <span className="font-medium text-orange-500">+{formatPrice(deliveryCost)}</span>
+                    )}
+                  </div>
                 ) : (
                   <span className="text-sm text-gray-400 italic">Sélectionnez une wilaya</span>
                 )}
@@ -417,11 +446,42 @@ export default function Checkout() {
               )}
             </div>
             
+            {/* Discount Offer Block */}
+            {!formData.email && !isShippingDiscountApplied && showDiscountOffer && deliveryCost > 0 && (
+              <div className="mb-6 bg-gradient-to-r from-orange-50 to-red-50 border border-orange-200 rounded-lg p-4 shadow-sm animate-fade-in transition-all duration-500">
+                <div className="flex items-start gap-3 mb-3">
+                  <div className="text-2xl">🎁</div>
+                  <div>
+                    <h3 className="font-bold text-orange-800 text-sm">Offre spéciale</h3>
+                    <p className="text-xs text-orange-700 font-medium mt-0.5">Profitez de -30% sur les frais de livraison aujourd'hui</p>
+                    <p className="text-[10px] text-red-500 font-bold mt-1 flex items-center gap-1">
+                      <span>⏳</span> Offre limitée aujourd'hui
+                    </p>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <input 
+                    type="email" 
+                    placeholder="Entrez votre email pour activer l'offre" 
+                    className="w-full px-3 py-2 text-sm rounded border border-orange-300 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white"
+                    value={discountEmail}
+                    onChange={(e) => setDiscountEmail(e.target.value)}
+                  />
+                  <button 
+                    onClick={handleApplyDiscount}
+                    className="w-full bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold py-2 px-4 rounded transition-colors shadow-sm flex items-center justify-center gap-2"
+                  >
+                    <span>👉</span> Confirmer et appliquer la réduction
+                  </button>
+                </div>
+              </div>
+            )}
+
             <div className="border-t pt-4 mb-6">
               <div className="flex justify-between items-end">
                 <span className="font-bold text-gray-800">Total à payer</span>
                 <div className="text-right">
-                  <span className="text-2xl font-black text-orange-600">{formatPrice(checkoutTotal + deliveryCost)}</span>
+                  <span className="text-2xl font-black text-orange-600">{formatPrice(finalTotal)}</span>
                 </div>
               </div>
             </div>

@@ -11,8 +11,8 @@
   }
 }
 
-/* Yumi TopBar Custom CSS */
-.yumi-topbar-wrapper {
+/* ZORANDO TopBar Custom CSS */
+.zorando-topbar-wrapper {
   transition: all 0.3s ease;
   width: 100%;
   overflow: hidden;
@@ -20,23 +20,23 @@
   z-index: 50;
   font-family: inherit;
 }
-.yumi-topbar-wrapper:hover {
+.zorando-topbar-wrapper:hover {
   filter: brightness(1.08);
   box-shadow: 0 4px 12px rgba(0, 166, 81, 0.3);
 }
-.yumi-topbar-inner {
+.zorando-topbar-inner {
   display: flex;
   align-items: center;
   justify-content: space-between;
   height: 100%;
   width: 100%;
 }
-.yumi-topbar-left {
+.zorando-topbar-left {
   flex: 1;
   height: 100%;
   position: relative;
 }
-.yumi-topbar-message {
+.zorando-topbar-message {
   position: absolute;
   left: 0;
   top: 50%;
@@ -54,11 +54,11 @@
   padding: 0;
   box-sizing: border-box;
 }
-.yumi-topbar-message.yumi-topbar-active {
+.zorando-topbar-message.zorando-topbar-active {
   opacity: 1;
   pointer-events: auto;
 }
-.yumi-topbar-right {
+.zorando-topbar-right {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -68,7 +68,7 @@
   clip-path: polygon(15px 0, 100% 0, 100% 100%, 0 100%);
   margin-right: 0;
 }
-.yumi-topbar-phone-container {
+.zorando-topbar-phone-container {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -77,14 +77,14 @@
   cursor: pointer;
   font-weight: 600;
 }
-.yumi-topbar-phone-container:hover {
+.zorando-topbar-phone-container:hover {
   transform: scale(1.05);
   text-decoration: underline;
 }
-.yumi-topbar-icon-phone {
-  animation: yumi-topbar-pulse 1.5s infinite;
+.zorando-topbar-icon-phone {
+  animation: zorando-topbar-pulse 1.5s infinite;
 }
-.yumi-topbar-close {
+.zorando-topbar-close {
   background: transparent;
   border: none;
   cursor: pointer;
@@ -97,46 +97,46 @@
   transition: all 0.3s ease;
   color: inherit;
 }
-.yumi-topbar-close:hover {
+.zorando-topbar-close:hover {
   transform: rotate(90deg);
   background: rgba(255, 255, 255, 0.2);
 }
-@keyframes yumi-topbar-pulse {
+@keyframes zorando-topbar-pulse {
   0% { transform: scale(1); }
   50% { transform: scale(1.2); }
   100% { transform: scale(1); }
 }
 
 @media (max-width: 767px) {
-  .yumi-topbar-wrapper {
+  .zorando-topbar-wrapper {
     height: 40px !important;
-    font-size: var(--yumi-fs-mobile) !important;
+    font-size: var(--zorando-fs-mobile) !important;
   }
-  .yumi-topbar-left {
+  .zorando-topbar-left {
     display: none !important;
   }
-  .yumi-topbar-right {
+  .zorando-topbar-right {
     width: 100%;
     justify-content: center;
     clip-path: none;
     margin-right: 0;
     padding: 0 10px;
   }
-  .yumi-topbar-close {
+  .zorando-topbar-close {
     position: absolute;
     right: 10px;
   }
-  .yumi-topbar-phone-text-desktop { display: none; }
-  .yumi-topbar-phone-text-mobile { display: inline; }
-  .yumi-topbar-hide-mobile { display: none !important; }
+  .zorando-topbar-phone-text-desktop { display: none; }
+  .zorando-topbar-phone-text-mobile { display: inline; }
+  .zorando-topbar-hide-mobile { display: none !important; }
 }
 @media (min-width: 768px) {
-  .yumi-topbar-wrapper {
+  .zorando-topbar-wrapper {
     height: 45px !important;
-    font-size: var(--yumi-fs-desktop) !important;
+    font-size: var(--zorando-fs-desktop) !important;
   }
-  .yumi-topbar-phone-text-desktop { display: inline; }
-  .yumi-topbar-phone-text-mobile { display: none; }
+  .zorando-topbar-phone-text-desktop { display: inline; }
+  .zorando-topbar-phone-text-mobile { display: none; }
 }
 
 .animate-marquee {

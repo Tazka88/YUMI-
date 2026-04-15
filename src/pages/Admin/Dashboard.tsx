@@ -118,7 +118,7 @@ export default function AdminDashboard() {
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ home_sections: JSON.stringify(sections) })
       });
-      window.dispatchEvent(new Event('yumi_sections_updated'));
+      window.dispatchEvent(new Event('zorando_sections_updated'));
     } catch (err) {
       console.error('Failed to save sections', err);
     }
@@ -375,7 +375,7 @@ export default function AdminDashboard() {
         <body>
           <div class="header">
             <div>
-              <div class="logo">Yumi Store</div>
+              <div class="logo">ZORANDO Store</div>
               <div style="color: #6b7280; margin-top: 5px;">Boutique en ligne</div>
             </div>
             <div class="invoice-details">
@@ -543,7 +543,7 @@ export default function AdminDashboard() {
           <div class="page-break">
             <div class="header">
               <div>
-                <div class="logo">Yumi Store</div>
+                <div class="logo">ZORANDO Store</div>
                 <div style="color: #6b7280; margin-top: 5px;">Boutique en ligne</div>
               </div>
               <div class="invoice-details">
@@ -1262,11 +1262,11 @@ export default function AdminDashboard() {
       <aside className="w-full md:w-64 bg-gray-900 text-white flex flex-col">
         <div className="p-6 border-b border-gray-800 flex items-center gap-3">
           {settingsForm.site_logo ? (
-            <img src={settingsForm.site_logo} alt="Yumi Logo" className="h-8 w-auto object-contain" />
+            <img src={settingsForm.site_logo} alt="ZORANDO Logo" className="h-8 w-auto object-contain" />
           ) : (
             <>
-              <div className="bg-orange-500 text-white px-2 py-1 rounded-md font-black italic text-xl">Y</div>
-              <span className="text-xl font-bold tracking-tight">Yumi Admin</span>
+              <div className="bg-orange-500 text-white px-2 py-1 rounded-md font-black italic text-xl">Z</div>
+              <span className="text-xl font-bold tracking-tight">ZORANDO Admin</span>
             </>
           )}
         </div>

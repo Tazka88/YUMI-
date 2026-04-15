@@ -47,7 +47,7 @@ export default function Page() {
     <div className="container mx-auto px-4 py-12">
       <SEO 
         title={page.title} 
-        description={`Lisez notre page sur ${page.title} sur Yumi.`}
+        description={`Lisez notre page sur ${page.title} sur ZORANDO.`}
       />
       <div className="max-w-4xl mx-auto bg-white rounded-2xl shadow-sm border border-gray-100 p-8 md:p-12">
         <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-8 pb-6 border-b border-gray-100">

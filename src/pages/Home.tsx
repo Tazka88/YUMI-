@@ -539,10 +539,10 @@ export default function Home() {
         })
         .catch(console.error);
     };
-    window.addEventListener('yumi_sections_updated', loadSections);
+    window.addEventListener('zorando_sections_updated', loadSections);
     return () => {
       controller.abort();
-      window.removeEventListener('yumi_sections_updated', loadSections);
+      window.removeEventListener('zorando_sections_updated', loadSections);
     };
   }, []);
 
@@ -558,12 +558,12 @@ export default function Home() {
     <>
       <SEO 
         title="Boutique en ligne" 
-        description="Yumi - Votre boutique en ligne de confiance. Découvrez nos meilleurs produits, promotions et nouveautés au meilleur prix." 
+        description="ZORANDO - Votre boutique en ligne de confiance. Découvrez nos meilleurs produits, promotions et nouveautés au meilleur prix." 
         url={window.location.href}
       />
       <ThemeBackground activeTheme={activeTheme} themeImages={themeImages} />
       <div className="container mx-auto px-4 py-6">
-        <h1 className="sr-only">Yumi - Boutique en ligne en Algérie</h1>
+        <h1 className="sr-only">ZORANDO - Boutique en ligne en Algérie</h1>
         {/* Hero Section with Sidebar and Carousel */}
         <div className="flex gap-4 lg:h-[384px] mb-6">
           <CategorySidebar categories={categories} />

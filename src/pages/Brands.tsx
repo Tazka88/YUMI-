@@ -39,7 +39,7 @@ export default function Brands() {
       <h1 className="sr-only">Nos Marques</h1>
       <SEO 
         title="Toutes les marques" 
-        description="Découvrez toutes les marques de produits disponibles sur Yumi."
+        description="Découvrez toutes les marques de produits disponibles sur ZORANDO."
       />
       <div className="text-sm text-gray-500 mb-6 flex items-center gap-2">
         <Link to="/" className="hover:text-orange-500">Accueil</Link>

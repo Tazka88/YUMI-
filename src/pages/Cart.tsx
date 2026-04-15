@@ -48,7 +48,7 @@ export default function Cart() {
                   <Link to={`/product/${item.slug}`} className="font-medium text-gray-800 hover:text-orange-500 line-clamp-2 mb-1">
                     {item.name}
                   </Link>
-                  <div className="text-sm text-gray-500 mb-2">Vendeur: Yumi Express</div>
+                  <div className="text-sm text-gray-500 mb-2">Vendeur: ZORANDO Express</div>
                   <div className="text-lg font-bold text-orange-600">{formatPrice(currentPrice)}</div>
                 </div>
 

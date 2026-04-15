@@ -76,7 +76,7 @@ export const useCartStore = create<CartStore>()(
       },
     }),
     {
-      name: 'yumi-cart-storage', // name of the item in the storage (must be unique)
+      name: 'zorando-cart-storage', // name of the item in the storage (must be unique)
     }
   )
 );

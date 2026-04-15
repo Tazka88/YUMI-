@@ -312,7 +312,7 @@ export default function FooterSettings() {
               value={settings.copyright_text || ''}
               onChange={(e) => handleSettingChange('copyright_text', e.target.value)}
               className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-orange-500 focus:border-orange-500"
-              placeholder="© 2026 Yumi Algérie. Tous droits réservés."
+              placeholder="© 2026 ZORANDO Algérie. Tous droits réservés."
             />
           </div>
         </section>

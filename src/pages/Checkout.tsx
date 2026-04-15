@@ -96,7 +96,7 @@ export default function Checkout() {
     if (trackingIds.fb && checkoutItems.length > 0 && !initiateCheckoutTrackedRef.current) {
       initiateCheckoutTrackedRef.current = true;
       const eventId = generateEventId();
-      const isProduction = typeof window !== 'undefined' && window.location.hostname.includes('yumidz.vercel.app');
+      const isProduction = typeof window !== 'undefined' && window.location.hostname.includes('zorandodz.vercel.app');
       
       const safeValue = isNaN(checkoutTotal) || checkoutTotal <= 0 ? 1 : Number(Number(checkoutTotal).toFixed(2));
       
@@ -205,7 +205,7 @@ export default function Checkout() {
         if (trackingIds.fb) {
           try {
             const eventId = responseData.order_id || responseData.id.toString();
-            const isProduction = typeof window !== 'undefined' && window.location.hostname.includes('yumidz.vercel.app');
+            const isProduction = typeof window !== 'undefined' && window.location.hostname.includes('zorandodz.vercel.app');
             
             if (isProduction && typeof window !== 'undefined' && (window as any).fbq) {
               (window as any).fbq('track', 'Purchase', {

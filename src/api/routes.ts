@@ -132,9 +132,9 @@ router.get('/hero-banners/first-image/:type', async (req, res) => {
   }
 });
 
-const JWT_SECRET = process.env.JWT_SECRET || 'yumi-secret-key-123';
+const JWT_SECRET = process.env.JWT_SECRET || 'zorando-secret-key-123';
 
-if (process.env.NODE_ENV === 'production' && JWT_SECRET === 'yumi-secret-key-123') {
+if (process.env.NODE_ENV === 'production' && JWT_SECRET === 'zorando-secret-key-123') {
   console.error('CRITICAL ERROR: Default JWT_SECRET is used in production! Please set JWT_SECRET in Vercel.');
   // We don't exit the process to avoid crashing completely, but we log a critical error.
 }
@@ -1171,7 +1171,7 @@ router.get('/admin/export-meta-catalog', authenticate, async (req, res) => {
       // Image: no base64, specific format
       const vMatch = p.image.match(/(\?v=[^&]+)/);
       const vParam = vMatch ? vMatch[1] : '';
-      const image_link = `https://yumidz.vercel.app/api/images/products/${p.id}/image${vParam}`;
+      const image_link = `https://zorandodz.vercel.app/api/images/products/${p.id}/image${vParam}`;
       
       const brand = formatField(p.brand_name || 'Generic');
 

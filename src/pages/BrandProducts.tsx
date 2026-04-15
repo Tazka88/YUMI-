@@ -68,7 +68,7 @@ export default function BrandProducts() {
       <h1 className="sr-only">Nos Marques</h1>
       <SEO 
         title={`Produits ${brand.name}`} 
-        description={brand.description || `Découvrez tous les produits de la marque ${brand.name} sur Yumi.`}
+        description={brand.description || `Découvrez tous les produits de la marque ${brand.name} sur ZORANDO.`}
         image={brand.image}
       />
       {/* Breadcrumb */}

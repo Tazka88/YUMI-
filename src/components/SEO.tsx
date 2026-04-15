@@ -9,7 +9,7 @@ interface SEOProps {
 }
 
 export default function SEO({ title, description, image, url, schema }: SEOProps) {
-  const siteName = 'Yumi';
+  const siteName = 'ZORANDO';
   const fullTitle = `${title} | ${siteName}`;
   
   return (

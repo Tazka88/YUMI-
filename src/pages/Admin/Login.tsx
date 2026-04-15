@@ -45,7 +45,7 @@ export default function AdminLogin() {
             <Lock size={32} />
           </div>
           <h1 className="text-2xl font-bold text-gray-800">Espace Administrateur</h1>
-          <p className="text-gray-500 text-sm mt-2">Connectez-vous pour gérer votre boutique Yumi</p>
+          <p className="text-gray-500 text-sm mt-2">Connectez-vous pour gérer votre boutique ZORANDO</p>
         </div>
 
         {error && (

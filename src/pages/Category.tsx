@@ -185,7 +185,7 @@ export default function Category() {
       <h1 className="sr-only">{categoryName}</h1>
       <SEO 
         title={categoryName} 
-        description={`Découvrez notre sélection de produits dans la catégorie ${categoryName}. Achetez au meilleur prix sur Yumi.`} 
+        description={`Découvrez notre sélection de produits dans la catégorie ${categoryName}. Achetez au meilleur prix sur ZORANDO.`} 
         url={window.location.href}
       />
       <div className="flex flex-col md:flex-row gap-6">

@@ -102,7 +102,7 @@ export default function Product() {
       const eventId = generateEventId();
       const currentPrice = (product.promo_price !== null && product.promo_price !== undefined) ? Number(product.promo_price) : Number(product.price);
       const safeValue = isNaN(currentPrice) || currentPrice <= 0 ? 1 : Number(currentPrice.toFixed(2));
-      const isProduction = typeof window !== 'undefined' && window.location.hostname.includes('yumidz.vercel.app');
+      const isProduction = typeof window !== 'undefined' && window.location.hostname.includes('zorandodz.vercel.app');
       
       try {
         // Use window.fbq directly to ensure eventID is passed correctly (ReactPixel wrapper sometimes drops the 3rd argument)
@@ -213,7 +213,7 @@ export default function Product() {
     if (trackingIds.fb) {
       try {
         const eventId = generateEventId();
-        const isProduction = typeof window !== 'undefined' && window.location.hostname.includes('yumidz.vercel.app');
+        const isProduction = typeof window !== 'undefined' && window.location.hostname.includes('zorandodz.vercel.app');
         
         if (isProduction && typeof window !== 'undefined' && (window as any).fbq) {
           (window as any).fbq('track', 'AddToCart', {
@@ -288,7 +288,7 @@ export default function Product() {
     "sku": product.id.toString(),
     "brand": {
       "@type": "Brand",
-      "name": product.brand_name || "Yumi"
+      "name": product.brand_name || "ZORANDO"
     },
     "offers": {
       "@type": "Offer",

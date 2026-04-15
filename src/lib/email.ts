@@ -7,9 +7,9 @@ export const sendOrderConfirmationEmail = async (orderId: string, customerName: 
 
   try {
     await resend.emails.send({
-      from: 'Yumi <contact@yumidz.vercel.app>', // Update this with a verified domain if needed, or use a default Resend testing email if not verified. Actually, Resend requires a verified domain or uses onboarding@resend.dev for testing. Let's use onboarding@resend.dev as fallback or a generic one.
+      from: 'ZORANDO <contact@zorandodz.vercel.app>', // Update this with a verified domain if needed, or use a default Resend testing email if not verified. Actually, Resend requires a verified domain or uses onboarding@resend.dev for testing. Let's use onboarding@resend.dev as fallback or a generic one.
       to: customerEmail,
-      subject: `Confirmation de votre commande ${orderId} - Yumi`,
+      subject: `Confirmation de votre commande ${orderId} - ZORANDO`,
       html: `
         <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
           <h2>Merci pour votre commande, ${customerName} !</h2>
@@ -17,7 +17,7 @@ export const sendOrderConfirmationEmail = async (orderId: string, customerName: 
           <p>Le montant total est de <strong>${totalAmount} DZD</strong>.</p>
           <p>Nous préparons votre commande et vous contacterons très bientôt pour la livraison.</p>
           <br/>
-          <p>L'équipe Yumi</p>
+          <p>L'équipe ZORANDO</p>
         </div>
       `
     });
@@ -44,7 +44,7 @@ export const sendOrderStatusEmail = async (orderId: string, customerName: string
       break;
     case 'delivered':
       statusText = 'livrée';
-      statusMessage = 'Votre commande a été livrée. Merci d\'avoir fait confiance à Yumi !';
+      statusMessage = 'Votre commande a été livrée. Merci d\'avoir fait confiance à ZORANDO !';
       break;
     default:
       return; // Don't send email for other statuses like 'pending' or 'cancelled' unless requested
@@ -52,9 +52,9 @@ export const sendOrderStatusEmail = async (orderId: string, customerName: string
 
   try {
     await resend.emails.send({
-      from: 'Yumi <contact@yumidz.vercel.app>',
+      from: 'ZORANDO <contact@zorandodz.vercel.app>',
       to: customerEmail,
-      subject: `Mise à jour de votre commande ${orderId} - Yumi`,
+      subject: `Mise à jour de votre commande ${orderId} - ZORANDO`,
       html: `
         <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
           <h2>Bonjour ${customerName},</h2>
@@ -62,7 +62,7 @@ export const sendOrderStatusEmail = async (orderId: string, customerName: string
           <p>Votre commande est maintenant : <strong>${statusText}</strong>.</p>
           <p>${statusMessage}</p>
           <br/>
-          <p>L'équipe Yumi</p>
+          <p>L'équipe ZORANDO</p>
         </div>
       `
     });

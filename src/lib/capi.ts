@@ -65,11 +65,11 @@ function getFbp(): string | undefined {
 function getExternalId(): string | undefined {
   if (typeof window === 'undefined') return undefined;
   
-  let extId = getCookie('_yumi_ext_id');
+  let extId = getCookie('_zorando_ext_id');
   if (!extId) {
     extId = 'usr_' + Math.random().toString(36).substring(2, 15) + Date.now().toString(36);
     // Save it to cookie for 6 months
-    document.cookie = `_yumi_ext_id=${extId}; path=/; max-age=15552000; SameSite=Lax`;
+    document.cookie = `_zorando_ext_id=${extId}; path=/; max-age=15552000; SameSite=Lax`;
   }
   return extId;
 }
@@ -94,7 +94,7 @@ interface CapiEventData {
 
 export async function sendCapiEvent({ eventName, eventId, customData, userData }: CapiEventData) {
   // Only send CAPI events from the production domain
-  if (typeof window !== 'undefined' && !window.location.hostname.includes('yumidz.vercel.app')) {
+  if (typeof window !== 'undefined' && !window.location.hostname.includes('zorandodz.vercel.app')) {
     console.log(`[CAPI] Skipped ${eventName} event (non-production environment)`);
     return;
   }

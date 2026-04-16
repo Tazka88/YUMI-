@@ -637,24 +637,24 @@ export default function Product() {
       {product.features && (typeof product.features === 'string' ? product.features.trim().length > 0 : product.features.length > 0) && (
         <div className="bg-white rounded-lg shadow-sm p-6 mb-12">
           <h2 className="text-xl font-bold text-gray-800 mb-6 border-b pb-4">Caractéristiques techniques</h2>
-          {typeof product.features === 'string' ? (
-            <div className="prose max-w-none text-gray-700">
-              <p className="whitespace-pre-line leading-relaxed">{product.features}</p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse border border-gray-200">
-                <tbody>
-                  {product.features.map((feature: any, idx: number) => (
-                    <tr key={idx} className={idx % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
-                      <td className="py-3 px-4 border border-gray-200 font-medium text-gray-700 w-1/3 bg-gray-100">{feature.key}</td>
-                      <td className="py-3 px-4 border border-gray-200 text-gray-600">{feature.value}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse border border-gray-200">
+              <tbody>
+                {(typeof product.features === 'string' 
+                    ? product.features.split('\n').filter(line => line.trim().includes(':')).map(line => {
+                        const parts = line.split(':');
+                        return { key: parts[0].trim(), value: parts.slice(1).join(':').trim() };
+                      })
+                    : Array.isArray(product.features) ? product.features : []
+                ).map((feature: any, idx: number) => (
+                  <tr key={idx} className={idx % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
+                    <td className="py-3 px-4 border border-gray-200 font-medium text-gray-700 w-1/3 bg-gray-100">{feature.key}</td>
+                    <td className="py-3 px-4 border border-gray-200 text-gray-600">{feature.value}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 

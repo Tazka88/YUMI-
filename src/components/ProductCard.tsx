@@ -28,9 +28,9 @@ export const ProductCard: React.FC<{ product: Product; priority?: boolean; isFla
   const reviewsCount = product.reviews_count ? Number(product.reviews_count) : 0;
 
   return (
-    <div className="bg-white rounded-lg shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden group flex flex-col h-full relative">
-      <Link to={`/product/${product.slug}`} className="relative block h-36 sm:h-48 overflow-hidden">
-        {/* Badges */}
+    <div className="bg-white rounded-xl shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden group flex flex-col h-full relative border border-gray-100">
+      <div className="relative block h-36 sm:h-48 overflow-hidden">
+        {/* Badges - Top left */}
         <div className="absolute top-2 left-2 flex flex-col gap-1 z-10">
           {isPromo && (
             <div className="bg-orange-500 text-white text-xs font-bold px-2 py-1 rounded">
@@ -38,38 +38,55 @@ export const ProductCard: React.FC<{ product: Product; priority?: boolean; isFla
             </div>
           )}
           {product.is_fast_delivery && (
-            <div className="bg-green-500 text-white text-xs font-bold px-2 py-1 rounded">
+            <div className="bg-green-500 text-white text-[10px] sm:text-xs font-bold px-2 py-1 rounded">
               LIVRAISON RAPIDE
             </div>
           )}
         </div>
         
-        <img 
-          src={getResizedImageUrl(product.image, 400) || `https://ui-avatars.com/api/?name=${encodeURIComponent(product.name)}&background=random&size=400`} 
-          srcSet={product.image && product.image.startsWith('/api/images/') ? `${getResizedImageUrl(product.image, 200)} 200w, ${getResizedImageUrl(product.image, 400)} 400w` : undefined}
-          sizes="(max-width: 640px) 200px, 400px"
-          alt={product.name}
-          loading={priority ? "eager" : "lazy"}
-          fetchPriority={priority ? "high" : "auto"}
-          decoding="async"
-          width="400"
-          height="400"
-          className={`w-full h-full object-contain p-4 bg-white group-hover:scale-110 transition-transform duration-500 ${isOutOfStock ? 'opacity-50 grayscale' : ''}`}
-          referrerPolicy="no-referrer"
-        />
-
-        {/* Out of stock overlay */}
-        {isOutOfStock && (
-          <div className="absolute inset-0 flex items-center justify-center bg-white/40 z-10">
-            <span className="bg-gray-800 text-white text-sm font-bold px-3 py-1 rounded">
-              Rupture de stock
-            </span>
-          </div>
+        {/* Quick Add to Cart - Top right */}
+        {!isOutOfStock && (
+          <button 
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              addItem(product as any, 1);
+            }}
+            className="absolute top-2 right-2 bg-white/90 hover:bg-orange-500 text-orange-500 hover:text-white p-2 rounded-full shadow-md z-10 transition-colors duration-200"
+            title="Ajouter au panier"
+          >
+            <ShoppingCart size={18} />
+          </button>
         )}
-      </Link>
+
+        <Link to={`/product/${product.slug}`} className="block w-full h-full">
+          <img 
+            src={getResizedImageUrl(product.image, 400) || `https://ui-avatars.com/api/?name=${encodeURIComponent(product.name)}&background=random&size=400`} 
+            srcSet={product.image && product.image.startsWith('/api/images/') ? `${getResizedImageUrl(product.image, 200)} 200w, ${getResizedImageUrl(product.image, 400)} 400w` : undefined}
+            sizes="(max-width: 640px) 200px, 400px"
+            alt={product.name}
+            loading={priority ? "eager" : "lazy"}
+            fetchPriority={priority ? "high" : "auto"}
+            decoding="async"
+            width="400"
+            height="400"
+            className={`w-full h-full object-contain p-4 bg-white group-hover:scale-110 transition-transform duration-500 ${isOutOfStock ? 'opacity-50 grayscale' : ''}`}
+            referrerPolicy="no-referrer"
+          />
+
+          {/* Out of stock overlay */}
+          {isOutOfStock && (
+            <div className="absolute inset-0 flex items-center justify-center bg-white/40 z-10">
+              <span className="bg-gray-800 text-white text-sm font-bold px-3 py-1 rounded">
+                Rupture de stock
+              </span>
+            </div>
+          )}
+        </Link>
+      </div>
       
       <div className="p-3 sm:p-4 flex flex-col flex-grow">
-        <Link to={`/product/${product.slug}`} className="text-xs sm:text-sm text-gray-800 hover:text-orange-500 line-clamp-2 mb-1 sm:mb-2 flex-grow font-medium">
+        <Link to={`/product/${product.slug}`} className="text-xs sm:text-sm text-gray-800 hover:text-orange-500 line-clamp-2 mb-1 sm:mb-2 flex-grow font-medium leading-snug">
           {product.name}
         </Link>
         <div className="flex items-center mb-1 sm:mb-2">
@@ -87,7 +104,7 @@ export const ProductCard: React.FC<{ product: Product; priority?: boolean; isFla
                 <div className="text-base sm:text-lg font-bold text-gray-900">{formatPrice(product.promo_price!)}</div>
                 <div className="text-[10px] sm:text-xs text-gray-500 line-through mb-0.5 sm:mb-1">{formatPrice(product.price)}</div>
               </div>
-              <div className="text-[10px] sm:text-xs text-green-600 font-medium mt-0.5 sm:mt-1">
+              <div className="text-[10px] sm:text-xs text-green-600 font-medium mt-0.5 sm:mt-1 bg-green-50 self-start px-1.5 py-0.5 rounded">
                 Vous économisez {discount}%
               </div>
             </>
@@ -111,26 +128,15 @@ export const ProductCard: React.FC<{ product: Product; priority?: boolean; isFla
         )}
 
         {!isOutOfStock && (
-          <div className="flex flex-col gap-1.5 sm:gap-2 mt-auto">
+          <div className="mt-auto pt-2 flex justify-center">
             <button 
               onClick={(e) => {
                 e.preventDefault();
                 navigate('/checkout', { state: { directBuyItem: { ...product, quantity: 1 } } });
               }}
-              className="w-full bg-orange-500 text-white py-1.5 sm:py-2 rounded-md text-xs sm:text-sm font-bold shadow-sm hover:bg-orange-600 transition-transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center"
+              className="w-[85%] sm:w-full mx-auto bg-orange-500 text-white py-1.5 sm:py-2.5 rounded-lg text-[11px] sm:text-sm font-bold shadow hover:shadow-lg hover:bg-orange-600 transition-all duration-200 transform hover:-translate-y-0.5 active:translate-y-0 flex items-center justify-center tracking-wide"
             >
-              Acheter
-            </button>
-            <button 
-              onClick={(e) => {
-                e.preventDefault();
-                addItem(product as any, 1);
-              }}
-              className="w-full bg-white border border-orange-500 text-orange-600 hover:bg-orange-50 py-1.5 sm:py-2 rounded-md text-xs sm:text-sm font-bold transition-colors flex items-center justify-center gap-1.5"
-            >
-              <ShoppingCart size={14} className="sm:w-4 sm:h-4" />
-              <span className="hidden sm:inline">Ajouter au panier</span>
-              <span className="sm:hidden">Ajouter</span>
+              Acheter maintenant
             </button>
           </div>
         )}

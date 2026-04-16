@@ -3,6 +3,17 @@
 @plugin "@tailwindcss/typography";
 
 @theme {
+  --color-orange-50: #fff4eb;
+  --color-orange-100: #ffecd6;
+  --color-orange-200: #ffd6ad;
+  --color-orange-300: #ffbb7a;
+  --color-orange-400: #ff8c33; /* Version plus claire */
+  --color-orange-500: #FF6A00; /* Couleur principale */
+  --color-orange-600: #e65c00; /* Hover */
+  --color-orange-700: #c24d00;
+  --color-orange-800: #993d00;
+  --color-orange-900: #7a3100;
+
   --animate-fade-in: fade-in 0.5s ease-out;
 
   @keyframes fade-in {

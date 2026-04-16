@@ -634,7 +634,7 @@ export default function AdminDashboard() {
         </head>
         <body>
           <div style="text-align: right; margin-bottom: 20px;">
-            <button onclick="window.print()" style="background: #f97316; color: white; border: none; padding: 10px 20px; border-radius: 6px; font-weight: bold; cursor: pointer;">Imprimer toutes les commandes</button>
+            <button onclick="window.print()" style="background: #FF6A00; color: white; border: none; padding: 10px 20px; border-radius: 6px; font-weight: bold; cursor: pointer;">Imprimer toutes les commandes</button>
           </div>
           ${allOrdersHtml}
           <script>

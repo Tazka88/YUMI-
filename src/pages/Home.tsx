@@ -703,7 +703,7 @@ export default function Home() {
             <section key={section.id}>
               <FlashSalesHeader link="/category/all" />
               <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-4">
-                {promotions.slice(0, 5).map((p, i) => <ProductCard key={p.id} product={p} priority={i < 4} isFlashSale={true} />)}
+                {promotions.slice(0, 10).map((p, i) => <ProductCard key={p.id} product={p} priority={i < 4} isFlashSale={true} />)}
               </div>
             </section>
           );
@@ -713,7 +713,7 @@ export default function Home() {
             <section key={section.id}>
               <SectionHeader title={section.title || "Meilleures Ventes 🏆"} link="/category/all" />
               <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-4">
-                {bestSellers.slice(0, 5).map((p, i) => <ProductCard key={p.id} product={p} priority={i < 4} />)}
+                {bestSellers.slice(0, 10).map((p, i) => <ProductCard key={p.id} product={p} priority={i < 4} />)}
               </div>
             </section>
           );
@@ -733,7 +733,7 @@ export default function Home() {
             <section key={section.id}>
               <SectionHeader title={section.title || "Nouveautés 🆕"} link="/category/all" />
               <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-4">
-                {newProducts.slice(0, 5).map((p, i) => <ProductCard key={p.id} product={p} priority={i < 4} />)}
+                {newProducts.slice(0, 10).map((p, i) => <ProductCard key={p.id} product={p} priority={i < 4} />)}
               </div>
             </section>
           );
@@ -743,7 +743,7 @@ export default function Home() {
             <section key={section.id}>
               <SectionHeader title={section.title || "Découverte Aléatoire 🎲"} link="/category/all" />
               <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-4">
-                {randomProducts.slice(0, 5).map((p, i) => <ProductCard key={p.id} product={p} priority={i < 4} />)}
+                {randomProducts.slice(0, 10).map((p, i) => <ProductCard key={p.id} product={p} priority={i < 4} />)}
               </div>
             </section>
           );

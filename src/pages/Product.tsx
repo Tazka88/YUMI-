@@ -65,7 +65,7 @@ export default function Product() {
           .then(res => res.json())
           .then(related => {
             if (Array.isArray(related)) {
-              setRelatedProducts(related.filter((p: ProductType) => p.id !== data.id).slice(0, 4));
+              setRelatedProducts(related.filter((p: ProductType) => p.id !== data.id).slice(0, 10));
             }
           })
           .catch(err => {
@@ -784,9 +784,9 @@ export default function Product() {
       {relatedProducts.length > 0 && (
         <div>
           <h2 className="text-xl font-bold text-gray-800 mb-6 border-b-2 border-orange-500 inline-block pb-2">Produits Similaires</h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {relatedProducts.map(p => (
-              <ProductCard key={p.id} product={p} />
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-4">
+            {relatedProducts.map((p, i) => (
+              <ProductCard key={p.id} product={p} priority={i < 4} />
             ))}
           </div>
         </div>

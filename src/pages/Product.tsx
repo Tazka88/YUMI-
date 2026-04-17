@@ -477,7 +477,16 @@ export default function Product() {
               <span 
                 className="text-sm text-orange-500 hover:underline cursor-pointer"
                 onClick={() => {
-                  document.getElementById('reviews-section')?.scrollIntoView({ behavior: 'smooth' });
+                  const element = document.getElementById('read-reviews-section');
+                  if (element) {
+                    const headerOffset = 180;
+                    const elementPosition = element.getBoundingClientRect().top;
+                    const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+                    window.scrollTo({
+                         top: offsetPosition,
+                         behavior: "smooth"
+                    });
+                  }
                 }}
               >({reviews.length} avis vérifiés)</span>
             </div>
@@ -816,7 +825,7 @@ export default function Product() {
             </div>
           </div>
           
-          <div className="w-full md:w-2/3 space-y-4">
+          <div id="read-reviews-section" className="w-full md:w-2/3 space-y-4">
             {reviews.length === 0 ? (
               <div className="text-center py-8 text-gray-500">
                 Aucun avis pour le moment. Soyez le premier à donner votre avis !

@@ -453,7 +453,12 @@ export default function Product() {
                   <Star key={star} fill={star <= parseFloat(avgRating) ? "currentColor" : "none"} size={18} />
                 ))}
               </div>
-              <span className="text-sm text-orange-500 hover:underline cursor-pointer">({reviews.length} avis vérifiés)</span>
+              <span 
+                className="text-sm text-orange-500 hover:underline cursor-pointer"
+                onClick={() => {
+                  document.getElementById('reviews-section')?.scrollIntoView({ behavior: 'smooth' });
+                }}
+              >({reviews.length} avis vérifiés)</span>
             </div>
 
             <div className="mb-6 pb-6 border-b border-gray-100">
@@ -692,7 +697,7 @@ export default function Product() {
       </div>
 
       {/* Reviews Section */}
-      <div className="bg-white rounded-lg shadow-sm p-6 mb-12">
+      <div id="reviews-section" className="bg-white rounded-lg shadow-sm p-6 mb-12">
         <h2 className="text-xl font-bold text-gray-800 mb-6 border-b pb-4">Avis Clients</h2>
         <div className="flex flex-col md:flex-row gap-8">
           <div className="w-full md:w-1/3">

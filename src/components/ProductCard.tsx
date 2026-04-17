@@ -31,14 +31,14 @@ export const ProductCard: React.FC<{ product: Product; priority?: boolean; isFla
     <div className="bg-white rounded-xl shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden group flex flex-col h-full relative border border-gray-100">
       <div className="relative block h-36 sm:h-48 overflow-hidden">
         {/* Badges - Top left */}
-        <div className="absolute top-2 left-2 flex flex-col gap-1 z-10">
+        <div className="absolute top-1 left-1 sm:top-2 sm:left-2 flex flex-col gap-1 z-10">
           {isPromo && (
-            <div className="bg-orange-500 text-white text-xs font-bold px-2 py-1 rounded">
+            <div className="bg-orange-500 text-white text-[10px] sm:text-xs font-bold px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-sm shadow-sm">
               -{discount}%
             </div>
           )}
           {product.is_fast_delivery && (
-            <div className="bg-green-500 text-white text-[10px] sm:text-xs font-bold px-2 py-1 rounded">
+            <div className="bg-green-500 text-white text-[8px] sm:text-[10px] font-bold px-1.5 py-0.5 sm:px-2 sm:py-0.5 rounded-sm shadow-sm leading-tight">
               LIVRAISON RAPIDE
             </div>
           )}

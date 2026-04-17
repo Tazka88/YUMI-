@@ -570,9 +570,11 @@ export default function Product() {
               </button>
             </div>
 
-            <div className="mt-auto flex flex-col gap-3">
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-                <div className="flex items-center border border-gray-300 rounded-md bg-white h-12 w-full sm:w-32 shrink-0">
+            <div className="mt-auto flex flex-col gap-4">
+              {/* Quantity Selector */}
+              <div className="flex flex-wrap items-center gap-3">
+                <span className="text-sm font-medium text-gray-700">Quantité :</span>
+                <div className="flex items-center border border-gray-300 rounded-md bg-white h-[42px] w-32 shrink-0">
                   <button 
                     className="px-4 h-full text-gray-600 hover:bg-gray-100 disabled:opacity-50 flex items-center justify-center"
                     onClick={() => setQuantity(Math.max(1, quantity - 1))}
@@ -585,30 +587,29 @@ export default function Product() {
                     disabled={quantity >= product.stock}
                   >+</button>
                 </div>
-                
-                <button 
-                  onClick={handleBuyNow}
-                  disabled={product.stock === 0}
-                  className="flex-1 bg-orange-500 hover:bg-orange-600 text-white font-bold h-12 px-6 rounded-md flex items-center justify-center gap-2 transition-transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed shadow-md text-lg"
-                >
-                  J'achète
-                </button>
               </div>
               
-              <div className="flex gap-3">
+              {/* Action Buttons */}
+              <div className="flex items-center gap-2">
                 <a 
                   href={`tel:${settings?.contact_phone?.replace(/\s/g, '') || ''}`}
-                  className="flex items-center justify-center w-12 h-12 rounded-md border-2 border-orange-500 text-orange-500 hover:bg-orange-50 transition-colors shrink-0"
+                  className="flex items-center justify-center w-[54px] h-[54px] rounded-md border-2 border-orange-500 text-orange-500 hover:bg-orange-50 shrink-0 transition-colors"
                 >
                   <Phone size={24} />
                 </a>
-                <button 
+                <button
                   onClick={handleAddToCart}
                   disabled={product.stock === 0}
-                  className="flex-1 bg-white border-2 border-orange-500 text-orange-600 hover:bg-orange-50 font-bold h-12 px-6 rounded-md flex items-center justify-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex items-center justify-center w-[54px] h-[54px] rounded-md bg-orange-500 text-white shrink-0 hover:bg-orange-600 disabled:opacity-50 transition-colors shadow-sm"
                 >
-                  <ShoppingCart size={20} />
-                  Ajouter au panier
+                  <ShoppingCart size={24} />
+                </button>
+                <button
+                  onClick={handleBuyNow}
+                  disabled={product.stock === 0}
+                  className="flex-1 bg-orange-500 text-white h-[54px] rounded-md font-bold text-lg flex items-center justify-center hover:bg-orange-600 disabled:opacity-50 transition-all hover:scale-[1.02] active:scale-[0.98] shadow-sm"
+                >
+                  J'achète
                 </button>
               </div>
             </div>
@@ -861,24 +862,24 @@ export default function Product() {
       )}
 
       {/* Sticky Mobile Add to Cart */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-3 z-50 md:hidden flex items-center justify-between gap-2 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]">
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-3 z-50 md:hidden flex items-center gap-2 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]">
         <a 
           href={`tel:${settings?.contact_phone?.replace(/\s/g, '') || ''}`}
-          className="flex items-center justify-center w-12 h-12 rounded-md border-2 border-orange-500 text-orange-500 shrink-0"
+          className="flex items-center justify-center w-[54px] h-[54px] rounded-md border-2 border-orange-500 text-orange-500 hover:bg-orange-50 shrink-0 transition-colors"
         >
           <Phone size={24} />
         </a>
         <button
           onClick={handleAddToCart}
           disabled={product.stock === 0}
-          className="flex items-center justify-center w-12 h-12 rounded-md bg-orange-500 text-white shrink-0 disabled:opacity-50"
+          className="flex items-center justify-center w-[54px] h-[54px] rounded-md bg-orange-500 text-white shrink-0 hover:bg-orange-600 disabled:opacity-50 transition-colors"
         >
           <ShoppingCart size={24} />
         </button>
         <button
           onClick={handleBuyNow}
           disabled={product.stock === 0}
-          className="flex-1 bg-orange-500 text-white h-12 rounded-md font-bold text-lg flex items-center justify-center disabled:opacity-50"
+          className="flex-1 bg-orange-500 text-white h-[54px] rounded-md font-bold text-lg flex items-center justify-center hover:bg-orange-600 disabled:opacity-50 transition-colors"
         >
           J'achète
         </button>

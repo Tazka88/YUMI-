@@ -2,6 +2,7 @@ import toast from 'react-hot-toast';
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Lock, User } from 'lucide-react';
+import { Helmet } from 'react-helmet-async';
 
 export default function AdminLogin() {
   const [username, setUsername] = useState('');
@@ -26,7 +27,7 @@ export default function AdminLogin() {
 
       if (res.ok) {
         localStorage.setItem('adminToken', data.token);
-        navigate('/admin/dashboard');
+        navigate('/admin-7xK9pL2q/dashboard');
       } else {
         setError(data.error || 'Identifiants invalides');
       }
@@ -39,6 +40,9 @@ export default function AdminLogin() {
 
   return (
     <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
+      <Helmet>
+        <meta name="robots" content="noindex, nofollow" />
+      </Helmet>
       <div className="bg-white p-8 rounded-xl shadow-lg w-full max-w-md">
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 bg-orange-100 text-orange-500 rounded-full mb-4">

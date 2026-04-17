@@ -26,6 +26,8 @@ const defaultSections: HomeSection[] = [
   { id: 'new', type: 'new', title: 'Nouveautés 🆕', isVisible: true },
 ];
 
+import { Helmet } from 'react-helmet-async';
+
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState('overview');
   const [productSubTab, setProductSubTab] = useState('products');
@@ -168,7 +170,7 @@ export default function AdminDashboard() {
   useEffect(() => {
     const token = localStorage.getItem('adminToken');
     if (!token) {
-      navigate('/admin/login');
+      navigate('/admin-7xK9pL2q/login');
       return;
     }
 
@@ -188,7 +190,7 @@ export default function AdminDashboard() {
         })
         .then(setStats)
         .catch(err => {
-          if (err.name !== 'AbortError') navigate('/admin/login');
+          if (err.name !== 'AbortError') navigate('/admin-7xK9pL2q/login');
         });
     }
 
@@ -276,7 +278,7 @@ export default function AdminDashboard() {
 
   const handleLogout = () => {
     localStorage.removeItem('adminToken');
-    navigate('/admin/login');
+    navigate('/admin-7xK9pL2q/login');
   };
 
   const updateOrderStatus = async (id: number, status: string) => {
@@ -1258,6 +1260,9 @@ export default function AdminDashboard() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col md:flex-row">
+      <Helmet>
+        <meta name="robots" content="noindex, nofollow" />
+      </Helmet>
       {/* Sidebar */}
       <aside className="w-full md:w-64 bg-gray-900 text-white flex flex-col">
         <div className="p-6 border-b border-gray-800 flex items-center gap-3">

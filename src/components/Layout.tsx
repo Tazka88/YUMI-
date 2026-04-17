@@ -247,10 +247,6 @@ export default function Layout() {
 
             {/* Icons */}
             <div className="flex items-center gap-4">
-              <Link to="/admin/login" className="hidden md:flex flex-col items-center hover:text-orange-100">
-                <User size={24} />
-                <span className="text-xs mt-1">Se connecter</span>
-              </Link>
               <Link to="/cart" className="flex flex-col items-center hover:text-orange-100 relative">
                 <div className="relative">
                   <ShoppingCart size={24} />

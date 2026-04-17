@@ -1,5 +1,5 @@
 import React, { Suspense, useEffect } from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
 import { Toaster } from 'react-hot-toast';
 import { SpeedInsights } from '@vercel/speed-insights/react';
@@ -56,8 +56,9 @@ export default function App() {
           <Route path="checkout" element={<Checkout />} />
           <Route path=":slug" element={<Page />} />
         </Route>
-        <Route path="/admin/login" element={<AdminLogin />} />
-        <Route path="/admin/*" element={<AdminDashboard />} />
+        <Route path="/admin-7xK9pL2q/login" element={<AdminLogin />} />
+        <Route path="/admin-7xK9pL2q/*" element={<AdminDashboard />} />
+        <Route path="/admin/*" element={<Navigate to="/" replace />} />
       </Routes>
       </Suspense>
     </BrowserRouter>

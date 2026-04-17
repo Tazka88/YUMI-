@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { ShoppingCart, Star, ShieldCheck, Truck, RotateCcw, ThumbsUp, Facebook, Instagram, MessageCircle, CreditCard, ArrowDown, Phone, Play, ChevronDown, HelpCircle } from 'lucide-react';
+import { ShoppingCart, Star, ShieldCheck, Truck, RotateCcw, ThumbsUp, Facebook, Instagram, MessageCircle, CreditCard, ArrowDown, Phone, Play, ChevronDown, HelpCircle, Camera, X } from 'lucide-react';
 import { useCartStore, Product as ProductType } from '../store/cartStore';
 import { formatPrice } from '../utils/formatPrice';
 import { ProductCard } from '../components/ProductCard';
@@ -19,6 +19,8 @@ export default function Product() {
   const [quantity, setQuantity] = useState(1);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [reviewForm, setReviewForm] = useState({ name: '', rating: 5, comment: '' });
+  const [reviewImage, setReviewImage] = useState<File | null>(null);
+  const [modalImage, setModalImage] = useState<string | null>(null);
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
   const [trackingIds, setTrackingIds] = useState({ ga: '', fb: '' });
   const [settings, setSettings] = useState<any>({});
@@ -251,18 +253,37 @@ export default function Product() {
     if (!reviewForm.name || !reviewForm.comment) return;
     
     setIsSubmittingReview(true);
+    let imageUrl = null;
+
     try {
+      if (reviewImage) {
+        const formData = new FormData();
+        formData.append('image', reviewImage);
+        const uploadRes = await fetch('/api/reviews/upload', {
+          method: 'POST',
+          body: formData
+        });
+        if (uploadRes.ok) {
+          const uploadData = await uploadRes.json();
+          imageUrl = uploadData.url;
+        } else {
+          console.error('Image upload failed');
+        }
+      }
+
       const res = await fetch(`/api/products/${slug}/reviews`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           customer_name: reviewForm.name,
           rating: reviewForm.rating,
-          comment: reviewForm.comment
+          comment: reviewForm.comment,
+          image_url: imageUrl
         })
       });
       if (res.ok) {
         setReviewForm({ name: '', rating: 5, comment: '' });
+        setReviewImage(null);
         fetch(`/api/products/${slug}/reviews`)
           .then(res => res.json())
           .then(setReviews)
@@ -749,6 +770,40 @@ export default function Product() {
                     onChange={e => setReviewForm({...reviewForm, comment: e.target.value})}
                   ></textarea>
                 </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Photo (Optionnel)</label>
+                  <label className="cursor-pointer flex items-center justify-center gap-2 w-full px-3 py-3 border-2 border-dashed border-gray-300 rounded-md hover:border-orange-500 hover:bg-orange-50 transition-colors">
+                    <Camera size={20} className="text-gray-500" />
+                    <span className="text-sm text-gray-600">Ajouter une photo</span>
+                    <input 
+                      type="file" 
+                      accept="image/jpeg, image/png, image/webp" 
+                      className="hidden" 
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          if (file.size > 5 * 1024 * 1024) {
+                            alert('La taille de l\'image ne doit pas dépasser 5MB');
+                            return;
+                          }
+                          setReviewImage(file);
+                        }
+                      }}
+                    />
+                  </label>
+                  {reviewImage && (
+                    <div className="mt-2 relative inline-block">
+                      <img src={URL.createObjectURL(reviewImage)} alt="Preview" className="w-20 h-20 object-cover rounded-md border" />
+                      <button 
+                        type="button" 
+                        onClick={() => setReviewImage(null)} 
+                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                  )}
+                </div>
                 <button 
                   type="submit"
                   disabled={isSubmittingReview}
@@ -777,7 +832,15 @@ export default function Product() {
                       <Star key={star} fill={star <= review.rating ? "currentColor" : "none"} size={14} />
                     ))}
                   </div>
-                  <p className="text-sm text-gray-600">{review.comment}</p>
+                  <p className="text-sm text-gray-600 mb-3">{review.comment}</p>
+                  {review.image_url && (
+                    <img 
+                      src={review.image_url} 
+                      alt="Photo de l'avis" 
+                      className="w-24 h-24 object-cover rounded-md border cursor-pointer hover:opacity-90 transition-opacity"
+                      onClick={() => setModalImage(review.image_url)}
+                    />
+                  )}
                 </div>
               ))
             )}
@@ -820,6 +883,23 @@ export default function Product() {
           J'achète
         </button>
       </div>
+      {/* Image Modal */}
+      {modalImage && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4" onClick={() => setModalImage(null)}>
+          <button 
+            className="absolute top-4 right-4 text-white hover:text-gray-300"
+            onClick={() => setModalImage(null)}
+          >
+            <X size={32} />
+          </button>
+          <img 
+            src={modalImage} 
+            alt="Image en plein écran" 
+            className="max-w-full max-h-[90vh] object-contain rounded-md" 
+            onClick={e => e.stopPropagation()}
+          />
+        </div>
+      )}
     </div>
   );
 }

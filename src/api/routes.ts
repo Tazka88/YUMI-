@@ -681,17 +681,18 @@ router.get('/products/:slug/reviews', async (req, res) => {
 });
 
 router.post('/products/:slug/reviews', async (req, res) => {
-  const { customer_name, rating, comment } = req.body;
+  const { customer_name, rating, comment, image_url } = req.body;
   
   if (typeof customer_name !== 'string' || customer_name.length > 100) return res.status(400).json({ error: 'Nom invalide' });
   if (typeof comment !== 'string' || comment.length > 1000) return res.status(400).json({ error: 'Commentaire trop long' });
   if (typeof rating !== 'number' || rating < 1 || rating > 5) return res.status(400).json({ error: 'Note invalide' });
+  if (image_url && typeof image_url !== 'string') return res.status(400).json({ error: 'Image URL invalide' });
 
   try {
     const [product] = await sql`SELECT id FROM products WHERE slug = ${req.params.slug}`;
     if (!product) return res.status(404).json({ error: 'Product not found' });
 
-    await sql`INSERT INTO reviews (product_id, customer_name, rating, comment) VALUES (${product.id}, ${customer_name}, ${rating}, ${comment})`;
+    await sql`INSERT INTO reviews (product_id, customer_name, rating, comment, image_url) VALUES (${product.id}, ${customer_name}, ${rating}, ${comment}, ${image_url || null})`;
     res.status(201).json({ message: 'Review added' });
   } catch (err) {
     res.status(500).json({ error: 'Failed to add review' });
@@ -928,6 +929,70 @@ router.delete('/admin/footer-links/:id', authenticate, async (req, res) => {
     res.json({ message: 'Link deleted' });
   } catch (err) {
     res.status(500).json({ error: 'Failed to delete link' });
+  }
+});
+
+router.post('/reviews/upload', upload.single('image'), async (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ error: 'No file uploaded' });
+  }
+
+  // Check file size (5MB limit) already handled by multer if we configure it, but we can double check
+  if (req.file.size > 5 * 1024 * 1024) {
+    return res.status(400).json({ error: 'File size too large (max 5MB)' });
+  }
+  
+  try {
+    let buffer = req.file.buffer;
+    let contentType = req.file.mimetype;
+    let ext = req.file.originalname.split('.').pop() || 'bin';
+
+    if (req.file.mimetype !== 'image/svg+xml') {
+      const sharp = (await import('sharp')).default;
+      buffer = await sharp(req.file.buffer)
+        .resize({ width: 800, height: 800, fit: 'inside', withoutEnlargement: true })
+        .webp({ quality: 80 })
+        .toBuffer();
+      contentType = 'image/webp';
+      ext = 'webp';
+    }
+
+    const supabase = getSupabase();
+    if (supabase) {
+      const { data: bucketData, error: bucketError } = await supabase.storage.getBucket('images');
+      if (bucketError && (bucketError.message.includes('not found') || bucketError.message.includes('does not exist') || (bucketError as any).status === 404 || bucketError.name === 'StorageApiError')) {
+        await supabase.storage.createBucket('images', { public: true });
+      }
+
+      const fileName = `reviews/${Date.now()}-${Math.random().toString(36).substring(7)}.${ext}`;
+      
+      const { data, error } = await supabase.storage
+        .from('images')
+        .upload(fileName, buffer, {
+          contentType,
+          cacheControl: '3600',
+          upsert: false
+        });
+
+      if (error) throw error;
+      
+      const { data: publicUrlData } = supabase.storage.from('images').getPublicUrl(fileName);
+      return res.json({ url: publicUrlData.publicUrl });
+    }
+
+    // Fallback to local storage if no Supabase
+    const fs = await import('fs');
+    const path = await import('path');
+    const uploadsDir = path.join(process.cwd(), 'uploads', 'reviews');
+    if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+    
+    const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${ext}`;
+    fs.writeFileSync(path.join(uploadsDir, fileName), buffer);
+    
+    res.json({ url: `/uploads/reviews/${fileName}` });
+  } catch (err) {
+    console.error('Upload Error:', err);
+    res.status(500).json({ error: 'Failed to upload image' });
   }
 });
 

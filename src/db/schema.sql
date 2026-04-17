@@ -180,9 +180,13 @@ CREATE TABLE IF NOT EXISTS reviews (
   customer_name VARCHAR(255) NOT NULL,
   rating INTEGER NOT NULL CHECK (rating >= 1 AND rating <= 5),
   comment TEXT,
+  image_url TEXT,
   status VARCHAR(50) DEFAULT 'pending',
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Force add column if it was created before
+ALTER TABLE reviews ADD COLUMN IF NOT EXISTS image_url TEXT;
 
 CREATE TABLE IF NOT EXISTS wilayas (
   id SERIAL PRIMARY KEY,

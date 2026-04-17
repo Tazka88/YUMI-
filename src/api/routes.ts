@@ -1237,7 +1237,7 @@ router.get('/admin/export-meta-catalog', authenticate, async (req, res) => {
       // Image: no base64, specific format
       const vMatch = p.image.match(/(\?v=[^&]+)/);
       const vParam = vMatch ? vMatch[1] : '';
-      const image_link = `https://zorando.vercel.app/api/images/products/${p.id}/image${vParam}`;
+      const image_link = `https://zorando.com/api/images/products/${p.id}/image${vParam}`;
       
       const brand = formatField(p.brand_name || 'Generic');
 

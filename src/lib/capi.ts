@@ -94,7 +94,7 @@ interface CapiEventData {
 
 export async function sendCapiEvent({ eventName, eventId, customData, userData }: CapiEventData) {
   // Only send CAPI events from the production domain
-  if (typeof window !== 'undefined' && !window.location.hostname.includes('zorando.vercel.app')) {
+  if (typeof window !== 'undefined' && !window.location.hostname.includes('zorando.com')) {
     console.log(`[CAPI] Skipped ${eventName} event (non-production environment)`);
     return;
   }

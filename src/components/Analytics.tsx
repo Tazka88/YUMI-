@@ -29,7 +29,7 @@ export default function Analytics() {
         // GA is now initialized in index.html directly
         setGaId('G-7JLYM1QX3C');
 
-        const isProduction = typeof window !== 'undefined' && window.location.hostname.includes('zorando.vercel.app');
+        const isProduction = typeof window !== 'undefined' && window.location.hostname.includes('zorando.com');
         
         if (fbPixelId && typeof window !== 'undefined' && isProduction) {
           try {
@@ -100,7 +100,7 @@ export default function Analytics() {
     if (fbId) {
       try {
         const eventId = generateEventId();
-        const isProduction = typeof window !== 'undefined' && window.location.hostname.includes('zorando.vercel.app');
+        const isProduction = typeof window !== 'undefined' && window.location.hostname.includes('zorando.com');
         
         if (isProduction && typeof window !== 'undefined' && window.fbq) {
           window.fbq('track', 'PageView', {}, { eventID: eventId });

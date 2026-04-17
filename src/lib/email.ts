@@ -7,7 +7,7 @@ export const sendOrderConfirmationEmail = async (orderId: string, customerName: 
 
   try {
     await resend.emails.send({
-      from: 'ZORANDO <contact@zorando.vercel.app>', // Update this with a verified domain if needed, or use a default Resend testing email if not verified. Actually, Resend requires a verified domain or uses onboarding@resend.dev for testing. Let's use onboarding@resend.dev as fallback or a generic one.
+      from: 'ZORANDO <contact@zorando.com>', // Update this with a verified domain if needed, or use a default Resend testing email if not verified. Actually, Resend requires a verified domain or uses onboarding@resend.dev for testing. Let's use onboarding@resend.dev as fallback or a generic one.
       to: customerEmail,
       subject: `Confirmation de votre commande ${orderId} - ZORANDO`,
       html: `
@@ -52,7 +52,7 @@ export const sendOrderStatusEmail = async (orderId: string, customerName: string
 
   try {
     await resend.emails.send({
-      from: 'ZORANDO <contact@zorando.vercel.app>',
+      from: 'ZORANDO <contact@zorando.com>',
       to: customerEmail,
       subject: `Mise à jour de votre commande ${orderId} - ZORANDO`,
       html: `

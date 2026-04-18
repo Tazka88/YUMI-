@@ -22,7 +22,7 @@ export default function Checkout() {
   
   const directBuyItem = location.state?.directBuyItem;
   const checkoutItems = directBuyItem ? [directBuyItem] : items;
-  const checkoutTotal = directBuyItem ? (directBuyItem.promo_price || directBuyItem.price) * directBuyItem.quantity : total();
+  const checkoutTotal = directBuyItem ? (directBuyItem.selectedVariation?.price || directBuyItem.promo_price || directBuyItem.price) * directBuyItem.quantity : total();
   
   const [formData, setFormData] = useState({
     name: '',
@@ -160,7 +160,8 @@ export default function Checkout() {
       items: checkoutItems.map(item => ({
         product_id: item.id,
         quantity: item.quantity,
-        price: item.promo_price || item.price
+        price: item.selectedVariation?.price || item.promo_price || item.price,
+        variation: item.selectedVariation ? `${item.selectedVariation.attribute} : ${item.selectedVariation.value}` : null
       }))
     };
 
@@ -407,12 +408,17 @@ export default function Checkout() {
             
             <div className="space-y-4 mb-6 max-h-60 overflow-y-auto pr-2">
               {checkoutItems.map(item => (
-                <div key={item.id} className="flex justify-between text-sm">
+                <div key={item.cartItemId || item.id} className="flex justify-between text-sm">
                   <div className="flex gap-2">
                     <span className="font-medium text-gray-500">{item.quantity}x</span>
-                    <span className="text-gray-800 line-clamp-1">{item.name}</span>
+                    <div className="flex flex-col">
+                      <span className="text-gray-800 line-clamp-1">{item.name}</span>
+                      {item.selectedVariation && (
+                        <span className="text-xs text-gray-500">{item.selectedVariation.attribute}: {item.selectedVariation.value}</span>
+                      )}
+                    </div>
                   </div>
-                  <span className="font-medium whitespace-nowrap">{formatPrice((item.promo_price || item.price) * item.quantity)}</span>
+                  <span className="font-medium whitespace-nowrap">{formatPrice((item.selectedVariation?.price || item.promo_price || item.price) * item.quantity)}</span>
                 </div>
               ))}
             </div>

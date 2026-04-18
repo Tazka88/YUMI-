@@ -32,12 +32,13 @@ export default function Cart() {
         {/* Cart Items */}
         <div className="w-full lg:w-2/3 space-y-4">
           {items.map((item) => {
-            const currentPrice = item.promo_price || item.price;
+            const currentPrice = item.selectedVariation?.price || item.promo_price || item.price;
+            const itemImage = item.selectedVariation?.image ? (item.selectedVariation.image.startsWith('http') || item.selectedVariation.image.startsWith('/api') ? item.selectedVariation.image : '/api/images/' + item.selectedVariation.image) : item.image;
             return (
-              <div key={item.id} className="bg-white p-4 rounded-lg shadow-sm flex flex-col sm:flex-row items-start sm:items-center gap-4 relative">
-                <Link to={`/product/${item.slug}`} className="w-24 h-24 shrink-0 rounded-md overflow-hidden bg-gray-50">
+              <div key={item.cartItemId || item.id} className="bg-white p-4 rounded-lg shadow-sm flex flex-col sm:flex-row items-start sm:items-center gap-4 relative">
+                <Link to={`/product/${item.slug}`} className="w-24 h-24 shrink-0 rounded-md overflow-hidden bg-gray-50 border border-gray-100">
                   <img 
-                    src={item.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(item.name)}&background=random&size=200`} 
+                    src={itemImage || `https://ui-avatars.com/api/?name=${encodeURIComponent(item.name)}&background=random&size=200`} 
                     alt={item.name}
                     className="w-full h-full object-cover"
                     referrerPolicy="no-referrer"
@@ -48,7 +49,12 @@ export default function Cart() {
                   <Link to={`/product/${item.slug}`} className="font-medium text-gray-800 hover:text-orange-500 line-clamp-2 mb-1">
                     {item.name}
                   </Link>
-                  <div className="text-sm text-gray-500 mb-2">Vendeur: ZORANDO Express</div>
+                  {item.selectedVariation && (
+                    <div className="text-sm text-gray-500 mb-1 bg-gray-50 inline-block px-2 py-1 rounded">
+                      <span className="font-medium">{item.selectedVariation.attribute} :</span> {item.selectedVariation.value}
+                    </div>
+                  )}
+                  <div className="text-sm text-gray-400 mb-2">Vendeur: ZORANDO Express</div>
                   <div className="text-lg font-bold text-orange-600">{formatPrice(currentPrice)}</div>
                 </div>
 
@@ -56,19 +62,22 @@ export default function Cart() {
                   <div className="flex items-center border border-gray-300 rounded-md bg-white">
                     <button 
                       className="px-3 py-1 text-gray-600 hover:bg-gray-100 disabled:opacity-50"
-                      onClick={() => updateQuantity(item.id, Math.max(1, item.quantity - 1))}
+                      onClick={() => updateQuantity(item.cartItemId || item.id, Math.max(1, item.quantity - 1))}
                       disabled={item.quantity <= 1}
                     >-</button>
                     <span className="w-10 text-center font-medium text-sm">{item.quantity}</span>
                     <button 
                       className="px-3 py-1 text-gray-600 hover:bg-gray-100 disabled:opacity-50"
-                      onClick={() => updateQuantity(item.id, Math.min(item.stock, item.quantity + 1))}
-                      disabled={item.quantity >= item.stock}
+                      onClick={() => {
+                         const maxStock = item.selectedVariation?.stock ?? item.stock;
+                         updateQuantity(item.cartItemId || item.id, Math.min(maxStock, item.quantity + 1))
+                      }}
+                      disabled={item.quantity >= (item.selectedVariation?.stock ?? item.stock)}
                     >+</button>
                   </div>
                   
                   <button 
-                    onClick={() => removeItem(item.id)}
+                    onClick={() => removeItem(item.cartItemId || item.id)}
                     className="text-red-500 hover:bg-red-50 p-2 rounded-md transition-colors"
                     title="Supprimer"
                   >

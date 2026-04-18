@@ -14,6 +14,7 @@ export default function Product() {
   const [error, setError] = useState<string | null>(null);
   const [selectedImage, setSelectedImage] = useState<string>('');
   const [selectedMedia, setSelectedMedia] = useState<{type: 'image' | 'video', url: string}>({type: 'image', url: ''});
+  const [selectedVariation, setSelectedVariation] = useState<any>(null);
   const [relatedProducts, setRelatedProducts] = useState<ProductType[]>([]);
   const [reviews, setReviews] = useState<any[]>([]);
   const [quantity, setQuantity] = useState(1);
@@ -188,11 +189,19 @@ export default function Product() {
   const isPromo = product.promo_price !== null;
   const discount = isPromo ? Math.round(((product.price - product.promo_price!) / product.price) * 100) : 0;
   const currentPrice = isPromo ? product.promo_price! : product.price;
+  const activePriceForDisplay = selectedVariation?.price || currentPrice;
+  const hasVariationPrice = !!selectedVariation?.price;
 
   const handleAddToCart = () => {
-    addItem(product, quantity);
+    if (product.variations && product.variations.length > 0 && !selectedVariation) {
+      alert("Veuillez sélectionner une option avant d'ajouter au panier.");
+      return;
+    }
+    addItem(product, quantity, selectedVariation);
     
-    const safeValue = isNaN(currentPrice * quantity) || (currentPrice * quantity) <= 0 ? 1 : Number(Number(currentPrice * quantity).toFixed(2));
+    // Use price from variation if available
+    const activePrice = selectedVariation?.price || currentPrice;
+    const safeValue = isNaN(activePrice * quantity) || (activePrice * quantity) <= 0 ? 1 : Number(Number(activePrice * quantity).toFixed(2));
 
     // Track Add to Cart
     if (typeof window !== 'undefined' && typeof window.gtag === 'function') {
@@ -203,7 +212,7 @@ export default function Product() {
           items: [{
             item_id: product.id.toString(),
             item_name: product.name,
-            price: currentPrice,
+            price: activePrice,
             quantity: quantity
           }]
         });
@@ -245,7 +254,11 @@ export default function Product() {
   };
 
   const handleBuyNow = () => {
-    navigate('/checkout', { state: { directBuyItem: { ...product, quantity } } });
+    if (product.variations && product.variations.length > 0 && !selectedVariation) {
+      alert("Veuillez sélectionner une option avant de commander.");
+      return;
+    }
+    navigate('/checkout', { state: { directBuyItem: { ...product, quantity, selectedVariation, cartItemId: `${product.id}` + (selectedVariation ? `-${selectedVariation.id}` : '') } } });
   };
 
   const handleReviewSubmit = async (e: React.FormEvent) => {
@@ -492,7 +505,11 @@ export default function Product() {
             </div>
 
             <div className="mb-6 pb-6 border-b border-gray-100">
-              {isPromo ? (
+              {hasVariationPrice ? (
+                <div className="flex items-end gap-3">
+                  <span className="text-3xl font-black text-orange-600">{formatPrice(activePriceForDisplay)}</span>
+                </div>
+              ) : isPromo ? (
                 <div className="flex items-end gap-3">
                   <span className="text-3xl font-black text-orange-600">{formatPrice(product.promo_price)}</span>
                   <span className="text-lg text-gray-400 line-through mb-1">{formatPrice(product.price)}</span>
@@ -541,6 +558,49 @@ export default function Product() {
 
             {/* Info Boxes */}
             <div className="space-y-3 mb-6">
+              {product.variations && product.variations.length > 0 && (
+                <div className="mb-4">
+                  <h4 className="text-sm font-bold text-gray-800 mb-2">Options disponibles :</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {product.variations.map((variation: any, idx: number) => {
+                      const isSelected = selectedVariation?.id === variation.id;
+                      return (
+                        <button
+                          key={variation.id || idx}
+                          onClick={() => {
+                            setSelectedVariation(variation);
+                            if (variation.image) {
+                              const img = variation.image.startsWith('http') || variation.image.startsWith('/api') ? variation.image : '/api/images/' + variation.image;
+                              setSelectedImage(img);
+                              setSelectedMedia({type: 'image', url: img});
+                            }
+                          }}
+                          className={`
+                            px-3 py-2 rounded border text-sm flex items-center gap-2 transition-all
+                            ${isSelected 
+                              ? 'border-orange-500 bg-orange-50 text-orange-700 ring-1 ring-orange-500' 
+                              : 'border-gray-200 hover:border-orange-300 text-gray-700 hover:bg-gray-50'
+                            }
+                            ${variation.stock === 0 ? 'opacity-50 cursor-not-allowed' : ''}
+                          `}
+                          disabled={variation.stock === 0}
+                        >
+                          <div className="flex flex-col text-left">
+                            <span className="font-medium text-xs text-gray-500">{variation.attribute}</span>
+                            <span className="font-bold">{variation.value}</span>
+                          </div>
+                          {variation.price ? (
+                            <span className="text-xs font-bold text-orange-600 bg-white px-1.5 py-0.5 rounded border border-orange-100">
+                              {variation.price} DA
+                            </span>
+                          ) : null}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
               <div className="flex items-start gap-3 p-3 bg-blue-50/50 border border-blue-100 rounded-lg">
                 <Truck className="text-blue-500 mt-0.5" size={20} />
                 <div>

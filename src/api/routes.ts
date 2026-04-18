@@ -712,15 +712,26 @@ router.post('/orders', orderLimiter, async (req, res) => {
 
     const validatedItems = [];
     for (const item of items) {
-      const [product] = await sql`SELECT price, promo_price FROM products WHERE id = ${item.product_id}`;
+      const [product] = await sql`SELECT price, promo_price, variations FROM products WHERE id = ${item.product_id}`;
       if (!product) throw new Error(`Produit invalide: ${item.product_id}`);
       
-      const actualPrice = product.promo_price || product.price;
+      let actualPrice = product.promo_price || product.price;
+      
+      // Calculate active variation price if selected
+      if (item.variation && product.variations && Array.isArray(product.variations)) {
+         // Assuming variation string is matching attribute + value from frontend:
+         // item.variation = `${variation.attribute} : ${variation.value}`
+         const matchingVariation = product.variations.find(v => `${v.attribute} : ${v.value}` === item.variation);
+         if (matchingVariation && matchingVariation.price) {
+            actualPrice = Number(matchingVariation.price);
+         }
+      }
+      
       const quantity = parseInt(item.quantity, 10);
       if (isNaN(quantity) || quantity <= 0) throw new Error('Quantité invalide');
 
       calculatedTotal += actualPrice * quantity;
-      validatedItems.push({ ...item, price: actualPrice, quantity });
+      validatedItems.push({ ...item, price: actualPrice, quantity, variation: item.variation || null });
     }
 
     calculatedTotal += delivery_cost;
@@ -743,8 +754,8 @@ router.post('/orders', orderLimiter, async (req, res) => {
           throw new Error(`Stock insuffisant pour le produit ID: ${item.product_id}`);
         }
         await sql`
-          INSERT INTO order_items (order_id, product_id, quantity, price)
-          VALUES (${order.id}, ${item.product_id}, ${item.quantity}, ${item.price})
+          INSERT INTO order_items (order_id, product_id, quantity, price, variation)
+          VALUES (${order.id}, ${item.product_id}, ${item.quantity}, ${item.price}, ${item.variation})
         `;
       }
       return { id: order.id, order_id: generatedOrderId };
@@ -1259,13 +1270,13 @@ router.get('/admin/export-meta-catalog', authenticate, async (req, res) => {
 });
 
 router.post('/admin/products', authenticate, async (req, res) => {
-  const { category_id, subcategory_id, sub_subcategory_id, brand_id, brand_name, name, slug, description, price, promo_price, stock, image, video_url, is_popular, is_best_seller, is_new, is_recommended, is_fast_delivery, is_active, images, features, key_points, faq_q1, faq_a1, faq_q2, faq_a2 } = req.body;
+  const { category_id, subcategory_id, sub_subcategory_id, brand_id, brand_name, name, slug, description, price, promo_price, stock, image, video_url, is_popular, is_best_seller, is_new, is_recommended, is_fast_delivery, is_active, images, features, key_points, faq_q1, faq_a1, faq_q2, faq_a2, variations } = req.body;
   
   try {
     const productId = await sql.begin(async (sql: any) => {
       const [info] = await sql`
-        INSERT INTO products (category_id, subcategory_id, sub_subcategory_id, brand_id, brand_name, name, slug, description, price, promo_price, stock, image, video_url, is_popular, is_best_seller, is_new, is_recommended, is_fast_delivery, is_active, features, key_points, faq_q1, faq_a1, faq_q2, faq_a2)
-        VALUES (${category_id || null}, ${subcategory_id || null}, ${sub_subcategory_id || null}, ${brand_id || null}, ${brand_name || null}, ${name || ''}, ${slug || ''}, ${description || null}, ${price || 0}, ${promo_price || null}, ${stock || 0}, ${image || null}, ${video_url || null}, ${is_popular ? true : false}, ${is_best_seller ? true : false}, ${is_new ? true : false}, ${is_recommended ? true : false}, ${is_fast_delivery ? true : false}, ${is_active !== undefined ? is_active : true}, ${features ? JSON.stringify(features) : null}::jsonb, ${key_points ? JSON.stringify(key_points) : null}::jsonb, ${faq_q1 || null}, ${faq_a1 || null}, ${faq_q2 || null}, ${faq_a2 || null})
+        INSERT INTO products (category_id, subcategory_id, sub_subcategory_id, brand_id, brand_name, name, slug, description, price, promo_price, stock, image, video_url, is_popular, is_best_seller, is_new, is_recommended, is_fast_delivery, is_active, features, key_points, faq_q1, faq_a1, faq_q2, faq_a2, variations)
+        VALUES (${category_id || null}, ${subcategory_id || null}, ${sub_subcategory_id || null}, ${brand_id || null}, ${brand_name || null}, ${name || ''}, ${slug || ''}, ${description || null}, ${price || 0}, ${promo_price || null}, ${stock || 0}, ${image || null}, ${video_url || null}, ${is_popular ? true : false}, ${is_best_seller ? true : false}, ${is_new ? true : false}, ${is_recommended ? true : false}, ${is_fast_delivery ? true : false}, ${is_active !== undefined ? is_active : true}, ${features ? JSON.stringify(features) : null}::jsonb, ${key_points ? JSON.stringify(key_points) : null}::jsonb, ${faq_q1 || null}, ${faq_a1 || null}, ${faq_q2 || null}, ${faq_a2 || null}, ${variations ? JSON.stringify(variations) : null}::jsonb)
         RETURNING id
       `;
       
@@ -1287,20 +1298,20 @@ router.post('/admin/products', authenticate, async (req, res) => {
 });
 
 router.put('/admin/products/:id', authenticate, async (req, res) => {
-  const { category_id, subcategory_id, sub_subcategory_id, brand_id, brand_name, name, slug, description, price, promo_price, stock, image, video_url, is_popular, is_best_seller, is_new, is_recommended, is_fast_delivery, is_active, images, features, key_points, faq_q1, faq_a1, faq_q2, faq_a2 } = req.body;
+  const { category_id, subcategory_id, sub_subcategory_id, brand_id, brand_name, name, slug, description, price, promo_price, stock, image, video_url, is_popular, is_best_seller, is_new, is_recommended, is_fast_delivery, is_active, images, features, key_points, faq_q1, faq_a1, faq_q2, faq_a2, variations } = req.body;
   
   try {
     await sql.begin(async (sql: any) => {
       if (image && image.startsWith('/api/images/')) {
         await sql`
           UPDATE products 
-          SET category_id = ${category_id || null}, subcategory_id = ${subcategory_id || null}, sub_subcategory_id = ${sub_subcategory_id || null}, brand_id = ${brand_id || null}, brand_name = ${brand_name || null}, name = ${name || ''}, slug = ${slug || ''}, description = ${description || null}, price = ${price || 0}, promo_price = ${promo_price || null}, stock = ${stock || 0}, video_url = ${video_url || null}, is_popular = ${is_popular ? true : false}, is_best_seller = ${is_best_seller ? true : false}, is_new = ${is_new ? true : false}, is_recommended = ${is_recommended ? true : false}, is_fast_delivery = ${is_fast_delivery ? true : false}, is_active = ${is_active !== undefined ? is_active : true}, features = ${features ? JSON.stringify(features) : null}::jsonb, key_points = ${key_points ? JSON.stringify(key_points) : null}::jsonb, faq_q1 = ${faq_q1 || null}, faq_a1 = ${faq_a1 || null}, faq_q2 = ${faq_q2 || null}, faq_a2 = ${faq_a2 || null}
+          SET category_id = ${category_id || null}, subcategory_id = ${subcategory_id || null}, sub_subcategory_id = ${sub_subcategory_id || null}, brand_id = ${brand_id || null}, brand_name = ${brand_name || null}, name = ${name || ''}, slug = ${slug || ''}, description = ${description || null}, price = ${price || 0}, promo_price = ${promo_price || null}, stock = ${stock || 0}, video_url = ${video_url || null}, is_popular = ${is_popular ? true : false}, is_best_seller = ${is_best_seller ? true : false}, is_new = ${is_new ? true : false}, is_recommended = ${is_recommended ? true : false}, is_fast_delivery = ${is_fast_delivery ? true : false}, is_active = ${is_active !== undefined ? is_active : true}, features = ${features ? JSON.stringify(features) : null}::jsonb, key_points = ${key_points ? JSON.stringify(key_points) : null}::jsonb, faq_q1 = ${faq_q1 || null}, faq_a1 = ${faq_a1 || null}, faq_q2 = ${faq_q2 || null}, faq_a2 = ${faq_a2 || null}, variations = ${variations ? JSON.stringify(variations) : null}::jsonb
           WHERE id = ${req.params.id}
         `;
       } else {
         await sql`
           UPDATE products 
-          SET category_id = ${category_id || null}, subcategory_id = ${subcategory_id || null}, sub_subcategory_id = ${sub_subcategory_id || null}, brand_id = ${brand_id || null}, brand_name = ${brand_name || null}, name = ${name || ''}, slug = ${slug || ''}, description = ${description || null}, price = ${price || 0}, promo_price = ${promo_price || null}, stock = ${stock || 0}, image = ${image || null}, video_url = ${video_url || null}, is_popular = ${is_popular ? true : false}, is_best_seller = ${is_best_seller ? true : false}, is_new = ${is_new ? true : false}, is_recommended = ${is_recommended ? true : false}, is_fast_delivery = ${is_fast_delivery ? true : false}, is_active = ${is_active !== undefined ? is_active : true}, features = ${features ? JSON.stringify(features) : null}::jsonb, key_points = ${key_points ? JSON.stringify(key_points) : null}::jsonb, faq_q1 = ${faq_q1 || null}, faq_a1 = ${faq_a1 || null}, faq_q2 = ${faq_q2 || null}, faq_a2 = ${faq_a2 || null}
+          SET category_id = ${category_id || null}, subcategory_id = ${subcategory_id || null}, sub_subcategory_id = ${sub_subcategory_id || null}, brand_id = ${brand_id || null}, brand_name = ${brand_name || null}, name = ${name || ''}, slug = ${slug || ''}, description = ${description || null}, price = ${price || 0}, promo_price = ${promo_price || null}, stock = ${stock || 0}, image = ${image || null}, video_url = ${video_url || null}, is_popular = ${is_popular ? true : false}, is_best_seller = ${is_best_seller ? true : false}, is_new = ${is_new ? true : false}, is_recommended = ${is_recommended ? true : false}, is_fast_delivery = ${is_fast_delivery ? true : false}, is_active = ${is_active !== undefined ? is_active : true}, features = ${features ? JSON.stringify(features) : null}::jsonb, key_points = ${key_points ? JSON.stringify(key_points) : null}::jsonb, faq_q1 = ${faq_q1 || null}, faq_a1 = ${faq_a1 || null}, faq_q2 = ${faq_q2 || null}, faq_a2 = ${faq_a2 || null}, variations = ${variations ? JSON.stringify(variations) : null}::jsonb
           WHERE id = ${req.params.id}
         `;
       }

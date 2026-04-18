@@ -59,7 +59,7 @@ export default function AdminDashboard() {
   
   const [productForm, setProductForm] = useState({
     name: '', slug: '', sku: '', category_id: '', subcategory_id: '', sub_subcategory_id: '', brand_id: '', brand_name: '', price: '', promo_price: '', stock: '', description: '', image: '', video_url: '',
-    is_popular: false, is_best_seller: false, is_new: false, is_recommended: false, is_fast_delivery: false, is_active: true, images: [] as any[],
+    is_popular: false, is_best_seller: false, is_new: false, is_recommended: false, is_fast_delivery: false, is_active: true, images: [] as any[], variations: [] as any[],
     features: '', key_points: '', faq_q1: '', faq_a1: '', faq_q2: '', faq_a2: ''
   });
   const [subcategoryForm, setSubcategoryForm] = useState({
@@ -342,7 +342,10 @@ export default function AdminDashboard() {
 
       const itemsHtml = orderData.items.map((item: any) => `
         <tr>
-          <td style="padding: 10px; border-bottom: 1px solid #eee;">${item.product_name}</td>
+          <td style="padding: 10px; border-bottom: 1px solid #eee;">
+            ${item.product_name}
+            ${item.variation ? `<br><small style="color: #666;">${item.variation}</small>` : ''}
+          </td>
           <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: center;">${item.quantity}</td>
           <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: right;">${item.price} DA</td>
           <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: right;">${item.price * item.quantity} DA</td>
@@ -534,7 +537,10 @@ export default function AdminDashboard() {
       const allOrdersHtml = ordersData.map(orderData => {
         const itemsHtml = orderData.items.map((item: any) => `
           <tr>
-            <td style="padding: 10px; border-bottom: 1px solid #eee;">${item.product_name}</td>
+            <td style="padding: 10px; border-bottom: 1px solid #eee;">
+              ${item.product_name}
+              ${item.variation ? `<br><small style="color: #666;">${item.variation}</small>` : ''}
+            </td>
             <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: center;">${item.quantity}</td>
             <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: right;">${item.price} DA</td>
             <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: right;">${item.price * item.quantity} DA</td>
@@ -685,6 +691,7 @@ export default function AdminDashboard() {
         is_fast_delivery: !!product.is_fast_delivery,
         is_active: product.is_active !== false,
         images: product.images || [],
+        variations: product.variations || [],
         features: typeof product.features === 'string' ? product.features : (Array.isArray(product.features) ? product.features.map((f: any) => `${f.key}: ${f.value}`).join('\n') : ''),
         key_points: typeof product.key_points === 'string' ? product.key_points : (Array.isArray(product.key_points) ? product.key_points.join('\n') : ''),
         faq_q1: product.faq_q1 || '', faq_a1: product.faq_a1 || '', faq_q2: product.faq_q2 || '', faq_a2: product.faq_a2 || ''
@@ -693,7 +700,7 @@ export default function AdminDashboard() {
       setEditingProduct(null);
       setProductForm({
         name: '', slug: '', sku: '', category_id: categories[0]?.id || '', subcategory_id: '', sub_subcategory_id: '', brand_id: '', brand_name: '', price: '', promo_price: '', stock: '', description: '', image: '', video_url: '',
-        is_popular: false, is_best_seller: false, is_new: false, is_recommended: false, is_fast_delivery: false, is_active: true, images: [], features: '', key_points: '',
+        is_popular: false, is_best_seller: false, is_new: false, is_recommended: false, is_fast_delivery: false, is_active: true, images: [], variations: [], features: '', key_points: '',
         faq_q1: '', faq_a1: '', faq_q2: '', faq_a2: ''
       });
     }
@@ -2695,6 +2702,30 @@ export default function AdminDashboard() {
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-2">Points clés (un par ligne)</label>
                   <textarea rows={5} placeholder="Entrez les points clés ici..." className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500" value={productForm.key_points as string} onChange={e => setProductForm({...productForm, key_points: e.target.value})}></textarea>
+                </div>
+
+                <div className="md:col-span-2 border-t pt-4 mt-2">
+                  <div className="flex justify-between items-center mb-4">
+                    <h4 className="font-bold text-gray-800">Variations de produit (Couleurs, Tailles...)</h4>
+                    <button type="button" onClick={() => setProductForm({...productForm, variations: [...(productForm.variations || []), { id: 'v_'+Date.now(), attribute: 'Couleur', value: '', price: '', stock: '', image: '' }]})} className="text-sm bg-gray-100 px-3 py-1 rounded-md hover:bg-gray-200 font-medium">+ Ajouter une variation</button>
+                  </div>
+                  {(!productForm.variations || productForm.variations.length === 0) && (
+                    <p className="text-sm text-gray-500 mb-4">Aucune variation pour ce produit.</p>
+                  )}
+                  <div className="flex flex-col gap-3 mb-4">
+                    {(productForm.variations || []).map((v: any, i: number) => (
+                      <div key={v.id || i} className="grid grid-cols-1 md:grid-cols-6 gap-2 items-center bg-gray-50 p-3 rounded-md border border-gray-200">
+                        <input className="px-2 py-1 border rounded focus:ring-orange-500 focus:border-orange-500" placeholder="Type (ex: Couleur)" value={v.attribute} onChange={e => { const nv = [...productForm.variations]; nv[i].attribute = e.target.value; setProductForm({...productForm, variations: nv}) }} />
+                        <input className="px-2 py-1 border rounded focus:ring-orange-500 focus:border-orange-500" placeholder="Valeur (ex: Noir)" value={v.value} onChange={e => { const nv = [...productForm.variations]; nv[i].value = e.target.value; setProductForm({...productForm, variations: nv}) }} />
+                        <input type="number" className="px-2 py-1 border rounded focus:ring-orange-500 focus:border-orange-500" placeholder="Prix (+)" value={v.price || ''} onChange={e => { const nv = [...productForm.variations]; nv[i].price = e.target.value; setProductForm({...productForm, variations: nv}) }} />
+                        <input type="number" className="px-2 py-1 border rounded focus:ring-orange-500 focus:border-orange-500" placeholder="Stock" value={v.stock || ''} onChange={e => { const nv = [...productForm.variations]; nv[i].stock = e.target.value; setProductForm({...productForm, variations: nv}) }} />
+                        <div className="flex gap-2 md:col-span-2 items-center">
+                           <input className="px-2 py-1 border rounded flex-1 focus:ring-orange-500 focus:border-orange-500" placeholder="URL Image" value={v.image || ''} onChange={e => { const nv = [...productForm.variations]; nv[i].image = e.target.value; setProductForm({...productForm, variations: nv}) }} />
+                           <button type="button" onClick={() => { const nv = [...productForm.variations]; nv.splice(i,1); setProductForm({...productForm, variations: nv}) }} className="text-red-500 hover:text-red-700 bg-red-50 p-1 rounded"><Trash2 size={18} /></button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
 
                 <div className="md:col-span-2 border-t pt-4 mt-2">

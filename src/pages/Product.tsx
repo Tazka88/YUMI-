@@ -1,12 +1,48 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { ShoppingCart, Star, ShieldCheck, Truck, RotateCcw, ThumbsUp, Facebook, Instagram, MessageCircle, CreditCard, ArrowDown, Phone, Play, ChevronDown, HelpCircle, Camera, X } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { useCartStore, Product as ProductType } from '../store/cartStore';
 import { formatPrice } from '../utils/formatPrice';
 import { ProductCard } from '../components/ProductCard';
 import SEO from '../components/SEO';
 import { fetchWithCache } from '../lib/utils';
 import { sendCapiEvent, generateEventId } from '../lib/capi';
+
+const COLOR_MAP: Record<string, string> = {
+  'noir': '#000000',
+  'black': '#000000',
+  'blanc': '#FFFFFF',
+  'white': '#FFFFFF',
+  'rouge': '#FF0000',
+  'red': '#FF0000',
+  'bleu': '#0000FF',
+  'blue': '#0000FF',
+  'vert': '#008000',
+  'green': '#008000',
+  'jaune': '#FFFF00',
+  'yellow': '#FFFF00',
+  'orange': '#FFA500',
+  'rose': '#FFC0CB',
+  'pink': '#FFC0CB',
+  'violet': '#EE82EE',
+  'purple': '#800080',
+  'gris': '#808080',
+  'gray': '#808080',
+  'grey': '#808080',
+  'marron': '#A52A2A',
+  'brown': '#A52A2A',
+  'beige': '#F5F5DC',
+  'doré': '#FFD700',
+  'or': '#FFD700',
+  'gold': '#FFD700',
+  'argent': '#C0C0C0',
+  'silver': '#C0C0C0',
+  'cyan': '#00FFFF',
+  'magenta': '#FF00FF',
+  'marine': '#000080',
+  'bordeaux': '#800000'
+};
 
 export default function Product() {
   const { slug } = useParams();
@@ -18,6 +54,8 @@ export default function Product() {
   const [relatedProducts, setRelatedProducts] = useState<ProductType[]>([]);
   const [reviews, setReviews] = useState<any[]>([]);
   const [quantity, setQuantity] = useState(1);
+  const optionsRef = useRef<HTMLDivElement>(null);
+  const [showOptionsHighlight, setShowOptionsHighlight] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [reviewForm, setReviewForm] = useState({ name: '', rating: 5, comment: '' });
   const [reviewImage, setReviewImage] = useState<File | null>(null);
@@ -55,13 +93,23 @@ export default function Product() {
         return res.json();
       })
       .then(data => {
+        if (typeof data.variations === 'string') {
+          try {
+            data.variations = JSON.parse(data.variations);
+          } catch (e) {
+            data.variations = [];
+          }
+        }
+        if (!Array.isArray(data.variations)) {
+           data.variations = [];
+        }
         setProduct(data);
         const mainImage = data.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(data.name)}&background=random&size=800`;
         setSelectedImage(mainImage);
         setSelectedMedia({type: 'image', url: mainImage});
         
         // Increment view count
-        fetch(`/api/products/${data.id}/view`, { method: 'POST', signal }).catch(console.error);
+        fetch(`/api/products/${data.id}/view`, { method: 'POST', signal }).catch(() => {});
 
         // Fetch related
         fetch(`/api/products?category=${data.category_id}`, { signal })
@@ -72,7 +120,7 @@ export default function Product() {
             }
           })
           .catch(err => {
-            if (err.name !== 'AbortError') console.error(err);
+            if (err.name !== 'AbortError' && !err.message?.includes('aborted')) console.error(err);
           });
           
         // Fetch reviews
@@ -84,11 +132,11 @@ export default function Product() {
             }
           })
           .catch(err => {
-            if (err.name !== 'AbortError') console.error(err);
+            if (err.name !== 'AbortError' && !err.message?.includes('aborted')) console.error(err);
           });
       })
       .catch(err => {
-        if (err.name !== 'AbortError') {
+        if (err.name !== 'AbortError' && !err.message?.includes('aborted')) {
           console.error(err);
           setError(err.message);
         }
@@ -194,7 +242,10 @@ export default function Product() {
 
   const handleAddToCart = () => {
     if (product.variations && product.variations.length > 0 && !selectedVariation) {
-      alert("Veuillez sélectionner une option avant d'ajouter au panier.");
+      toast.error("Veuillez sélectionner une option disponible (couleur, taille...) avant de continuer.");
+      setShowOptionsHighlight(true);
+      setTimeout(() => setShowOptionsHighlight(false), 3000);
+      optionsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       return;
     }
     addItem(product, quantity, selectedVariation);
@@ -255,7 +306,10 @@ export default function Product() {
 
   const handleBuyNow = () => {
     if (product.variations && product.variations.length > 0 && !selectedVariation) {
-      alert("Veuillez sélectionner une option avant de commander.");
+      toast.error("Veuillez sélectionner une option disponible (couleur, taille...) avant de commander.");
+      setShowOptionsHighlight(true);
+      setTimeout(() => setShowOptionsHighlight(false), 3000);
+      optionsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       return;
     }
     navigate('/checkout', { state: { directBuyItem: { ...product, quantity, selectedVariation, cartItemId: `${product.id}` + (selectedVariation ? `-${selectedVariation.id}` : '') } } });
@@ -559,16 +613,25 @@ export default function Product() {
             {/* Info Boxes */}
             <div className="space-y-3 mb-6">
               {product.variations && product.variations.length > 0 && (
-                <div className="mb-4">
-                  <h4 className="text-sm font-bold text-gray-800 mb-2">Options disponibles :</h4>
+                <div 
+                  className={`mb-4 p-3 rounded-lg border-2 transition-all duration-500 ${showOptionsHighlight ? 'border-red-500 bg-red-50/50 shadow-md ring-4 ring-red-500/20' : 'border-transparent'}`}
+                  ref={optionsRef}
+                >
+                  <h4 className={`text-sm font-bold mb-3 ${showOptionsHighlight ? 'text-red-600' : 'text-gray-800'}`}>
+                    Options disponibles {showOptionsHighlight && <span className="font-normal">— Requis pour commander</span>} :
+                  </h4>
                   <div className="flex flex-wrap gap-2">
                     {product.variations.map((variation: any, idx: number) => {
                       const isSelected = selectedVariation?.id === variation.id;
+                      const isColorAttribute = variation.attribute?.toLowerCase().includes('couleur') || variation.attribute?.toLowerCase().includes('color');
+                      const colorHex = isColorAttribute ? (COLOR_MAP[variation.value.toLowerCase().trim()] || variation.value) : null;
+                      
                       return (
                         <button
                           key={variation.id || idx}
                           onClick={() => {
                             setSelectedVariation(variation);
+                            setShowOptionsHighlight(false);
                             if (variation.image) {
                               const img = variation.image.startsWith('http') || variation.image.startsWith('/api') ? variation.image : '/api/images/' + variation.image;
                               setSelectedImage(img);
@@ -576,21 +639,27 @@ export default function Product() {
                             }
                           }}
                           className={`
-                            px-3 py-2 rounded border text-sm flex items-center gap-2 transition-all
+                            px-3 py-2 rounded-lg border text-sm flex items-center gap-2.5 transition-all
                             ${isSelected 
-                              ? 'border-orange-500 bg-orange-50 text-orange-700 ring-1 ring-orange-500' 
-                              : 'border-gray-200 hover:border-orange-300 text-gray-700 hover:bg-gray-50'
+                              ? 'border-orange-500 bg-orange-50 text-orange-800 ring-2 ring-orange-500/50 shadow-sm' 
+                              : 'border-gray-200 hover:border-gray-300 text-gray-700 hover:bg-gray-50'
                             }
-                            ${variation.stock === 0 ? 'opacity-50 cursor-not-allowed' : ''}
+                            ${variation.stock === 0 ? 'opacity-50 cursor-not-allowed bg-gray-100' : ''}
                           `}
                           disabled={variation.stock === 0}
                         >
+                          {isColorAttribute && colorHex && (
+                            <span 
+                              className={`w-4 h-4 rounded-full border shadow-inner flex-shrink-0 ${colorHex.toLowerCase() === '#ffffff' ? 'border-gray-300' : 'border-black/10'}`}
+                              style={{ backgroundColor: colorHex }}
+                            ></span>
+                          )}
                           <div className="flex flex-col text-left">
-                            <span className="font-medium text-xs text-gray-500">{variation.attribute}</span>
-                            <span className="font-bold">{variation.value}</span>
+                            <span className="font-medium text-[10px] uppercase tracking-wide text-gray-500 mb-0.5">{variation.attribute}</span>
+                            <span className="font-bold text-sm leading-none">{variation.value}</span>
                           </div>
                           {variation.price ? (
-                            <span className="text-xs font-bold text-orange-600 bg-white px-1.5 py-0.5 rounded border border-orange-100">
+                            <span className={`text-xs pl-2 ml-1 border-l font-bold ${isSelected ? 'text-orange-700 border-orange-200' : 'text-gray-500 border-gray-200'}`}>
                               {variation.price} DA
                             </span>
                           ) : null}

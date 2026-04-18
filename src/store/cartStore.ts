@@ -51,11 +51,11 @@ export const useCartStore = create<CartStore>()(
             ? `${product.id}-${selectedVariation.id}` 
             : `${product.id}`;
             
-          const existingItem = state.items.find((i) => i.cartItemId === cartItemId || i.id === cartItemId);
+          const existingItem = state.items.find((i) => i.cartItemId === cartItemId || i.id.toString() === cartItemId);
           if (existingItem) {
             return {
               items: state.items.map((i) =>
-                (i.cartItemId === cartItemId || i.id === cartItemId) ? { ...i, quantity: i.quantity + quantity } : i
+                (i.cartItemId === cartItemId || i.id.toString() === cartItemId) ? { ...i, quantity: i.quantity + quantity } : i
               ),
             };
           }
@@ -64,13 +64,13 @@ export const useCartStore = create<CartStore>()(
       },
       removeItem: (id) => {
         set((state) => ({
-          items: state.items.filter((i) => i.cartItemId !== id && i.id !== id),
+          items: state.items.filter((i) => i.cartItemId !== id && i.id.toString() !== id.toString()),
         }));
       },
       updateQuantity: (id, quantity) => {
         set((state) => ({
           items: state.items.map((i) =>
-            (i.cartItemId === id || i.id === id) ? { ...i, quantity } : i
+            (i.cartItemId === id || i.id.toString() === id.toString()) ? { ...i, quantity } : i
           ),
         }));
       },

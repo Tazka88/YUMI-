@@ -682,6 +682,14 @@ export default function AdminDashboard() {
   const openModal = (product: any = null) => {
     if (product) {
       setEditingProduct(product);
+      
+      let parsedVariations = [];
+      if (typeof product.variations === 'string') {
+        try { parsedVariations = JSON.parse(product.variations); } catch(e) {}
+      } else if (Array.isArray(product.variations)) {
+        parsedVariations = product.variations;
+      }
+      
       setProductForm({
         name: product.name, slug: product.slug, sku: product.sku || '', category_id: product.category_id, subcategory_id: product.subcategory_id || '', sub_subcategory_id: product.sub_subcategory_id || '', brand_id: product.brand_id || '', brand_name: product.brand_name || '',
         price: product.price, promo_price: product.promo_price || '', stock: product.stock, 
@@ -691,7 +699,7 @@ export default function AdminDashboard() {
         is_fast_delivery: !!product.is_fast_delivery,
         is_active: product.is_active !== false,
         images: product.images || [],
-        variations: product.variations || [],
+        variations: parsedVariations,
         features: typeof product.features === 'string' ? product.features : (Array.isArray(product.features) ? product.features.map((f: any) => `${f.key}: ${f.value}`).join('\n') : ''),
         key_points: typeof product.key_points === 'string' ? product.key_points : (Array.isArray(product.key_points) ? product.key_points.join('\n') : ''),
         faq_q1: product.faq_q1 || '', faq_a1: product.faq_a1 || '', faq_q2: product.faq_q2 || '', faq_a2: product.faq_a2 || ''

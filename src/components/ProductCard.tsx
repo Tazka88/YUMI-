@@ -16,6 +16,7 @@ interface Product {
   is_fast_delivery?: boolean;
   reviews_count?: number;
   avg_rating?: number;
+  variations?: any;
 }
 
 export const ProductCard: React.FC<{ product: Product; priority?: boolean; isFlashSale?: boolean }> = ({ product, priority = false, isFlashSale = false }) => {
@@ -26,6 +27,13 @@ export const ProductCard: React.FC<{ product: Product; priority?: boolean; isFla
   const isOutOfStock = product.stock <= 0;
   const avgRating = product.avg_rating ? Number(product.avg_rating) : 0;
   const reviewsCount = product.reviews_count ? Number(product.reviews_count) : 0;
+  
+  let hasVariations = false;
+  if (typeof product.variations === 'string' && product.variations.length > 5) {
+     hasVariations = true;
+  } else if (Array.isArray(product.variations) && product.variations.length > 0) {
+     hasVariations = true;
+  }
 
   return (
     <div className="bg-white rounded-xl shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden group flex flex-col h-full relative border border-gray-100">
@@ -45,7 +53,7 @@ export const ProductCard: React.FC<{ product: Product; priority?: boolean; isFla
         </div>
         
         {/* Quick Add to Cart - Top right */}
-        {!isOutOfStock && (
+        {!isOutOfStock && !hasVariations && (
           <button 
             onClick={(e) => {
               e.preventDefault();
@@ -129,15 +137,24 @@ export const ProductCard: React.FC<{ product: Product; priority?: boolean; isFla
 
         {!isOutOfStock && (
           <div className="mt-auto pt-2 flex justify-center">
-            <button 
-              onClick={(e) => {
-                e.preventDefault();
-                navigate('/checkout', { state: { directBuyItem: { ...product, quantity: 1 } } });
-              }}
-              className="w-[85%] sm:w-full mx-auto bg-orange-500 text-white py-1.5 sm:py-2.5 rounded-lg text-[11px] sm:text-sm font-bold shadow hover:shadow-lg hover:bg-orange-600 transition-all duration-200 transform hover:-translate-y-0.5 active:translate-y-0 flex items-center justify-center tracking-wide"
-            >
-              Acheter maintenant
-            </button>
+            {hasVariations ? (
+              <Link 
+                to={`/product/${product.slug}`}
+                className="w-[85%] sm:w-full mx-auto bg-gray-800 text-white py-1.5 sm:py-2.5 rounded-lg text-[11px] sm:text-sm font-bold shadow hover:shadow-lg hover:bg-gray-900 transition-all duration-200 flex items-center justify-center tracking-wide"
+              >
+                Choisir les options
+              </Link>
+            ) : (
+              <button 
+                onClick={(e) => {
+                  e.preventDefault();
+                  navigate('/checkout', { state: { directBuyItem: { ...product, quantity: 1 } } });
+                }}
+                className="w-[85%] sm:w-full mx-auto bg-orange-500 text-white py-1.5 sm:py-2.5 rounded-lg text-[11px] sm:text-sm font-bold shadow hover:shadow-lg hover:bg-orange-600 transition-all duration-200 transform hover:-translate-y-0.5 active:translate-y-0 flex items-center justify-center tracking-wide"
+              >
+                Acheter maintenant
+              </button>
+            )}
           </div>
         )}
       </div>

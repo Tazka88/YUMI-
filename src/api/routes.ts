@@ -304,7 +304,7 @@ router.get('/sitemap.xml', async (req, res) => {
 
 router.get('/pages', async (req, res) => {
   try {
-    const pages = await sql`SELECT id, title, slug, created_at, updated_at FROM pages`;
+    const pages = await sql`SELECT id, title, slug, content, created_at, updated_at FROM pages`;
     res.json(pages);
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch pages' });

@@ -242,7 +242,19 @@ export default function AdminDashboard() {
     return () => controller.abort();
   }, [navigate, activeTab]);
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const toSlug = (text: string) => {
+    if (!text) return '';
+    return text.toString()
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/\s+/g, '-')
+      .replace(/[^a-z0-9-]/g, '')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '');
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, customName?: string) => {
     const file = e.target.files?.[0];
     if (!file) return null;
 
@@ -250,6 +262,7 @@ export default function AdminDashboard() {
     try {
       const formData = new FormData();
       formData.append('image', file);
+      if (customName) formData.append('customName', customName);
 
       const token = localStorage.getItem('adminToken');
       const res = await fetch('/api/admin/upload', {
@@ -2664,8 +2677,14 @@ export default function AdminDashboard() {
                     <label className="cursor-pointer bg-white border border-gray-300 px-4 py-2 rounded-md hover:bg-gray-50 flex items-center gap-2">
                       <Upload size={18} />
                       Télécharger une image
-                      <input type="file" className="hidden" accept="image/*" onChange={async (e) => {
-                        const url = await handleFileUpload(e);
+                      <input type="file" className="hidden" accept="image/*" onClick={(e) => {
+                        if (!productForm.name) {
+                          e.preventDefault();
+                          toast.error('Veuillez saisir le titre du produit avant d\'ajouter une image (pour le renommer automatiquement en SEO).');
+                        }
+                      }} onChange={async (e) => {
+                        const customName = productForm.name ? `${toSlug(productForm.name)}-1` : undefined;
+                        const url = await handleFileUpload(e, customName);
                         if (url) setProductForm({...productForm, image: url});
                       }} />
                     </label>
@@ -2690,8 +2709,14 @@ export default function AdminDashboard() {
                   <label className="cursor-pointer bg-white border border-gray-300 px-4 py-2 rounded-md hover:bg-gray-50 inline-flex items-center gap-2">
                     <Upload size={18} />
                     Ajouter une image
-                    <input type="file" className="hidden" accept="image/*" onChange={async (e) => {
-                      const url = await handleFileUpload(e);
+                    <input type="file" className="hidden" accept="image/*" onClick={(e) => {
+                      if (!productForm.name) {
+                        e.preventDefault();
+                        toast.error('Veuillez saisir le titre du produit avant d\'ajouter des images supplémentaires.');
+                      }
+                    }} onChange={async (e) => {
+                      const customName = productForm.name ? `${toSlug(productForm.name)}-${productForm.images.length + 2}` : undefined;
+                      const url = await handleFileUpload(e, customName);
                       if (url) setProductForm({...productForm, images: [...productForm.images, { url, is_main: false }]});
                     }} />
                   </label>

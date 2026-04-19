@@ -1056,15 +1056,18 @@ router.post('/admin/upload', authenticate, upload.single('image'), async (req, r
         console.log('Bucket "images" not found, creating it...');
         await supabase.storage.createBucket('images', { public: true });
       }
-
-      const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${ext}`;
+      
+      const customName = req.body.customName ? req.body.customName.replace(/[^a-z0-9-]/g, '') : '';
+      const fileName = customName 
+        ? `${customName}.${ext}`
+        : `${Date.now()}-${Math.random().toString(36).substring(7)}.${ext}`;
       
       const { data, error } = await supabase.storage
         .from('images') // The user must create this bucket in Supabase
         .upload(fileName, buffer, {
           contentType,
           cacheControl: '3600',
-          upsert: false
+          upsert: customName ? true : false
         });
 
       if (error) {

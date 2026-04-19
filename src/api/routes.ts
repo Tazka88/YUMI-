@@ -19,13 +19,9 @@ const processImage = (table: string, id: number | string, field: string, image: 
   if (!image) return null;
   if (image.startsWith('data:image/')) {
     // Create a simple hash from the base64 string to bust cache when image changes
-    // If slug is provided, we use the clean external URL /images/slug.webp
-    // Otherwise fallback to the api internal one
-    if (slug) {
-      return `/images/${slug}.webp`;
-    }
     const hash = image.substring(image.length - 20).replace(/[^a-zA-Z0-9]/g, '');
-    return `/api/images/${table}/${id}/${field}?v=${hash}`;
+    const seoPart = slug ? `/${slug}.webp` : '';
+    return `/api/images/${table}/${id}/${field}${seoPart}?v=${hash}`;
   }
   return image;
 };
@@ -74,13 +70,13 @@ const serveImageData = async (res: any, imageData: string, targetWidth?: number,
   res.status(404).json({ error: 'Invalid image format' });
 };
 
-const PRODUCT_COLS = `p.id, p.category_id, p.subcategory_id, p.sub_subcategory_id, p.brand_id, p.name, p.slug, p.description, p.price, p.promo_price, p.stock, CASE WHEN p.image LIKE 'data:image/%' THEN '/images/' || COALESCE(NULLIF(p.slug, ''), p.id::text) || '.webp' ELSE p.image END as image, p.video_url, p.is_popular, p.is_best_seller, p.is_new, p.is_recommended, p.is_fast_delivery, p.is_active, p.features, p.key_points, p.faq_q1, p.faq_a1, p.faq_q2, p.faq_a2, p.variations, p.created_at`;
+const PRODUCT_COLS = `p.id, p.category_id, p.subcategory_id, p.sub_subcategory_id, p.brand_id, p.name, p.slug, p.description, p.price, p.promo_price, p.stock, CASE WHEN p.image LIKE 'data:image/%' THEN '/api/images/products/' || p.id || '/image/' || COALESCE(NULLIF(p.slug, ''), 'product') || '.webp?v=' || LENGTH(p.image) ELSE p.image END as image, p.video_url, p.is_popular, p.is_best_seller, p.is_new, p.is_recommended, p.is_fast_delivery, p.is_active, p.features, p.key_points, p.faq_q1, p.faq_a1, p.faq_q2, p.faq_a2, p.variations, p.created_at`;
 const PRODUCT_IMAGES_COLS = `id, product_id, is_main, CASE WHEN image LIKE 'data:image/%' THEN '/api/images/product_images/' || id || '/image?v=' || LENGTH(image) ELSE image END as image`;
-const CATEGORIES_COLS = `id, name, slug, CASE WHEN image LIKE 'data:image/%' THEN '/images/' || COALESCE(NULLIF(slug, ''), id::text) || '.webp' ELSE image END as image, CASE WHEN slide_image LIKE 'data:image/%' THEN '/images/' || COALESCE(NULLIF(slug, ''), id::text) || '-slide.webp' ELSE slide_image END as slide_image, CASE WHEN mobile_slide_image LIKE 'data:image/%' THEN '/images/' || COALESCE(NULLIF(slug, ''), id::text) || '-mobile-slide.webp' ELSE mobile_slide_image END as mobile_slide_image`;
+const CATEGORIES_COLS = `id, name, slug, CASE WHEN image LIKE 'data:image/%' THEN '/api/images/categories/' || id || '/image/' || COALESCE(NULLIF(slug, ''), 'category') || '.webp?v=' || LENGTH(image) ELSE image END as image, CASE WHEN slide_image LIKE 'data:image/%' THEN '/api/images/categories/' || id || '/slide_image/' || COALESCE(NULLIF(slug, ''), 'category') || '-slide.webp?v=' || LENGTH(slide_image) ELSE slide_image END as slide_image, CASE WHEN mobile_slide_image LIKE 'data:image/%' THEN '/api/images/categories/' || id || '/mobile_slide_image/' || COALESCE(NULLIF(slug, ''), 'category') || '-mobile-slide.webp?v=' || LENGTH(mobile_slide_image) ELSE mobile_slide_image END as mobile_slide_image`;
 const SLIDER_IMAGES_COLS = `id, category_id, position, is_active, title, description, button_text, button_link, created_at, CASE WHEN image_url LIKE 'data:image/%' THEN '/api/images/slider_images/' || id || '/image_url?v=' || LENGTH(image_url) ELSE image_url END as image_url, CASE WHEN mobile_image_url LIKE 'data:image/%' THEN '/api/images/slider_images/' || id || '/mobile_image_url?v=' || LENGTH(mobile_image_url) ELSE mobile_image_url END as mobile_image_url`;
-const BRANDS_COLS = `id, name, slug, description, CASE WHEN image LIKE 'data:image/%' THEN '/images/' || COALESCE(NULLIF(slug, ''), id::text) || '.webp' ELSE image END as image`;
-const SUBCAT_COLS = `id, category_id, name, slug, CASE WHEN image LIKE 'data:image/%' THEN '/images/' || COALESCE(NULLIF(slug, ''), id::text) || '.webp' ELSE image END as image`;
-const SUB_SUBCAT_COLS = `id, subcategory_id, name, slug, CASE WHEN image LIKE 'data:image/%' THEN '/images/' || COALESCE(NULLIF(slug, ''), id::text) || '.webp' ELSE image END as image`;
+const BRANDS_COLS = `id, name, slug, description, CASE WHEN image LIKE 'data:image/%' THEN '/api/images/brands/' || id || '/image/' || COALESCE(NULLIF(slug, ''), 'brand') || '.webp?v=' || LENGTH(image) ELSE image END as image`;
+const SUBCAT_COLS = `id, category_id, name, slug, CASE WHEN image LIKE 'data:image/%' THEN '/api/images/subcategories/' || id || '/image/' || COALESCE(NULLIF(slug, ''), 'subcategory') || '.webp?v=' || LENGTH(image) ELSE image END as image`;
+const SUB_SUBCAT_COLS = `id, subcategory_id, name, slug, CASE WHEN image LIKE 'data:image/%' THEN '/api/images/sub_subcategories/' || id || '/image/' || COALESCE(NULLIF(slug, ''), 'subsubcategory') || '.webp?v=' || LENGTH(image) ELSE image END as image`;
 
 // Route to serve images from the database
 router.get(['/images/:table/:id/:field', '/images/:table/:id/:field/:seoSlug'], async (req, res) => {

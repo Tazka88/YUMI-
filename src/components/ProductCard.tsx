@@ -70,7 +70,7 @@ export const ProductCard: React.FC<{ product: Product; priority?: boolean; isFla
         <Link to={`/product/${product.slug}`} className="block w-full h-full">
           <img 
             src={getResizedImageUrl(product.image, 400) || `https://ui-avatars.com/api/?name=${encodeURIComponent(product.name)}&background=random&size=400`} 
-            srcSet={product.image && product.image.startsWith('/api/images/') ? `${getResizedImageUrl(product.image, 200)} 200w, ${getResizedImageUrl(product.image, 400)} 400w` : undefined}
+            srcSet={product.image && (product.image.startsWith('/api/images/') || product.image.startsWith('/images/')) ? `${getResizedImageUrl(product.image, 200)} 200w, ${getResizedImageUrl(product.image, 400)} 400w` : undefined}
             sizes="(max-width: 640px) 200px, 400px"
             alt={product.name}
             loading={priority ? "eager" : "lazy"}

@@ -79,8 +79,8 @@ async function startServer() {
   });
 
   // Server-side Image Proxy for clean SEO URLs
-  // /images/slug-1.webp -> /api/images/products/...
-  app.get('/images/:slug.webp', async (req, res) => {
+  // /images/slug.webp -> /api/images/products/...
+  app.get('/images/:slug.webp', async (req, res, next) => {
     try {
       const fullSlug = req.params.slug;
       
@@ -93,9 +93,11 @@ async function startServer() {
         if (imageData && imageData.startsWith('data:image/')) {
           const vMatch = imageData.match(/(.{20})$/);
           const hash = vMatch ? vMatch[1].replace(/[^a-zA-Z0-9]/g, '') : '1';
-          return res.redirect(301, `/api/images/products/${products[0].id}/image/${fullSlug}.webp?v=${hash}`);
+          const queryParams = req.url.includes('?') ? '&' + req.url.split('?')[1] : '';
+          req.url = `/api/images/products/${products[0].id}/image/${fullSlug}.webp?v=${hash}${queryParams}`;
+          return next();
         } else if (imageData) {
-          return res.redirect(301, imageData);
+          return res.redirect(302, imageData);
         }
       }
 
@@ -117,18 +119,22 @@ async function startServer() {
               if (imageData && imageData.startsWith('data:image/')) {
                  const vMatch = imageData.match(/(.{20})$/);
                  const hash = vMatch ? vMatch[1].replace(/[^a-zA-Z0-9]/g, '') : '1';
-                 return res.redirect(301, `/api/images/products/${products[0].id}/image/${fullSlug}.webp?v=${hash}`);
+                 const queryParams = req.url.includes('?') ? '&' + req.url.split('?')[1] : '';
+                 req.url = `/api/images/products/${products[0].id}/image/${fullSlug}.webp?v=${hash}${queryParams}`;
+                 return next();
               } else if (imageData) {
-                 return res.redirect(301, imageData);
+                 return res.redirect(302, imageData);
               }
             } else if (extraImages.length >= index - 1) {
               const extraData = extraImages[index - 2].image;
               if (extraData && extraData.startsWith('data:image/')) {
                 const vMatch = extraData.match(/(.{20})$/);
                 const hash = vMatch ? vMatch[1].replace(/[^a-zA-Z0-9]/g, '') : '1';
-                return res.redirect(301, `/api/images/product_images/${extraImages[index - 2].id}/image/${fullSlug}.webp?v=${hash}`);
+                const queryParams = req.url.includes('?') ? '&' + req.url.split('?')[1] : '';
+                req.url = `/api/images/product_images/${extraImages[index - 2].id}/image/${fullSlug}.webp?v=${hash}${queryParams}`;
+                return next();
               } else if (extraData) {
-                return res.redirect(301, extraData);
+                return res.redirect(302, extraData);
               }
             }
           }
@@ -142,9 +148,11 @@ async function startServer() {
          if (catData && catData.startsWith('data:image/')) {
             const vMatch = catData.match(/(.{20})$/);
             const hash = vMatch ? vMatch[1].replace(/[^a-zA-Z0-9]/g, '') : '1';
-            return res.redirect(301, `/api/images/categories/${categories[0].id}/image/${fullSlug}.webp?v=${hash}`);
+            const queryParams = req.url.includes('?') ? '&' + req.url.split('?')[1] : '';
+            req.url = `/api/images/categories/${categories[0].id}/image/${fullSlug}.webp?v=${hash}${queryParams}`;
+            return next();
          } else if (catData) {
-           return res.redirect(301, catData);
+           return res.redirect(302, catData);
          }
       }
 
@@ -155,9 +163,11 @@ async function startServer() {
         if (brandData && brandData.startsWith('data:image/')) {
           const vMatch = brandData.match(/(.{20})$/);
           const hash = vMatch ? vMatch[1].replace(/[^a-zA-Z0-9]/g, '') : '1';
-          return res.redirect(301, `/api/images/brands/${brands[0].id}/image/${fullSlug}.webp?v=${hash}`);
+          const queryParams = req.url.includes('?') ? '&' + req.url.split('?')[1] : '';
+          req.url = `/api/images/brands/${brands[0].id}/image/${fullSlug}.webp?v=${hash}${queryParams}`;
+          return next();
         } else if (brandData) {
-          return res.redirect(301, brandData);
+          return res.redirect(302, brandData);
         }
       }
 

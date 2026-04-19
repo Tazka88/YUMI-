@@ -617,10 +617,10 @@ export default function Product() {
                   className={`mb-4 p-3 rounded-lg border-2 transition-all duration-500 ${showOptionsHighlight ? 'border-red-500 bg-red-50/50 shadow-md ring-4 ring-red-500/20' : 'border-transparent'}`}
                   ref={optionsRef}
                 >
-                  <h4 className={`text-sm font-bold mb-3 ${showOptionsHighlight ? 'text-red-600' : 'text-gray-800'}`}>
-                    Options disponibles {showOptionsHighlight && <span className="font-normal">— Requis pour commander</span>} :
+                  <h4 className={`text-base font-bold mb-3 ${showOptionsHighlight ? 'text-red-600 animate-pulse' : 'text-gray-800'}`}>
+                    Options disponibles {showOptionsHighlight && <span className="font-bold bg-red-100 px-2 py-1 rounded ml-2 text-xs uppercase tracking-wider block sm:inline-block mt-2 sm:mt-0">— Vous devez choisir une option !</span>}
                   </h4>
-                  <div className="flex flex-wrap gap-2">
+                  <div className={`flex flex-wrap gap-3 ${showOptionsHighlight ? 'p-3 rounded-xl border-2 border-red-500 bg-red-50/30' : ''}`}>
                     {product.variations.map((variation: any, idx: number) => {
                       const isSelected = selectedVariation?.id === variation.id;
                       const isColorAttribute = variation.attribute?.toLowerCase().includes('couleur') || variation.attribute?.toLowerCase().includes('color');
@@ -639,10 +639,10 @@ export default function Product() {
                             }
                           }}
                           className={`
-                            px-3 py-2 rounded-lg border text-sm flex items-center gap-2.5 transition-all
+                            px-4 py-3 rounded-xl border text-sm flex flex-row items-center gap-3 transition-all
                             ${isSelected 
-                              ? 'border-orange-500 bg-orange-50 text-orange-800 ring-2 ring-orange-500/50 shadow-sm' 
-                              : 'border-gray-200 hover:border-gray-300 text-gray-700 hover:bg-gray-50'
+                              ? 'border-orange-500 bg-orange-50 text-orange-900 ring-2 ring-orange-500/50 shadow-md scale-[1.02]' 
+                              : 'border-gray-200 hover:border-gray-300 text-gray-700 hover:bg-gray-50 flex-1 sm:flex-none'
                             }
                             ${variation.stock === 0 ? 'opacity-50 cursor-not-allowed bg-gray-100' : ''}
                           `}
@@ -650,16 +650,16 @@ export default function Product() {
                         >
                           {isColorAttribute && colorHex && (
                             <span 
-                              className={`w-4 h-4 rounded-full border shadow-inner flex-shrink-0 ${colorHex.toLowerCase() === '#ffffff' ? 'border-gray-300' : 'border-black/10'}`}
+                              className={`w-8 h-8 rounded-full border shadow-inner flex-shrink-0 ${colorHex.toLowerCase() === '#ffffff' ? 'border-gray-300' : 'border-black/20'}`}
                               style={{ backgroundColor: colorHex }}
                             ></span>
                           )}
-                          <div className="flex flex-col text-left">
-                            <span className="font-medium text-[10px] uppercase tracking-wide text-gray-500 mb-0.5">{variation.attribute}</span>
-                            <span className="font-bold text-sm leading-none">{variation.value}</span>
+                          <div className="flex flex-col text-left justify-center">
+                            <span className="font-medium text-[11px] uppercase tracking-wider text-gray-500 mb-1">{variation.attribute}</span>
+                            <span className="font-extrabold text-base leading-none">{variation.value}</span>
                           </div>
                           {variation.price ? (
-                            <span className={`text-xs pl-2 ml-1 border-l font-bold ${isSelected ? 'text-orange-700 border-orange-200' : 'text-gray-500 border-gray-200'}`}>
+                            <span className={`text-sm pl-3 ml-2 border-l-2 font-black ${isSelected ? 'text-orange-700 border-orange-200' : 'text-gray-500 border-gray-200'}`}>
                               {variation.price} DA
                             </span>
                           ) : null}

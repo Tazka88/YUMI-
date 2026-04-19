@@ -69,6 +69,14 @@ const serveImageData = async (res: any, imageData: string, targetWidth?: number,
   res.status(404).json({ error: 'Invalid image format' });
 };
 
+const PRODUCT_COLS = `p.id, p.category_id, p.subcategory_id, p.sub_subcategory_id, p.brand_id, p.name, p.slug, p.description, p.price, p.promo_price, p.stock, CASE WHEN p.image LIKE 'data:image/%' THEN '/api/images/products/' || p.id || '/image?v=' || LENGTH(p.image) ELSE p.image END as image, p.is_popular, p.is_best_seller, p.is_new, p.is_recommended, p.is_fast_delivery, p.features, p.key_points, p.variations, p.created_at`;
+const PRODUCT_IMAGES_COLS = `id, product_id, is_main, CASE WHEN image LIKE 'data:image/%' THEN '/api/images/product_images/' || id || '/image?v=' || LENGTH(image) ELSE image END as image`;
+const CATEGORIES_COLS = `id, name, slug, CASE WHEN image LIKE 'data:image/%' THEN '/api/images/categories/' || id || '/image?v=' || LENGTH(image) ELSE image END as image, CASE WHEN slide_image LIKE 'data:image/%' THEN '/api/images/categories/' || id || '/slide_image?v=' || LENGTH(slide_image) ELSE slide_image END as slide_image, CASE WHEN mobile_slide_image LIKE 'data:image/%' THEN '/api/images/categories/' || id || '/mobile_slide_image?v=' || LENGTH(mobile_slide_image) ELSE mobile_slide_image END as mobile_slide_image`;
+const SLIDER_IMAGES_COLS = `id, category_id, position, is_active, title, description, button_text, button_link, created_at, CASE WHEN image_url LIKE 'data:image/%' THEN '/api/images/slider_images/' || id || '/image_url?v=' || LENGTH(image_url) ELSE image_url END as image_url, CASE WHEN mobile_image_url LIKE 'data:image/%' THEN '/api/images/slider_images/' || id || '/mobile_image_url?v=' || LENGTH(mobile_image_url) ELSE mobile_image_url END as mobile_image_url`;
+const BRANDS_COLS = `id, name, slug, description, CASE WHEN image LIKE 'data:image/%' THEN '/api/images/brands/' || id || '/image?v=' || LENGTH(image) ELSE image END as image`;
+const SUBCAT_COLS = `id, category_id, name, slug, CASE WHEN image LIKE 'data:image/%' THEN '/api/images/subcategories/' || id || '/image?v=' || LENGTH(image) ELSE image END as image`;
+const SUB_SUBCAT_COLS = `id, subcategory_id, name, slug, CASE WHEN image LIKE 'data:image/%' THEN '/api/images/sub_subcategories/' || id || '/image?v=' || LENGTH(image) ELSE image END as image`;
+
 // Route to serve images from the database
 router.get('/images/:table/:id/:field', async (req, res) => {
   const { table, id, field } = req.params;
@@ -323,7 +331,7 @@ router.get('/pages/:slug', async (req, res) => {
 
 router.get('/settings', async (req, res) => {
   try {
-    const settings = await sql`SELECT * FROM settings WHERE key != 'admin_email'`;
+    const settings = await sql`SELECT "key", CASE WHEN value LIKE 'data:image/%' THEN '/api/images/settings/' || "key" || '/value?v=' || LENGTH(value) ELSE value END as value FROM settings WHERE "key" != 'admin_email'`;
     const settingsObj = settings.reduce((acc: any, setting: any) => {
       let val = setting.value;
       if (setting.key === 'site_logo' || setting.key.startsWith('theme_image_')) {
@@ -349,7 +357,7 @@ router.get('/footer-links', async (req, res) => {
 
 router.get('/hero-banners', async (req, res) => {
   try {
-    const sliderImages = await sql`SELECT * FROM slider_images ORDER BY position ASC`;
+    const sliderImages = await sql`SELECT ${sql.unsafe(SLIDER_IMAGES_COLS)} FROM slider_images ORDER BY position ASC`;
     
     sliderImages.forEach((s: any) => {
       s.image_url = processImage('slider_images', s.id, 'image_url', s.image_url);
@@ -448,21 +456,22 @@ router.put('/hero-banners/reorder', authenticate, async (req, res) => {
 
 router.get('/brands', async (req, res) => {
   try {
-    const brands = await sql`SELECT * FROM brands ORDER BY name ASC`;
+    const brands = await sql`SELECT ${sql.unsafe(BRANDS_COLS)} FROM brands ORDER BY name ASC`;
     
     brands.forEach((b: any) => {
       b.image = processImage('brands', b.id, 'image', b.image);
     });
     res.json(brands);
 
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to fetch brands' });
+  } catch (err: any) {
+    console.error('Failed to fetch brands:', err);
+    res.status(500).json({ error: 'Failed to fetch brands', details: err.message, stack: err.stack });
   }
 });
 
 router.get('/brands/:slug', async (req, res) => {
   try {
-    const [brand] = await sql`SELECT * FROM brands WHERE slug = ${req.params.slug}`;
+    const [brand] = await sql`SELECT ${sql.unsafe(BRANDS_COLS)} FROM brands WHERE slug = ${req.params.slug}`;
     if (!brand) return res.status(404).json({ error: 'Brand not found' });
     
     brand.image = processImage('brands', brand.id, 'image', brand.image);
@@ -475,9 +484,9 @@ router.get('/brands/:slug', async (req, res) => {
 
 router.get('/categories', async (req, res) => {
   try {
-    const categories = await sql`SELECT * FROM categories`;
-    const subcategories = await sql`SELECT * FROM subcategories`;
-    const sub_subcategories = await sql`SELECT * FROM sub_subcategories`;
+    const categories = await sql`SELECT ${sql.unsafe(CATEGORIES_COLS)} FROM categories`;
+    const subcategories = await sql`SELECT ${sql.unsafe(SUBCAT_COLS)} FROM subcategories`;
+    const sub_subcategories = await sql`SELECT ${sql.unsafe(SUB_SUBCAT_COLS)} FROM sub_subcategories`;
     
     const categoriesWithSubcats = categories.map((cat: any) => ({
       ...cat,
@@ -509,14 +518,15 @@ router.get('/categories', async (req, res) => {
     res.setHeader('Cache-Control', 'public, max-age=10, stale-while-revalidate=60');
     res.json(categoriesWithSubcats);
 
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to fetch categories' });
+  } catch (err: any) {
+    console.error('Failed to fetch categories:', err);
+    res.status(500).json({ error: 'Failed to fetch categories', details: err.message, stack: err.stack });
   }
 });
 
 router.get('/subcategories', async (req, res) => {
   try {
-    const subcategories = await sql`SELECT * FROM subcategories`;
+    const subcategories = await sql`SELECT ${sql.unsafe(SUBCAT_COLS)} FROM subcategories`;
     
     subcategories.forEach((s: any) => {
       s.image = processImage('subcategories', s.id, 'image', s.image);
@@ -558,7 +568,7 @@ router.get('/products', async (req, res) => {
     }
 
     const products = await sql`
-      SELECT p.*, COALESCE(p.brand_name, b.name) as brand_name, b.slug as brand_slug, b.image as brand_image,
+      SELECT ${sql.unsafe(PRODUCT_COLS)}, COALESCE(p.brand_name, b.name) as brand_name, b.slug as brand_slug, CASE WHEN b.image LIKE 'data:image/%' THEN '/api/images/brands/' || b.id || '/image?v=' || LENGTH(b.image) ELSE b.image END as brand_image,
       (SELECT COUNT(*) FROM reviews r WHERE r.product_id = p.id) as reviews_count,
       (SELECT COALESCE(AVG(rating), 0) FROM reviews r WHERE r.product_id = p.id) as avg_rating
       FROM products p 
@@ -590,6 +600,11 @@ router.get('/products', async (req, res) => {
         p.key_points = typeof p.key_points === 'string' ? JSON.parse(p.key_points) : (p.key_points || []);
       } catch (e) {
         // Keep as string if it can't be parsed
+      }
+      try {
+        p.variations = typeof p.variations === 'string' ? JSON.parse(p.variations) : (p.variations || []);
+      } catch (e) {
+        p.variations = [];
       }
     });
 
@@ -626,7 +641,7 @@ router.post('/products/:id/view', async (req, res) => {
 router.get('/products/:slug', async (req, res) => {
   try {
     const [product] = await sql`
-      SELECT p.*, c.name as category_name, s.name as subcategory_name, ss.name as sub_subcategory_name, COALESCE(p.brand_name, b.name) as brand_name, b.slug as brand_slug, b.image as brand_image,
+      SELECT ${sql.unsafe(PRODUCT_COLS)}, c.name as category_name, s.name as subcategory_name, ss.name as sub_subcategory_name, COALESCE(p.brand_name, b.name) as brand_name, b.slug as brand_slug, CASE WHEN b.image LIKE 'data:image/%' THEN '/api/images/brands/' || b.id || '/image?v=' || LENGTH(b.image) ELSE b.image END as brand_image,
       (SELECT COUNT(*) FROM reviews r WHERE r.product_id = p.id) as reviews_count,
       (SELECT COALESCE(AVG(rating), 0) FROM reviews r WHERE r.product_id = p.id) as avg_rating
       FROM products p 
@@ -649,8 +664,13 @@ router.get('/products/:slug', async (req, res) => {
     } catch (e) {
       // Keep as string if it can't be parsed
     }
+    try {
+      product.variations = typeof product.variations === 'string' ? JSON.parse(product.variations) : (product.variations || []);
+    } catch (e) {
+      product.variations = [];
+    }
 
-    const images = await sql`SELECT * FROM product_images WHERE product_id = ${product.id}`;
+    const images = await sql`SELECT ${sql.unsafe(PRODUCT_IMAGES_COLS)} FROM product_images WHERE product_id = ${product.id}`;
     product.images = images;
     
     
@@ -829,7 +849,7 @@ router.delete('/admin/pages/:id', authenticate, async (req, res) => {
 
 router.get('/admin/settings', authenticate, async (req, res) => {
   try {
-    const settings = await sql`SELECT * FROM settings`;
+    const settings = await sql`SELECT "key", CASE WHEN value LIKE 'data:image/%' THEN '/api/images/settings/' || "key" || '/value?v=' || LENGTH(value) ELSE value END as value FROM settings`;
     const settingsObj = settings.reduce((acc: any, setting: any) => {
       let val = setting.value;
       if (setting.key === 'site_logo' || setting.key.startsWith('theme_image_')) {
@@ -1152,7 +1172,7 @@ router.delete('/admin/orders/:id', authenticate, async (req, res) => {
 router.get('/admin/products', authenticate, async (req, res) => {
   try {
     const products = await sql`
-      SELECT p.*, c.name as category_name, s.name as subcategory_name, ss.name as sub_subcategory_name, COALESCE(p.brand_name, b.name) as brand_name 
+      SELECT ${sql.unsafe(PRODUCT_COLS)}, c.name as category_name, s.name as subcategory_name, ss.name as sub_subcategory_name, COALESCE(p.brand_name, b.name) as brand_name 
       FROM products p 
       LEFT JOIN categories c ON p.category_id = c.id 
       LEFT JOIN subcategories s ON p.subcategory_id = s.id
@@ -1163,7 +1183,7 @@ router.get('/admin/products', authenticate, async (req, res) => {
     
     const productIds = products.map((p: any) => p.id);
     if (productIds.length > 0) {
-      const images = await sql`SELECT * FROM product_images WHERE product_id IN ${sql(productIds)}`;
+      const images = await sql`SELECT ${sql.unsafe(PRODUCT_IMAGES_COLS)} FROM product_images WHERE product_id IN ${sql(productIds)}`;
       products.forEach((p: any) => {
         p.images = images.filter((img: any) => img.product_id === p.id);
       });
@@ -1179,6 +1199,11 @@ router.get('/admin/products', authenticate, async (req, res) => {
         p.key_points = typeof p.key_points === 'string' ? JSON.parse(p.key_points) : (p.key_points || []);
       } catch (e) {
         // Keep as string if it can't be parsed
+      }
+      try {
+        p.variations = typeof p.variations === 'string' ? JSON.parse(p.variations) : (p.variations || []);
+      } catch (e) {
+        p.variations = [];
       }
     });
 
@@ -1202,7 +1227,7 @@ router.get('/admin/products', authenticate, async (req, res) => {
 router.get('/admin/export-meta-catalog', authenticate, async (req, res) => {
   try {
     const products = await sql`
-      SELECT p.*, COALESCE(p.brand_name, b.name) as brand_name 
+      SELECT ${sql.unsafe(PRODUCT_COLS)}, COALESCE(p.brand_name, b.name) as brand_name 
       FROM products p 
       LEFT JOIN brands b ON p.brand_id = b.id
     `;

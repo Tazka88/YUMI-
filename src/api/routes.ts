@@ -1059,16 +1059,17 @@ router.post('/admin/upload', authenticate, upload.single('image'), async (req, r
       }
       
       const customName = req.body.customName ? req.body.customName.replace(/[^a-z0-9-]/g, '') : '';
+      const uniqueId = Math.random().toString(36).substring(7);
       const fileName = customName 
-        ? `${customName}.${ext}`
-        : `${Date.now()}-${Math.random().toString(36).substring(7)}.${ext}`;
+        ? `${customName}-${uniqueId}.${ext}`
+        : `${Date.now()}-${uniqueId}.${ext}`;
       
       const { data, error } = await supabase.storage
         .from('images') // The user must create this bucket in Supabase
         .upload(fileName, buffer, {
           contentType,
           cacheControl: '3600',
-          upsert: customName ? true : false
+          upsert: false
         });
 
       if (error) {

@@ -78,6 +78,96 @@ async function startServer() {
     }
   });
 
+  // Server-side Image Proxy for clean SEO URLs
+  // /images/slug-1.webp -> /api/images/products/...
+  app.get('/images/:slug.webp', async (req, res) => {
+    try {
+      const fullSlug = req.params.slug;
+      
+      // Attempt 1: Exact match on full slug or ID (main image)
+      let products = await sql`SELECT id, image FROM products WHERE slug = ${fullSlug} OR id::text = ${fullSlug} LIMIT 1`;
+      
+      if (products && products.length > 0) {
+        // It's a main image for the exact slug
+        const imageData = products[0].image;
+        if (imageData && imageData.startsWith('data:image/')) {
+          const vMatch = imageData.match(/(.{20})$/);
+          const hash = vMatch ? vMatch[1].replace(/[^a-zA-Z0-9]/g, '') : '1';
+          return res.redirect(301, `/api/images/products/${products[0].id}/image/${fullSlug}.webp?v=${hash}`);
+        } else if (imageData) {
+          return res.redirect(301, imageData);
+        }
+      }
+
+      // Attempt 2: It might be a slug with an index suffix (e.g. slug-2)
+      const slugParts = fullSlug.split('-');
+      if (slugParts.length > 1) {
+        const lastPart = slugParts[slugParts.length - 1];
+        if (/^\d+$/.test(lastPart)) {
+          const baseSlug = slugParts.slice(0, -1).join('-');
+          const index = parseInt(lastPart);
+          
+          products = await sql`SELECT id, image FROM products WHERE slug = ${baseSlug} OR id::text = ${baseSlug} LIMIT 1`;
+          if (products && products.length > 0) {
+            // Found a base product. Try to serve additional image
+            const extraImages = await sql`SELECT id, image FROM product_images WHERE product_id = ${products[0].id} ORDER BY id ASC`;
+            
+            if (index === 1) {
+              const imageData = products[0].image;
+              if (imageData && imageData.startsWith('data:image/')) {
+                 const vMatch = imageData.match(/(.{20})$/);
+                 const hash = vMatch ? vMatch[1].replace(/[^a-zA-Z0-9]/g, '') : '1';
+                 return res.redirect(301, `/api/images/products/${products[0].id}/image/${fullSlug}.webp?v=${hash}`);
+              } else if (imageData) {
+                 return res.redirect(301, imageData);
+              }
+            } else if (extraImages.length >= index - 1) {
+              const extraData = extraImages[index - 2].image;
+              if (extraData && extraData.startsWith('data:image/')) {
+                const vMatch = extraData.match(/(.{20})$/);
+                const hash = vMatch ? vMatch[1].replace(/[^a-zA-Z0-9]/g, '') : '1';
+                return res.redirect(301, `/api/images/product_images/${extraImages[index - 2].id}/image/${fullSlug}.webp?v=${hash}`);
+              } else if (extraData) {
+                return res.redirect(301, extraData);
+              }
+            }
+          }
+        }
+      }
+
+      // Attempt 3: Category match
+      const categories = await sql`SELECT id, image FROM categories WHERE slug = ${fullSlug} OR id::text = ${fullSlug} LIMIT 1`;
+      if (categories && categories.length > 0) {
+        const catData = categories[0].image;
+         if (catData && catData.startsWith('data:image/')) {
+            const vMatch = catData.match(/(.{20})$/);
+            const hash = vMatch ? vMatch[1].replace(/[^a-zA-Z0-9]/g, '') : '1';
+            return res.redirect(301, `/api/images/categories/${categories[0].id}/image/${fullSlug}.webp?v=${hash}`);
+         } else if (catData) {
+           return res.redirect(301, catData);
+         }
+      }
+
+      // Attempt 4: Brands match
+      const brands = await sql`SELECT id, image FROM brands WHERE slug = ${fullSlug} OR id::text = ${fullSlug} LIMIT 1`;
+      if (brands && brands.length > 0) {
+        const brandData = brands[0].image;
+        if (brandData && brandData.startsWith('data:image/')) {
+          const vMatch = brandData.match(/(.{20})$/);
+          const hash = vMatch ? vMatch[1].replace(/[^a-zA-Z0-9]/g, '') : '1';
+          return res.redirect(301, `/api/images/brands/${brands[0].id}/image/${fullSlug}.webp?v=${hash}`);
+        } else if (brandData) {
+          return res.redirect(301, brandData);
+        }
+      }
+
+      res.status(404).send('Image not found');
+    } catch (e) {
+      console.error(e);
+      res.status(500).send('Error');
+    }
+  });
+
   // API Routes
   app.use('/api', apiRoutes);
 

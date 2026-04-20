@@ -187,7 +187,7 @@ export default function Product() {
   if (error) {
     return (
       <div className="container mx-auto px-4 py-16 text-center">
-        <h1 className="text-2xl font-bold text-gray-800 mb-4">Oups !</h1>
+        <h1 className="text-xl md:text-2xl font-bold text-gray-900 mb-4 px-4">Oups !</h1>
         <p className="text-gray-600 mb-8">{error}</p>
         <Link to="/" className="bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 px-8 rounded-md transition-colors shadow-md">
           Retour à l'accueil
@@ -397,7 +397,6 @@ export default function Product() {
 
   return (
     <div className="container mx-auto px-4 py-8 pb-24 md:pb-8">
-      <h1 className="sr-only">{product.name}</h1>
       <SEO 
         title={product.name} 
         description={product.description.substring(0, 150) + '...'} 
@@ -425,6 +424,8 @@ export default function Product() {
         <span>/</span>
         <span className="text-gray-800 font-medium truncate">{product.name}</span>
       </div>
+
+      <h1 className="text-xl md:text-2xl font-bold text-gray-900 mb-4 px-4">{product.name}</h1>
 
       <div className="bg-white rounded-lg shadow-sm overflow-hidden mb-8">
         <div className="flex flex-col md:flex-row">
@@ -533,7 +534,7 @@ export default function Product() {
                 </span>
               )
             )}
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">{product.name}</h1>
+            <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">{product.name}</h2>
             
             <div className="flex items-center gap-4 mb-4">
               <div className="flex text-orange-400">

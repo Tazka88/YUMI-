@@ -262,7 +262,7 @@ export default function Checkout() {
         <div className="bg-green-100 p-6 rounded-full text-green-500 mb-6">
           <CheckCircle size={64} />
         </div>
-        <h1 className="text-3xl font-bold text-gray-800 mb-4">Commande Confirmée !</h1>
+        <h1 className="text-xl md:text-2xl font-bold text-gray-900 mb-4 px-4">Commande Confirmée !</h1>
         {createdOrderId && (
           <div className="bg-gray-100 px-6 py-3 rounded-lg mb-6 inline-block">
             <span className="text-gray-600 mr-2">Numéro de commande:</span>
@@ -285,7 +285,7 @@ export default function Checkout() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="text-2xl font-bold text-gray-800 mb-8">Finaliser la commande</h1>
+      <h1 className="text-xl md:text-2xl font-bold text-gray-900 mb-4 px-4">Finaliser la commande</h1>
 
       <div className="flex flex-col lg:flex-row gap-8">
         {/* Form */}

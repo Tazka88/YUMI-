@@ -13,7 +13,7 @@ export default function Cart() {
         <div className="bg-orange-100 p-6 rounded-full text-orange-500 mb-6">
           <ShoppingBag size={64} />
         </div>
-        <h1 className="text-2xl font-bold text-gray-800 mb-4">Votre panier est vide</h1>
+        <h1 className="text-xl md:text-2xl font-bold text-gray-900 mb-4 px-4">Votre panier est vide</h1>
         <p className="text-gray-500 mb-8 max-w-md">
           Parcourez nos catégories et découvrez nos meilleures offres pour remplir votre panier.
         </p>
@@ -26,7 +26,7 @@ export default function Cart() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="text-2xl font-bold text-gray-800 mb-8">Mon Panier ({items.length} articles)</h1>
+      <h1 className="text-xl md:text-2xl font-bold text-gray-900 mb-4 px-4">Mon Panier ({items.length} articles)</h1>
 
       <div className="flex flex-col lg:flex-row gap-8">
         {/* Cart Items */}

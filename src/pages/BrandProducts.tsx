@@ -54,7 +54,7 @@ export default function BrandProducts() {
     return (
       <div className="container mx-auto px-4 py-16 text-center">
         <SEO title="Marque introuvable" description="La marque demandée n'existe pas." />
-        <h1 className="text-3xl font-bold text-gray-800 mb-4">Marque introuvable</h1>
+        <h1 className="text-xl md:text-2xl font-bold text-gray-900 mb-4 px-4">Marque introuvable</h1>
         <p className="text-gray-600 mb-8">La marque que vous recherchez n'existe pas ou a été supprimée.</p>
         <Link to="/brands" className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-3 rounded-md font-medium transition-colors">
           Voir toutes les marques
@@ -65,7 +65,6 @@ export default function BrandProducts() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="sr-only">Nos Marques</h1>
       <SEO 
         title={`Produits ${brand.name}`} 
         description={brand.description || `Découvrez tous les produits de la marque ${brand.name} sur ZORANDO.`}
@@ -80,6 +79,8 @@ export default function BrandProducts() {
         <span className="text-gray-800 font-medium">{brand.name}</span>
       </div>
 
+      <h1 className="text-xl md:text-2xl font-bold text-gray-900 mb-4 px-4">{brand.name}</h1>
+
       {/* Brand Header */}
       <div className="bg-white rounded-xl shadow-sm p-6 md:p-8 mb-8 flex flex-col md:flex-row items-center gap-6">
         {brand.image ? (
@@ -93,7 +94,7 @@ export default function BrandProducts() {
         )}
         
         <div className="text-center md:text-left">
-          <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">{brand.name}</h1>
+          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">{brand.name}</h2>
           {brand.description && (
             <p className="text-gray-600 max-w-2xl">{brand.description}</p>
           )}

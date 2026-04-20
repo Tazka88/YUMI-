@@ -563,6 +563,9 @@ export default function Home() {
       />
       <ThemeBackground activeTheme={activeTheme} themeImages={themeImages} />
       <div className="container mx-auto px-4 py-6">
+        <h1 className="text-xl md:text-2xl font-bold text-gray-900 mb-4 px-4 text-center">
+          ZORANDO - Boutique en ligne en Algérie : Mode, Électroménager, Téléphonie, Beauté & Maison
+        </h1>
         {/* Hero Section with Sidebar and Carousel */}
         <div className="flex gap-4 lg:h-[384px] mb-6">
           <CategorySidebar categories={categories} />

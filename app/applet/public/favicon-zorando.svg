@@ -5,5 +5,5 @@
   <!-- Bag -->
   <rect x="100" y="160" width="312" height="240" rx="48" fill="#FFFFFF"/>
   <!-- Z -->
-  <path d="M 161 220 L 331 220 L 181 340 L 351 340" fill="none" stroke="#FF6A00" stroke-width="32" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 160 220 L 340 220 L 170 340 L 350 340" fill="none" stroke="#FF6A00" stroke-width="32" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>

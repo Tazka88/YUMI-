@@ -187,9 +187,6 @@ export default function Category() {
         description={`Découvrez notre sélection de produits dans la catégorie ${categoryName}. Achetez au meilleur prix sur ZORANDO.`} 
         url={window.location.href}
       />
-      
-      {/* Breadcrumb replacement / H1 */}
-      <h1 className="text-xl md:text-2xl font-bold text-gray-900 mb-4 px-4">{categoryName}</h1>
 
       <div className="flex flex-col md:flex-row gap-6">
         {/* Sidebar Filters */}
@@ -293,7 +290,7 @@ export default function Category() {
             <Slider categoryId={categoryId} />
           ) : null}
           <div className="bg-white p-4 rounded-lg shadow-sm mb-6 flex justify-between items-center">
-            <h2 className="text-xl font-bold text-gray-800">{categoryName}</h2>
+            <h1 className="text-xl font-bold text-gray-800">{categoryName}</h1>
             <span className="text-sm text-gray-500">{filteredProducts.length} produits trouvés</span>
           </div>
 

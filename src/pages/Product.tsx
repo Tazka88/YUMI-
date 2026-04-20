@@ -425,8 +425,6 @@ export default function Product() {
         <span className="text-gray-800 font-medium truncate">{product.name}</span>
       </div>
 
-      <h1 className="text-xl md:text-2xl font-bold text-gray-900 mb-4 px-4">{product.name}</h1>
-
       <div className="bg-white rounded-lg shadow-sm overflow-hidden mb-8">
         <div className="flex flex-col md:flex-row">
           {/* Image Gallery */}
@@ -534,7 +532,7 @@ export default function Product() {
                 </span>
               )
             )}
-            <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">{product.name}</h2>
+            <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">{product.name}</h1>
             
             <div className="flex items-center gap-4 mb-4">
               <div className="flex text-orange-400">

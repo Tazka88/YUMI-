@@ -79,8 +79,6 @@ export default function BrandProducts() {
         <span className="text-gray-800 font-medium">{brand.name}</span>
       </div>
 
-      <h1 className="text-xl md:text-2xl font-bold text-gray-900 mb-4 px-4">{brand.name}</h1>
-
       {/* Brand Header */}
       <div className="bg-white rounded-xl shadow-sm p-6 md:p-8 mb-8 flex flex-col md:flex-row items-center gap-6">
         {brand.image ? (
@@ -94,7 +92,7 @@ export default function BrandProducts() {
         )}
         
         <div className="text-center md:text-left">
-          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">{brand.name}</h2>
+          <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">{brand.name}</h1>
           {brand.description && (
             <p className="text-gray-600 max-w-2xl">{brand.description}</p>
           )}

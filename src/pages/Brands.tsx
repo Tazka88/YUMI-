@@ -46,10 +46,8 @@ export default function Brands() {
         <span className="text-gray-800 font-medium">Toutes les marques</span>
       </div>
 
-      <h1 className="text-xl md:text-2xl font-bold text-gray-900 mb-4 px-4">Toutes nos marques</h1>
-
       <div className="bg-white rounded-xl shadow-sm p-6 md:p-8 mb-8">
-        <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">Toutes nos marques</h2>
+        <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">Toutes nos marques</h1>
         <p className="text-gray-600 mb-8">Découvrez les produits de vos marques préférées.</p>
 
         {brands.length > 0 ? (

@@ -99,7 +99,7 @@ async function startServer() {
         let seoHtml = '';
         let headHtml = '';
         let title = 'ZORANDO - Boutique en ligne';
-        let description = 'Découvrez ZORANDO (ZORANDODZ), votre boutique en ligne de confiance en Algérie.';
+        let description = 'Découvrez ZORANDO, votre boutique en ligne de confiance en Algérie.';
 
         if (req.path === '/' || req.path === '/index.html') {
           const categories = await sql`SELECT name, slug FROM categories`;

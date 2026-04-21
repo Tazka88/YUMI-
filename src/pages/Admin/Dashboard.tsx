@@ -706,7 +706,10 @@ export default function AdminDashboard() {
       
       setProductForm({
         name: product.name, slug: product.slug, sku: product.sku || '', category_id: product.category_id, subcategory_id: product.subcategory_id || '', sub_subcategory_id: product.sub_subcategory_id || '', brand_id: product.brand_id || '', brand_name: product.brand_name || '',
-        price: product.price, promo_price: product.promo_price || '', stock: product.stock, weight: product.weight || '',
+        price: product.price, 
+        promo_price: (product.promo_price !== null && product.promo_price !== undefined) ? product.promo_price : '', 
+        stock: product.stock, 
+        weight: (product.weight !== null && product.weight !== undefined) ? product.weight : '',
         description: product.description || '', image: product.image || '', video_url: product.video_url || '',
         is_popular: !!product.is_popular, is_best_seller: !!product.is_best_seller, 
         is_new: !!product.is_new, is_recommended: !!product.is_recommended,
@@ -831,10 +834,10 @@ export default function AdminDashboard() {
       subcategory_id: productForm.subcategory_id || null,
       sub_subcategory_id: productForm.sub_subcategory_id || null,
       brand_id: productForm.brand_id || null,
-      price: parseFloat(productForm.price as string),
-      promo_price: productForm.promo_price ? parseFloat(productForm.promo_price as string) : null,
+      price: parseFloat(productForm.price.toString().replace(',', '.')),
+      promo_price: (productForm.promo_price !== '' && productForm.promo_price !== null) ? parseFloat(productForm.promo_price.toString().replace(',', '.')) : null,
       stock: parseInt(productForm.stock as string, 10),
-      weight: productForm.weight ? parseFloat(productForm.weight as string) : null,
+      weight: (productForm.weight !== '' && productForm.weight !== null) ? parseFloat(productForm.weight.toString().replace(',', '.')) : null,
       features: parsedFeatures,
       key_points: typeof productForm.key_points === 'string' 
         ? productForm.key_points.split('\n').map(p => p.trim()).filter(p => p) 
@@ -1778,6 +1781,7 @@ export default function AdminDashboard() {
                         <th className="px-6 py-3">Sous-catégorie</th>
                         <th className="px-6 py-3">Sous-sous-catégorie</th>
                         <th className="px-6 py-3">Marque</th>
+                        <th className="px-6 py-3">Poids (kg)</th>
                         <th className="px-6 py-3">Prix</th>
                         <th className="px-6 py-3">Stock</th>
                         <th className="px-6 py-3">Actions</th>
@@ -1801,6 +1805,7 @@ export default function AdminDashboard() {
                           <td className="px-6 py-4 text-gray-500">{product.subcategory_name || '-'}</td>
                           <td className="px-6 py-4 text-gray-500">{product.sub_subcategory_name || '-'}</td>
                           <td className="px-6 py-4 text-gray-500">{product.brand_name || '-'}</td>
+                          <td className="px-6 py-4 text-gray-500">{product.weight ? `${product.weight} kg` : '-'}</td>
                           <td className="px-6 py-4">
                             <div className="font-bold text-gray-900">{formatPrice(product.price)}</div>
                             {product.promo_price && <div className="text-xs text-orange-500">{formatPrice(product.promo_price)} (Promo)</div>}

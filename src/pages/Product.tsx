@@ -593,6 +593,13 @@ export default function Product() {
               )}
             </div>
 
+            {product.weight && Number(product.weight) > 0 && (
+              <div className="mb-6">
+                <span className="font-medium text-gray-700 mr-2">Poids:</span>
+                <span className="text-gray-900 font-bold">{product.weight} kg</span>
+              </div>
+            )}
+
             {/* Reassurance Badges */}
             <div className="grid grid-cols-3 gap-3 mb-6">
               <div className="flex flex-col items-center text-center p-3 bg-gray-50 rounded-lg border border-gray-100">

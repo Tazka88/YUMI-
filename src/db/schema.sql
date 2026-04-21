@@ -86,6 +86,7 @@ CREATE TABLE IF NOT EXISTS products (
   is_new BOOLEAN DEFAULT FALSE,
   is_recommended BOOLEAN DEFAULT FALSE,
   is_fast_delivery BOOLEAN DEFAULT FALSE,
+  weight DECIMAL(10, 2),
   features JSONB,
   key_points JSONB,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP

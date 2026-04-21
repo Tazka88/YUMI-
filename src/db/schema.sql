@@ -110,6 +110,7 @@ CREATE TABLE IF NOT EXISTS orders (
   customer_email VARCHAR(255),
   customer_phone VARCHAR(255) NOT NULL,
   wilaya VARCHAR(255) NOT NULL,
+  commune VARCHAR(255),
   address TEXT NOT NULL,
   note TEXT,
   total_amount DECIMAL(10, 2) NOT NULL,

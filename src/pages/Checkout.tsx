@@ -2,10 +2,11 @@ import toast from 'react-hot-toast';
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useCartStore } from '../store/cartStore';
-import { CheckCircle, Truck, MapPin, Phone, User as UserIcon } from 'lucide-react';
+import { CheckCircle, Truck, MapPin, Phone, User as UserIcon, Navigation } from 'lucide-react';
 import { formatPrice } from '../utils/formatPrice';
 import { fetchWithCache } from '../lib/utils';
 import { sendCapiEvent, generateEventId } from '../lib/capi';
+import { ALGERIA_COMMUNES } from '../utils/communes';
 
 interface Wilaya {
   id: number;
@@ -29,6 +30,7 @@ export default function Checkout() {
     email: '',
     phone: '',
     wilaya: '',
+    commune: '',
     address: '',
     note: ''
   });
@@ -132,7 +134,7 @@ export default function Checkout() {
 
   const handleWilayaChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const wilayaNumber = e.target.value;
-    setFormData({ ...formData, wilaya: wilayaNumber });
+    setFormData({ ...formData, wilaya: wilayaNumber, commune: '' });
     
     const selectedWilaya = wilayas.find(w => w.number === wilayaNumber);
     if (selectedWilaya) {
@@ -144,6 +146,10 @@ export default function Checkout() {
     }
   };
 
+  const handleCommuneChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setFormData({ ...formData, commune: e.target.value });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -153,6 +159,7 @@ export default function Checkout() {
       customer_email: formData.email,
       customer_phone: formData.phone,
       wilaya: wilayas.find(w => w.number === formData.wilaya)?.name || formData.wilaya,
+      commune: formData.commune,
       address: formData.address,
       note: formData.note,
       total_amount: finalTotal,
@@ -342,23 +349,46 @@ export default function Checkout() {
               </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Wilaya *</label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <MapPin size={18} className="text-gray-400" />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Wilaya *</label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <MapPin size={18} className="text-gray-400" />
+                  </div>
+                  <select 
+                    required
+                    className="w-full pl-10 pr-4 py-3 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-shadow appearance-none bg-white"
+                    value={formData.wilaya}
+                    onChange={handleWilayaChange}
+                  >
+                    <option value="" disabled>Sélectionnez votre wilaya</option>
+                    {wilayas.map(w => (
+                      <option key={w.number} value={w.number}>{w.number} - {w.name}</option>
+                    ))}
+                  </select>
                 </div>
-                <select 
-                  required
-                  className="w-full pl-10 pr-4 py-3 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-shadow appearance-none bg-white"
-                  value={formData.wilaya}
-                  onChange={handleWilayaChange}
-                >
-                  <option value="" disabled>Sélectionnez votre wilaya</option>
-                  {wilayas.map(w => (
-                    <option key={w.number} value={w.number}>{w.number} - {w.name}</option>
-                  ))}
-                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Commune *</label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Navigation size={18} className="text-gray-400" />
+                  </div>
+                  <select 
+                    required
+                    disabled={!formData.wilaya}
+                    className="w-full pl-10 pr-4 py-3 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-shadow appearance-none bg-white disabled:bg-gray-100 disabled:cursor-not-allowed"
+                    value={formData.commune}
+                    onChange={handleCommuneChange}
+                  >
+                    <option value="" disabled>{!formData.wilaya ? 'D\'abord choisir une wilaya' : 'Sélectionnez votre commune'}</option>
+                    {formData.wilaya && ALGERIA_COMMUNES[formData.wilaya]?.map(commune => (
+                      <option key={commune} value={commune}>{commune}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
             </div>
 
@@ -494,7 +524,7 @@ export default function Checkout() {
             
             <button 
               onClick={handleSubmit}
-              disabled={isSubmitting || !formData.wilaya || !formData.name || !formData.phone || !formData.address}
+              disabled={isSubmitting || !formData.wilaya || !formData.commune || !formData.name || !formData.phone || !formData.address}
               className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-4 px-4 rounded-md flex items-center justify-center gap-2 transition-colors shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isSubmitting ? (

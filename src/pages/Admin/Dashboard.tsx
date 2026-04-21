@@ -408,6 +408,7 @@ export default function AdminDashboard() {
             <div style="font-size: 18px; font-weight: bold; margin-bottom: 5px;">${orderData.customer_name}</div>
             <div><strong>Téléphone:</strong> ${orderData.customer_phone}</div>
             <div><strong>Wilaya:</strong> ${orderData.wilaya}</div>
+            ${orderData.commune ? `<div><strong>Commune:</strong> ${orderData.commune}</div>` : ''}
             <div><strong>Adresse:</strong> ${orderData.address}</div>
             ${orderData.note ? `<div style="margin-top: 10px;"><strong>Note:</strong> ${orderData.note}</div>` : ''}
           </div>

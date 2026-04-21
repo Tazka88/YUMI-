@@ -87,7 +87,9 @@ export default function OrderKanban({ orders, updateOrderStatus, orderSearchTerm
                             <div>
                               <div className="font-medium text-gray-800">{order.customer_name}</div>
                               <div className="text-sm text-gray-500">{order.customer_phone}</div>
-                              <div className="text-xs text-gray-500 truncate mt-1" title={order.address}>{order.wilaya} - {order.address}</div>
+                              <div className="text-xs text-gray-500 truncate mt-1" title={order.address}>
+                                {order.wilaya} {order.commune && `- ${order.commune}`} - {order.address}
+                              </div>
                             </div>
                             
                             <div className="flex justify-between items-center mt-2 pt-2 border-t border-gray-100">

@@ -11,6 +11,8 @@ interface SEOProps {
 export default function SEO({ title, description, image, url, schema }: SEOProps) {
   const siteName = 'ZORANDO';
   const fullTitle = `${title} | ${siteName}`;
+  const defaultImage = 'https://zorando.com/og-image.png';
+  const finalImage = image || defaultImage;
   
   return (
     <Helmet>
@@ -18,9 +20,10 @@ export default function SEO({ title, description, image, url, schema }: SEOProps
       <meta name="description" content={description} />
       <meta property="og:title" content={fullTitle} />
       <meta property="og:description" content={description} />
-      {image && <meta property="og:image" content={image} />}
+      <meta property="og:image" content={finalImage} />
       {url && <meta property="og:url" content={url} />}
       <meta name="twitter:card" content="summary_large_image" />
+      <meta name="twitter:image" content={finalImage} />
       {schema && (
         <script type="application/ld+json">
           {JSON.stringify(schema)}

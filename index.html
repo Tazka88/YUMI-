@@ -162,20 +162,27 @@
       function showBanner() {
         const dismissed = localStorage.getItem('pwa-banner-dismissed');
         const isDismissed = dismissed && (Date.now() - parseInt(dismissed)) < 24 * 60 * 60 * 1000;
+        const inIframe = window.self !== window.top;
 
         if (!isStandalone && !isDismissed && window.innerWidth <= 768) {
           setTimeout(() => {
-            if (isIOS) {
+            if (inIframe) {
+              pwaDesc.innerText = "Ouvrez le site dans un nouvel onglet pour l'installer";
+              installBtn.innerText = "Ouvrir";
+              pwaBanner.style.display = 'flex';
+            } else if (isIOS) {
               pwaDesc.innerText = "Appuyez sur [Partager] puis [Sur l'écran d'accueil]";
               installBtn.style.display = 'none';
               pwaBanner.style.display = 'flex';
             } else if (deferredPrompt) {
               pwaBanner.style.display = 'flex';
             } else {
-              // Forced fallback for some browsers if install is supported but prompt hasn't fired
+              // Forced fallback
+              pwaDesc.innerText = "Installez l'app via le menu du navigateur";
+              installBtn.style.display = 'none';
               pwaBanner.style.display = 'flex';
             }
-          }, 3000); // 3 seconds delay
+          }, 3000);
         }
       }
 
@@ -183,6 +190,10 @@
         console.log('beforeinstallprompt fired');
         e.preventDefault();
         deferredPrompt = e;
+        // If banner was already shown with fallback text, update it
+        pwaDesc.innerText = "Achetez plus facilement avec l'application";
+        installBtn.innerText = "Installer";
+        installBtn.style.display = 'block';
         pwaBanner.style.display = 'flex';
       });
 
@@ -190,6 +201,12 @@
       showBanner();
 
       installBtn.addEventListener('click', () => {
+        const inIframe = window.self !== window.top;
+        if (inIframe) {
+          window.open(window.location.href, '_blank');
+          return;
+        }
+
         if (deferredPrompt) {
           deferredPrompt.prompt();
           deferredPrompt.userChoice.then((choiceResult) => {
@@ -199,6 +216,8 @@
             pwaBanner.style.display = 'none';
             deferredPrompt = null;
           });
+        } else {
+          console.log('No deferredPrompt available yet');
         }
       });
 

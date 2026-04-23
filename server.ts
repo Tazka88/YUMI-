@@ -36,7 +36,18 @@ async function startServer() {
   // SEO Routes
   app.get('/robots.txt', (req, res) => {
     res.type('text/plain');
-    res.send(`User-agent: *\nAllow: /\nDisallow: /admin/\nSitemap: https://${req.get('host')}/sitemap.xml`);
+    res.send(`User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /admin-7xK9pL2q/
+
+User-agent: facebookexternalhit
+Allow: /
+
+User-agent: Facebot
+Allow: /
+
+Sitemap: https://${req.get('host')}/sitemap.xml`);
   });
 
   app.get('/sitemap.xml', async (req, res) => {
@@ -99,7 +110,11 @@ async function startServer() {
         let seoHtml = '';
         let headHtml = '';
         let title = 'ZORANDO - Boutique en ligne';
-        let description = 'Découvrez ZORANDO, votre boutique en ligne de confiance en Algérie.';
+        let description = 'Découvrez ZORANDO, votre boutique en ligne de confiance en Algérie. Achetez des produits de qualité au meilleur prix.';
+        const host = req.get('host') || 'zorando.com';
+        const baseUrl = `https://${host}`;
+        let ogImage = `${baseUrl}/og-image.png`;
+        let ogUrl = `${baseUrl}${req.path}`;
 
         if (req.path === '/' || req.path === '/index.html') {
           const categories = await sql`SELECT name, slug FROM categories`;
@@ -238,7 +253,17 @@ async function startServer() {
         finalHtml = finalHtml.replace(/<title>.*?<\/title>/, `<title>${title}</title>`);
         finalHtml = finalHtml.replace(/<meta name="description" content=".*?" \/>/, `<meta name="description" content="${description}" />`);
         
-        res.send(finalHtml);
+        // Update OG Tags dynamically
+        finalHtml = finalHtml.replace(/<meta property="og:title" content=".*?" \/>/, `<meta property="og:title" content="${title}" />`);
+        finalHtml = finalHtml.replace(/<meta property="og:description" content=".*?" \/>/, `<meta property="og:description" content="${description}" />`);
+        finalHtml = finalHtml.replace(/<meta property="og:image" content=".*?" \/>/, `<meta property="og:image" content="${ogImage}" />`);
+        finalHtml = finalHtml.replace(/<meta property="og:url" content=".*?" \/>/, `<meta property="og:url" content="${ogUrl}" />`);
+        finalHtml = finalHtml.replace(/<meta name="twitter:title" content=".*?" \/>/, `<meta name="twitter:title" content="${title}" />`);
+        finalHtml = finalHtml.replace(/<meta name="twitter:description" content=".*?" \/>/, `<meta name="twitter:description" content="${description}" />`);
+        finalHtml = finalHtml.replace(/<meta name="twitter:image" content=".*?" \/>/, `<meta name="twitter:image" content="${ogImage}" />`);
+        
+        res.header('X-Robots-Tag', 'all');
+        res.status(200).send(finalHtml);
       } catch (err) {
         console.error('SEO Injection Error:', err);
         res.sendFile(path.join(distPath, 'index.html'));

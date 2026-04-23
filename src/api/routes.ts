@@ -233,12 +233,19 @@ router.post('/admin/login', loginLimiter, async (req, res) => {
 
 // --- PUBLIC ROUTES ---
 router.get('/robots.txt', (req, res) => {
-  const baseUrl = process.env.APP_URL || `https://${req.get('host')}`;
+  const host = req.get('host') || 'zorando.com';
+  const baseUrl = `https://${host}`;
   res.type('text/plain');
   res.send(`User-agent: *
 Allow: /
 Disallow: /admin/
 Disallow: /admin-7xK9pL2q/
+
+User-agent: facebookexternalhit
+Allow: /
+
+User-agent: Facebot
+Allow: /
 
 Sitemap: ${baseUrl}/sitemap.xml`);
 });

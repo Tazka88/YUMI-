@@ -29,6 +29,68 @@
     <meta name="twitter:description" content="Découvrez ZORANDO, votre boutique en ligne de confiance en Algérie. Achetez des produits de qualité au meilleur prix." />
     <meta name="twitter:image" content="https://zorando.com/og-image-fb.jpg" />
 
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#000000">
+
+    <style>
+      #pwa-install-banner {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: white;
+        padding: 16px;
+        box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+        display: none;
+        z-index: 9999;
+        align-items: center;
+        justify-content: space-between;
+        font-family: sans-serif;
+        border-top: 1px solid #eee;
+      }
+      .pwa-content {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .pwa-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 10px;
+      }
+      .pwa-text h4 {
+        margin: 0;
+        font-size: 16px;
+        color: #333;
+      }
+      .pwa-text p {
+        margin: 2px 0 0;
+        font-size: 13px;
+        color: #666;
+      }
+      .pwa-actions {
+        display: flex;
+        gap: 8px;
+      }
+      .btn-install {
+        background: #000;
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 6px;
+        font-weight: 500;
+        cursor: pointer;
+      }
+      .btn-close {
+        background: none;
+        border: none;
+        color: #999;
+        font-size: 20px;
+        cursor: pointer;
+        padding: 0 8px;
+      }
+    </style>
+
     <!-- Google tag (gtag.js) - Lazy loaded -->
     <script>
       window.dataLayer = window.dataLayer || [];
@@ -50,6 +112,73 @@
   </head>
   <body>
     <div id="root"></div>
+
+    <!-- PWA Install Banner -->
+    <div id="pwa-install-banner">
+      <div class="pwa-content">
+        <img src="/favicon-zorando-192x192.png" alt="ZORANDO" class="pwa-icon">
+        <div class="pwa-text">
+          <h4>ZORANDO</h4>
+          <p>Installez l'application pour une meilleure expérience</p>
+        </div>
+      </div>
+      <div class="pwa-actions">
+        <button class="btn-install" id="pwa-install-btn">Installer</button>
+        <button class="btn-close" id="pwa-close-btn">&times;</button>
+      </div>
+    </div>
+
+    <script>
+      // Service Worker Registration
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js')
+            .then(reg => console.log('SW Registered'))
+            .catch(err => console.log('SW Registration Failed', err));
+        });
+      }
+
+      // Install Application Logic
+      let deferredPrompt;
+      const pwaBanner = document.getElementById('pwa-install-banner');
+      const installBtn = document.getElementById('pwa-install-btn');
+      const closeBtn = document.getElementById('pwa-close-btn');
+
+      window.addEventListener('beforeinstallprompt', (e) => {
+        // Only show banner on mobile devices
+        if (window.innerWidth <= 768) {
+          e.preventDefault();
+          deferredPrompt = e;
+          pwaBanner.style.display = 'flex';
+        }
+      });
+
+      installBtn.addEventListener('click', () => {
+        if (deferredPrompt) {
+          deferredPrompt.prompt();
+          deferredPrompt.userChoice.then((choiceResult) => {
+            if (choiceResult.outcome === 'accepted') {
+              console.log('User accepted the PWA install');
+            }
+            pwaBanner.style.display = 'none';
+            deferredPrompt = null;
+          });
+        }
+      });
+
+      closeBtn.addEventListener('click', () => {
+        pwaBanner.style.display = 'none';
+        // Optional: Save preference to not show again for 7 days
+        localStorage.setItem('pwa-banner-dimissed', Date.now());
+      });
+
+      // Hide banner if already dismissed recently
+      const dismissed = localStorage.getItem('pwa-banner-dimissed');
+      if (dismissed && (Date.now() - dismissed) < 7 * 24 * 60 * 60 * 1000) {
+        // Skip showing
+      }
+    </script>
+
     <!--seo-injection-->
     <script type="module" src="/src/main.tsx"></script>
   </body>

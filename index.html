@@ -29,75 +29,10 @@
     <meta name="twitter:description" content="Découvrez ZORANDO, votre boutique en ligne de confiance en Algérie. Achetez des produits de qualité au meilleur prix." />
     <meta name="twitter:image" content="https://zorando.com/og-image-fb.jpg" />
 
-    <link rel="manifest" href="/manifest.json">
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="ZORANDO">
-    <meta name="theme-color" content="#ffffff">
+    <!-- PWA meta tags removed -->
 
     <style>
-      #pwa-install-banner {
-        position: fixed;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        background: #ff9800; /* Orange background */
-        padding: 16px;
-        box-shadow: 0 -4px 15px rgba(0,0,0,0.2);
-        display: none;
-        z-index: 10000;
-        align-items: center;
-        justify-content: space-between;
-        font-family: 'Inter', sans-serif;
-        color: white;
-      }
-      .pwa-content {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-      }
-      .pwa-icon {
-        width: 44px;
-        height: 44px;
-        border-radius: 8px;
-        background: white;
-        padding: 2px;
-      }
-      .pwa-text h4 {
-        margin: 0;
-        font-size: 15px;
-        font-weight: 700;
-        color: #fff;
-      }
-      .pwa-text p {
-        margin: 0;
-        font-size: 11px;
-        color: rgba(255, 255, 255, 0.9);
-      }
-      .pwa-actions {
-        display: flex;
-        flex-direction: column;
-        gap: 6px;
-      }
-      .btn-install {
-        background: white;
-        color: #ff9800;
-        border: none;
-        padding: 6px 14px;
-        border-radius: 6px;
-        font-weight: 700;
-        cursor: pointer;
-        font-size: 12px;
-      }
-      .btn-later {
-        background: transparent;
-        border: none;
-        color: white;
-        font-size: 11px;
-        cursor: pointer;
-        text-decoration: underline;
-      }
+      /* Removed PWA styles */
     </style>
 
     <!-- Google tag (gtag.js) - Lazy loaded -->
@@ -122,109 +57,8 @@
   <body>
     <div id="root"></div>
 
-    <!-- PWA Install Banner -->
-    <div id="pwa-install-banner">
-      <div class="pwa-content">
-        <img src="/favicon-zorando.svg" alt="ZORANDO" class="pwa-icon">
-        <div class="pwa-text">
-          <h4 id="pwa-title">ZORANDO</h4>
-          <p id="pwa-desc">Achetez plus facilement avec l'application</p>
-        </div>
-      </div>
-      <div class="pwa-actions">
-        <button class="btn-install" id="pwa-install-btn">Installer</button>
-        <button class="btn-later" id="pwa-close-btn">Plus tard</button>
-      </div>
-    </div>
-
     <script>
-      // Service Worker Registration
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js', { scope: '/' })
-            .then(reg => console.log('SW Registered', reg.scope))
-            .catch(err => console.error('SW Registration Failed', err));
-        });
-      }
-
-      // Install Application Logic
-      let deferredPrompt;
-      const pwaBanner = document.getElementById('pwa-install-banner');
-      const installBtn = document.getElementById('pwa-install-btn');
-      const closeBtn = document.getElementById('pwa-close-btn');
-      const pwaDesc = document.getElementById('pwa-desc');
-
-      // Detection
-      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-      const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
-
-      // Logic to show banner
-      function showBanner() {
-        const dismissed = localStorage.getItem('pwa-banner-dismissed');
-        const isDismissed = dismissed && (Date.now() - parseInt(dismissed)) < 24 * 60 * 60 * 1000;
-        const inIframe = window.self !== window.top;
-
-        if (!isStandalone && !isDismissed && window.innerWidth <= 768) {
-          setTimeout(() => {
-            pwaBanner.style.display = 'flex';
-            if (inIframe) {
-              pwaDesc.innerText = "Installez l'application ZORANDO sur votre mobile";
-              installBtn.innerText = "Installer";
-            } else if (isIOS) {
-              pwaDesc.innerText = "Appuyez sur [Partager] puis [Sur l'écran d'accueil]";
-              installBtn.innerText = "Comment faire ?";
-            } else if (!deferredPrompt) {
-              pwaDesc.innerText = "Installez l'app pour une meilleure expérience";
-              installBtn.innerText = "Installer";
-            }
-          }, 3000);
-        }
-      }
-
-      window.addEventListener('beforeinstallprompt', (e) => {
-        console.log('beforeinstallprompt fired');
-        e.preventDefault();
-        deferredPrompt = e;
-        // If banner was already shown with fallback text, update it
-        pwaDesc.innerText = "Achetez plus facilement avec l'application";
-        installBtn.innerText = "Installer";
-        installBtn.style.display = 'block';
-        pwaBanner.style.display = 'flex';
-      });
-
-      // Also trigger initial check
-      showBanner();
-
-      installBtn.addEventListener('click', () => {
-        const inIframe = window.self !== window.top;
-        if (inIframe) {
-          window.open(window.location.href, '_blank');
-          return;
-        }
-
-        if (isIOS) {
-          alert("Pour installer ZORANDO sur votre iPhone/iPad : \n1. Appuyez sur l'icône de partage (carré avec une flèche vers le haut).\n2. Faites défiler vers le bas et appuyez sur 'Sur l'écran d'accueil'. \n3. Confirmez en appuyant sur 'Ajouter'.");
-          return;
-        }
-
-        if (deferredPrompt) {
-          deferredPrompt.prompt();
-          deferredPrompt.userChoice.then((choiceResult) => {
-            if (choiceResult.outcome === 'accepted') {
-              console.log('User accepted the PWA install');
-            }
-            pwaBanner.style.display = 'none';
-            deferredPrompt = null;
-          });
-        } else {
-          console.log('No deferredPrompt available yet');
-        }
-      });
-
-      closeBtn.addEventListener('click', () => {
-        pwaBanner.style.display = 'none';
-        localStorage.setItem('pwa-banner-dismissed', Date.now());
-      });
+      // PWA features removed
     </script>
 
     <!--seo-injection-->

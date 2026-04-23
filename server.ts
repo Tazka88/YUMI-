@@ -51,25 +51,7 @@ Allow: /
 Sitemap: https://zorando.com/sitemap.xml`);
   });
 
-  // Fallback for explicitly listed PWA files to ensure correct MIME types and headers
-  app.get(['/manifest.json', '/sw.js'], (req, res) => {
-    const filename = req.path.substring(1);
-    const publicPath = path.join(process.cwd(), 'public', filename);
-    
-    if (fs.existsSync(publicPath)) {
-      if (filename === 'sw.js') {
-        res.header('Content-Type', 'application/javascript');
-        res.header('Service-Worker-Allowed', '/');
-      } else if (filename === 'manifest.json') {
-        res.header('Content-Type', 'application/manifest+json');
-      }
-      res.header('Access-Control-Allow-Origin', '*');
-      return res.sendFile(publicPath);
-    }
-    res.status(404).send('Not found');
-  });
-
-  // Serve the public folder directly for all other root files (icons, etc.)
+  // Serve fixed static files from public
   app.use(express.static(path.join(process.cwd(), 'public')));
 
   // Serve uploads statically with Cache-Control (1 year)

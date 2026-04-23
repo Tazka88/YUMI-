@@ -166,21 +166,16 @@
 
         if (!isStandalone && !isDismissed && window.innerWidth <= 768) {
           setTimeout(() => {
+            pwaBanner.style.display = 'flex';
             if (inIframe) {
-              pwaDesc.innerText = "Ouvrez le site dans un nouvel onglet pour l'installer";
-              installBtn.innerText = "Ouvrir";
-              pwaBanner.style.display = 'flex';
+              pwaDesc.innerText = "Installez l'application ZORANDO sur votre mobile";
+              installBtn.innerText = "Installer";
             } else if (isIOS) {
               pwaDesc.innerText = "Appuyez sur [Partager] puis [Sur l'écran d'accueil]";
-              installBtn.style.display = 'none';
-              pwaBanner.style.display = 'flex';
-            } else if (deferredPrompt) {
-              pwaBanner.style.display = 'flex';
-            } else {
-              // Forced fallback
-              pwaDesc.innerText = "Installez l'app via le menu du navigateur";
-              installBtn.style.display = 'none';
-              pwaBanner.style.display = 'flex';
+              installBtn.innerText = "Comment faire ?";
+            } else if (!deferredPrompt) {
+              pwaDesc.innerText = "Installez l'app pour une meilleure expérience";
+              installBtn.innerText = "Installer";
             }
           }, 3000);
         }
@@ -204,6 +199,11 @@
         const inIframe = window.self !== window.top;
         if (inIframe) {
           window.open(window.location.href, '_blank');
+          return;
+        }
+
+        if (isIOS) {
+          alert("Pour installer ZORANDO sur votre iPhone/iPad : \n1. Appuyez sur l'icône de partage (carré avec une flèche vers le haut).\n2. Faites défiler vers le bas et appuyez sur 'Sur l'écran d'accueil'. \n3. Confirmez en appuyant sur 'Ajouter'.");
           return;
         }
 

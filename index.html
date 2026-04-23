@@ -29,12 +29,12 @@
     <meta name="twitter:description" content="Découvrez ZORANDO, votre boutique en ligne de confiance en Algérie. Achetez des produits de qualité au meilleur prix." />
     <meta name="twitter:image" content="https://zorando.com/og-image-fb.jpg" />
 
-    <link rel="manifest" href="/manifest.json" crossorigin="use-credentials">
+    <link rel="manifest" href="/manifest.json">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="ZORANDO">
-    <meta name="theme-color" content="#000000">
+    <meta name="theme-color" content="#ffffff">
 
     <style>
       #pwa-install-banner {
@@ -156,26 +156,21 @@
       // Logic to show banner
       function showBanner() {
         const dismissed = localStorage.getItem('pwa-banner-dismissed');
-        const isDismissed = dismissed && (Date.now() - parseInt(dismissed)) < 3 * 24 * 60 * 60 * 1000; // 3 days for testing
+        const isDismissed = dismissed && (Date.now() - parseInt(dismissed)) < 24 * 60 * 60 * 1000; // 24h dismissal for testing
 
         if (!isStandalone && !isDismissed) {
           if (isIOS) {
             pwaDesc.innerText = "Appuyez sur [Partager] puis [Sur l'écran d'accueil]";
             installBtn.style.display = 'none';
             pwaBanner.style.display = 'flex';
-          } else {
-            // For Android/Other (will be triggered by beforeinstallprompt or shown manually if supported)
-            // pwaBanner.style.display = 'flex'; // Optional: force show? No, better wait for prompt
           }
         }
       }
 
       window.addEventListener('beforeinstallprompt', (e) => {
-        // Prevent Chrome 67 and earlier from automatically showing the prompt
+        console.log('beforeinstallprompt fired');
         e.preventDefault();
-        // Stash the event so it can be triggered later.
         deferredPrompt = e;
-        // Update UI notify the user they can install the PWA
         pwaBanner.style.display = 'flex';
       });
 

@@ -30,12 +30,11 @@ async function startServer() {
   app.use(express.json({ limit: '15mb' })); // Increased to 15mb for larger base64 images
   app.use(express.urlencoded({ limit: '15mb', extended: true }));
   
-  // 1. Robots.txt - MOVE TO TOP TO ENSURE ZERO INTERFERENCE
+  // 1. Robots.txt - Ensuring it is correctly served to fix Facebook crawler 403
   app.get('/robots.txt', (req, res) => {
     res.header('Content-Type', 'text/plain');
     res.header('X-Robots-Tag', 'all');
-    const host = req.get('host') || 'zorando.com';
-    res.send(`User-agent: *
+    res.status(200).send(`User-agent: *
 Allow: /
 Disallow: /admin/
 Disallow: /admin-7xK9pL2q/
@@ -46,13 +45,16 @@ Allow: /
 User-agent: Facebot
 Allow: /
 
-Sitemap: https://${host}/sitemap.xml`);
+User-agent: Twitterbot
+Allow: /
+
+Sitemap: https://zorando.com/sitemap.xml`);
   });
 
   // Serve uploads statically with Cache-Control (1 year)
   app.use('/uploads', express.static(uploadsDir, { maxAge: '1y' }));
 
-  // Serve OG images and PWA files explicitly for crawlers/browsers
+  // Serve OG images and PWA files explicitly
   app.get(['/og-image.png', '/og-image.jpg', '/og-image-fb.jpg', '/og-image-fb.png', '/manifest.json', '/sw.js', '/favicon-zorando-192x192.png', '/favicon-zorando-512x512.png'], (req, res) => {
     const filename = req.path.substring(1);
     const publicPath = path.join(process.cwd(), 'public', filename);
@@ -65,13 +67,14 @@ Sitemap: https://${host}/sitemap.xml`);
         res.header('Content-Type', 'application/javascript');
         res.header('Service-Worker-Allowed', '/');
       } else if (filename === 'manifest.json') {
-        res.header('Content-Type', 'application/manifest+json');
+        res.header('Content-Type', 'application/json'); // PWA manifest as standard JSON
       } else if (filename.endsWith('.png')) {
         res.header('Content-Type', 'image/png');
       } else if (filename.endsWith('.jpg') || filename.endsWith('.jpeg')) {
         res.header('Content-Type', 'image/jpeg');
       }
       
+      res.header('Access-Control-Allow-Origin', '*'); // Allow cross-origin for sharing
       return res.sendFile(filePath);
     }
     res.status(404).send('Not found');

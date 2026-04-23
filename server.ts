@@ -29,13 +29,12 @@ async function startServer() {
   app.use(compression()); // Compress all HTTP responses (Gzip/Brotli)
   app.use(express.json({ limit: '15mb' })); // Increased to 15mb for larger base64 images
   app.use(express.urlencoded({ limit: '15mb', extended: true }));
-
-  // Serve uploads statically with Cache-Control (1 year)
-  app.use('/uploads', express.static(uploadsDir, { maxAge: '1y' }));
-
-  // SEO Routes
+  
+  // 1. Robots.txt - MOVE TO TOP TO ENSURE ZERO INTERFERENCE
   app.get('/robots.txt', (req, res) => {
-    res.type('text/plain');
+    res.header('Content-Type', 'text/plain');
+    res.header('X-Robots-Tag', 'all');
+    const host = req.get('host') || 'zorando.com';
     res.send(`User-agent: *
 Allow: /
 Disallow: /admin/
@@ -47,7 +46,24 @@ Allow: /
 User-agent: Facebot
 Allow: /
 
-Sitemap: https://${req.get('host')}/sitemap.xml`);
+Sitemap: https://${host}/sitemap.xml`);
+  });
+
+  // Serve uploads statically with Cache-Control (1 year)
+  app.use('/uploads', express.static(uploadsDir, { maxAge: '1y' }));
+
+  // Serve OG images explicitly for crawlers
+  app.get(['/og-image.png', '/og-image.jpg', '/og-image-fb.jpg', '/og-image-fb.png'], (req, res) => {
+    const filename = req.path.substring(1);
+    const publicPath = path.join(process.cwd(), 'public', filename);
+    const distPath = path.join(process.cwd(), 'dist', filename);
+    
+    if (fs.existsSync(publicPath)) {
+      return res.sendFile(publicPath);
+    } else if (fs.existsSync(distPath)) {
+      return res.sendFile(distPath);
+    }
+    res.status(404).send('Not found');
   });
 
   app.get('/sitemap.xml', async (req, res) => {
@@ -113,7 +129,8 @@ Sitemap: https://${req.get('host')}/sitemap.xml`);
         let description = 'Découvrez ZORANDO, votre boutique en ligne de confiance en Algérie. Achetez des produits de qualité au meilleur prix.';
         const host = req.get('host') || 'zorando.com';
         const baseUrl = `https://${host}`;
-        let ogImage = `${baseUrl}/og-image.png`;
+        // Prefer JPEG for Facebook if it exists
+        let ogImage = `${baseUrl}/og-image-fb.jpg`;
         let ogUrl = `${baseUrl}${req.path}`;
 
         if (req.path === '/' || req.path === '/index.html') {
@@ -254,15 +271,16 @@ Sitemap: https://${req.get('host')}/sitemap.xml`);
         finalHtml = finalHtml.replace(/<meta name="description" content=".*?" \/>/, `<meta name="description" content="${description}" />`);
         
         // Update OG Tags dynamically
-        finalHtml = finalHtml.replace(/<meta property="og:title" content=".*?" \/>/, `<meta property="og:title" content="${title}" />`);
-        finalHtml = finalHtml.replace(/<meta property="og:description" content=".*?" \/>/, `<meta property="og:description" content="${description}" />`);
-        finalHtml = finalHtml.replace(/<meta property="og:image" content=".*?" \/>/, `<meta property="og:image" content="${ogImage}" />`);
-        finalHtml = finalHtml.replace(/<meta property="og:url" content=".*?" \/>/, `<meta property="og:url" content="${ogUrl}" />`);
-        finalHtml = finalHtml.replace(/<meta name="twitter:title" content=".*?" \/>/, `<meta name="twitter:title" content="${title}" />`);
-        finalHtml = finalHtml.replace(/<meta name="twitter:description" content=".*?" \/>/, `<meta name="twitter:description" content="${description}" />`);
-        finalHtml = finalHtml.replace(/<meta name="twitter:image" content=".*?" \/>/, `<meta name="twitter:image" content="${ogImage}" />`);
+        finalHtml = finalHtml.replace(/<meta property="og:title" content=".*?" \/>/g, `<meta property="og:title" content="${title}" />`);
+        finalHtml = finalHtml.replace(/<meta property="og:description" content=".*?" \/>/g, `<meta property="og:description" content="${description}" />`);
+        finalHtml = finalHtml.replace(/<meta property="og:image" content=".*?" \/>/g, `<meta property="og:image" content="${ogImage}" />`);
+        finalHtml = finalHtml.replace(/<meta property="og:url" content=".*?" \/>/g, `<meta property="og:url" content="${ogUrl}" />`);
+        finalHtml = finalHtml.replace(/<meta name="twitter:title" content=".*?" \/>/g, `<meta name="twitter:title" content="${title}" />`);
+        finalHtml = finalHtml.replace(/<meta name="twitter:description" content=".*?" \/>/g, `<meta name="twitter:description" content="${description}" />`);
+        finalHtml = finalHtml.replace(/<meta name="twitter:image" content=".*?" \/>/g, `<meta name="twitter:image" content="${ogImage}" />`);
         
         res.header('X-Robots-Tag', 'all');
+        res.header('Cache-Control', 'no-cache');
         res.status(200).send(finalHtml);
       } catch (err) {
         console.error('SEO Injection Error:', err);

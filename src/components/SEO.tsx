@@ -11,7 +11,7 @@ interface SEOProps {
 export default function SEO({ title, description, image, url, schema }: SEOProps) {
   const siteName = 'ZORANDO';
   const fullTitle = `${title} | ${siteName}`;
-  const defaultImage = 'https://zorando.com/og-image.png';
+  const defaultImage = 'https://zorando.com/og-image-fb.jpg';
   const finalImage = image || defaultImage;
   
   return (

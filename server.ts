@@ -55,7 +55,7 @@ Sitemap: https://zorando.com/sitemap.xml`);
   app.use('/uploads', express.static(uploadsDir, { maxAge: '1y' }));
 
   // Serve OG images and PWA files explicitly
-  app.get(['/og-image.png', '/og-image.jpg', '/og-image-fb.jpg', '/og-image-fb.png', '/manifest.json', '/sw.js', '/favicon-zorando-192x192.png', '/favicon-zorando-512x512.png'], (req, res) => {
+  app.get(['/og-image.png', '/og-image.jpg', '/og-image-fb.jpg', '/og-image-fb.png', '/manifest.json', '/sw.js', '/favicon-zorando-192x192.png', '/favicon-zorando-512x512.png', '/favicon-zorando-32x32.png'], (req, res) => {
     const filename = req.path.substring(1);
     const publicPath = path.join(process.cwd(), 'public', filename);
     const distPath = path.join(process.cwd(), 'dist', filename);
@@ -67,7 +67,7 @@ Sitemap: https://zorando.com/sitemap.xml`);
         res.header('Content-Type', 'application/javascript');
         res.header('Service-Worker-Allowed', '/');
       } else if (filename === 'manifest.json') {
-        res.header('Content-Type', 'application/json'); // PWA manifest as standard JSON
+        res.header('Content-Type', 'application/manifest+json'); // Official PWA manifest content-type
       } else if (filename.endsWith('.png')) {
         res.header('Content-Type', 'image/png');
       } else if (filename.endsWith('.jpg') || filename.endsWith('.jpeg')) {

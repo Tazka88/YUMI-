@@ -125,7 +125,10 @@
     <!-- PWA Install Banner -->
     <div id="pwa-install-banner">
       <div class="pwa-content">
-        <img src="/favicon-zorando-192x192.png" alt="ZORANDO" class="pwa-icon">
+        <img src="/favicon-zorando-192x192.png" 
+             alt="ZORANDO" 
+             class="pwa-icon"
+             onerror="this.src='/favicon-zorando-32x32.png'; this.onerror=null;">
         <div class="pwa-text">
           <h4 id="pwa-title">ZORANDO</h4>
           <p id="pwa-desc">Achetez plus facilement avec l'application</p>
@@ -199,6 +202,13 @@
             pwaBanner.style.display = 'none';
             deferredPrompt = null;
           });
+        } else if (isIOS) {
+          // iOS instructions already shown in pwaDesc, but just in case
+          alert("Pour installer : appuyez sur le bouton 'Partager' puis sur 'Sur l'écran d'accueil'.");
+        } else {
+          // General browser fallback
+          alert("L'installation est disponible dans le menu de votre navigateur.");
+          pwaBanner.style.display = 'none';
         }
       });
 

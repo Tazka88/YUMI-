@@ -30,7 +30,7 @@ async function startServer() {
   app.use(express.json({ limit: '15mb' })); // Increased to 15mb for larger base64 images
   app.use(express.urlencoded({ limit: '15mb', extended: true }));
   
-  // 1. Robots.txt
+  // 1. Robots.txt - Ensuring it is correctly served to fix Facebook crawler 403
   app.get('/robots.txt', (req, res) => {
     res.header('Content-Type', 'text/plain');
     res.header('X-Robots-Tag', 'all');
@@ -51,41 +51,28 @@ Allow: /
 Sitemap: https://zorando.com/sitemap.xml`);
   });
 
-  // 2. Static Assets (Public & Uploads)
-  // Hardcoded route for PWA/Static files to ensure absolute reliability
-  app.get(['/sw.js', '/manifest.json', '/icon-192.png', '/icon-512.png', '/favicon.ico', '/favicon-zorando-32x32.png', '/favicon-zorando.svg'], (req, res) => {
+  // Fallback for explicitly listed PWA files to ensure correct MIME types and headers
+  app.get(['/manifest.json', '/sw.js'], (req, res) => {
     const filename = req.path.substring(1);
-    const filePath = path.join(process.cwd(), 'public', filename);
+    const publicPath = path.join(process.cwd(), 'public', filename);
     
-    if (fs.existsSync(filePath)) {
+    if (fs.existsSync(publicPath)) {
       if (filename === 'sw.js') {
         res.header('Content-Type', 'application/javascript');
         res.header('Service-Worker-Allowed', '/');
-        res.header('Cache-Control', 'no-cache, no-store, must-revalidate');
       } else if (filename === 'manifest.json') {
-        res.header('Content-Type', 'application/manifest+json');
-      } else if (filename.endsWith('.png')) {
-        res.header('Content-Type', 'image/png');
-        res.header('Cache-Control', 'public, max-age=86400');
+        res.header('Content-Type', 'application/json');
       }
       res.header('Access-Control-Allow-Origin', '*');
-      return res.sendFile(filePath);
+      return res.sendFile(publicPath);
     }
     res.status(404).send('Not found');
   });
 
-  // Serve everything from public directory at root first
-  app.use(express.static(path.join(process.cwd(), 'public'), {
-    maxAge: '1d',
-    setHeaders: (res, filePath) => {
-      const filename = path.basename(filePath);
-      if (filename.endsWith('.png') || filename.endsWith('.jpg') || filename.endsWith('.ico') || filename.endsWith('.svg')) {
-        res.setHeader('Cache-Control', 'public, max-age=86400');
-        res.setHeader('Access-Control-Allow-Origin', '*');
-      }
-    }
-  }));
+  // Serve the public folder directly for all other root files (icons, etc.)
+  app.use(express.static(path.join(process.cwd(), 'public')));
 
+  // Serve uploads statically with Cache-Control (1 year)
   app.use('/uploads', express.static(uploadsDir, { maxAge: '1y' }));
 
   app.get('/sitemap.xml', async (req, res) => {

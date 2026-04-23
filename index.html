@@ -6,10 +6,10 @@
     <title>ZORANDO - Boutique en ligne</title>
     
     <!-- Favicons -->
-    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="icon" href="/favicon.ico" sizes="any">
+    <link rel="icon" type="image/svg+xml" href="/favicon-zorando.svg">
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-zorando-32x32.png">
-    <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png">
-    <link rel="apple-touch-icon" href="/icon-192.png">
+    <link rel="apple-touch-icon" sizes="192x192" href="/icon-192.png">
     
     <!-- Balises SEO de base -->
     <meta name="description" content="Découvrez ZORANDO, votre boutique en ligne de confiance en Algérie. Achetez des produits de qualité : électroménager, mode, beauté, maison, informatique et plus au meilleur prix." />
@@ -32,7 +32,7 @@
     <link rel="manifest" href="/manifest.json">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="ZORANDO">
     <meta name="theme-color" content="#ffffff">
 
@@ -125,10 +125,7 @@
     <!-- PWA Install Banner -->
     <div id="pwa-install-banner">
       <div class="pwa-content">
-        <img src="/icon-192.png" 
-             alt="ZORANDO" 
-             class="pwa-icon"
-             onerror="this.src='/favicon-zorando-32x32.png'; this.onerror=null;">
+        <img src="/favicon-zorando.svg" alt="ZORANDO" class="pwa-icon">
         <div class="pwa-text">
           <h4 id="pwa-title">ZORANDO</h4>
           <p id="pwa-desc">Achetez plus facilement avec l'application</p>
@@ -163,25 +160,22 @@
 
       // Logic to show banner
       function showBanner() {
-        if (isStandalone) return;
-        
         const dismissed = localStorage.getItem('pwa-banner-dismissed');
-        const isDismissed = dismissed && (Date.now() - parseInt(dismissed)) < 12 * 60 * 60 * 1000;
+        const isDismissed = dismissed && (Date.now() - parseInt(dismissed)) < 24 * 60 * 60 * 1000;
 
-        if (!isDismissed && window.innerWidth <= 768) {
+        if (!isStandalone && !isDismissed && window.innerWidth <= 768) {
           setTimeout(() => {
             if (isIOS) {
-              pwaDesc.innerText = "Partager > Sur l'écran d'accueil";
-              installBtn.innerText = "Comment ?";
+              pwaDesc.innerText = "Appuyez sur [Partager] puis [Sur l'écran d'accueil]";
+              installBtn.style.display = 'none';
               pwaBanner.style.display = 'flex';
             } else if (deferredPrompt) {
               pwaBanner.style.display = 'flex';
             } else {
-              // Forced fallback for some browsers
+              // Forced fallback for some browsers if install is supported but prompt hasn't fired
               pwaBanner.style.display = 'flex';
-              installBtn.innerText = "Installer";
             }
-          }, 3000);
+          }, 3000); // 3 seconds delay
         }
       }
 
@@ -200,15 +194,11 @@
           deferredPrompt.prompt();
           deferredPrompt.userChoice.then((choiceResult) => {
             if (choiceResult.outcome === 'accepted') {
-              pwaBanner.style.display = 'none';
+              console.log('User accepted the PWA install');
             }
+            pwaBanner.style.display = 'none';
             deferredPrompt = null;
           });
-        } else if (isIOS) {
-          alert("Pour installer : appuyez sur le bouton 'Partager' en bas de votre navigateur Safari, puis faites défiler et choisissez 'Sur l'écran d'accueil'.");
-        } else {
-          alert("Ouvrez le menu de votre navigateur (les 3 points ou l'icône de partage) et choisissez 'Installer l'application' ou 'Ajouter à l'écran d'accueil'.");
-          pwaBanner.style.display = 'none';
         }
       });
 

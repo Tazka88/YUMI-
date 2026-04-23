@@ -61,7 +61,7 @@ Sitemap: https://zorando.com/sitemap.xml`);
         res.header('Content-Type', 'application/javascript');
         res.header('Service-Worker-Allowed', '/');
       } else if (filename === 'manifest.json') {
-        res.header('Content-Type', 'application/json');
+        res.header('Content-Type', 'application/manifest+json');
       }
       res.header('Access-Control-Allow-Origin', '*');
       return res.sendFile(publicPath);

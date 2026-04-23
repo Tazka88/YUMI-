@@ -30,7 +30,7 @@ async function startServer() {
   app.use(express.json({ limit: '15mb' })); // Increased to 15mb for larger base64 images
   app.use(express.urlencoded({ limit: '15mb', extended: true }));
   
-  // 1. Robots.txt - Ensuring it is correctly served to fix Facebook crawler 403
+  // 1. Robots.txt
   app.get('/robots.txt', (req, res) => {
     res.header('Content-Type', 'text/plain');
     res.header('X-Robots-Tag', 'all');
@@ -51,47 +51,42 @@ Allow: /
 Sitemap: https://zorando.com/sitemap.xml`);
   });
 
-  // Serve uploads statically with Cache-Control (1 year)
-  app.use('/uploads', express.static(uploadsDir, { maxAge: '1y' }));
-
-  // Serve everything from public directory at root
-  app.use(express.static(path.join(process.cwd(), 'public'), {
-    maxAge: '1d',
-    setHeaders: (res, filePath) => {
-      if (filePath.endsWith('sw.js')) {
-        res.setHeader('Service-Worker-Allowed', '/');
-      }
-      if (filePath.endsWith('manifest.json')) {
-        res.setHeader('Content-Type', 'application/manifest+json');
-      }
-    }
-  }));
-
-  // Serve OG images and PWA files explicitly for crawlers/old browsers that might need specific handling
-  app.get(['/og-image.png', '/og-image.jpg', '/og-image-fb.jpg', '/og-image-fb.png', '/manifest.json', '/sw.js', '/favicon-zorando-192x192.png', '/favicon-zorando-512x512.png', '/favicon-zorando-32x32.png', '/favicon-zorando-16x16.png'], (req, res) => {
+  // 2. Static Assets (Public & Uploads)
+  // Hardcoded route for PWA/Static files to ensure absolute reliability
+  app.get(['/sw.js', '/manifest.json', '/icon-192.png', '/icon-512.png', '/favicon.ico', '/favicon-zorando-32x32.png', '/favicon-zorando.svg'], (req, res) => {
     const filename = req.path.substring(1);
-    const publicPath = path.join(process.cwd(), 'public', filename);
-    const distPath = path.join(process.cwd(), 'dist', filename);
+    const filePath = path.join(process.cwd(), 'public', filename);
     
-    if (fs.existsSync(publicPath) || fs.existsSync(distPath)) {
-      const filePath = fs.existsSync(publicPath) ? publicPath : distPath;
-      
+    if (fs.existsSync(filePath)) {
       if (filename === 'sw.js') {
         res.header('Content-Type', 'application/javascript');
         res.header('Service-Worker-Allowed', '/');
+        res.header('Cache-Control', 'no-cache, no-store, must-revalidate');
       } else if (filename === 'manifest.json') {
         res.header('Content-Type', 'application/manifest+json');
       } else if (filename.endsWith('.png')) {
         res.header('Content-Type', 'image/png');
-      } else if (filename.endsWith('.jpg') || filename.endsWith('.jpeg')) {
-        res.header('Content-Type', 'image/jpeg');
+        res.header('Cache-Control', 'public, max-age=86400');
       }
-      
-      res.header('Access-Control-Allow-Origin', '*'); // Allow cross-origin for sharing
+      res.header('Access-Control-Allow-Origin', '*');
       return res.sendFile(filePath);
     }
     res.status(404).send('Not found');
   });
+
+  // Serve everything from public directory at root first
+  app.use(express.static(path.join(process.cwd(), 'public'), {
+    maxAge: '1d',
+    setHeaders: (res, filePath) => {
+      const filename = path.basename(filePath);
+      if (filename.endsWith('.png') || filename.endsWith('.jpg') || filename.endsWith('.ico') || filename.endsWith('.svg')) {
+        res.setHeader('Cache-Control', 'public, max-age=86400');
+        res.setHeader('Access-Control-Allow-Origin', '*');
+      }
+    }
+  }));
+
+  app.use('/uploads', express.static(uploadsDir, { maxAge: '1y' }));
 
   app.get('/sitemap.xml', async (req, res) => {
     try {

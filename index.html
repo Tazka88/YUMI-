@@ -42,15 +42,15 @@
         bottom: 0;
         left: 0;
         right: 0;
-        background: white;
+        background: #ff9800; /* Orange background */
         padding: 16px;
-        box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+        box-shadow: 0 -4px 15px rgba(0,0,0,0.2);
         display: none;
-        z-index: 9999;
+        z-index: 10000;
         align-items: center;
         justify-content: space-between;
-        font-family: sans-serif;
-        border-top: 1px solid #eee;
+        font-family: 'Inter', sans-serif;
+        color: white;
       }
       .pwa-content {
         display: flex;
@@ -58,40 +58,45 @@
         gap: 12px;
       }
       .pwa-icon {
-        width: 48px;
-        height: 48px;
-        border-radius: 10px;
+        width: 44px;
+        height: 44px;
+        border-radius: 8px;
+        background: white;
+        padding: 2px;
       }
       .pwa-text h4 {
         margin: 0;
-        font-size: 16px;
-        color: #333;
+        font-size: 15px;
+        font-weight: 700;
+        color: #fff;
       }
       .pwa-text p {
-        margin: 2px 0 0;
-        font-size: 13px;
-        color: #666;
+        margin: 0;
+        font-size: 11px;
+        color: rgba(255, 255, 255, 0.9);
       }
       .pwa-actions {
         display: flex;
-        gap: 8px;
+        flex-direction: column;
+        gap: 6px;
       }
       .btn-install {
-        background: #000;
-        color: white;
+        background: white;
+        color: #ff9800;
         border: none;
-        padding: 8px 16px;
+        padding: 6px 14px;
         border-radius: 6px;
-        font-weight: 500;
+        font-weight: 700;
         cursor: pointer;
+        font-size: 12px;
       }
-      .btn-close {
-        background: none;
+      .btn-later {
+        background: transparent;
         border: none;
-        color: #999;
-        font-size: 20px;
+        color: white;
+        font-size: 11px;
         cursor: pointer;
-        padding: 0 8px;
+        text-decoration: underline;
       }
     </style>
 
@@ -123,12 +128,12 @@
         <img src="/favicon-zorando-192x192.png" alt="ZORANDO" class="pwa-icon">
         <div class="pwa-text">
           <h4 id="pwa-title">ZORANDO</h4>
-          <p id="pwa-desc">Installez l'application pour une meilleure expérience</p>
+          <p id="pwa-desc">Achetez plus facilement avec l'application</p>
         </div>
       </div>
       <div class="pwa-actions">
         <button class="btn-install" id="pwa-install-btn">Installer</button>
-        <button class="btn-close" id="pwa-close-btn">&times;</button>
+        <button class="btn-later" id="pwa-close-btn">Plus tard</button>
       </div>
     </div>
 
@@ -156,14 +161,21 @@
       // Logic to show banner
       function showBanner() {
         const dismissed = localStorage.getItem('pwa-banner-dismissed');
-        const isDismissed = dismissed && (Date.now() - parseInt(dismissed)) < 24 * 60 * 60 * 1000; // 24h dismissal for testing
+        const isDismissed = dismissed && (Date.now() - parseInt(dismissed)) < 24 * 60 * 60 * 1000;
 
-        if (!isStandalone && !isDismissed) {
-          if (isIOS) {
-            pwaDesc.innerText = "Appuyez sur [Partager] puis [Sur l'écran d'accueil]";
-            installBtn.style.display = 'none';
-            pwaBanner.style.display = 'flex';
-          }
+        if (!isStandalone && !isDismissed && window.innerWidth <= 768) {
+          setTimeout(() => {
+            if (isIOS) {
+              pwaDesc.innerText = "Appuyez sur [Partager] puis [Sur l'écran d'accueil]";
+              installBtn.style.display = 'none';
+              pwaBanner.style.display = 'flex';
+            } else if (deferredPrompt) {
+              pwaBanner.style.display = 'flex';
+            } else {
+              // Forced fallback for some browsers if install is supported but prompt hasn't fired
+              pwaBanner.style.display = 'flex';
+            }
+          }, 3000); // 3 seconds delay
         }
       }
 

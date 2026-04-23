@@ -37,6 +37,11 @@ const GlobalFbclidCatcher = () => {
 };
 
 export default function App() {
+  useEffect(() => {
+    // Smooth entry after hydration
+    document.getElementById('root')?.classList.add('app-ready');
+  }, []);
+
   return (
     <HelmetProvider>
       <BrowserRouter>
@@ -44,7 +49,12 @@ export default function App() {
         <Toaster position="top-center" />
         <Analytics />
         <SpeedInsights />
-        <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500"></div></div>}>
+        <Suspense fallback={
+          <div className="min-h-screen bg-white flex flex-col items-center justify-center">
+            <div className="w-16 h-16 border-4 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
+            <p className="mt-4 text-gray-500 font-medium animate-pulse">Chargement de ZORANDO...</p>
+          </div>
+        }>
           <Routes>
         <Route path="/" element={<Layout />}>
           <Route index element={<Home />} />

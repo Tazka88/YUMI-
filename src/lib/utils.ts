@@ -32,15 +32,21 @@ export const fetchWithCache = (url: string, options?: RequestInit) => {
   
   return new Promise((resolve, reject) => {
     if (options?.signal?.aborted) {
-      return reject(new DOMException('Aborted', 'AbortError'));
+      return reject(new DOMException('The user aborted a request.', 'AbortError'));
     }
     
-    const onAbort = () => reject(new DOMException('Aborted', 'AbortError'));
+    const onAbort = () => reject(new DOMException('The user aborted a request.', 'AbortError'));
     options?.signal?.addEventListener('abort', onAbort);
     
     fetchCache.get(cacheKey)!.promise
       .then(resolve)
-      .catch(reject)
+      .catch(err => {
+        if (err.name === 'AbortError') {
+          reject(new DOMException('The user aborted a request.', 'AbortError'));
+        } else {
+          reject(err);
+        }
+      })
       .finally(() => {
         options?.signal?.removeEventListener('abort', onAbort);
       });

@@ -462,6 +462,7 @@ export default function Home() {
   const [promotions, setPromotions] = useState<Product[]>([]);
   const [randomProducts, setRandomProducts] = useState<Product[]>([]);
   const [customProducts, setCustomProducts] = useState<Record<string, Product[]>>({});
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [homeSections, setHomeSections] = useState<any[]>([
     { id: 'flash_sales', type: 'flash_sales', title: 'Ventes Flash', isVisible: true },
     { id: 'best_sellers', type: 'best_sellers', title: 'Meilleures Ventes 🏆', isVisible: true },
@@ -480,7 +481,10 @@ export default function Home() {
     };
 
     // Use standard fetch with a cache-busting query parameter to ensure real-time updates
-    const fetchDynamic = (url: string) => fetch(`${url}&_t=${Date.now()}`, { signal, cache: 'no-store' }).then(res => res.json());
+    const fetchDynamic = (url: string) => {
+      const separator = url.includes('?') ? '&' : '?';
+      return fetch(`${url}${separator}_t=${Date.now()}`, { signal, cache: 'no-store' }).then(res => res.json());
+    };
 
     fetchWithCache('/api/settings', { signal, priority: 'high' } as any).then(data => {
       if ((data as any).active_theme) setActiveTheme((data as any).active_theme);
@@ -510,9 +514,14 @@ export default function Home() {
     fetchWithCache('/api/categories', { signal, priority: 'high' } as any).then(data => { if (Array.isArray(data)) setCategories(data); }).catch(handleFetchError);
     fetchWithCache('/api/brands', { signal }).then(data => { if (Array.isArray(data)) setBrands(data); setLoadingBrands(false); }).catch(err => { handleFetchError(err); setLoadingBrands(false); });
     
-    fetchDynamic('/api/products?sort=popular&limit=12').then(data => { if (Array.isArray(data)) setPopularProducts(data); }).catch(handleFetchError);
-    fetchDynamic('/api/products?sort=bestsellers&limit=12').then(data => { if (Array.isArray(data)) setBestSellers(data); }).catch(handleFetchError);
-    fetchDynamic('/api/products?sort=newest&limit=12').then(data => { if (Array.isArray(data)) setNewProducts(data); }).catch(handleFetchError);
+    Promise.all([
+      fetchDynamic('/api/products?sort=popular&limit=12').then(data => { if (Array.isArray(data)) setPopularProducts(data); }),
+      fetchDynamic('/api/products?sort=bestsellers&limit=12').then(data => { if (Array.isArray(data)) setBestSellers(data); }),
+      fetchDynamic('/api/products?sort=newest&limit=12').then(data => { if (Array.isArray(data)) setNewProducts(data); })
+    ]).catch(handleFetchError).finally(() => {
+      setIsInitialLoading(false);
+    });
+    
     fetchDynamic('/api/products?sort=random&limit=12').then(data => { if (Array.isArray(data)) setRandomProducts(data); }).catch(handleFetchError);
     fetchDynamic('/api/products?special_offers=true&limit=12').then(data => { if (Array.isArray(data)) setPromotions(data); }).catch(handleFetchError);
 
@@ -699,7 +708,20 @@ export default function Home() {
       )}
 
       {/* Dynamic Sections */}
-      {homeSections.filter(s => s.isVisible).map(section => {
+      {isInitialLoading ? (
+        <div className="space-y-12 animate-pulse mt-8">
+          {[...Array(3)].map((_, i) => (
+            <div key={i}>
+              <div className="h-10 bg-gray-200 rounded-lg mb-6 w-1/4"></div>
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                {[...Array(5)].map((_, j) => (
+                  <div key={j} className="aspect-[4/5] bg-gray-100 rounded-xl"></div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : homeSections.filter(s => s.isVisible).map(section => {
         if (section.type === 'flash_sales' && promotions.length > 0) {
           return (
             <section key={section.id}>

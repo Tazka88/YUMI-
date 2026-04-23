@@ -53,14 +53,18 @@ Sitemap: https://${host}/sitemap.xml`);
   app.use('/uploads', express.static(uploadsDir, { maxAge: '1y' }));
 
   // Serve OG images explicitly for crawlers
-  app.get(['/og-image.png', '/og-image.jpg', '/og-image-fb.jpg', '/og-image-fb.png'], (req, res) => {
+  app.get(['/og-image.png', '/og-image.jpg', '/og-image-fb.jpg', '/og-image-fb.png', '/manifest.json', '/sw.js'], (req, res) => {
     const filename = req.path.substring(1);
     const publicPath = path.join(process.cwd(), 'public', filename);
     const distPath = path.join(process.cwd(), 'dist', filename);
     
     if (fs.existsSync(publicPath)) {
+      if (filename.endsWith('.js')) res.header('Content-Type', 'application/javascript');
+      if (filename.endsWith('.json')) res.header('Content-Type', 'application/json');
       return res.sendFile(publicPath);
     } else if (fs.existsSync(distPath)) {
+      if (filename.endsWith('.js')) res.header('Content-Type', 'application/javascript');
+      if (filename.endsWith('.json')) res.header('Content-Type', 'application/json');
       return res.sendFile(distPath);
     }
     res.status(404).send('Not found');

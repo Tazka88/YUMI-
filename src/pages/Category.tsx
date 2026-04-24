@@ -68,6 +68,14 @@ export default function Category() {
     const isSubcategory = searchParams.get('sub') === 'true';
     const isSubSubcategory = searchParams.get('subsub') === 'true';
 
+    const formatSlugToTitle = (s: string) => {
+      if (!s) return s;
+      return s
+        .split('-')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ');
+    };
+
     const loadData = async () => {
       setLoading(true);
       
@@ -82,7 +90,7 @@ export default function Category() {
           if (isSubSubcategory) {
             url += `?sub_subcategory=${slug}`;
             // Find the sub-subcategory name from the categories state
-            let foundName = slug;
+            let foundName = formatSlugToTitle(slug);
             for (const cat of categories) {
               for (const sub of (cat.subcategories || [])) {
                 const ss = (sub.sub_subcategories || []).find((s: any) => s.slug === slug || s.id.toString() === slug);
@@ -95,6 +103,7 @@ export default function Category() {
             newCategoryName = getCategoryWithEmoji(foundName);
           } else if (isSubcategory) {
             url += `?subcategory=${slug}`;
+            newCategoryName = getCategoryWithEmoji(formatSlugToTitle(slug));
             try {
               const subcats = await fetchWithCache('/api/subcategories', { signal });
               if (Array.isArray(subcats)) {
@@ -107,6 +116,7 @@ export default function Category() {
             } catch (e) {}
           } else {
             url += `?category=${slug}`;
+            newCategoryName = getCategoryWithEmoji(formatSlugToTitle(slug));
             try {
               const cats = await fetchWithCache('/api/categories', { signal, priority: 'high' } as any);
               if (Array.isArray(cats)) {
@@ -157,7 +167,7 @@ export default function Category() {
     loadData();
       
     return () => controller.abort();
-  }, [slug, searchQuery, searchParams]);
+  }, [slug, searchQuery, searchParams, categories]);
 
   const getResizedImageUrl = (url: string | null, width: number) => {
     if (!url) return '';

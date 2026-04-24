@@ -19,6 +19,7 @@ const Page = React.lazy(() => import('./pages/Page'));
 
 import { AuthProvider } from './lib/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
+import ErrorBoundary from './components/ErrorBoundary';
 
 const Login = React.lazy(() => import('./pages/Account/Login'));
 const Register = React.lazy(() => import('./pages/Account/Register'));
@@ -57,9 +58,10 @@ export default function App() {
   }, []);
 
   return (
-    <AuthProvider>
-      <HelmetProvider>
-      <BrowserRouter>
+    <ErrorBoundary>
+      <AuthProvider>
+        <HelmetProvider>
+        <BrowserRouter>
         <GlobalFbclidCatcher />
         <Toaster position="top-center" />
         <Analytics />
@@ -99,5 +101,6 @@ export default function App() {
     </BrowserRouter>
     </HelmetProvider>
     </AuthProvider>
+    </ErrorBoundary>
   );
 }

@@ -481,9 +481,20 @@ export default function Home() {
     };
 
     // Use standard fetch with a cache-busting query parameter to ensure real-time updates
-    const fetchDynamic = (url: string) => {
+    const fetchDynamic = async (url: string) => {
       const separator = url.includes('?') ? '&' : '?';
-      return fetch(`${url}${separator}_t=${Date.now()}`, { signal, cache: 'no-store' }).then(res => res.json());
+      try {
+        const res = await fetch(`${url}${separator}_t=${Date.now()}`, { signal, cache: 'no-store' });
+        if (!res.ok) {
+          const errorText = await res.text().catch(() => 'No error body');
+          throw new Error(`HTTP ${res.status}: ${errorText || res.statusText}`);
+        }
+        return await res.json();
+      } catch (err: any) {
+        if (err.name === 'AbortError') return []; // Silently return empty for aborted requests
+        console.error(`Fetch dynamic error for ${url}:`, err);
+        return []; // Return empty array to prevent mapping errors
+      }
     };
 
     fetchWithCache('/api/settings', { signal, priority: 'high' } as any).then(data => {

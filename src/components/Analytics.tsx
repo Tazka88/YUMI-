@@ -75,6 +75,9 @@ export default function Analytics() {
       })
       .catch(err => {
         if (err.name !== 'AbortError') console.error(err);
+      })
+      .finally(() => {
+        setIsInitialized(true);
       });
       
     return () => controller.abort();

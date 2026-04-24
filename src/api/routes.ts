@@ -26,6 +26,18 @@ const processImage = (table: string, id: number | string, field: string, image: 
   return image;
 };
 
+let sharp: any = null;
+const getSharp = async () => {
+  if (sharp) return sharp;
+  try {
+    sharp = (await import('sharp')).default;
+    return sharp;
+  } catch (e) {
+    console.error('Failed to load sharp:', e);
+    return null;
+  }
+};
+
 // Helper to serve image data directly
 const serveImageData = async (res: any, imageData: string, targetWidth?: number, cacheControl = 'public, max-age=31536000') => {
   if (imageData.startsWith('data:image/')) {
@@ -38,17 +50,21 @@ const serveImageData = async (res: any, imageData: string, targetWidth?: number,
       try {
         // Auto compress and convert to WebP on the fly for non-SVG images
         if (ext !== 'svg+xml' && ext !== 'svg') {
-          const sharp = (await import('sharp')).default;
-          let sharpInstance = sharp(buffer);
-          
-          if (targetWidth && targetWidth > 0 && targetWidth <= 2000) {
-            sharpInstance = sharpInstance.resize({ width: targetWidth, withoutEnlargement: true });
+          const sharpLib = await getSharp();
+          if (sharpLib) {
+            let sharpInstance = sharpLib(buffer);
+            
+            if (targetWidth && targetWidth > 0 && targetWidth <= 2000) {
+              sharpInstance = sharpInstance.resize({ width: targetWidth, withoutEnlargement: true });
+            }
+            
+            buffer = await sharpInstance
+              .webp({ quality: 80, effort: 4 })
+              .toBuffer();
+            res.setHeader('Content-Type', 'image/webp');
+          } else {
+            res.setHeader('Content-Type', `image/${ext}`);
           }
-          
-          buffer = await sharpInstance
-            .webp({ quality: 80, effort: 4 })
-            .toBuffer();
-          res.setHeader('Content-Type', 'image/webp');
         } else {
           res.setHeader('Content-Type', `image/${ext}`);
         }
@@ -131,7 +147,7 @@ router.get('/hero-banners/first-image/:type', async (req, res) => {
       return res.status(404).send('Not found');
     }
     
-    const width = type === 'mobile' ? 800 : 1600;
+    const width = type === 'mobile' ? 640 : 1600;
     // Use a long cache time (1 year) for better performance and to fix PageSpeed Insights warning
     await serveImageData(res, imageData, width, 'public, max-age=31536000, immutable');
     
@@ -1307,7 +1323,7 @@ router.get('/admin/export-meta-catalog', authenticate, async (req, res) => {
       const vMatch = p.image.match(/(\?v=[^&]+)/);
       const vParam = vMatch ? vMatch[1] : '';
       const seoSlug = p.slug ? `/${p.slug}.webp` : '';
-      const image_link = `https://zorando.com/api/images/products/${p.id}/image${seoSlug}${vParam}`;
+      const image_link = `${baseUrl}/api/images/products/${p.id}/image${seoSlug}${vParam}`;
       
       const brand = formatField(p.brand_name || 'Generic');
 

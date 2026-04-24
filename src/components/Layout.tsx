@@ -2,6 +2,8 @@ import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { ShoppingCart, Search, Menu, User, MessageCircle, X, Phone, LayoutDashboard, Facebook, Instagram, Youtube, Truck, MapPin, ChevronRight, HelpCircle, Package, ClipboardList, Heart, LogOut, LifeBuoy, RotateCcw, CreditCard } from 'lucide-react';
 import { useCartStore } from '../store/cartStore';
 import { useAuth } from '../lib/AuthContext';
+import { auth } from '../lib/firebase';
+import { signOut } from 'firebase/auth';
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { fetchWithCache } from '../lib/utils';
@@ -312,10 +314,7 @@ export default function Layout() {
                         </Link>
                         {user && (
                           <button 
-                            onClick={() => {
-                              const { auth } = require('../lib/firebase');
-                              auth.signOut();
-                            }}
+                            onClick={() => signOut(auth)}
                             className="w-full flex items-center gap-3 px-4 py-3 hover:bg-red-50 text-red-600 transition-colors border-t border-gray-50"
                           >
                             <LogOut size={18} />
@@ -495,6 +494,52 @@ export default function Layout() {
                 </li>
               ))}
             </ul>
+
+            <div className="mt-10 pt-6 border-t border-gray-100">
+              <h3 className="font-bold text-lg text-gray-900 mb-4">Besoin d'aide ?</h3>
+              <ul className="space-y-2">
+                <li>
+                  <Link 
+                    to="/track-order" 
+                    className="flex items-center gap-3 py-2 text-gray-600 hover:text-orange-600 font-medium"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    <Truck size={18} />
+                    Suivre ma commande
+                  </Link>
+                </li>
+                <li>
+                  <Link 
+                    to="/contact" 
+                    className="flex items-center gap-3 py-2 text-gray-600 hover:text-orange-600 font-medium"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    <LifeBuoy size={18} />
+                    Centre d'assistance
+                  </Link>
+                </li>
+                <li>
+                  <Link 
+                    to="/retours" 
+                    className="flex items-center gap-3 py-2 text-gray-600 hover:text-orange-600 font-medium"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    <RotateCcw size={18} />
+                    Retours et remboursements
+                  </Link>
+                </li>
+                <li>
+                  <Link 
+                    to="/modes-de-paiement" 
+                    className="flex items-center gap-3 py-2 text-gray-600 hover:text-orange-600 font-medium"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    <CreditCard size={18} />
+                    Modes de paiement
+                  </Link>
+                </li>
+              </ul>
+            </div>
           </div>
         </div>
       )}

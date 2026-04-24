@@ -26,50 +26,83 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
+    let unsubscribeProfile: (() => void) | null = null;
+
     const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
       setUser(user);
       
       if (user) {
-        // Fetch or create profile
-        const profileRef = doc(db, 'profiles', user.uid);
-        const profileSnap = await getDoc(profileRef);
-        
-        if (profileSnap.exists()) {
-          setProfile(profileSnap.data());
-        } else {
-          // Create basic profile if it doesn't exist
-          const newProfile = {
-            firstName: user.displayName?.split(' ')[0] || '',
-            lastName: user.displayName?.split(' ')[1] || '',
-            email: user.email,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          };
-          await setDoc(profileRef, newProfile);
-          setProfile(newProfile);
-        }
-
-        // Check for admin status from a protected collection or field
-        // For now, let's just check a field in the profile
-        setIsAdmin(profileSnap.data()?.role === 'admin');
-
-        // Listen for profile changes
-        const unsubscribeProfile = onSnapshot(profileRef, (doc) => {
-          if (doc.exists()) {
-            setProfile(doc.data());
-            setIsAdmin(doc.data().role === 'admin');
+        try {
+          // Fetch or create profile
+          const profileRef = doc(db, 'profiles', user.uid);
+          
+          // Use a timeout for the profile fetch to avoid hanging the auth state
+          const profilePromise = getDoc(profileRef);
+          const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Profile fetch timeout')), 5000)
+          );
+          
+          const profileSnap = await Promise.race([profilePromise, timeoutPromise]) as any;
+          
+          if (profileSnap && profileSnap.exists()) {
+            const data = profileSnap.data();
+            setProfile(data);
+            setIsAdmin(data?.role === 'admin');
+          } else {
+            // Create basic profile if it doesn't exist
+            const newProfile = {
+              firstName: user.displayName?.split(' ')[0] || '',
+              lastName: user.displayName?.split(' ')[1] || '',
+              email: user.email,
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+            };
+            try {
+              await setDoc(profileRef, newProfile);
+              setProfile(newProfile);
+            } catch (e) {
+              console.error('Failed to create profile:', e);
+              // Fallback profile
+              setProfile(newProfile);
+            }
           }
-        });
 
-        return () => unsubscribeProfile();
+          // Listen for profile changes
+          if (unsubscribeProfile) unsubscribeProfile();
+          unsubscribeProfile = onSnapshot(profileRef, (doc) => {
+            if (doc.exists()) {
+              const data = doc.data();
+              setProfile(data);
+              setIsAdmin(data?.role === 'admin');
+            }
+          }, (err) => {
+            console.error('Profile snapshot error:', err);
+          });
+
+        } catch (error) {
+          console.error('Error in auth state change:', error);
+          // Don't block the app if profile fetch fails
+          setProfile(null);
+          setIsAdmin(false);
+        }
       } else {
+        if (unsubscribeProfile) {
+          unsubscribeProfile();
+          unsubscribeProfile = null;
+        }
         setProfile(null);
         setIsAdmin(false);
       }
       setLoading(false);
+    }, (error) => {
+      console.error('Auth state change error:', error);
+      setLoading(false);
     });
 
-    return () => unsubscribeAuth();
+    return () => {
+      unsubscribeAuth();
+      if (unsubscribeProfile) unsubscribeProfile();
+    };
   }, []);
 
   return (

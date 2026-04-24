@@ -374,6 +374,8 @@ export default function Product() {
     "image": product.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(product.name)}&background=random&size=800`,
     "description": product.description,
     "sku": product.id.toString(),
+    "mpn": product.id.toString(),
+    "category": product.category_name || "General",
     "brand": {
       "@type": "Brand",
       "name": product.brand_name || "ZORANDO"
@@ -383,6 +385,7 @@ export default function Product() {
       "url": window.location.href,
       "priceCurrency": "DZD",
       "price": currentPrice,
+      "priceValidUntil": new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0],
       "availability": product.stock > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
       "itemCondition": "https://schema.org/NewCondition",
       "shippingDetails": {

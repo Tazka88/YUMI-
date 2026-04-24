@@ -349,19 +349,19 @@ export default function Layout() {
                       className="absolute top-full right-0 mt-1 w-60 bg-white border border-gray-100 rounded-xl shadow-xl z-50 overflow-hidden"
                     >
                       <div className="py-2">
-                        <Link to="/page/contact" className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 text-gray-700 transition-colors">
+                        <Link to="/contact" className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 text-gray-700 transition-colors">
                           <LifeBuoy size={18} className="text-gray-400" />
                           <span className="text-sm font-medium">Centre d'assistance</span>
                         </Link>
-                        <Link to="/account/orders" className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 text-gray-700 transition-colors">
+                        <Link to="/track-order" className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 text-gray-700 transition-colors">
                           <Truck size={18} className="text-gray-400" />
                           <span className="text-sm font-medium">Suivre ma commande</span>
                         </Link>
-                        <Link to="/page/returns" className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 text-gray-700 transition-colors">
+                        <Link to="/retours" className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 text-gray-700 transition-colors">
                           <RotateCcw size={18} className="text-gray-400" />
                           <span className="text-sm font-medium">Retours et remboursements</span>
                         </Link>
-                        <Link to="/page/payment" className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 text-gray-700 transition-colors">
+                        <Link to="/modes-de-paiement" className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 text-gray-700 transition-colors">
                           <CreditCard size={18} className="text-gray-400" />
                           <span className="text-sm font-medium">Modes de paiement</span>
                         </Link>

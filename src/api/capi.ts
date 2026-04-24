@@ -62,6 +62,9 @@ router.post('/', async (req, res) => {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify(payload)
+    }).catch(err => {
+      console.error('Fetch to Facebook Graph API failed:', err);
+      throw new Error(`Fetch failed: ${err.message}`);
     });
 
     const result = await response.json();

@@ -1,5 +1,5 @@
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
-import { ShoppingCart, Search, Menu, User, MessageCircle, X, Phone, LayoutDashboard, Facebook, Instagram, Youtube, Truck, MapPin, ChevronRight, HelpCircle } from 'lucide-react';
+import { ShoppingCart, Search, Menu, User, MessageCircle, X, Phone, LayoutDashboard, Facebook, Instagram, Youtube, Truck, MapPin, ChevronRight, HelpCircle, Package, ClipboardList, Heart, LogOut, LifeBuoy, RotateCcw, CreditCard } from 'lucide-react';
 import { useCartStore } from '../store/cartStore';
 import { useAuth } from '../lib/AuthContext';
 import React, { useState, useEffect } from 'react';
@@ -72,6 +72,8 @@ export default function Layout() {
   const location = useLocation();
   const [categories, setCategories] = useState<any[]>([]);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [showAccountDropdown, setShowAccountDropdown] = useState(false);
+  const [showHelpDropdown, setShowHelpDropdown] = useState(false);
   const [expandedSubcategories, setExpandedSubcategories] = useState<number[]>([]);
   const [showAnnouncement, setShowAnnouncement] = useState(true);
   const [currentMessageIndex, setCurrentMessageIndex] = useState(0);
@@ -249,7 +251,11 @@ export default function Layout() {
             {/* Actions */}
             <div className="flex items-center gap-2 md:gap-8 lg:gap-10">
               {/* Account */}
-              <div className="hidden md:block">
+              <div 
+                className="hidden md:block relative"
+                onMouseEnter={() => setShowAccountDropdown(true)}
+                onMouseLeave={() => setShowAccountDropdown(false)}
+              >
                 {user ? (
                   <Link to="/account/dashboard" className="flex items-center gap-2 group transition-all p-1">
                      <User size={24} className="text-gray-800 group-hover:text-orange-600 transition-colors" />
@@ -257,7 +263,7 @@ export default function Layout() {
                         <span className="text-sm font-bold text-gray-800 group-hover:text-orange-600 truncate max-w-[80px]">
                           {profile?.firstName || user.displayName?.split(' ')[0] || 'Compte'}
                         </span>
-                        <ChevronRight size={14} className="rotate-90 text-gray-400" />
+                        <ChevronRight size={14} className={`transition-transform text-gray-400 ${showAccountDropdown ? '-rotate-90' : 'rotate-90'}`} />
                      </div>
                   </Link>
                 ) : (
@@ -265,19 +271,110 @@ export default function Layout() {
                     <User size={24} className="text-gray-800 group-hover:text-orange-600 transition-colors" />
                     <div className="flex items-center gap-1">
                       <span className="text-sm font-bold text-gray-800 group-hover:text-orange-600">Se connecter</span>
-                      <ChevronRight size={16} className="rotate-90 text-gray-400" />
+                      <ChevronRight size={16} className={`transition-transform text-gray-400 ${showAccountDropdown ? '-rotate-90' : 'rotate-90'}`} />
                     </div>
                   </Link>
                 )}
+
+                <AnimatePresence>
+                  {showAccountDropdown && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: 10 }}
+                      className="absolute top-full right-0 mt-1 w-64 bg-white border border-gray-100 rounded-xl shadow-xl z-50 overflow-hidden"
+                    >
+                      {!user && (
+                        <div className="p-4 border-b border-gray-50">
+                          <Link 
+                            to="/account/login" 
+                            className="block w-full text-center py-2.5 bg-orange-600 text-white font-bold rounded-lg hover:bg-orange-700 transition-colors text-sm mb-3 shadow-md active:scale-95"
+                          >
+                            Se connecter
+                          </Link>
+                          <p className="text-[11px] text-center text-gray-500">
+                            Nouveau sur Zorando ? <Link to="/account/register" className="text-orange-600 font-bold hover:underline">Créer un compte</Link>
+                          </p>
+                        </div>
+                      )}
+                      <div className="py-2">
+                        <Link to="/account/dashboard" className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 text-gray-700 transition-colors">
+                          <User size={18} className="text-gray-400" />
+                          <span className="text-sm font-medium">Mon Compte</span>
+                        </Link>
+                        <Link to="/account/orders" className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 text-gray-700 transition-colors">
+                          <Package size={18} className="text-gray-400" />
+                          <span className="text-sm font-medium">Mes Commandes</span>
+                        </Link>
+                        <Link to="/account/wishlist" className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 text-gray-700 transition-colors">
+                          <Heart size={18} className="text-gray-400" />
+                          <span className="text-sm font-medium">Ma Liste d'envies</span>
+                        </Link>
+                        {user && (
+                          <button 
+                            onClick={() => {
+                              const { auth } = require('../lib/firebase');
+                              auth.signOut();
+                            }}
+                            className="w-full flex items-center gap-3 px-4 py-3 hover:bg-red-50 text-red-600 transition-colors border-t border-gray-50"
+                          >
+                            <LogOut size={18} />
+                            <span className="text-sm font-medium">Déconnexion</span>
+                          </button>
+                        )}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
 
               {/* Help */}
-              <div className="hidden lg:flex items-center gap-2 group transition-all cursor-pointer p-1">
+              <div 
+                className="hidden lg:flex items-center gap-2 group transition-all cursor-pointer p-1 relative"
+                onMouseEnter={() => setShowHelpDropdown(true)}
+                onMouseLeave={() => setShowHelpDropdown(false)}
+              >
                 <HelpCircle size={24} className="text-gray-800 group-hover:text-orange-600 transition-colors" />
                 <div className="flex items-center gap-1">
                   <span className="text-sm font-bold text-gray-800 group-hover:text-orange-600">Aide</span>
-                  <ChevronRight size={16} className="rotate-90 text-gray-400" />
+                  <ChevronRight size={16} className={`transition-transform text-gray-400 ${showHelpDropdown ? '-rotate-90' : 'rotate-90'}`} />
                 </div>
+
+                <AnimatePresence>
+                  {showHelpDropdown && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: 10 }}
+                      className="absolute top-full right-0 mt-1 w-60 bg-white border border-gray-100 rounded-xl shadow-xl z-50 overflow-hidden"
+                    >
+                      <div className="py-2">
+                        <Link to="/page/contact" className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 text-gray-700 transition-colors">
+                          <LifeBuoy size={18} className="text-gray-400" />
+                          <span className="text-sm font-medium">Centre d'assistance</span>
+                        </Link>
+                        <Link to="/account/orders" className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 text-gray-700 transition-colors">
+                          <Truck size={18} className="text-gray-400" />
+                          <span className="text-sm font-medium">Suivre ma commande</span>
+                        </Link>
+                        <Link to="/page/returns" className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 text-gray-700 transition-colors">
+                          <RotateCcw size={18} className="text-gray-400" />
+                          <span className="text-sm font-medium">Retours et remboursements</span>
+                        </Link>
+                        <Link to="/page/payment" className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 text-gray-700 transition-colors">
+                          <CreditCard size={18} className="text-gray-400" />
+                          <span className="text-sm font-medium">Modes de paiement</span>
+                        </Link>
+                      </div>
+                      <div className="p-4 bg-orange-50 border-t border-orange-100">
+                        <button className="w-full flex items-center justify-center gap-2 py-2 bg-orange-600 text-white text-xs font-bold rounded-lg shadow-sm">
+                          <MessageCircle size={14} />
+                          CHAT EN DIRECT
+                        </button>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
 
               {/* Cart */}

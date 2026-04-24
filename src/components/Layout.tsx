@@ -1,5 +1,5 @@
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
-import { ShoppingCart, Search, Menu, User, MessageCircle, X, Phone, LayoutDashboard, Facebook, Instagram, Youtube, Truck, MapPin, ChevronRight } from 'lucide-react';
+import { ShoppingCart, Search, Menu, User, MessageCircle, X, Phone, LayoutDashboard, Facebook, Instagram, Youtube, Truck, MapPin, ChevronRight, HelpCircle } from 'lucide-react';
 import { useCartStore } from '../store/cartStore';
 import { useAuth } from '../lib/AuthContext';
 import React, { useState, useEffect } from 'react';
@@ -181,13 +181,13 @@ export default function Layout() {
       <TopBar />
 
       {/* Header */}
-      <header className="bg-orange-500 text-white sticky top-0 z-40 shadow-md">
+      <header className="bg-white text-gray-800 sticky top-0 z-40 border-b border-gray-100 shadow-sm">
         <div className="container mx-auto px-4 py-3">
           <div className="flex items-center justify-between gap-4">
             {/* Mobile Menu Toggle & Logo */}
             <div className="flex items-center gap-3">
               <button 
-                className="lg:hidden p-1"
+                className="lg:hidden p-1 text-gray-700"
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
               >
                 <Menu size={24} />
@@ -195,29 +195,28 @@ export default function Layout() {
               <Link to="/" className="flex items-center hover:opacity-90 transition-opacity" aria-label="ZORANDO Accueil">
                 <svg width="190" height="36" viewBox="0 0 190 36" fill="none" xmlns="http://www.w3.org/2000/svg" className="h-8 md:h-9 w-auto">
                   <g transform="translate(2, 2)">
-                    <path d="M10 10V6C10 3.79086 11.7909 2 14 2C16.2091 2 18 3.79086 18 6V10" stroke="white" strokeWidth="2.5" strokeLinecap="round"/>
-                    <rect x="2" y="10" width="24" height="20" rx="4" fill="white" fillOpacity="0.15" stroke="white" strokeWidth="2.5" strokeLinejoin="round"/>
-                    <path d="M9 14.5 H19 L9 24.5 H19" stroke="#FFD8A8" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"/>
-                    <path d="M26 4L27 1L28 4L31 5L28 6L27 9L26 6L23 5L26 4Z" fill="#FFD8A8"/>
+                    <path d="M10 10V6C10 3.79086 11.7909 2 14 2C16.2091 2 18 3.79086 18 6V10" stroke="#f97316" strokeWidth="2.5" strokeLinecap="round"/>
+                    <rect x="2" y="10" width="24" height="20" rx="4" fill="#f97316" fillOpacity="0.1" stroke="#f97316" strokeWidth="2.5" strokeLinejoin="round"/>
+                    <path d="M9 14.5 H19 L9 24.5 H19" stroke="#f97316" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"/>
                   </g>
-                  <text x="38" y="28" fontFamily="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" fontSize="28" fontWeight="900" fill="white" letterSpacing="-0.02em"><tspan fill="black" fontSize="36">Z</tspan>ORANDO</text>
+                  <text x="38" y="28" fontFamily="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" fontSize="28" fontWeight="900" fill="#111827" letterSpacing="-0.02em"><tspan fill="#f97316" fontSize="36">Z</tspan>ORANDO</text>
                 </svg>
               </Link>
             </div>
 
             {/* Search Bar (Desktop) */}
-            <div ref={searchRef} className="hidden md:flex flex-1 max-w-2xl relative">
+            <div ref={searchRef} className="hidden md:flex flex-1 max-w-xl relative">
               <form onSubmit={handleSearch} className="w-full relative">
                 <input
                   type="text"
                   placeholder="Chercher un produit, une marque ou une catégorie..."
-                  className="w-full py-2 pl-4 pr-10 rounded-md bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-orange-300"
+                  className="w-full py-2 pl-4 pr-10 rounded-md bg-gray-50 border border-gray-200 text-gray-900 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onFocus={() => { if (searchQuery.trim().length > 0) setShowSuggestions(true); }}
                 />
-                <button type="submit" className="absolute right-0 top-0 h-full px-3 text-gray-500 hover:text-orange-500">
-                  <Search size={20} />
+                <button type="submit" className="absolute right-0 top-0 h-full px-3 text-gray-400 hover:text-orange-500 transition-colors">
+                  <Search size={18} />
                 </button>
               </form>
 
@@ -247,96 +246,71 @@ export default function Layout() {
               )}
             </div>
 
-            {/* Icons */}
-            <div className="flex items-center gap-2 md:gap-4">
-              {/* Desktop Account */}
-              <div className="hidden md:flex items-center gap-3 mr-1">
+            {/* Actions */}
+            <div className="flex items-center gap-2 md:gap-8 lg:gap-10">
+              {/* Account */}
+              <div className="hidden md:block">
                 {user ? (
-                  <Link to="/account/dashboard" className="flex items-center gap-2 hover:bg-white/10 p-2 rounded-lg transition-colors border border-white/30 bg-white/5">
-                    <User size={18} className="text-orange-100" />
-                    <div className="flex flex-col items-start leading-tight">
-                      <span className="text-[9px] text-orange-200 font-medium">Bonjour,</span>
-                      <span className="text-xs font-bold truncate max-w-[70px]">{profile?.firstName || user.displayName?.split(' ')[0] || 'Compte'}</span>
-                    </div>
+                  <Link to="/account/dashboard" className="flex items-center gap-2 group transition-all p-1">
+                     <User size={24} className="text-gray-800 group-hover:text-orange-600 transition-colors" />
+                     <div className="flex items-center gap-1">
+                        <span className="text-sm font-bold text-gray-800 group-hover:text-orange-600 truncate max-w-[80px]">
+                          {profile?.firstName || user.displayName?.split(' ')[0] || 'Compte'}
+                        </span>
+                        <ChevronRight size={14} className="rotate-90 text-gray-400" />
+                     </div>
                   </Link>
                 ) : (
-                  <div className="flex items-center gap-1">
-                    <Link to="/account/login" className="flex items-center gap-2 hover:bg-white/10 p-2 rounded-lg transition-colors group">
-                      <User size={22} className="group-hover:text-orange-100" />
-                      <div className="flex flex-col items-start leading-tight">
-                        <span className="text-[9px] text-orange-200 uppercase font-bold tracking-tighter">Connexion</span>
-                        <span className="text-[11px] font-black whitespace-nowrap">MON COMPTE</span>
-                      </div>
-                    </Link>
-                  </div>
+                  <Link to="/account/login" className="flex items-center gap-2 group transition-all p-1">
+                    <User size={24} className="text-gray-800 group-hover:text-orange-600 transition-colors" />
+                    <div className="flex items-center gap-1">
+                      <span className="text-sm font-bold text-gray-800 group-hover:text-orange-600">Se connecter</span>
+                      <ChevronRight size={16} className="rotate-90 text-gray-400" />
+                    </div>
+                  </Link>
                 )}
               </div>
 
-              {/* Mobile Account Icon */}
-              <div className="md:hidden">
-                <Link to={user ? "/account/dashboard" : "/account/login"} className="p-2 hover:bg-white/10 rounded-lg transition-colors flex items-center justify-center">
-                  <User size={24} />
-                </Link>
+              {/* Help */}
+              <div className="hidden lg:flex items-center gap-2 group transition-all cursor-pointer p-1">
+                <HelpCircle size={24} className="text-gray-800 group-hover:text-orange-600 transition-colors" />
+                <div className="flex items-center gap-1">
+                  <span className="text-sm font-bold text-gray-800 group-hover:text-orange-600">Aide</span>
+                  <ChevronRight size={16} className="rotate-90 text-gray-400" />
+                </div>
               </div>
 
-              <Link to="/cart" className="flex flex-col items-center hover:bg-white/10 p-2 rounded-lg transition-colors relative group">
+              {/* Cart */}
+              <Link to="/cart" className="flex items-center gap-2 group transition-all p-1 relative">
                 <div className="relative">
-                  <ShoppingCart size={24} />
+                  <ShoppingCart size={24} className="text-gray-800 group-hover:text-orange-600 transition-colors" />
                   {cartCount > 0 && (
-                    <span className="absolute -top-2 -right-2 bg-black text-white text-xs font-bold w-5 h-5 flex items-center justify-center rounded-full">
+                    <span className="absolute -top-2 -right-2 bg-orange-500 text-white text-[10px] font-black h-5 w-5 flex items-center justify-center rounded-full border-2 border-white shadow-sm">
                       {cartCount}
                     </span>
                   )}
                 </div>
-                <span className="text-xs mt-1 hidden md:block">Panier</span>
+                <span className="text-sm font-bold text-gray-800 group-hover:text-orange-600 hidden sm:inline">Panier</span>
               </Link>
             </div>
           </div>
 
           {/* Search Bar (Mobile) */}
-          <div ref={mobileSearchRef} className="mt-3 md:hidden relative">
+          <div ref={mobileSearchRef} className="mt-3 md:hidden relative px-1">
             <form onSubmit={handleSearch} className="relative">
               <input
                 type="text"
                 placeholder="Chercher un produit..."
-                className="w-full py-2 pl-4 pr-10 rounded-md bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-orange-300"
+                className="w-full py-2 pl-4 pr-10 rounded-md bg-gray-50 border border-gray-200 text-gray-900 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all text-sm"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                onFocus={() => { if (searchQuery.trim().length > 0) setShowSuggestions(true); }}
               />
-              <button type="submit" className="absolute right-0 top-0 h-full px-3 text-gray-500">
-                <Search size={20} />
+              <button type="submit" className="absolute right-0 top-0 h-full px-3 text-gray-400 hover:text-orange-500">
+                <Search size={18} />
               </button>
             </form>
-
-            {/* Suggestions Dropdown */}
-            {showSuggestions && suggestions.length > 0 && (
-              <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-md shadow-xl border border-gray-100 overflow-hidden z-50">
-                <ul className="py-1">
-                  {suggestions.map((product) => (
-                    <li key={product.id}>
-                      <Link 
-                        to={`/product/${product.slug}`}
-                        className="block px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-orange-600 transition-colors cursor-pointer"
-                        onClick={() => {
-                          setShowSuggestions(false);
-                          setSearchQuery('');
-                        }}
-                      >
-                        <div className="flex items-center gap-3">
-                          <Search size={14} className="text-gray-400" />
-                          <span className="truncate">{product.name}</span>
-                        </div>
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
           </div>
         </div>
-
-        {/* Categories Nav (Desktop) Removed */}
       </header>
 
       {/* Mobile Menu Overlay */}

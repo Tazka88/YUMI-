@@ -248,28 +248,38 @@ export default function Layout() {
             </div>
 
             {/* Icons */}
-            <div className="flex items-center gap-4">
-              <div className="hidden lg:flex items-center gap-4 mr-2">
+            <div className="flex items-center gap-2 md:gap-4">
+              {/* Desktop Account */}
+              <div className="hidden md:flex items-center gap-3 mr-1">
                 {user ? (
-                  <Link to="/account/dashboard" className="flex items-center gap-2 hover:bg-white/10 p-2 rounded-lg transition-colors border border-white/20">
-                    <User size={20} />
+                  <Link to="/account/dashboard" className="flex items-center gap-2 hover:bg-white/10 p-2 rounded-lg transition-colors border border-white/30 bg-white/5">
+                    <User size={18} className="text-orange-100" />
                     <div className="flex flex-col items-start leading-tight">
-                      <span className="text-[10px] text-orange-200">Bonjour,</span>
-                      <span className="text-xs font-bold truncate max-w-[80px]">{profile?.firstName || user.displayName?.split(' ')[0] || 'Compte'}</span>
+                      <span className="text-[9px] text-orange-200 font-medium">Bonjour,</span>
+                      <span className="text-xs font-bold truncate max-w-[70px]">{profile?.firstName || user.displayName?.split(' ')[0] || 'Compte'}</span>
                     </div>
                   </Link>
                 ) : (
-                  <Link to="/account/login" className="flex items-center gap-2 hover:text-orange-100 transition-colors">
-                    <User size={24} />
-                    <div className="flex flex-col items-start leading-tight">
-                      <span className="text-[10px] text-orange-200">Se connecter</span>
-                      <span className="text-xs font-bold">Votre Compte</span>
-                    </div>
-                  </Link>
+                  <div className="flex items-center gap-1">
+                    <Link to="/account/login" className="flex items-center gap-2 hover:bg-white/10 p-2 rounded-lg transition-colors group">
+                      <User size={22} className="group-hover:text-orange-100" />
+                      <div className="flex flex-col items-start leading-tight">
+                        <span className="text-[9px] text-orange-200 uppercase font-bold tracking-tighter">Connexion</span>
+                        <span className="text-[11px] font-black whitespace-nowrap">MON COMPTE</span>
+                      </div>
+                    </Link>
+                  </div>
                 )}
               </div>
 
-              <Link to="/cart" className="flex flex-col items-center hover:text-orange-100 relative">
+              {/* Mobile Account Icon */}
+              <div className="md:hidden">
+                <Link to={user ? "/account/dashboard" : "/account/login"} className="p-2 hover:bg-white/10 rounded-lg transition-colors flex items-center justify-center">
+                  <User size={24} />
+                </Link>
+              </div>
+
+              <Link to="/cart" className="flex flex-col items-center hover:bg-white/10 p-2 rounded-lg transition-colors relative group">
                 <div className="relative">
                   <ShoppingCart size={24} />
                   {cartCount > 0 && (

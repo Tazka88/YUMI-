@@ -727,8 +727,29 @@ router.post('/products/:slug/reviews', async (req, res) => {
   }
 });
 
+// --- CUSTOMER ORDERS ---
+router.get('/orders/user/:userId', async (req, res) => {
+  const { userId } = req.params;
+  try {
+    const orders = await sql`
+      SELECT o.*, 
+      (SELECT JSON_AGG(JSON_BUILD_OBJECT('id', oi.id, 'name', p.name, 'quantity', oi.quantity, 'price', oi.price, 'image', p.image))
+       FROM order_items oi 
+       JOIN products p ON oi.product_id = p.id 
+       WHERE oi.order_id = o.id) as items
+      FROM orders o 
+      WHERE o.customer_user_id = ${userId}
+      ORDER BY o.created_at DESC
+    `;
+    res.json(orders);
+  } catch (err) {
+    console.error('Error fetching user orders:', err);
+    res.status(500).json({ error: 'Failed to fetch orders' });
+  }
+});
+
 router.post('/orders', orderLimiter, async (req, res) => {
-  const { customer_name, customer_email, customer_phone, wilaya, commune, address, note, items, delivery_cost: clientDeliveryCost } = req.body;
+  const { customer_name, customer_email, customer_phone, wilaya, commune, address, note, items, delivery_cost: clientDeliveryCost, customer_user_id } = req.body;
   
   if (!items || !Array.isArray(items) || items.length === 0) {
     return res.status(400).json({ error: 'La commande doit contenir au moins un article' });
@@ -766,8 +787,8 @@ router.post('/orders', orderLimiter, async (req, res) => {
 
     const orderData = await sql.begin(async (sql: any) => {
       const [order] = await sql`
-        INSERT INTO orders (customer_name, customer_email, customer_phone, wilaya, commune, address, note, total_amount, delivery_cost)
-        VALUES (${customer_name || ''}, ${customer_email || null}, ${customer_phone || ''}, ${wilaya || ''}, ${commune || ''}, ${address || ''}, ${note || null}, ${calculatedTotal}, ${delivery_cost})
+        INSERT INTO orders (customer_name, customer_email, customer_phone, wilaya, commune, address, note, total_amount, delivery_cost, customer_user_id)
+        VALUES (${customer_name || ''}, ${customer_email || null}, ${customer_phone || ''}, ${wilaya || ''}, ${commune || ''}, ${address || ''}, ${note || null}, ${calculatedTotal}, ${delivery_cost}, ${customer_user_id || null})
         RETURNING id
       `;
       

@@ -1,6 +1,7 @@
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { ShoppingCart, Search, Menu, User, MessageCircle, X, Phone, LayoutDashboard, Facebook, Instagram, Youtube, Truck, MapPin, ChevronRight } from 'lucide-react';
 import { useCartStore } from '../store/cartStore';
+import { useAuth } from '../lib/AuthContext';
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { fetchWithCache } from '../lib/utils';
@@ -59,6 +60,7 @@ export const CategoryNameDisplay = ({ name, className = "" }: { name: string, cl
 };
 
 export default function Layout() {
+  const { user, profile } = useAuth();
   const cartItems = useCartStore((state) => state.items);
   const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
   const [searchQuery, setSearchQuery] = useState('');
@@ -247,6 +249,26 @@ export default function Layout() {
 
             {/* Icons */}
             <div className="flex items-center gap-4">
+              <div className="hidden lg:flex items-center gap-4 mr-2">
+                {user ? (
+                  <Link to="/account/dashboard" className="flex items-center gap-2 hover:bg-white/10 p-2 rounded-lg transition-colors border border-white/20">
+                    <User size={20} />
+                    <div className="flex flex-col items-start leading-tight">
+                      <span className="text-[10px] text-orange-200">Bonjour,</span>
+                      <span className="text-xs font-bold truncate max-w-[80px]">{profile?.firstName || user.displayName?.split(' ')[0] || 'Compte'}</span>
+                    </div>
+                  </Link>
+                ) : (
+                  <Link to="/account/login" className="flex items-center gap-2 hover:text-orange-100 transition-colors">
+                    <User size={24} />
+                    <div className="flex flex-col items-start leading-tight">
+                      <span className="text-[10px] text-orange-200">Se connecter</span>
+                      <span className="text-xs font-bold">Votre Compte</span>
+                    </div>
+                  </Link>
+                )}
+              </div>
+
               <Link to="/cart" className="flex flex-col items-center hover:text-orange-100 relative">
                 <div className="relative">
                   <ShoppingCart size={24} />
@@ -317,6 +339,28 @@ export default function Layout() {
                 <X size={20} />
               </button>
             </div>
+            
+            {user && (
+              <div className="mb-6 p-4 bg-orange-50 rounded-xl border border-orange-100">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center border border-orange-200">
+                    <User className="text-orange-500" size={24} />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-gray-900 text-sm">{profile?.firstName || user.displayName || 'Client'}</h4>
+                    <Link to="/account/dashboard" onClick={() => setIsMenuOpen(false)} className="text-xs text-orange-600 font-bold hover:underline">Accéder à mon espace</Link>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {!user && (
+              <div className="mb-6 grid grid-cols-2 gap-2">
+                <Link to="/account/login" onClick={() => setIsMenuOpen(false)} className="flex items-center justify-center px-4 py-2 bg-orange-600 text-white text-xs font-bold rounded-lg truncate">Connexion</Link>
+                <Link to="/account/register" onClick={() => setIsMenuOpen(false)} className="flex items-center justify-center px-4 py-2 border border-orange-600 text-orange-600 text-xs font-bold rounded-lg truncate">Inscription</Link>
+              </div>
+            )}
+
             <ul className="space-y-4">
               {categories.map(cat => (
                 <li key={cat.id}>

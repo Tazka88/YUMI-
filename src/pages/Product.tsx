@@ -1,8 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { ShoppingCart, Star, ShieldCheck, Truck, RotateCcw, ThumbsUp, Facebook, Instagram, MessageCircle, CreditCard, ArrowDown, Phone, Play, ChevronDown, HelpCircle, Camera, X } from 'lucide-react';
+import { ShoppingCart, Star, ShieldCheck, Truck, RotateCcw, ThumbsUp, Facebook, Instagram, MessageCircle, CreditCard, ArrowDown, Phone, Play, ChevronDown, HelpCircle, Camera, X, Heart } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useCartStore, Product as ProductType } from '../store/cartStore';
+import { useAuth } from '../lib/AuthContext';
+import { db } from '../lib/firebase';
+import { collection, addDoc, query, where, getDocs, deleteDoc, doc } from 'firebase/firestore';
 import { formatPrice } from '../utils/formatPrice';
 import { ProductCard } from '../components/ProductCard';
 import SEO from '../components/SEO';
@@ -61,9 +64,12 @@ export default function Product() {
   const [reviewImage, setReviewImage] = useState<File | null>(null);
   const [modalImage, setModalImage] = useState<string | null>(null);
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
+  const [isInWishlist, setIsInWishlist] = useState(false);
+  const [wishlistDocId, setWishlistDocId] = useState<string | null>(null);
   const [trackingIds, setTrackingIds] = useState({ ga: '', fb: '' });
   const [settings, setSettings] = useState<any>({});
   const addItem = useCartStore(state => state.addItem);
+  const { user } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -79,8 +85,30 @@ export default function Product() {
       .catch(err => {
         if (err.name !== 'AbortError') console.error(err);
       });
+      
+    // Check if in wishlist
+    if (user && slug) {
+       const checkWishlist = async () => {
+         try {
+           const q = query(
+             collection(db, 'wishlists'),
+             where('userId', '==', user.uid),
+             where('productId', '==', product?.id?.toString() || '')
+           );
+           const snapshot = await getDocs(q);
+           if (!snapshot.empty) {
+             setIsInWishlist(true);
+             setWishlistDocId(snapshot.docs[0].id);
+           }
+         } catch (e) {
+           console.error("Wishlist check error:", e);
+         }
+       };
+       if (product?.id) checkWishlist();
+    }
+    
     return () => controller.abort();
-  }, []);
+  }, [user, slug, product?.id]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -313,6 +341,35 @@ export default function Product() {
       return;
     }
     navigate('/checkout', { state: { directBuyItem: { ...product, quantity, selectedVariation, cartItemId: `${product.id}` + (selectedVariation ? `-${selectedVariation.id}` : '') } } });
+  };
+
+  const toggleWishlist = async () => {
+    if (!user) {
+      toast.error("Veuillez vous connecter pour ajouter des favoris");
+      navigate('/account/login');
+      return;
+    }
+
+    try {
+      if (isInWishlist && wishlistDocId) {
+        await deleteDoc(doc(db, 'wishlists', wishlistDocId));
+        setIsInWishlist(false);
+        setWishlistDocId(null);
+        toast.success("Retiré des favoris");
+      } else {
+        const docRef = await addDoc(collection(db, 'wishlists'), {
+          userId: user.uid,
+          productId: product.id.toString(),
+          addedAt: new Date().toISOString()
+        });
+        setIsInWishlist(true);
+        setWishlistDocId(docRef.id);
+        toast.success("Ajouté aux favoris !");
+      }
+    } catch (e) {
+      console.error("Wishlist error:", e);
+      toast.error("Une erreur est survenue");
+    }
   };
 
   const handleReviewSubmit = async (e: React.FormEvent) => {
@@ -785,6 +842,16 @@ export default function Product() {
                   className="flex items-center justify-center w-[54px] h-[54px] rounded-md bg-orange-500 text-white shrink-0 hover:bg-orange-600 disabled:opacity-50 transition-colors shadow-sm"
                 >
                   <ShoppingCart size={24} />
+                </button>
+                <button
+                  onClick={toggleWishlist}
+                  className={`flex items-center justify-center w-[54px] h-[54px] rounded-md border-2 shrink-0 transition-all ${
+                    isInWishlist 
+                      ? 'bg-red-50 border-red-500 text-red-500' 
+                      : 'border-gray-200 text-gray-400 hover:border-red-200 hover:text-red-300'
+                  }`}
+                >
+                  <Heart size={24} fill={isInWishlist ? "currentColor" : "none"} />
                 </button>
                 <button
                   onClick={handleBuyNow}

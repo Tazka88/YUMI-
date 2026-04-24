@@ -1,0 +1,76 @@
+{
+  "entities": {
+    "Profile": {
+      "title": "User Profile",
+      "description": "Stores extended user details and preferences",
+      "type": "object",
+      "properties": {
+        "firstName": { "type": "string", "description": "User's first name" },
+        "lastName": { "type": "string", "description": "User's last name" },
+        "email": { "type": "string", "format": "email", "description": "User's contact email" },
+        "phone": { "type": "string", "description": "User's phone number" },
+        "wilaya": { "type": "string", "description": "Wilaya (Region)" },
+        "fullAddress": { "type": "string", "description": "Detailed primary address" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Account registration timestamp" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Last profile update" }
+      },
+      "required": ["firstName", "lastName", "email"]
+    },
+    "Order": {
+      "title": "Customer Order",
+      "description": "Stores order details linked to a user",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Reference to the user profile ID" },
+        "items": { "type": "array", "description": "List of ordered products" },
+        "total": { "type": "number", "description": "Order total amount" },
+        "status": { "type": "string", "enum": ["pending", "confirmed", "shipped", "delivered", "cancelled"], "description": "Current status of the order" },
+        "shippingAddress": { "type": "object", "description": "Snapshot of address used for this order" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "When the order was placed" }
+      },
+      "required": ["userId", "items", "total", "status", "createdAt"]
+    },
+    "Wishlist": {
+      "title": "User Wishlist Item",
+      "description": "A single product in a user's wishlist",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Reference to the user ID" },
+        "productId": { "type": "string", "description": "Reference to the product ID" },
+        "addedAt": { "type": "string", "format": "date-time", "description": "When the item was added" }
+      },
+      "required": ["userId", "productId", "addedAt"]
+    },
+    "Address": {
+      "title": "User Address",
+      "description": "Additional shipping addresses for a user",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "description": "Label for the address (Home, Office, etc.)" },
+        "isPrimary": { "type": "boolean", "description": "Whether this is the default address" },
+        "wilaya": { "type": "string", "description": "Region" },
+        "address": { "type": "string", "description": "Detailed address line" },
+        "phone": { "type": "string", "description": "Contact phone for this address" }
+      },
+      "required": ["title", "wilaya", "address"]
+    }
+  },
+  "firestore": {
+    "profiles/{userId}": {
+      "schema": "Profile",
+      "description": "Individual user profiles"
+    },
+    "profiles/{userId}/addresses/{addressId}": {
+      "schema": "Address",
+      "description": "User-specific additional addresses"
+    },
+    "orders/{orderId}": {
+      "schema": "Order",
+      "description": "Global collection of orders"
+    },
+    "wishlists/{wishlistId}": {
+      "schema": "Wishlist",
+      "description": "Items saved by users for later"
+    }
+  }
+}

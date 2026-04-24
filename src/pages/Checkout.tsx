@@ -1,8 +1,11 @@
 import toast from 'react-hot-toast';
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useCartStore } from '../store/cartStore';
-import { CheckCircle, Truck, MapPin, Phone, User as UserIcon, Navigation } from 'lucide-react';
+import { useAuth } from '../lib/AuthContext';
+import { CheckCircle, Truck, MapPin, Phone, User as UserIcon, Navigation, ChevronDown, Plus } from 'lucide-react';
+import { db } from '../lib/firebase';
+import { collection, query, getDocs } from 'firebase/firestore';
 import { formatPrice } from '../utils/formatPrice';
 import { fetchWithCache } from '../lib/utils';
 import { sendCapiEvent, generateEventId } from '../lib/capi';
@@ -18,6 +21,7 @@ interface Wilaya {
 
 export default function Checkout() {
   const { items, total, clearCart } = useCartStore();
+  const { user, profile } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   
@@ -42,6 +46,48 @@ export default function Checkout() {
   const [createdOrderId, setCreatedOrderId] = useState<string | null>(null);
   const [trackingIds, setTrackingIds] = useState({ ga: '', fb: '' });
   const [wilayas, setWilayas] = useState<Wilaya[]>([]);
+  const [savedAddresses, setSavedAddresses] = useState<any[]>([]);
+  const [showAddressPicker, setShowAddressPicker] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      const fetchSavedAddresses = async () => {
+        try {
+          const q = query(collection(db, 'profiles', user.uid, 'addresses'));
+          const snapshot = await getDocs(q);
+          const addrs = snapshot.docs.map(d => ({ id: d.id, ...d.data() })) as any[];
+          setSavedAddresses(addrs);
+          
+          // Pre-fill with primary if form is empty
+          const primary = addrs.find((a: any) => a.isPrimary);
+          if (primary && !formData.wilaya) {
+            setFormData(prev => ({
+              ...prev,
+              wilaya: primary.wilaya?.split(' ')[0] || '',
+              address: primary.address,
+              phone: primary.phone || prev.phone
+            }));
+          }
+        } catch (e) {
+          console.error("Error fetching saved addresses:", e);
+        }
+      };
+      fetchSavedAddresses();
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (user && profile) {
+      setFormData(prev => ({
+        ...prev,
+        name: profile.firstName ? `${profile.firstName} ${profile.lastName || ''}`.trim() : (user.displayName || prev.name),
+        email: user.email || prev.email,
+        phone: profile.phone || prev.phone,
+        wilaya: profile.wilaya || prev.wilaya,
+        address: profile.fullAddress || prev.address
+      }));
+    }
+  }, [user, profile]);
 
   // Shipping discount state
   const [isShippingDiscountApplied, setIsShippingDiscountApplied] = useState(false);
@@ -150,6 +196,24 @@ export default function Checkout() {
     setFormData({ ...formData, commune: e.target.value });
   };
 
+  const handleSelectSavedAddress = (addr: any) => {
+    const wilayaNumber = addr.wilaya?.split(' ')[0] || '';
+    setFormData(prev => ({
+      ...prev,
+      wilaya: wilayaNumber,
+      address: addr.address,
+      phone: addr.phone || prev.phone
+    }));
+    
+    const selectedWilaya = wilayas.find(w => w.number === wilayaNumber);
+    if (selectedWilaya) {
+      setDeliveryCost(Number(selectedWilaya.delivery_cost));
+      setDeliveryTime('24h-72h');
+    }
+    setShowAddressPicker(false);
+    toast.success('Adresse sélectionnée');
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -164,6 +228,7 @@ export default function Checkout() {
       note: formData.note,
       total_amount: finalTotal,
       delivery_cost: effectiveDeliveryCost,
+      customer_user_id: user?.uid || null,
       items: checkoutItems.map(item => ({
         product_id: item.id,
         quantity: item.quantity,
@@ -298,10 +363,48 @@ export default function Checkout() {
         {/* Form */}
         <div className="w-full lg:w-2/3">
           <form onSubmit={handleSubmit} className="bg-white p-6 md:p-8 rounded-lg shadow-sm space-y-6">
-            <h2 className="text-xl font-bold text-gray-800 mb-6 border-b pb-4 flex items-center gap-2">
-              <UserIcon size={20} className="text-orange-500" />
-              Informations de livraison
-            </h2>
+            <div className="flex items-center justify-between border-b pb-4 mb-6">
+              <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                <UserIcon size={20} className="text-orange-500" />
+                Informations de livraison
+              </h2>
+              {user && savedAddresses.length > 0 && (
+                <div className="relative">
+                  <button 
+                    type="button"
+                    onClick={() => setShowAddressPicker(!showAddressPicker)}
+                    className="text-xs font-bold text-orange-600 bg-orange-50 px-3 py-1.5 rounded-full flex items-center gap-1 hover:bg-orange-100 transition-colors"
+                  >
+                    <MapPin size={12} /> Vos adresses <ChevronDown size={12} />
+                  </button>
+                  
+                  {showAddressPicker && (
+                    <div className="absolute right-0 mt-2 w-72 bg-white border border-gray-100 rounded-xl shadow-xl z-50 p-2 space-y-1 animate-fade-in">
+                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-3 py-2">Sélectionnez une adresse</p>
+                      {savedAddresses.map(addr => (
+                        <button
+                          key={addr.id}
+                          type="button"
+                          onClick={() => handleSelectSavedAddress(addr)}
+                          className="w-full text-left p-3 rounded-lg hover:bg-gray-50 transition-colors border border-transparent hover:border-gray-100"
+                        >
+                          <p className="text-sm font-bold text-gray-900 flex items-center justify-between">
+                            {addr.title}
+                            {addr.isPrimary && <span className="text-[8px] bg-orange-100 text-orange-600 px-1.5 py-0.5 rounded">Principale</span>}
+                          </p>
+                          <p className="text-xs text-gray-500 line-clamp-1 mt-0.5">{addr.address}</p>
+                        </button>
+                      ))}
+                      <div className="pt-2 border-t mt-1">
+                        <Link to="/account/addresses" className="w-full text-center block p-2 text-xs font-bold text-orange-600 hover:bg-orange-50 rounded-lg">
+                          Gérer mes adresses
+                        </Link>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>

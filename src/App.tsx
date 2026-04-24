@@ -17,6 +17,20 @@ const Brands = React.lazy(() => import('./pages/Brands'));
 const BrandProducts = React.lazy(() => import('./pages/BrandProducts'));
 const Page = React.lazy(() => import('./pages/Page'));
 
+import { AuthProvider } from './lib/AuthContext';
+import ProtectedRoute from './components/ProtectedRoute';
+
+const Login = React.lazy(() => import('./pages/Account/Login'));
+const Register = React.lazy(() => import('./pages/Account/Register'));
+const ForgotPassword = React.lazy(() => import('./pages/Account/ForgotPassword'));
+const AccountLayout = React.lazy(() => import('./pages/Account/AccountLayout'));
+const Dashboard = React.lazy(() => import('./pages/Account/Dashboard'));
+const Orders = React.lazy(() => import('./pages/Account/Orders'));
+const Wishlist = React.lazy(() => import('./pages/Account/Wishlist'));
+const Addresses = React.lazy(() => import('./pages/Account/Addresses'));
+const Profile = React.lazy(() => import('./pages/Account/Profile'));
+const Notifications = React.lazy(() => import('./pages/Account/Notifications'));
+
 // Global fbclid catcher
 const GlobalFbclidCatcher = () => {
   useEffect(() => {
@@ -43,7 +57,8 @@ export default function App() {
   }, []);
 
   return (
-    <HelmetProvider>
+    <AuthProvider>
+      <HelmetProvider>
       <BrowserRouter>
         <GlobalFbclidCatcher />
         <Toaster position="top-center" />
@@ -64,6 +79,16 @@ export default function App() {
           <Route path="brands/:slug" element={<BrandProducts />} />
           <Route path="cart" element={<Cart />} />
           <Route path="checkout" element={<Checkout />} />
+          <Route path="account/login" element={<Login />} />
+          <Route path="account/register" element={<Register />} />
+          <Route path="account/forgot-password" element={<ForgotPassword />} />
+          <Route path="account" element={<ProtectedRoute><AccountLayout><Navigate to="/account/dashboard" replace /></AccountLayout></ProtectedRoute>} />
+          <Route path="account/dashboard" element={<ProtectedRoute><AccountLayout><Dashboard /></AccountLayout></ProtectedRoute>} />
+          <Route path="account/orders" element={<ProtectedRoute><AccountLayout><Orders /></AccountLayout></ProtectedRoute>} />
+          <Route path="account/wishlist" element={<ProtectedRoute><AccountLayout><Wishlist /></AccountLayout></ProtectedRoute>} />
+          <Route path="account/addresses" element={<ProtectedRoute><AccountLayout><Addresses /></AccountLayout></ProtectedRoute>} />
+          <Route path="account/profile" element={<ProtectedRoute><AccountLayout><Profile /></AccountLayout></ProtectedRoute>} />
+          <Route path="account/notifications" element={<ProtectedRoute><AccountLayout><Notifications /></AccountLayout></ProtectedRoute>} />
           <Route path=":slug" element={<Page />} />
         </Route>
         <Route path="/admin-7xK9pL2q/login" element={<AdminLogin />} />
@@ -73,5 +98,6 @@ export default function App() {
       </Suspense>
     </BrowserRouter>
     </HelmetProvider>
+    </AuthProvider>
   );
 }

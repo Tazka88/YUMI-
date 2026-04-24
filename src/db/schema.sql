@@ -107,6 +107,7 @@ CREATE TABLE IF NOT EXISTS product_images (
 CREATE TABLE IF NOT EXISTS orders (
   id SERIAL PRIMARY KEY,
   order_id VARCHAR(50) UNIQUE,
+  customer_user_id VARCHAR(255), -- Firebase UID or User ID
   customer_name VARCHAR(255) NOT NULL,
   customer_email VARCHAR(255),
   customer_phone VARCHAR(255) NOT NULL,
@@ -119,6 +120,8 @@ CREATE TABLE IF NOT EXISTS orders (
   status VARCHAR(50) DEFAULT 'pending',
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_user_id VARCHAR(255);
 
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_email VARCHAR(255);
 

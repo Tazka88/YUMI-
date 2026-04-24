@@ -48,7 +48,6 @@ class ErrorBoundary extends Component<Props, State> {
             <div className="space-y-3">
               <button
                 onClick={() => {
-                  // @ts-ignore
                   this.setState({ hasError: false, error: null });
                   window.location.reload();
                 }}
@@ -71,7 +70,6 @@ class ErrorBoundary extends Component<Props, State> {
       );
     }
 
-    // @ts-ignore
     return this.props.children;
   }
 }

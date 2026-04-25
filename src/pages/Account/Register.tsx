@@ -225,7 +225,10 @@ export default function Register() {
 
           <button
             type="button"
-            onClick={handleGoogleLogin}
+            onClick={(e) => {
+              e.preventDefault();
+              handleGoogleLogin();
+            }}
             className="w-full flex items-center justify-center py-3 px-4 border border-gray-200 rounded-xl shadow-sm text-sm font-bold text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 transition-all"
           >
             <svg className="w-5 h-5 mr-3" viewBox="0 0 24 24">

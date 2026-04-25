@@ -66,7 +66,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(({ data: { session }, error }) => {
+      if (error) {
+        console.error('Session error:', error);
+      }
       if (session) {
         setUser(session.user);
         fetchProfile(session.user.id).then(profileData => {
@@ -75,6 +78,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         });
       }
       setLoading(false);
+    }).catch(err => {
+      console.error('Catch session error:', err);
+      setLoading(false);
     });
 
     // Listen for auth changes
@@ -82,15 +88,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log('Auth event:', event);
       if (session) {
         setUser(session.user);
-        const profileData = await fetchProfile(session.user.id);
-        setProfile(profileData);
-        setIsAdmin(profileData?.role === 'admin');
+        // Do not block setting loading to false by waiting for profile
+        fetchProfile(session.user.id).then(profileData => {
+          setProfile(profileData);
+          setIsAdmin(profileData?.role === 'admin');
+        }).finally(() => {
+          setLoading(false);
+        });
       } else {
         setUser(null);
         setProfile(null);
         setIsAdmin(false);
+        setLoading(false);
       }
-      setLoading(false);
     });
 
     return () => {

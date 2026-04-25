@@ -20,13 +20,17 @@ export default function Register() {
   const handleGoogleLogin = async () => {
     if (!supabase) return;
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
+      const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: window.location.origin + '/account/dashboard'
+          redirectTo: window.location.origin + '/account/dashboard',
+          skipBrowserRedirect: true
         }
       });
       if (error) throw error;
+      if (data?.url) {
+        window.open(data.url, '_blank', 'width=500,height=600');
+      }
     } catch (error: any) {
       console.error("Google login error:", error);
       toast.error('Erreur lors de la connexion Google: ' + (error.message || 'erreur inconnue'));

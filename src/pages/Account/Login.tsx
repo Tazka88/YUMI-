@@ -45,10 +45,16 @@ export default function Login() {
         provider: 'google',
         options: {
           redirectTo: window.location.origin + '/account/dashboard',
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          },
           skipBrowserRedirect: true
         }
       });
+      
       if (error) throw error;
+      
       if (data?.url) {
         window.open(data.url, '_blank', 'width=500,height=600');
       }

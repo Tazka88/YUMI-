@@ -6,6 +6,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { fetchWithCache } from '../lib/utils';
 import TopBar from './TopBar';
+import { toast } from 'react-hot-toast';
 
 const categoryEmojis: Record<string, string> = {
   "Mode & Vêtements": "👗",
@@ -87,6 +88,21 @@ export default function Layout() {
     setExpandedSubcategories(prev => 
       prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
     );
+  };
+
+  const handleLogoutClick = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    try {
+      if (handleSignOut) {
+        await handleSignOut();
+      }
+      setShowAccountDropdown(false);
+      setIsMenuOpen(false);
+      toast.success('Déconnexion réussie');
+      navigate('/');
+    } catch (error) {
+      toast.error('Erreur lors de la déconnexion');
+    }
   };
 
   // Scroll to top on route change
@@ -312,7 +328,7 @@ export default function Layout() {
                         </Link>
                         {user && (
                           <button 
-                            onClick={handleSignOut}
+                            onClick={handleLogoutClick}
                             className="w-full flex items-center gap-3 px-4 py-3 hover:bg-red-50 text-red-600 transition-colors border-t border-gray-50"
                           >
                             <LogOut size={18} />

@@ -48,7 +48,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signOut = async () => {
     if (supabase) {
-      await supabase.auth.signOut();
+      try {
+        await supabase.auth.signOut();
+      } catch (err) {
+        console.error('Error during sign out:', err);
+      }
       setUser(null);
       setProfile(null);
       setIsAdmin(false);

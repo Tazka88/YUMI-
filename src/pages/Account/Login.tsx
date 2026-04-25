@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
-import { auth } from '../../lib/firebase';
+import { getSupabase } from '../../lib/supabase';
 import { toast } from 'react-hot-toast';
 import { LogIn, Mail, Lock, Chrome } from 'lucide-react';
 
@@ -12,29 +11,46 @@ export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
   const from = location.state?.from?.pathname || '/account/dashboard';
+  const supabase = getSupabase();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!supabase) {
+      toast.error('Erreur de configuration de la base de données.');
+      return;
+    }
     setLoading(true);
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) throw error;
+
       toast.success('Bon retour sur Zorando !');
       navigate(from, { replace: true });
     } catch (error: any) {
-      toast.error('Email ou mot de passe incorrect.');
+      console.error("Login error:", error);
+      toast.error(error.message || 'Email ou mot de passe incorrect.');
     } finally {
       setLoading(false);
     }
   };
 
   const handleGoogleLogin = async () => {
-    const provider = new GoogleAuthProvider();
+    if (!supabase) return;
     try {
-      await signInWithPopup(auth, provider);
-      toast.success('Bienvenue avec Google !');
-      navigate(from, { replace: true });
-    } catch (error) {
-      toast.error('Échec de la connexion avec Google.');
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: window.location.origin + '/account/dashboard'
+        }
+      });
+      if (error) throw error;
+    } catch (error: any) {
+      console.error("Google login error:", error);
+      toast.error('Échec de la connexion avec Google: ' + (error.message || 'erreur inconnue'));
     }
   };
 

@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../lib/AuthContext';
-import { db } from '../../lib/firebase';
-import { collection, query, where, getDocs, addDoc, deleteDoc, doc, updateDoc } from 'firebase/firestore';
+import { getSupabase } from '../../lib/supabase';
 import { MapPin, Plus, Trash2, Edit2, CheckCircle2, Home, Briefcase, User } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
@@ -10,25 +9,32 @@ export default function Addresses() {
   const [addresses, setAddresses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<number | null>(null);
   const [formData, setFormData] = useState({
     title: '',
     wilaya: '',
+    commune: '',
     address: '',
     phone: '',
     isPrimary: false
   });
+  const supabase = getSupabase();
 
   useEffect(() => {
-    if (!user) return;
+    if (!user || !supabase) return;
     fetchAddresses();
   }, [user]);
 
   const fetchAddresses = async () => {
+    if (!user || !supabase) return;
     try {
-      const q = query(collection(db, 'profiles', user!.uid, 'addresses'));
-      const snapshot = await getDocs(q);
-      setAddresses(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
+      const { data, error } = await supabase
+        .from('addresses')
+        .select('*')
+        .eq('profile_id', user.id);
+      
+      if (error) throw error;
+      setAddresses(data.map(d => ({ ...d, isPrimary: d.is_primary })));
     } catch (error) {
       console.error("Error fetching addresses:", error);
     } finally {
@@ -38,45 +44,65 @@ export default function Addresses() {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return;
+    if (!user || !supabase) return;
 
     try {
-      const addrRef = collection(db, 'profiles', user.uid, 'addresses');
-      
       if (formData.isPrimary) {
         // Unset other primary addresses
-        const primaryQuery = query(addrRef, where('isPrimary', '==', true));
-        const snap = await getDocs(primaryQuery);
-        for (const d of snap.docs) {
-          await updateDoc(doc(addrRef, d.id), { isPrimary: false });
-        }
+        await supabase
+          .from('addresses')
+          .update({ is_primary: false })
+          .eq('profile_id', user.id);
       }
 
+      const payload = {
+        profile_id: user.id,
+        title: formData.title,
+        wilaya: formData.wilaya,
+        commune: formData.commune,
+        address: formData.address,
+        phone: formData.phone,
+        is_primary: formData.isPrimary,
+        updated_at: new Date().toISOString()
+      };
+
       if (editingId) {
-        await updateDoc(doc(addrRef, editingId), formData);
+        const { error } = await supabase
+          .from('addresses')
+          .update(payload)
+          .eq('id', editingId);
+        if (error) throw error;
         toast.success('Adresse mise à jour');
       } else {
-        await addDoc(addrRef, formData);
+        const { error } = await supabase
+          .from('addresses')
+          .insert([payload]);
+        if (error) throw error;
         toast.success('Adresse ajoutée');
       }
       
-      setFormData({ title: '', wilaya: '', address: '', phone: '', isPrimary: false });
+      setFormData({ title: '', wilaya: '', commune: '', address: '', phone: '', isPrimary: false });
       setShowForm(false);
       setEditingId(null);
       fetchAddresses();
-    } catch (error) {
-      toast.error('Erreur lors de l\'enregistrement');
+    } catch (error: any) {
+      console.error('Save address error:', error);
+      toast.error('Erreur lors de l\'enregistrement: ' + (error.message || ''));
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Voulez-vous vraiment supprimer cette adresse ?')) return;
+  const handleDelete = async (id: number) => {
+    if (!confirm('Voulez-vous vraiment supprimer cette adresse ?') || !supabase) return;
     try {
-      await deleteDoc(doc(db, 'profiles', user!.uid, 'addresses', id));
+      const { error } = await supabase
+        .from('addresses')
+        .delete()
+        .eq('id', id);
+      if (error) throw error;
       toast.success('Adresse supprimée');
       fetchAddresses();
-    } catch (error) {
-      toast.error('Erreur lors de la suppression');
+    } catch (error: any) {
+      toast.error('Erreur lors de la suppression: ' + (error.message || ''));
     }
   };
 
@@ -84,6 +110,7 @@ export default function Addresses() {
     setFormData({
       title: addr.title,
       wilaya: addr.wilaya,
+      commune: addr.commune || '',
       address: addr.address,
       phone: addr.phone,
       isPrimary: addr.isPrimary
@@ -102,7 +129,7 @@ export default function Addresses() {
         {!showForm && (
           <button 
             onClick={() => {
-              setFormData({ title: '', wilaya: '', address: '', phone: '', isPrimary: false });
+              setFormData({ title: '', wilaya: '', commune: '', address: '', phone: '', isPrimary: false });
               setEditingId(null);
               setShowForm(true);
             }}
@@ -127,15 +154,27 @@ export default function Addresses() {
                   placeholder="Ex: Maison, Bureau..."
                 />
               </div>
-              <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Wilaya</label>
-                <input 
-                  required
-                  value={formData.wilaya}
-                  onChange={e => setFormData({...formData, wilaya: e.target.value})}
-                  className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none text-sm transition-all"
-                  placeholder="Ex: 16 Alger"
-                />
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Wilaya</label>
+                  <input 
+                    required
+                    value={formData.wilaya}
+                    onChange={e => setFormData({...formData, wilaya: e.target.value})}
+                    className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none text-sm transition-all"
+                    placeholder="16 Alger"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Commune</label>
+                  <input 
+                    required
+                    value={formData.commune}
+                    onChange={e => setFormData({...formData, commune: e.target.value})}
+                    className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none text-sm transition-all"
+                    placeholder="Commune"
+                  />
+                </div>
               </div>
             </div>
             <div>
@@ -208,7 +247,7 @@ export default function Addresses() {
                 </div>
                 <div className="flex-1 pr-12">
                   <h4 className="font-bold text-gray-900 capitalize">{addr.title}</h4>
-                  <p className="text-sm font-bold text-gray-700 mt-1">{addr.wilaya}</p>
+                  <p className="text-sm font-bold text-gray-700 mt-1">{addr.wilaya}{addr.commune ? ` - ${addr.commune}` : ''}</p>
                   <p className="text-sm text-gray-500 mt-1 line-clamp-2">{addr.address}</p>
                   <p className="text-xs font-medium text-gray-400 mt-3">{addr.phone}</p>
                 </div>

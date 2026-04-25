@@ -1,8 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { createUserWithEmailAndPassword, updateProfile, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
-import { auth, db } from '../../lib/firebase';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { getSupabase } from '../../lib/supabase';
 import { toast } from 'react-hot-toast';
 import { UserPlus, Mail, Lock, User, Phone } from 'lucide-react';
 
@@ -17,38 +15,30 @@ export default function Register() {
   });
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const supabase = getSupabase();
 
   const handleGoogleLogin = async () => {
+    if (!supabase) return;
     try {
-      const provider = new GoogleAuthProvider();
-      const result = await signInWithPopup(auth, provider);
-      
-      // Check if profile exists, if not create one
-      const docRef = doc(db, 'profiles', result.user.uid);
-      const docSnap = await getDoc(docRef);
-      
-      if (!docSnap.exists()) {
-        const [firstName, ...lastNameParts] = (result.user.displayName || '').split(' ');
-        await setDoc(docRef, {
-          firstName: firstName || 'Client',
-          lastName: lastNameParts.join(' ') || '',
-          email: result.user.email,
-          phone: result.user.phoneNumber || '',
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        });
-      }
-      
-      toast.success('Bienvenue chez Zorando !');
-      navigate('/account/dashboard');
-    } catch (error) {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: window.location.origin + '/account/dashboard'
+        }
+      });
+      if (error) throw error;
+    } catch (error: any) {
       console.error("Google login error:", error);
-      toast.error('Erreur lors de la connexion Google.');
+      toast.error('Erreur lors de la connexion Google: ' + (error.message || 'erreur inconnue'));
     }
   };
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!supabase) {
+      toast.error('Erreur de configuration de la base de données.');
+      return;
+    }
     if (formData.password !== formData.confirmPassword) {
       toast.error('Les mots de passe ne correspondent pas.');
       return;
@@ -56,31 +46,48 @@ export default function Register() {
 
     setLoading(true);
     try {
-      const { user } = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
-      
-      // Update Auth Profile
-      await updateProfile(user, {
-        displayName: `${formData.firstName} ${formData.lastName}`
+      const { data, error } = await supabase.auth.signUp({
+        email: formData.email,
+        password: formData.password,
+        options: {
+          data: {
+            first_name: formData.firstName,
+            last_name: formData.lastName,
+            phone: formData.phone,
+          }
+        }
       });
 
-      // Create Firestore Profile
-      await setDoc(doc(db, 'profiles', user.uid), {
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        email: formData.email,
-        phone: formData.phone,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      });
+      if (error) throw error;
+
+      if (data.user) {
+        // Create profile in profiles table
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .insert([
+            {
+              id: data.user.id,
+              first_name: formData.firstName,
+              last_name: formData.lastName,
+              email: formData.email,
+              phone: formData.phone,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            }
+          ]);
+        
+        if (profileError) {
+          console.error('Error creating profile:', profileError);
+          // Don't fail the whole registration if profile creation fails
+          // as auth succeeded and Supabase triggers or metadata might handle it
+        }
+      }
 
       toast.success('Compte créé avec succès ! Bienvenue chez Zorando.');
       navigate('/account/dashboard');
     } catch (error: any) {
-      if (error.code === 'auth/email-already-in-use') {
-        toast.error('Cet email est déjà utilisé.');
-      } else {
-        toast.error('Une erreur est survenue lors de l\'inscription.');
-      }
+      console.error("Registration error:", error);
+      toast.error(error.message || 'Une erreur est survenue lors de l\'inscription.');
     } finally {
       setLoading(false);
     }

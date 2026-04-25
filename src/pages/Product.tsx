@@ -4,8 +4,7 @@ import { ShoppingCart, Star, ShieldCheck, Truck, RotateCcw, ThumbsUp, Facebook, 
 import toast from 'react-hot-toast';
 import { useCartStore, Product as ProductType } from '../store/cartStore';
 import { useAuth } from '../lib/AuthContext';
-import { db } from '../lib/firebase';
-import { collection, addDoc, query, where, getDocs, deleteDoc, doc } from 'firebase/firestore';
+import { getSupabase } from '../lib/supabase';
 import { formatPrice } from '../utils/formatPrice';
 import { ProductCard } from '../components/ProductCard';
 import SEO from '../components/SEO';
@@ -65,12 +64,13 @@ export default function Product() {
   const [modalImage, setModalImage] = useState<string | null>(null);
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
   const [isInWishlist, setIsInWishlist] = useState(false);
-  const [wishlistDocId, setWishlistDocId] = useState<string | null>(null);
+  const [wishlistDocId, setWishlistDocId] = useState<number | null>(null);
   const [trackingIds, setTrackingIds] = useState({ ga: '', fb: '' });
   const [settings, setSettings] = useState<any>({});
   const addItem = useCartStore(state => state.addItem);
   const { user } = useAuth();
   const navigate = useNavigate();
+  const supabase = getSupabase();
 
   useEffect(() => {
     const controller = new AbortController();
@@ -87,18 +87,22 @@ export default function Product() {
       });
       
     // Check if in wishlist
-    if (user && slug) {
+    if (user && slug && supabase) {
        const checkWishlist = async () => {
          try {
-           const q = query(
-             collection(db, 'wishlists'),
-             where('userId', '==', user.uid),
-             where('productId', '==', product?.id?.toString() || '')
-           );
-           const snapshot = await getDocs(q);
-           if (!snapshot.empty) {
+           const { data, error } = await supabase
+             .from('wishlists')
+             .select('id')
+             .eq('profile_id', user.id)
+             .eq('product_id', product?.id);
+             
+           if (error) throw error;
+           if (data && data.length > 0) {
              setIsInWishlist(true);
-             setWishlistDocId(snapshot.docs[0].id);
+             setWishlistDocId(data[0].id);
+           } else {
+             setIsInWishlist(false);
+             setWishlistDocId(null);
            }
          } catch (e) {
            console.error("Wishlist check error:", e);
@@ -344,7 +348,7 @@ export default function Product() {
   };
 
   const toggleWishlist = async () => {
-    if (!user) {
+    if (!user || !supabase) {
       toast.error("Veuillez vous connecter pour ajouter des favoris");
       navigate('/account/login');
       return;
@@ -352,18 +356,30 @@ export default function Product() {
 
     try {
       if (isInWishlist && wishlistDocId) {
-        await deleteDoc(doc(db, 'wishlists', wishlistDocId));
+        const { error } = await supabase
+          .from('wishlists')
+          .delete()
+          .eq('id', wishlistDocId);
+          
+        if (error) throw error;
         setIsInWishlist(false);
         setWishlistDocId(null);
         toast.success("Retiré des favoris");
       } else {
-        const docRef = await addDoc(collection(db, 'wishlists'), {
-          userId: user.uid,
-          productId: product.id.toString(),
-          addedAt: new Date().toISOString()
-        });
+        const { data, error } = await supabase
+          .from('wishlists')
+          .insert([
+            {
+              profile_id: user.id,
+              product_id: product.id
+            }
+          ])
+          .select('id')
+          .single();
+          
+        if (error) throw error;
         setIsInWishlist(true);
-        setWishlistDocId(docRef.id);
+        setWishlistDocId(data.id);
         toast.success("Ajouté aux favoris !");
       }
     } catch (e) {

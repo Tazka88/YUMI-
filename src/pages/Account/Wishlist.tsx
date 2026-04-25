@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../lib/AuthContext';
-import { db } from '../../lib/firebase';
-import { collection, query, where, getDocs, deleteDoc, doc } from 'firebase/firestore';
+import { getSupabase } from '../../lib/supabase';
 import { Heart, ShoppingCart, Trash2, ExternalLink } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
@@ -11,29 +10,29 @@ export default function Wishlist() {
   const { user } = useAuth();
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const supabase = getSupabase();
 
   useEffect(() => {
-    if (!user) return;
+    if (!user || !supabase) return;
 
     const fetchWishlist = async () => {
       try {
-        const q = query(
-          collection(db, 'wishlists'),
-          where('userId', '==', user.uid)
-        );
-        const snapshot = await getDocs(q);
-        const wishlistItems = snapshot.docs.map(d => ({ wishlistId: d.id, ...d.data() }));
+        const { data: wishlistItems, error } = await supabase
+          .from('wishlists')
+          .select('*')
+          .eq('profile_id', user.id);
+
+        if (error) throw error;
 
         // Fetch product details for each wishlist item
-        // In this architecture, we might fetch from /api/products?ids=...
-        if (wishlistItems.length > 0) {
-          const ids = wishlistItems.map((item: any) => item.productId).join(',');
+        if (wishlistItems && wishlistItems.length > 0) {
+          const ids = wishlistItems.map((item: any) => item.product_id).join(',');
           const response = await fetch(`/api/products?ids=${ids}`);
           const products = await response.json();
           
           const mergedItems = wishlistItems.map((wish: any) => {
-            const product = products.find((p: any) => p.id.toString() === wish.productId.toString());
-            return { ...wish, product };
+            const product = products.find((p: any) => p.id.toString() === wish.product_id.toString());
+            return { ...wish, wishlistId: wish.id, product };
           }).filter((item: any) => item.product); // Filter out any products that might have been deleted
 
           setItems(mergedItems);
@@ -50,9 +49,14 @@ export default function Wishlist() {
     fetchWishlist();
   }, [user]);
 
-  const handleRemove = async (wishlistId: string) => {
+  const handleRemove = async (wishlistId: number) => {
+    if (!supabase) return;
     try {
-      await deleteDoc(doc(db, 'wishlists', wishlistId));
+      const { error } = await supabase
+        .from('wishlists')
+        .delete()
+        .eq('id', wishlistId);
+      if (error) throw error;
       setItems(items.filter(item => item.wishlistId !== wishlistId));
       toast.success('Retiré de vos favoris');
     } catch (error) {

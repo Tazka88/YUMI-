@@ -31,6 +31,7 @@ const Wishlist = React.lazy(() => import('./pages/Account/Wishlist'));
 const Addresses = React.lazy(() => import('./pages/Account/Addresses'));
 const Profile = React.lazy(() => import('./pages/Account/Profile'));
 const Notifications = React.lazy(() => import('./pages/Account/Notifications'));
+const AuthCallback = React.lazy(() => import('./pages/AuthCallback'));
 
 // Global fbclid catcher
 const GlobalFbclidCatcher = () => {
@@ -91,6 +92,7 @@ export default function App() {
           <Route path="account/addresses" element={<ProtectedRoute><AccountLayout><Addresses /></AccountLayout></ProtectedRoute>} />
           <Route path="account/profile" element={<ProtectedRoute><AccountLayout><Profile /></AccountLayout></ProtectedRoute>} />
           <Route path="account/notifications" element={<ProtectedRoute><AccountLayout><Notifications /></AccountLayout></ProtectedRoute>} />
+          <Route path="auth/callback" element={<AuthCallback />} />
           <Route path=":slug" element={<Page />} />
         </Route>
         <Route path="/admin-7xK9pL2q/login" element={<AdminLogin />} />

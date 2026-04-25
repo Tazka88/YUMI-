@@ -2,8 +2,6 @@ import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { ShoppingCart, Search, Menu, User, MessageCircle, X, Phone, LayoutDashboard, Facebook, Instagram, Youtube, Truck, MapPin, ChevronRight, HelpCircle, Package, ClipboardList, Heart, LogOut, LifeBuoy, RotateCcw, CreditCard } from 'lucide-react';
 import { useCartStore } from '../store/cartStore';
 import { useAuth } from '../lib/AuthContext';
-import { auth } from '../lib/firebase';
-import { signOut } from 'firebase/auth';
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { fetchWithCache } from '../lib/utils';
@@ -62,7 +60,7 @@ export const CategoryNameDisplay = ({ name, className = "" }: { name: string, cl
 };
 
 export default function Layout() {
-  const { user, profile } = useAuth();
+  const { user, profile, signOut: handleSignOut } = useAuth();
   const cartItems = useCartStore((state) => state.items);
   const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
   const [searchQuery, setSearchQuery] = useState('');
@@ -263,7 +261,7 @@ export default function Layout() {
                      <User size={24} className="text-gray-800 group-hover:text-orange-600 transition-colors" />
                      <div className="flex items-center gap-1">
                         <span className="text-sm font-bold text-gray-800 group-hover:text-orange-600 truncate max-w-[80px]">
-                          {profile?.firstName || user.displayName?.split(' ')[0] || 'Compte'}
+                          {profile?.first_name || profile?.firstName || user?.user_metadata?.first_name || 'Compte'}
                         </span>
                         <ChevronRight size={14} className={`transition-transform text-gray-400 ${showAccountDropdown ? '-rotate-90' : 'rotate-90'}`} />
                      </div>
@@ -314,7 +312,7 @@ export default function Layout() {
                         </Link>
                         {user && (
                           <button 
-                            onClick={() => signOut(auth)}
+                            onClick={handleSignOut}
                             className="w-full flex items-center gap-3 px-4 py-3 hover:bg-red-50 text-red-600 transition-colors border-t border-gray-50"
                           >
                             <LogOut size={18} />
@@ -427,7 +425,7 @@ export default function Layout() {
                     <User className="text-orange-500" size={24} />
                   </div>
                   <div>
-                    <h4 className="font-bold text-gray-900 text-sm">{profile?.firstName || user.displayName || 'Client'}</h4>
+                    <h4 className="font-bold text-gray-900 text-sm">{profile?.first_name || profile?.firstName || user?.user_metadata?.first_name || 'Client'}</h4>
                     <Link to="/account/dashboard" onClick={() => setIsMenuOpen(false)} className="text-xs text-orange-600 font-bold hover:underline">Accéder à mon espace</Link>
                   </div>
                 </div>

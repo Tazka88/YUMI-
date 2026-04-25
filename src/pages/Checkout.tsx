@@ -4,8 +4,7 @@ import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useCartStore } from '../store/cartStore';
 import { useAuth } from '../lib/AuthContext';
 import { CheckCircle, Truck, MapPin, Phone, User as UserIcon, Navigation, ChevronDown, Plus } from 'lucide-react';
-import { db } from '../lib/firebase';
-import { collection, query, getDocs } from 'firebase/firestore';
+import { getSupabase } from '../lib/supabase';
 import { formatPrice } from '../utils/formatPrice';
 import { fetchWithCache } from '../lib/utils';
 import { sendCapiEvent, generateEventId } from '../lib/capi';
@@ -18,12 +17,12 @@ interface Wilaya {
   delivery_cost: number;
   is_active: number;
 }
-
 export default function Checkout() {
   const { items, total, clearCart } = useCartStore();
   const { user, profile } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const supabase = getSupabase();
   
   const directBuyItem = location.state?.directBuyItem;
   const checkoutItems = directBuyItem ? [directBuyItem] : items;
@@ -50,23 +49,29 @@ export default function Checkout() {
   const [showAddressPicker, setShowAddressPicker] = useState(false);
 
   useEffect(() => {
-    if (user) {
+    if (user && supabase) {
       const fetchSavedAddresses = async () => {
         try {
-          const q = query(collection(db, 'profiles', user.uid, 'addresses'));
-          const snapshot = await getDocs(q);
-          const addrs = snapshot.docs.map(d => ({ id: d.id, ...d.data() })) as any[];
-          setSavedAddresses(addrs);
+          const { data, error } = await supabase
+            .from('addresses')
+            .select('*')
+            .eq('profile_id', user.id);
+            
+          if (error) throw error;
           
-          // Pre-fill with primary if form is empty
-          const primary = addrs.find((a: any) => a.isPrimary);
-          if (primary && !formData.wilaya) {
-            setFormData(prev => ({
-              ...prev,
-              wilaya: primary.wilaya?.split(' ')[0] || '',
-              address: primary.address,
-              phone: primary.phone || prev.phone
-            }));
+          if (Array.isArray(data)) {
+            setSavedAddresses(data);
+            
+            // Pre-fill with primary if form is empty
+            const primary = data.find((a: any) => a.is_primary);
+            if (primary && !formData.wilaya) {
+              setFormData(prev => ({
+                ...prev,
+                wilaya: primary.wilaya?.split(' ')[0] || '',
+                address: primary.address,
+                phone: primary.phone || prev.phone
+              }));
+            }
           }
         } catch (e) {
           console.error("Error fetching saved addresses:", e);
@@ -80,11 +85,11 @@ export default function Checkout() {
     if (user && profile) {
       setFormData(prev => ({
         ...prev,
-        name: profile.firstName ? `${profile.firstName} ${profile.lastName || ''}`.trim() : (user.displayName || prev.name),
+        name: (profile.first_name || profile.firstName) ? `${profile.first_name || profile.firstName} ${profile.last_name || profile.lastName || ''}`.trim() : (user.user_metadata?.first_name || prev.name),
         email: user.email || prev.email,
         phone: profile.phone || prev.phone,
         wilaya: profile.wilaya || prev.wilaya,
-        address: profile.fullAddress || prev.address
+        address: profile.full_address || profile.fullAddress || prev.address
       }));
     }
   }, [user, profile]);
@@ -228,7 +233,7 @@ export default function Checkout() {
       note: formData.note,
       total_amount: finalTotal,
       delivery_cost: effectiveDeliveryCost,
-      customer_user_id: user?.uid || null,
+      customer_user_id: user?.id || null,
       items: checkoutItems.map(item => ({
         product_id: item.id,
         quantity: item.quantity,

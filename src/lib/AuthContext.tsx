@@ -1,13 +1,12 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { onAuthStateChanged, User } from 'firebase/auth';
-import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
-import { auth, db } from './firebase';
+import { getSupabase } from './supabase';
 
 interface AuthContextType {
-  user: User | null;
+  user: any | null;
   profile: any | null;
   loading: boolean;
   isAdmin: boolean;
+  signOut: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -15,98 +14,88 @@ const AuthContext = createContext<AuthContextType>({
   profile: null,
   loading: true,
   isAdmin: false,
+  signOut: async () => {},
 });
 
 export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<any | null>(null);
   const [profile, setProfile] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  const supabase = getSupabase();
+
+  const fetchProfile = async (userId: string) => {
+    if (!supabase) return null;
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+
+      if (error && error.code !== 'PGRST116') {
+        console.error('Error fetching profile:', error);
+        return null;
+      }
+      return data;
+    } catch (err) {
+      console.error('Catch error fetching profile:', err);
+      return null;
+    }
+  };
+
+  const signOut = async () => {
+    if (supabase) {
+      await supabase.auth.signOut();
+      setUser(null);
+      setProfile(null);
+      setIsAdmin(false);
+    }
+  };
 
   useEffect(() => {
-    let unsubscribeProfile: (() => void) | null = null;
+    if (!supabase) {
+      setLoading(false);
+      return;
+    }
 
-    const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
-      setUser(user);
-      
-      if (user) {
-        try {
-          // Fetch or create profile
-          const profileRef = doc(db, 'profiles', user.uid);
-          
-          // Use a timeout for the profile fetch to avoid hanging the auth state
-          const profilePromise = getDoc(profileRef);
-          const timeoutPromise = new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('Profile fetch timeout')), 5000)
-          );
-          
-          const profileSnap = await Promise.race([profilePromise, timeoutPromise]) as any;
-          
-          if (profileSnap && profileSnap.exists()) {
-            const data = profileSnap.data();
-            setProfile(data);
-            setIsAdmin(data?.role === 'admin');
-          } else {
-            // Create basic profile if it doesn't exist
-            const newProfile = {
-              firstName: user.displayName?.split(' ')[0] || '',
-              lastName: user.displayName?.split(' ')[1] || '',
-              email: user.email,
-              createdAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString(),
-            };
-            try {
-              await setDoc(profileRef, newProfile);
-              setProfile(newProfile);
-            } catch (e) {
-              console.error('Failed to create profile:', e);
-              // Fallback profile
-              setProfile(newProfile);
-            }
-          }
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        setUser(session.user);
+        fetchProfile(session.user.id).then(profileData => {
+          setProfile(profileData);
+          setIsAdmin(profileData?.role === 'admin');
+        });
+      }
+      setLoading(false);
+    });
 
-          // Listen for profile changes
-          if (unsubscribeProfile) unsubscribeProfile();
-          unsubscribeProfile = onSnapshot(profileRef, (doc) => {
-            if (doc.exists()) {
-              const data = doc.data();
-              setProfile(data);
-              setIsAdmin(data?.role === 'admin');
-            }
-          }, (err) => {
-            console.error('Profile snapshot error:', err);
-          });
-
-        } catch (error) {
-          console.error('Error in auth state change:', error);
-          // Don't block the app if profile fetch fails
-          setProfile(null);
-          setIsAdmin(false);
-        }
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('Auth event:', event);
+      if (session) {
+        setUser(session.user);
+        const profileData = await fetchProfile(session.user.id);
+        setProfile(profileData);
+        setIsAdmin(profileData?.role === 'admin');
       } else {
-        if (unsubscribeProfile) {
-          unsubscribeProfile();
-          unsubscribeProfile = null;
-        }
+        setUser(null);
         setProfile(null);
         setIsAdmin(false);
       }
       setLoading(false);
-    }, (error) => {
-      console.error('Auth state change error:', error);
-      setLoading(false);
     });
 
     return () => {
-      unsubscribeAuth();
-      if (unsubscribeProfile) unsubscribeProfile();
+      subscription.unsubscribe();
     };
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading, isAdmin }}>
+    <AuthContext.Provider value={{ user, profile, loading, isAdmin, signOut }}>
       {children}
     </AuthContext.Provider>
   );

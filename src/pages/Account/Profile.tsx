@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../lib/AuthContext';
-import { db } from '../../lib/firebase';
-import { doc, updateDoc } from 'firebase/firestore';
+import { getSupabase } from '../../lib/supabase';
 import { User, Mail, Phone, MapPin, Save, Shield, Calendar } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
@@ -15,32 +14,43 @@ export default function Profile() {
     fullAddress: ''
   });
   const [loading, setLoading] = useState(false);
+  const supabase = getSupabase();
 
   useEffect(() => {
     if (profile) {
       setFormData({
-        firstName: profile.firstName || '',
-        lastName: profile.lastName || '',
+        firstName: profile.first_name || profile.firstName || '',
+        lastName: profile.last_name || profile.lastName || '',
         phone: profile.phone || '',
         wilaya: profile.wilaya || '',
-        fullAddress: profile.fullAddress || ''
+        fullAddress: profile.full_address || profile.fullAddress || ''
       });
     }
   }, [profile]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return;
+    if (!user || !supabase) return;
 
     setLoading(true);
     try {
-      await updateDoc(doc(db, 'profiles', user.uid), {
-        ...formData,
-        updatedAt: new Date().toISOString()
-      });
+      const { error } = await supabase
+        .from('profiles')
+        .upsert({
+          id: user.id,
+          first_name: formData.firstName,
+          last_name: formData.lastName,
+          phone: formData.phone,
+          wilaya: formData.wilaya,
+          full_address: formData.fullAddress,
+          updated_at: new Date().toISOString()
+        });
+
+      if (error) throw error;
       toast.success('Profil mis à jour avec succès');
-    } catch (error) {
-      toast.error('Erreur lors de la mise à jour');
+    } catch (error: any) {
+      console.error('Update profile error:', error);
+      toast.error('Erreur lors de la mise à jour: ' + (error.message || ''));
     } finally {
       setLoading(false);
     }

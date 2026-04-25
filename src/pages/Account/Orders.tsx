@@ -1,7 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../lib/AuthContext';
-import { db } from '../../lib/firebase';
-import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
 import { Package, Search, ChevronRight, ExternalLink } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { formatPrice } from '../../utils/formatPrice';
@@ -17,7 +15,7 @@ export default function Orders() {
 
     const fetchOrders = async () => {
       try {
-        const response = await fetch(`/api/orders/user/${user.uid}`);
+        const response = await fetch(`/api/orders/user/${user.id}`);
         const data = await response.json();
         if (Array.isArray(data)) {
           setOrders(data);

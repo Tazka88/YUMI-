@@ -1,7 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../lib/AuthContext';
-import { db } from '../../lib/firebase';
-import { collection, query, where, limit, getDocs, orderBy } from 'firebase/firestore';
 import { Package, Heart, MapPin, ChevronRight, ShoppingBag } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { formatPrice } from '../../utils/formatPrice';
@@ -18,7 +16,7 @@ export default function Dashboard() {
     const fetchDashboardData = async () => {
       try {
         // Fetch from SQL database via API
-        const response = await fetch(`/api/orders/user/${user.uid}`);
+        const response = await fetch(`/api/orders/user/${user.id}`);
         const orders = await response.json();
         
         if (Array.isArray(orders)) {
@@ -48,7 +46,7 @@ export default function Dashboard() {
   return (
     <div className="space-y-8">
       <div>
-        <h2 className="text-2xl font-bold text-gray-900">Bienvenue, {profile?.firstName || user?.displayName?.split(' ')[0] || 'Client'} !</h2>
+        <h2 className="text-2xl font-bold text-gray-900">Bienvenue, {profile?.first_name || profile?.firstName || user?.user_metadata?.first_name || 'Client'} !</h2>
         <p className="text-gray-500 mt-1">Ravie de vous revoir. Voici un aperçu de votre compte.</p>
       </div>
 
@@ -119,7 +117,7 @@ export default function Dashboard() {
                   <MapPin className="w-5 h-5 mr-2" /> Adresse par défaut
                 </h4>
                 <p className="text-sm text-orange-800 mt-2 line-clamp-2">
-                  {profile?.fullAddress || "Aucune adresse enregistrée."}
+                  {profile?.full_address || profile?.fullAddress || "Aucune adresse enregistrée."}
                 </p>
                 <Link to="/account/addresses" className="mt-4 inline-flex items-center text-xs font-bold text-orange-700 uppercase tracking-wider group-hover:underline">
                   Modifier <ChevronRight className="w-3 h-3 ml-1" />

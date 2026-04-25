@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { sendPasswordResetEmail } from 'firebase/auth';
-import { auth } from '../../lib/firebase';
+import { getSupabase } from '../../lib/supabase';
 import { toast } from 'react-hot-toast';
 import { Mail, ArrowLeft, KeyRound } from 'lucide-react';
 
@@ -9,12 +8,17 @@ export default function ForgotPassword() {
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const supabase = getSupabase();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!supabase) return;
     setLoading(true);
     try {
-      await sendPasswordResetEmail(auth, email);
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/account/reset-password`,
+      });
+      if (error) throw error;
       setSubmitted(true);
       toast.success('Lien de réinitialisation envoyé !');
     } catch (error: any) {

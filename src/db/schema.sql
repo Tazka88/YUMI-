@@ -104,10 +104,46 @@ CREATE TABLE IF NOT EXISTS product_images (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS profiles (
+  id UUID PRIMARY KEY, -- Link to auth.users.id
+  first_name VARCHAR(255),
+  last_name VARCHAR(255),
+  email VARCHAR(255),
+  phone VARCHAR(255),
+  wilaya VARCHAR(255),
+  full_address TEXT,
+  role VARCHAR(50) DEFAULT 'user',
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS addresses (
+  id SERIAL PRIMARY KEY,
+  profile_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
+  title VARCHAR(255), -- e.g. Home, Office
+  first_name VARCHAR(255),
+  last_name VARCHAR(255),
+  phone VARCHAR(255),
+  wilaya VARCHAR(255),
+  commune VARCHAR(255),
+  address TEXT,
+  is_primary BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS wishlists (
+  id SERIAL PRIMARY KEY,
+  profile_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
+  product_id INTEGER,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(profile_id, product_id)
+);
+
 CREATE TABLE IF NOT EXISTS orders (
   id SERIAL PRIMARY KEY,
   order_id VARCHAR(50) UNIQUE,
-  customer_user_id VARCHAR(255), -- Firebase UID or User ID
+  customer_user_id UUID, -- Link to auth.users.id or profiles.id
   customer_name VARCHAR(255) NOT NULL,
   customer_email VARCHAR(255),
   customer_phone VARCHAR(255) NOT NULL,

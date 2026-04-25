@@ -1,7 +1,6 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../lib/AuthContext';
-import { auth } from '../../lib/firebase';
 import { 
   User, 
   Package, 
@@ -15,12 +14,14 @@ import {
 import { toast } from 'react-hot-toast';
 
 export default function AccountLayout({ children }: { children: React.ReactNode }) {
-  const { user, profile } = useAuth();
+  const { user, profile, signOut: handleSignOut } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = async () => {
     try {
-      await auth.signOut();
+      if (handleSignOut) {
+        await handleSignOut();
+      }
       toast.success('Déconnexion réussie');
       navigate('/');
     } catch (error) {

@@ -39,16 +39,15 @@ export default function Login() {
   };
 
   const handleGoogleLogin = async () => {
-    if (!supabase) return;
+    if (!supabase) {
+      toast.error("Erreur de configuration : Impossible de se connecter à la base de données.");
+      return;
+    }
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
+      const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: window.location.origin + '/account/dashboard',
-          queryParams: {
-            access_type: 'offline',
-            prompt: 'consent',
-          }
+          redirectTo: 'https://zorando.com'
         }
       });
       

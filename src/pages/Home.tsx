@@ -526,15 +526,15 @@ export default function Home() {
     fetchWithCache('/api/brands', { signal }).then(data => { if (Array.isArray(data)) setBrands(data); setLoadingBrands(false); }).catch(err => { handleFetchError(err); setLoadingBrands(false); });
     
     Promise.all([
-      fetchDynamic('/api/products?sort=popular&limit=12').then(data => { if (Array.isArray(data)) setPopularProducts(data); }),
-      fetchDynamic('/api/products?sort=bestsellers&limit=12').then(data => { if (Array.isArray(data)) setBestSellers(data); }),
+      fetchDynamic('/api/products?sort=trending&limit=12').then(data => { if (Array.isArray(data)) setPopularProducts(data); }),
+      fetchDynamic('/api/products?sort=top_sales&limit=12').then(data => { if (Array.isArray(data)) setBestSellers(data); }),
       fetchDynamic('/api/products?sort=newest&limit=12').then(data => { if (Array.isArray(data)) setNewProducts(data); })
     ]).catch(handleFetchError).finally(() => {
       setIsInitialLoading(false);
     });
     
     fetchDynamic('/api/products?sort=random&limit=12').then(data => { if (Array.isArray(data)) setRandomProducts(data); }).catch(handleFetchError);
-    fetchDynamic('/api/products?special_offers=true&limit=12').then(data => { if (Array.isArray(data)) setPromotions(data); }).catch(handleFetchError);
+    fetchDynamic('/api/products?promo_active=true&limit=12').then(data => { if (Array.isArray(data)) setPromotions(data); }).catch(handleFetchError);
 
     const loadSections = () => {
       fetchWithCache('/api/settings')

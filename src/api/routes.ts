@@ -568,11 +568,11 @@ router.get('/products', async (req, res) => {
   const sub_subcategory = req.query.sub_subcategory as string | undefined;
   const brand = req.query.brand as string | undefined;
   const search = req.query.search as string | undefined;
-  const popular = req.query.popular as string | undefined;
-  const best_seller = req.query.best_seller as string | undefined;
+  const popular = req.query.popular || req.query.trending === 'true' ? 'true' : undefined;
+  const best_seller = req.query.best_seller || req.query.top_sales === 'true' ? 'true' : undefined;
   const isNew = req.query.new as string | undefined;
   const recommended = req.query.recommended as string | undefined;
-  const special_offers = req.query.special_offers as string | undefined;
+  const special_offers = req.query.special_offers || req.query.promo_active === 'true' ? 'true' : undefined;
   const ids = req.query.ids as string | undefined;
   const sort = req.query.sort as string | undefined;
   const limit = req.query.limit ? Number(req.query.limit) : 100;
@@ -583,9 +583,9 @@ router.get('/products', async (req, res) => {
     let orderClause = sql`ORDER BY p.created_at DESC`;
     if (sort === 'newest') {
       orderClause = sql`ORDER BY p.created_at DESC`;
-    } else if (sort === 'bestsellers') {
+    } else if (sort === 'bestsellers' || sort === 'top_sales') {
       orderClause = sql`ORDER BY p.sales_count DESC NULLS LAST, p.created_at DESC`;
-    } else if (sort === 'popular') {
+    } else if (sort === 'popular' || sort === 'trending') {
       orderClause = sql`ORDER BY p.views_count DESC NULLS LAST, p.created_at DESC`;
     } else if (sort === 'random') {
       orderClause = sql`ORDER BY RANDOM()`;

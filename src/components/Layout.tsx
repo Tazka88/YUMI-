@@ -390,6 +390,13 @@ export default function Layout() {
                 </AnimatePresence>
               </div>
 
+              {/* Account Mobile */}
+              <div className="md:hidden">
+                <Link to={user ? "/account/dashboard" : "/account/login"} className="flex items-center group transition-all p-1">
+                  <User size={24} className="text-gray-800 group-hover:text-orange-600 transition-colors" />
+                </Link>
+              </div>
+
               {/* Cart */}
               <Link to="/cart" className="flex items-center gap-2 group transition-all p-1 relative">
                 <div className="relative">
@@ -445,6 +452,13 @@ export default function Layout() {
                     <Link to="/account/dashboard" onClick={() => setIsMenuOpen(false)} className="text-xs text-orange-600 font-bold hover:underline">Accéder à mon espace</Link>
                   </div>
                 </div>
+                <button
+                  onClick={handleLogoutClick}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2 mt-2 border border-red-200 bg-red-50 text-red-600 text-xs font-bold rounded-lg hover:bg-red-100 transition-colors"
+                >
+                  <LogOut size={14} />
+                  Déconnexion
+                </button>
               </div>
             )}
 

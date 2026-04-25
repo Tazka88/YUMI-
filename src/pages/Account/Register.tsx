@@ -26,7 +26,7 @@ export default function Register() {
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: 'https://zorando.com'
+          redirectTo: `${window.location.origin}/account/dashboard`
         }
       });
       

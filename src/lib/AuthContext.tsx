@@ -88,12 +88,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log('Auth event:', event);
       if (session) {
         setUser(session.user);
-        // Do not block setting loading to false by waiting for profile
+        setLoading(false);
+        // Fetch profile without blocking UI
         fetchProfile(session.user.id).then(profileData => {
           setProfile(profileData);
           setIsAdmin(profileData?.role === 'admin');
-        }).finally(() => {
-          setLoading(false);
         });
       } else {
         setUser(null);

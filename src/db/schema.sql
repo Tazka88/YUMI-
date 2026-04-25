@@ -255,5 +255,30 @@ ALTER TABLE pages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE settings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE footer_columns ENABLE ROW LEVEL SECURITY;
 ALTER TABLE footer_links ENABLE ROW LEVEL SECURITY;
-ALTER TABLE reviews ENABLE ROW LEVEL SECURITY;
-ALTER TABLE wilayas ENABLE ROW LEVEL SECURITY;
+ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE addresses ENABLE ROW LEVEL SECURITY;
+ALTER TABLE wishlists ENABLE ROW LEVEL SECURITY;
+
+-- Allow public read access to most tables we want to be visible
+CREATE POLICY "Enable read access for all users" ON products FOR SELECT USING (true);
+CREATE POLICY "Enable read access for all users" ON categories FOR SELECT USING (true);
+CREATE POLICY "Enable read access for all users" ON subcategories FOR SELECT USING (true);
+CREATE POLICY "Enable read access for all users" ON sub_subcategories FOR SELECT USING (true);
+CREATE POLICY "Enable read access for all users" ON brands FOR SELECT USING (true);
+CREATE POLICY "Enable read access for all users" ON slider_images FOR SELECT USING (true);
+CREATE POLICY "Enable read access for all users" ON pages FOR SELECT USING (true);
+CREATE POLICY "Enable read access for all users" ON settings FOR SELECT USING (true);
+CREATE POLICY "Enable read access for all users" ON footer_columns FOR SELECT USING (true);
+CREATE POLICY "Enable read access for all users" ON footer_links FOR SELECT USING (true);
+CREATE POLICY "Enable read access for all users" ON reviews FOR SELECT USING (true);
+CREATE POLICY "Enable read access for all users" ON wilayas FOR SELECT USING (true);
+
+-- Allow authenticated users to manage their own data
+CREATE POLICY "Users can manage their own profiles" ON profiles FOR ALL USING (auth.uid() = id);
+CREATE POLICY "Users can manage their own addresses" ON addresses FOR ALL USING (auth.uid() = profile_id);
+CREATE POLICY "Users can manage their own wishlists" ON wishlists FOR ALL USING (auth.uid() = profile_id);
+-- Orders uses a text string for customer_user_id in older data, need simple text comparison
+CREATE POLICY "Users can manage their own orders" ON orders FOR ALL USING (auth.uid()::text = customer_user_id::text);
+
+-- If you have a custom backend or edge functions doing admin tasks, you might want a service role policy or an admin policy.
+

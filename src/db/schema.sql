@@ -260,24 +260,40 @@ ALTER TABLE addresses ENABLE ROW LEVEL SECURITY;
 ALTER TABLE wishlists ENABLE ROW LEVEL SECURITY;
 
 -- Allow public read access to most tables we want to be visible
+DROP POLICY IF EXISTS "Enable read access for all users" ON products;
 CREATE POLICY "Enable read access for all users" ON products FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Enable read access for all users" ON categories;
 CREATE POLICY "Enable read access for all users" ON categories FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Enable read access for all users" ON subcategories;
 CREATE POLICY "Enable read access for all users" ON subcategories FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Enable read access for all users" ON sub_subcategories;
 CREATE POLICY "Enable read access for all users" ON sub_subcategories FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Enable read access for all users" ON brands;
 CREATE POLICY "Enable read access for all users" ON brands FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Enable read access for all users" ON slider_images;
 CREATE POLICY "Enable read access for all users" ON slider_images FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Enable read access for all users" ON pages;
 CREATE POLICY "Enable read access for all users" ON pages FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Enable read access for all users" ON settings;
 CREATE POLICY "Enable read access for all users" ON settings FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Enable read access for all users" ON footer_columns;
 CREATE POLICY "Enable read access for all users" ON footer_columns FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Enable read access for all users" ON footer_links;
 CREATE POLICY "Enable read access for all users" ON footer_links FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Enable read access for all users" ON reviews;
 CREATE POLICY "Enable read access for all users" ON reviews FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Enable read access for all users" ON wilayas;
 CREATE POLICY "Enable read access for all users" ON wilayas FOR SELECT USING (true);
 
 -- Allow authenticated users to manage their own data
+DROP POLICY IF EXISTS "Users can manage their own profiles" ON profiles;
 CREATE POLICY "Users can manage their own profiles" ON profiles FOR ALL USING ((select auth.uid()) = id);
+DROP POLICY IF EXISTS "Users can manage their own addresses" ON addresses;
 CREATE POLICY "Users can manage their own addresses" ON addresses FOR ALL USING ((select auth.uid()) = profile_id);
+DROP POLICY IF EXISTS "Users can manage their own wishlists" ON wishlists;
 CREATE POLICY "Users can manage their own wishlists" ON wishlists FOR ALL USING ((select auth.uid()) = profile_id);
 -- Orders uses a text string for customer_user_id in older data, need simple text comparison
+DROP POLICY IF EXISTS "Users can manage their own orders" ON orders;
 CREATE POLICY "Users can manage their own orders" ON orders FOR ALL USING ((select auth.uid())::text = customer_user_id::text);
 
 -- If you have a custom backend or edge functions doing admin tasks, you might want a service role policy or an admin policy.

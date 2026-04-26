@@ -80,7 +80,24 @@
     <div id="root"></div>
 
     <script>
-      // PWA features removed
+      // Automatically unregister any lingering Service Workers from the old PWA
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(function(registrations) {
+          for (let registration of registrations) {
+            registration.unregister().then(function(boolean) {
+              if (boolean) {
+                console.log('Ancien Service Worker désenregistré avec succès. Nettoyage du cache...');
+                // Optional: clear caches associated with the old PWA
+                caches.keys().then((keyList) => {
+                  return Promise.all(keyList.map((key) => caches.delete(key)));
+                }).then(() => {
+                  window.location.reload(true); // reload from the server
+                });
+              }
+            });
+          }
+        });
+      }
     </script>
 
     <!--seo-injection-->

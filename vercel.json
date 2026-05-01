@@ -5,7 +5,10 @@
   "outputDirectory": "dist",
   "functions": {
     "api/**/*.ts": {
-      "includeFiles": "src/db/schema.sql"
+      "includeFiles": [
+        "src/db/schema.sql",
+        "dist/index.html"
+      ]
     }
   },
   "headers": [
@@ -47,7 +50,7 @@
     },
     {
       "source": "/(.*)",
-      "destination": "/index.html"
+      "destination": "/api"
     }
   ]
 }

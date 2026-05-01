@@ -245,9 +245,9 @@ const FlashSalesHeader = ({ link }: { link?: string }) => {
     <div className="flex flex-col sm:flex-row items-center justify-between mb-4 mt-8 bg-gray-900 p-4 rounded-lg shadow-md">
       {/* Left: Title */}
       <div className="flex items-center mb-3 sm:mb-0 w-full sm:w-auto justify-center sm:justify-start">
-        <h2 className="text-xl font-bold text-white flex items-center gap-2">
+        <h3 className="text-xl font-bold text-white flex items-center gap-2">
           <span className="text-yellow-400 text-2xl">⚡</span> Ventes Flash
-        </h2>
+        </h3>
       </div>
 
       {/* Center: Countdown */}
@@ -277,7 +277,7 @@ const FlashSalesHeader = ({ link }: { link?: string }) => {
 const SectionHeader = ({ title, link, children }: { title: string, link?: string, children?: React.ReactNode }) => (
   <div className="flex items-center justify-between mb-4 mt-8 bg-white p-3 rounded-t-lg border-b-2 border-orange-500">
     <div className="flex items-center">
-      <h2 className="text-lg font-bold text-gray-800">{title}</h2>
+      <h3 className="text-lg font-bold text-gray-800">{title}</h3>
       {children}
     </div>
     {link && (
@@ -665,7 +665,7 @@ export default function Home() {
       {(loadingBrands || brands.length > 0) && (
         <div className="mb-6 sm:mb-8 bg-white p-4 sm:p-6 rounded-xl shadow-sm border border-gray-100 relative min-h-[150px] sm:min-h-[200px]">
           <div className="flex justify-between items-center mb-4 sm:mb-6">
-            <h2 className="text-lg sm:text-xl font-bold text-gray-800">Nos Marques</h2>
+            <h3 className="text-lg sm:text-xl font-bold text-gray-800">Nos Marques</h3>
             <Link to="/brands" className="text-orange-500 hover:text-orange-600 font-medium text-sm flex items-center gap-1">
               Voir tout <ChevronRight size={16} />
             </Link>

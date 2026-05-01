@@ -114,12 +114,18 @@ Sitemap: https://zorando.com/sitemap.xml`);
     app.get('*', async (req, res) => {
       try {
         let template = fs.readFileSync(path.join(distPath, 'index.html'), 'utf-8');
-        let seoHtml = '';
-        let headHtml = '';
         let title = 'ZORANDO - Boutique en ligne';
         let description = 'Découvrez ZORANDO, votre boutique en ligne de confiance en Algérie. Achetez des produits de qualité au meilleur prix.';
         const host = req.get('host') || 'zorando.com';
         const baseUrl = `https://${host}`;
+        let headHtml = `<link rel="canonical" href="${baseUrl}${req.path}" />`;
+        let seoHtml = `
+          <div id="seo-content" style="display:none;">
+            <h1>${title}</h1>
+            <p>${description}</p>
+            <p>Page: ${req.path}</p>
+          </div>
+        `;
         // Prefer JPEG for Facebook if it exists
         let ogImage = `${baseUrl}/og-image-fb.jpg`;
         let ogUrl = `${baseUrl}${req.path}`;

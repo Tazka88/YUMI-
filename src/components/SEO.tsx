@@ -22,6 +22,7 @@ export default function SEO({ title, description, image, url, schema }: SEOProps
       <meta property="og:description" content={description} />
       <meta property="og:image" content={finalImage} />
       {url && <meta property="og:url" content={url} />}
+      <link rel="canonical" href={url || (typeof window !== 'undefined' ? window.location.href.split('?')[0] : '')} />
       <meta name="twitter:card" content="summary_large_image" />
       <meta name="twitter:image" content={finalImage} />
       {schema && (

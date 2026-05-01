@@ -35,14 +35,15 @@ app.use(helmet({
   crossOriginEmbedderPolicy: false,
   contentSecurityPolicy: {
     directives: {
-      defaultSrc: ["'self'", "https:", "http:", "data:", "blob:", "'unsafe-inline'", "'unsafe-eval'"],
-      scriptSrc: ["'self'", "https:", "http:", "'unsafe-inline'", "'unsafe-eval'", "data:", "blob:"],
-      styleSrc: ["'self'", "https:", "http:", "'unsafe-inline'"],
-      imgSrc: ["'self'", "https:", "http:", "data:", "blob:"],
-      fontSrc: ["'self'", "https:", "http:", "data:"],
-      connectSrc: ["'self'", "https:", "http:", "ws:", "wss:"],
-      frameSrc: ["'self'", "https:", "http:"],
-      mediaSrc: ["'self'", "https:", "http:", "data:", "blob:"],
+      defaultSrc: ["'*'", "'unsafe-inline'", "'unsafe-eval'", "data:", "blob:"],
+      scriptSrc: ["'*'", "'unsafe-inline'", "'unsafe-eval'", "data:", "blob:"],
+      styleSrc: ["'*'", "'unsafe-inline'"],
+      imgSrc: ["'*'", "data:", "blob:"],
+      fontSrc: ["'*'", "data:"],
+      connectSrc: ["'*'", "ws:", "wss:"],
+      frameSrc: ["'*'"],
+      mediaSrc: ["'*'", "data:", "blob:"],
+      objectSrc: ["'none'"],
     },
   },
 }));

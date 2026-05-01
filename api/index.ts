@@ -32,7 +32,20 @@ app.use(cors({
 
 app.use(helmet({
   crossOriginResourcePolicy: false,
-  contentSecurityPolicy: false,
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https:"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https:"],
+      fontSrc: ["'self'", "data:", "https:"],
+      imgSrc: ["'self'", "data:", "https:", "blob:"],
+      connectSrc: ["'self'", "https:", "ws:", "wss:"],
+      frameSrc: ["'self'", "https:"],
+      mediaSrc: ["'self'", "https:", "data:", "blob:"],
+      objectSrc: ["'none'"],
+      baseUri: ["'self'"],
+    },
+  },
 }));
 
 app.use(compression());

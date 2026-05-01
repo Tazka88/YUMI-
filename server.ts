@@ -111,9 +111,14 @@ Sitemap: https://zorando.com/sitemap.xml`);
     const distPath = path.join(process.cwd(), 'dist');
     app.use(express.static(distPath, { index: false })); // Disable default index.html serving
     
-    app.get('*', async (req, res) => {
+    app.get('*', async (req, res, next) => {
+      // If it looks like a static file request, let it fall through to 404
+      if (req.path.match(/\.[a-zA-Z0-9]+$/) && !req.path.endsWith('.html')) {
+        return next();
+      }
+
       try {
-        let template = fs.readFileSync(path.join(distPath, 'index.html'), 'utf-8');
+        let template = fs.readFileSync(path.join(distPath, 'template.html'), 'utf-8');
         let title = 'ZORANDO - Boutique en ligne';
         let description = 'Découvrez ZORANDO, votre boutique en ligne de confiance en Algérie. Achetez des produits de qualité au meilleur prix.';
         const host = req.get('host') || 'zorando.com';
@@ -281,7 +286,7 @@ Sitemap: https://zorando.com/sitemap.xml`);
         res.status(200).send(finalHtml);
       } catch (err) {
         console.error('SEO Injection Error:', err);
-        res.sendFile(path.join(distPath, 'index.html'));
+        res.sendFile(path.join(distPath, 'template.html'));
       }
     });
   }

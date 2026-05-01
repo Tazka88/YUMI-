@@ -75,20 +75,23 @@ app.use((req, res, next) => {
   next();
 });
 
-// Serve frontend with SEO injection
-app.get('*', async (req, res) => {
+// Serve frontend with SEO injection for non-asset routes
+app.get('*', async (req, res, next) => {
+  // If it looks like a static file request (has extension dot), let it fall through
+  if (req.path.match(/\.[a-zA-Z0-9]+$/) && !req.path.endsWith('.html')) {
+    return next();
+  }
+
   try {
-    const distPath = path.join(process.cwd(), 'dist');
-    const indexPath = path.join(distPath, 'index.html');
-    let template = '<html><head></head><body><h1>Missing index.html</h1></body></html>';
+    // Use string literals to help Vercel NFT trace dependencies
+    const indexPath = path.join(process.cwd(), 'dist', 'template.html');
+    const publicPath = path.join(process.cwd(), 'public', 'index.html');
+    let template = '<html><head></head><body><h1>Missing template.html</h1></body></html>';
+    
     if (fs.existsSync(indexPath)) {
       template = fs.readFileSync(indexPath, 'utf-8');
-    } else {
-      // In development fallback, or if dist doesn't exist
-      const publicPath = path.join(process.cwd(), 'public', 'index.html');
-      if (fs.existsSync(publicPath)) {
-        template = fs.readFileSync(publicPath, 'utf-8');
-      }
+    } else if (fs.existsSync(publicPath)) {
+      template = fs.readFileSync(publicPath, 'utf-8');
     }
 
     let title = 'ZORANDO - Boutique en ligne';

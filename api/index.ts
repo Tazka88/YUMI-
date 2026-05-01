@@ -33,19 +33,7 @@ app.use(cors({
 app.use(helmet({
   crossOriginResourcePolicy: false,
   crossOriginEmbedderPolicy: false,
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["*", "'unsafe-inline'", "'unsafe-eval'", "data:", "blob:"],
-      scriptSrc: ["*", "'unsafe-inline'", "'unsafe-eval'", "data:", "blob:"],
-      styleSrc: ["*", "'unsafe-inline'"],
-      imgSrc: ["*", "data:", "blob:"],
-      fontSrc: ["*", "data:"],
-      connectSrc: ["*", "ws:", "wss:"],
-      frameSrc: ["*"],
-      mediaSrc: ["*", "data:", "blob:"],
-      objectSrc: ["'none'"],
-    },
-  },
+  contentSecurityPolicy: false,
 }));
 
 app.use(compression());

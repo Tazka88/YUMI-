@@ -25,14 +25,7 @@ async function startServer() {
     origin: true, // Allow the current origin (useful for AI Studio preview)
     credentials: true
   }));
-  app.use((req, res, next) => {
-    res.setHeader(
-      'Content-Security-Policy',
-      "default-src * 'unsafe-inline' 'unsafe-eval' data: blob:; script-src * 'unsafe-inline' 'unsafe-eval' data: blob:; style-src * 'unsafe-inline'; img-src * data: blob:; font-src * data:; connect-src * ws: wss:; frame-src *; media-src * data: blob:; object-src 'none';"
-    );
-    next();
-  });
-
+  // Removed helmet CSP to prevent iframe blocking in AI Studio preview
   app.use(compression()); // Compress all HTTP responses (Gzip/Brotli)
   app.use(express.json({ limit: '15mb' })); // Increased to 15mb for larger base64 images
   app.use(express.urlencoded({ limit: '15mb', extended: true }));

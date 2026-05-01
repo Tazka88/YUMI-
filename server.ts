@@ -267,7 +267,18 @@ Sitemap: https://zorando.com/sitemap.xml`);
           description = 'Suivez l\'état de votre commande ZORANDO en temps réel.';
         }
 
-        let finalHtml = template.replace('<!--seo-injection-->', seoHtml);
+        const globalNav = `
+          <nav id="global-nav" style="display:none;">
+            <a href="/">Accueil</a>
+            <a href="/brands">Marques</a>
+            <a href="/about">À propos</a>
+            <a href="/programme-fidelite">Programme de fidélité</a>
+            <a href="/retours">Retours</a>
+            <a href="/track-order">Suivi de commande</a>
+          </nav>
+        `;
+
+        let finalHtml = template.replace('<!--seo-injection-->', globalNav + seoHtml);
         finalHtml = finalHtml.replace('<!--head-injection-->', headHtml);
         finalHtml = finalHtml.replace(/<title>.*?<\/title>/, `<title>${title}</title>`);
         finalHtml = finalHtml.replace(/<meta name="description" content=".*?" \/>/, `<meta name="description" content="${description}" />`);

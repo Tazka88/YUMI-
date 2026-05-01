@@ -28,7 +28,7 @@ async function startServer() {
   app.use((req, res, next) => {
     res.setHeader(
       'Content-Security-Policy',
-      "default-src * data: blob: 'unsafe-inline' 'unsafe-eval'; script-src * 'unsafe-inline' 'unsafe-eval' data: blob:; style-src * 'unsafe-inline'; img-src * data: blob:; font-src * data:; connect-src * ws: wss:; frame-src *; media-src * data: blob:;"
+      "default-src 'self' https: http: data: blob: 'unsafe-inline' 'unsafe-eval'; script-src 'self' https: http: 'unsafe-inline' 'unsafe-eval' data: blob:; style-src 'self' https: http: 'unsafe-inline'; img-src 'self' https: http: data: blob:; font-src 'self' https: http: data:; connect-src 'self' https: http: ws: wss:; frame-src 'self' https: http:; media-src 'self' https: http: data: blob:;"
     );
     next();
   });

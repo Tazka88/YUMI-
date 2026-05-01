@@ -141,9 +141,9 @@ export default function Slider({ categoryId = null }: SliderProps) {
             <div className="absolute inset-0 flex items-center justify-center text-center p-2 md:p-8">
               <div className="w-full max-w-2xl text-white mx-auto">
                 {slide.title && (
-                  <h2 className="text-lg sm:text-2xl md:text-4xl font-bold mb-1 md:mb-3 drop-shadow-md leading-tight">
+                  <p className="text-lg sm:text-2xl md:text-4xl font-bold mb-1 md:mb-3 drop-shadow-md leading-tight">
                     {slide.title}
-                  </h2>
+                  </p>
                 )}
                 {slide.description && (
                   <p className="text-[10px] sm:text-sm md:text-base mb-2 md:mb-5 drop-shadow font-medium opacity-90 max-w-xl mx-auto line-clamp-2">

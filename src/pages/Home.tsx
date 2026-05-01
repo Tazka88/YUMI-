@@ -637,7 +637,7 @@ export default function Home() {
       <div className="mb-10 sm:mb-16 mt-4">
         <div className="flex items-end justify-between mb-6 px-2">
           <div>
-            <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">Catégories</h2>
+            <h3 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">Catégories</h3>
             <p className="text-gray-500 mt-1 text-sm sm:text-base">Explorez nos collections</p>
           </div>
           <Link to="/category/all" className="hidden sm:flex items-center text-sm font-semibold text-gray-900 hover:text-orange-600 transition-colors">

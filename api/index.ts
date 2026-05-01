@@ -102,6 +102,7 @@ app.get('*', async (req, res, next) => {
     let seoHtml = `
       <div id="seo-content" style="display:none;">
         <h1>${title}</h1>
+        <h2>ZORANDO - Informations</h2>
         <p>${description}</p>
         <p>Page: ${req.path}</p>
       </div>
@@ -140,6 +141,7 @@ app.get('*', async (req, res, next) => {
         seoHtml = `
           <div id="seo-content" style="display:none;">
             <h1>Toutes nos marques</h1>
+            <h2>Liste de toutes les marques partenaires</h2>
             <ul>
               ${brands.map(b => `<li><a href="/brands/${b.slug}">${b.name}</a></li>`).join('\n')}
             </ul>
@@ -157,6 +159,7 @@ app.get('*', async (req, res, next) => {
           seoHtml = `
             <div id="seo-content" style="display:none;">
               <h1>${brand.name}</h1>
+              <h2>Produits de marque ${brand.name}</h2>
               <p>${description}</p>
               <ul>
                 ${products.map(p => `<li><a href="/product/${p.slug}">${p.name}</a></li>`).join('\n')}
@@ -176,6 +179,7 @@ app.get('*', async (req, res, next) => {
           seoHtml = `
             <div id="seo-content" style="display:none;">
               <h1>${category.name}</h1>
+              <h2>Achetez dans ${category.name}</h2>
               <p>${description}</p>
               <ul>
                 ${products.map(p => `<li><a href="/product/${p.slug}">${p.name}</a></li>`).join('\n')}
@@ -190,6 +194,7 @@ app.get('*', async (req, res, next) => {
             seoHtml = `
               <div id="seo-content" style="display:none;">
                 <h1>${subcat.name}</h1>
+                <h2>Produits dans la sous-catégorie ${subcat.name}</h2>
                 <ul>
                   ${products.map(p => `<li><a href="/product/${p.slug}">${p.name}</a></li>`).join('\n')}
                 </ul>
@@ -209,6 +214,7 @@ app.get('*', async (req, res, next) => {
           seoHtml = `
             <div id="seo-content" style="display:none;">
               <h1>${product.name}</h1>
+              <h2>Achetez ${product.name} au meilleur prix</h2>
               <p>${description}</p>
               <p>Prix: ${displayPrice} DZD</p>
             </div>
@@ -218,6 +224,19 @@ app.get('*', async (req, res, next) => {
     } else if (req.path === '/about') {
       title = 'À propos de nous - ZORANDO';
       description = 'Découvrez l\'histoire de ZORANDO, votre boutique en ligne de confiance en Algérie.';
+      seoHtml = `<div id="seo-content" style="display:none;"><h1>${title}</h1><h2>Notre Histoire</h2><p>${description}</p></div>`;
+    } else if (req.path === '/programme-fidelite') {
+      title = 'Programme de fidélité - ZORANDO';
+      description = 'Rejoignez le programme de fidélité ZORANDO et profitez de récompenses exclusives.';
+      seoHtml = `<div id="seo-content" style="display:none;"><h1>${title}</h1><h2>Avantages et Récompenses</h2><p>${description}</p></div>`;
+    } else if (req.path === '/retours') {
+      title = 'Politique de retours - ZORANDO';
+      description = 'Consultez notre politique de retours et remboursements.';
+      seoHtml = `<div id="seo-content" style="display:none;"><h1>${title}</h1><h2>Conditions de Retour</h2><p>${description}</p></div>`;
+    } else if (req.path === '/track-order') {
+      title = 'Suivre ma commande - ZORANDO';
+      description = 'Suivez l\'état de votre commande ZORANDO en temps réel.';
+      seoHtml = `<div id="seo-content" style="display:none;"><h1>${title}</h1><h2>Tracking de Livraison</h2><p>${description}</p></div>`;
     }
 
     const globalNav = `

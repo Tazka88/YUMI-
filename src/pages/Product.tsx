@@ -551,7 +551,7 @@ export default function Product() {
                   src={selectedMedia.url}
                   title="Product Video"
                   className="w-full h-full rounded-md"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                   allowFullScreen
                 ></iframe>
               ) : (
@@ -566,35 +566,28 @@ export default function Product() {
                   />
                   {product.video_url && (() => {
                     let videoId = '';
-                    const url = product.video_url;
                     try {
-                      if (url.includes('youtube.com/watch')) {
-                        const urlObj = new URL(url);
-                        videoId = urlObj.searchParams.get('v') || '';
-                      } else if (url.includes('youtu.be/')) {
-                        videoId = url.split('youtu.be/')[1]?.split('?')[0] || '';
-                      } else if (url.includes('youtube.com/shorts/')) {
-                        videoId = url.split('youtube.com/shorts/')[1]?.split('?')[0] || '';
-                      } else if (url.includes('youtube.com/embed/')) {
-                        videoId = url.split('youtube.com/embed/')[1]?.split('?')[0] || '';
+                      const match = product.video_url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/))([\w-]{11})/);
+                      if (match && match[1]) {
+                        videoId = match[1];
                       }
                     } catch (e) {}
                     
                     if (!videoId) return null;
                     
-                    const isShort = url.includes('youtube.com/shorts/');
-                    const embedUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&loop=1&playlist=${videoId}&controls=0&showinfo=0&rel=0`;
+                    const isShort = product.video_url.includes('youtube.com/shorts/');
+                    const embedUrl = `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&mute=1&loop=1&playlist=${videoId}&controls=0&showinfo=0&rel=0`;
                     
                     return (
                       <div 
                         className={`absolute bottom-4 right-4 md:bottom-6 md:right-6 ${isShort ? 'w-[30%] max-w-[140px] md:w-[25%] md:max-w-[240px]' : 'w-[40%] max-w-[200px] md:w-[40%] md:max-w-[380px]'} ${isShort ? 'aspect-[9/16]' : 'aspect-video'} rounded-xl overflow-hidden shadow-2xl border-2 md:border-4 border-white cursor-pointer z-20 group transition-transform hover:scale-[1.02]`}
-                        onClick={() => setSelectedMedia({type: 'video', url: `https://www.youtube.com/embed/${videoId}?autoplay=1`})}
+                        onClick={() => setSelectedMedia({type: 'video', url: `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1`})}
                       >
                         <iframe
                           src={embedUrl}
                           title="Product Video Preview"
                           className="w-full h-full pointer-events-none"
-                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                         ></iframe>
                         <div className="absolute inset-0 flex items-center justify-center bg-black/10 group-hover:bg-black/20 transition-colors">
                           <div className="w-8 h-8 md:w-12 md:h-12 bg-white/90 rounded-full flex items-center justify-center backdrop-blur-sm shadow-lg scale-90 group-hover:scale-100 transition-transform">

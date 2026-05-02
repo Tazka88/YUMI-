@@ -1,7 +1,7 @@
 import React from 'react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { formatPrice } from '../../utils/formatPrice';
-import { Printer, Trash2 } from 'lucide-react';
+import { Printer, Trash2, Truck } from 'lucide-react';
 
 interface OrderKanbanProps {
   orders: any[];
@@ -9,6 +9,7 @@ interface OrderKanbanProps {
   orderSearchTerm: string;
   onDeleteOrder: (id: number) => void;
   onPrintOrder: (id: number) => void;
+  onSendToEcotrack?: (id: number) => void;
 }
 
 const COLUMNS = [
@@ -19,7 +20,7 @@ const COLUMNS = [
   { id: 'annulée', title: 'Annulée', color: 'bg-red-50', headerColor: 'bg-red-100 text-red-800 border-red-200' }
 ];
 
-export default function OrderKanban({ orders, updateOrderStatus, orderSearchTerm, onDeleteOrder, onPrintOrder }: OrderKanbanProps) {
+export default function OrderKanban({ orders, updateOrderStatus, orderSearchTerm, onDeleteOrder, onPrintOrder, onSendToEcotrack }: OrderKanbanProps) {
   const filteredOrders = orders.filter(order => 
     !orderSearchTerm || 
     (order.order_id && order.order_id.toLowerCase().includes(orderSearchTerm.toLowerCase())) || 
@@ -97,6 +98,15 @@ export default function OrderKanban({ orders, updateOrderStatus, orderSearchTerm
                                 {new Date(order.created_at).toLocaleDateString()} {new Date(order.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
                               </div>
                               <div className="flex gap-2">
+                                {onSendToEcotrack && (
+                                  <button 
+                                    onClick={() => onSendToEcotrack(order.id)}
+                                    className="p-1.5 text-gray-500 hover:text-orange-600 hover:bg-orange-50 rounded-md transition-colors"
+                                    title="Envoyer à Ecotrack"
+                                  >
+                                    <Truck size={16} />
+                                  </button>
+                                )}
                                 <button 
                                   onClick={() => onPrintOrder(order.id)}
                                   className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"

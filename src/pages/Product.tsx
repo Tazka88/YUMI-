@@ -474,13 +474,13 @@ export default function Product() {
             "@type": "QuantitativeValue",
             "minValue": 0,
             "maxValue": 1,
-            "unitCode": "DAY"
+            "unitCode": "d"
           },
           "transitTime": {
             "@type": "QuantitativeValue",
             "minValue": 1,
             "maxValue": 7,
-            "unitCode": "DAY"
+            "unitCode": "d"
           }
         },
         "shippingDestination": {
@@ -491,19 +491,21 @@ export default function Product() {
       "hasMerchantReturnPolicy": {
         "@type": "MerchantReturnPolicy",
         "applicableCountry": "DZ",
-        "returnPolicyCategory": "https://schema.org/MerchantReturnPolicyTermOfService",
+        "returnPolicyCategory": "https://schema.org/MerchantReturnFiniteReturnWindow",
         "merchantReturnDays": 7,
         "returnMethod": "https://schema.org/ReturnByMail",
         "returnFees": "https://schema.org/FreeReturn"
       }
     },
-    ...(reviews.length > 0 && {
+    ...(reviews.length > 0 ? {
       "aggregateRating": {
         "@type": "AggregateRating",
-        "ratingValue": avgRating,
-        "reviewCount": reviews.length
+        "ratingValue": Number(avgRating),
+        "reviewCount": reviews.length,
+        "bestRating": 5,
+        "worstRating": 1
       }
-    })
+    } : {})
   };
 
   return (

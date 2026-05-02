@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import axios from 'axios';
+import { z } from 'zod';
 
 const router = Router();
 
@@ -18,54 +19,113 @@ const ecotrackApi = axios.create({
   }
 });
 
-/**
- * Route: GET /get-fees
- * Récupère les tarifs de livraison depuis Ecotrack
- */
-router.get('/get-fees', async (req, res) => {
-  try {
-    const response = await ecotrackApi.get('/api/v1/get/fees');
-    res.json(response.data);
-  } catch (error: any) {
-    console.error('Erreur lors de la récupération des tarifs Ecotrack:', error.response?.data || error.message);
-    res.status(error.response?.status || 500).json({
-      error: "Erreur lors de la communication avec l'API Ecotrack",
-      details: error.response?.data || error.message
-    });
-  }
-});
+// Schéma de validation pour create/order
+const createOrderSchema = z.object({
+  reference: z.string().optional(),
+  nom_client: z.string().min(1, 'Le nom du client est requis'),
+  telephone: z.string().regex(/^(0(5|6|7)\d{8}|[5-7]\d{8})$|^(\d{9,10})$/, 'Le numéro de téléphone doit contenir 9 ou 10 chiffres valides'),
+  telephone_2: z.string().optional(),
+  adresse: z.string().min(1, "L'adresse est requise"),
+  wilaya: z.number().int().min(1, 'La wilaya doit être entre 1 et 58').max(58, 'La wilaya doit être entre 1 et 58'),
+  commune: z.string().min(1, 'La commune est requise'),
+  montant: z.number().min(0, 'Le montant doit être positif'),
+  remarque: z.string().optional(),
+  produit: z.string().optional(),
+  type: z.number().int().min(1, 'Le type doit être entre 1 et 4').max(4, 'Le type doit être entre 1 et 4'),
+  stop_desk: z.union([z.literal(0), z.literal(1)]),
+  poids: z.number().optional(),
+  id_produit: z.string().optional()
+}).passthrough(); // Autorise d'autres champs non spécifiés (ex: tarif, etc)
 
-/**
- * Route: GET /get-products
- * Récupère la liste des produits depuis Ecotrack
- */
-router.get('/get-products', async (req, res) => {
-  try {
-    const response = await ecotrackApi.get('/api/v1/get/products/list');
-    res.json(response.data);
-  } catch (error: any) {
-    console.error('Erreur lors de la récupération des produits Ecotrack:', error.response?.data || error.message);
-    res.status(error.response?.status || 500).json({
-      error: "Erreur lors de la communication avec l'API Ecotrack",
-      details: error.response?.data || error.message
-    });
-  }
-});
+const createOrdersBatchSchema = z.array(createOrderSchema);
 
-/**
- * Route: POST /create-order
- * Crée une nouvelle commande sur Ecotrack
- */
+const updateOrderSchema = z.object({
+  tracking: z.string().min(1, 'Le code tracking est requis')
+}).passthrough();
+
+
+// Wrapper pour simplifier la gestion des erreurs Ecotrack
+const handleEcotrackRequest = async (res: any, requestFn: () => Promise<any>) => {
+  try {
+    const response = await requestFn();
+    return res.json(response.data);
+  } catch (error: any) {
+    if (error.response) {
+      const status = error.response.status;
+      if (status === 401) {
+        console.error('Ecotrack API Error 401: Token invalide ou expiré');
+        return res.status(401).json({ error: "Problème d'authentification avec l'API de livraison (vérifiez le token)" });
+      }
+      if (status === 429) {
+        console.error('Ecotrack API Error 429: Too Many Requests');
+        const retryAfter = error.response.headers['retry-after'];
+        return res.status(429).json({ error: 'Trop de requêtes, veuillez réessayer plus tard.', retryAfter });
+      }
+      if (status === 400 || status === 422) {
+         console.error(`Ecotrack API Error ${status}: `, error.response.data);
+         return res.status(status).json({ error: 'Données invalides', details: error.response.data });
+      }
+      console.error(`Ecotrack API Error ${status}: `, error.response.data);
+      return res.status(status).json({ error: 'Erreur lors de la communication avec Ecotrack', details: error.response.data });
+    } else if (error.request) {
+      console.error('Ecotrack API Error: Pas de réponse du serveur Ecotrack', error.message);
+      return res.status(503).json({ error: 'Service de livraison (Ecotrack) temporairement indisponible' });
+    } else {
+      console.error('Ecotrack API Error:', error.message);
+      return res.status(500).json({ error: 'Erreur interne du serveur lors de la communication avec Ecotrack' });
+    }
+  }
+};
+
+// Routes GET
+router.get('/get-fees', (req, res) => handleEcotrackRequest(res, () => ecotrackApi.get('/api/v1/get/fees')));
+router.get('/get-products', (req, res) => handleEcotrackRequest(res, () => ecotrackApi.get('/api/v1/get/products/list')));
+router.get('/wilayas', (req, res) => handleEcotrackRequest(res, () => ecotrackApi.get('/api/v1/get/wilayas')));
+router.get('/communes', (req, res) => handleEcotrackRequest(res, () => ecotrackApi.get('/api/v1/get/communes', { params: req.query })));
+router.get('/orders', (req, res) => handleEcotrackRequest(res, () => ecotrackApi.get('/api/v1/get/orders', { params: req.query })));
+router.get('/tracking', (req, res) => handleEcotrackRequest(res, () => ecotrackApi.get('/api/v1/get/tracking/info', { params: req.query })));
+router.get('/label', (req, res) => handleEcotrackRequest(res, () => ecotrackApi.get('/api/v1/get/order/label', { params: req.query })));
+
+// Routes DELETE
+router.delete('/order', (req, res) => handleEcotrackRequest(res, () => ecotrackApi.delete('/api/v1/delete/order', { data: req.body })));
+
+// Route POST Simple sans validation Zod stricte (si besoin de flexibilité)
+router.post('/valid/order', (req, res) => handleEcotrackRequest(res, () => ecotrackApi.post('/api/v1/valid/order', req.body)));
+
+// Routes POST avec validation Zod
 router.post('/create-order', async (req, res) => {
   try {
-    const response = await ecotrackApi.post('/api/v1/create/order', req.body);
-    res.json(response.data);
-  } catch (error: any) {
-    console.error('Erreur lors de la création de commande Ecotrack:', error.response?.data || error.message);
-    res.status(error.response?.status || 500).json({
-      error: "Erreur lors de la communication avec l'API Ecotrack",
-      details: error.response?.data || error.message
-    });
+    const validatedData = createOrderSchema.parse(req.body);
+    return handleEcotrackRequest(res, () => ecotrackApi.post('/api/v1/create/order', validatedData));
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: 'Erreur de validation des données utilisateurs', details: (error as any).errors });
+    }
+    return res.status(500).json({ error: 'Erreur inattendue' });
+  }
+});
+
+router.post('/update/order', async (req, res) => {
+  try {
+    const validatedData = updateOrderSchema.parse(req.body);
+    return handleEcotrackRequest(res, () => ecotrackApi.post('/api/v1/update/order', validatedData));
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: 'Erreur de validation des données utilisateurs', details: (error as any).errors });
+    }
+    return res.status(500).json({ error: 'Erreur inattendue' });
+  }
+});
+
+router.post('/create-orders', async (req, res) => {
+  try {
+    const validatedData = createOrdersBatchSchema.parse(req.body);
+    return handleEcotrackRequest(res, () => ecotrackApi.post('/api/v1/create/orders', validatedData));
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: 'Erreur de validation des données utilisateurs', details: (error as any).errors });
+    }
+    return res.status(500).json({ error: 'Erreur inattendue' });
   }
 });
 

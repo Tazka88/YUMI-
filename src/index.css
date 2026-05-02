@@ -159,3 +159,20 @@
   0% { transform: translateX(0%); }
   100% { transform: translateX(-50%); }
 }
+
+@media (max-width: 767px) {
+  .bg-gray-900 + .grid {
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none; /* Firefox */
+  }
+  .bg-gray-900 + .grid::-webkit-scrollbar {
+    display: none; /* Chrome/Safari */
+  }
+  .bg-gray-900 + .grid > * {
+    flex: 0 0 83%; /* 1.2 items visible */
+    scroll-snap-align: start;
+    min-width: 83%;
+  }
+}

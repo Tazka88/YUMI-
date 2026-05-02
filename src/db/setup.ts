@@ -2,12 +2,13 @@ import postgres from 'postgres';
 import fs from 'fs';
 import path from 'path';
 
-const connectionString = process.env.DATABASE_URL || 'postgresql://postgres:Lifebook88855@db.evvbhalgyffagsesmvhu.supabase.co:5432/postgres';
+const rawConnString = process.env.DATABASE_URL || 'postgresql://postgres:Lifebook88855@db.evvbhalgyffagsesmvhu.supabase.co:5432/postgres';
+const connectionString = rawConnString.replace(':5432/', ':6543/');
 
 export const sql = postgres(connectionString, {
   ssl: 'require',
-  max: 10,
-  idle_timeout: 20,
+  max: 15,
+  idle_timeout: 5,
   connect_timeout: 10,
   prepare: false, // Required for Supabase connection pooler (Supavisor)
 });

@@ -525,7 +525,10 @@ export default function AdminDashboard() {
       const ecoData = await ecoRes.json();
       
       if (!ecoRes.ok) {
-        throw new Error(ecoData.error || ecoData.details?.[0]?.message || 'Erreur API Ecotrack');
+        const detailMsg = ecoData.details && Array.isArray(ecoData.details) 
+          ? ecoData.details.map((d: any) => d.message).join(', ')
+          : '';
+        throw new Error(detailMsg || ecoData.error || 'Erreur API Ecotrack');
       }
 
       if (!silent) toast.success('Commande envoyée avec succès', { id: loadId });

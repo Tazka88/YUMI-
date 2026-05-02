@@ -26,13 +26,13 @@ const createOrderSchema = z.object({
   telephone: z.string().regex(/^(0(5|6|7)\d{8}|[5-7]\d{8})$|^(\d{9,10})$/, 'Le numéro de téléphone doit contenir 9 ou 10 chiffres valides'),
   telephone_2: z.string().optional(),
   adresse: z.string().min(1, "L'adresse est requise"),
-  wilaya: z.number().int().min(1, 'La wilaya doit être entre 1 et 58').max(58, 'La wilaya doit être entre 1 et 58'),
+  wilaya: z.coerce.number().int().min(1, 'La wilaya doit être entre 1 et 58').max(58, 'La wilaya doit être entre 1 et 58'),
   commune: z.string().min(1, 'La commune est requise'),
-  montant: z.number().min(0, 'Le montant doit être positif'),
+  montant: z.coerce.number().min(0, 'Le montant doit être positif'),
   remarque: z.string().optional(),
   produit: z.string().optional(),
-  type: z.number().int().min(1, 'Le type doit être entre 1 et 4').max(4, 'Le type doit être entre 1 et 4'),
-  stop_desk: z.union([z.literal(0), z.literal(1)]),
+  type: z.coerce.number().int().min(1, 'Le type doit être entre 1 et 4').max(4, 'Le type doit être entre 1 et 4'),
+  stop_desk: z.union([z.literal(0), z.literal(1), z.literal("0"), z.literal("1")]).transform(v => Number(v) as 0 | 1),
   poids: z.number().optional(),
   id_produit: z.string().optional()
 }).passthrough(); // Autorise d'autres champs non spécifiés (ex: tarif, etc)
@@ -99,6 +99,8 @@ router.post('/create-order', async (req, res) => {
     return handleEcotrackRequest(res, () => ecotrackApi.post('/api/v1/create/order', validatedData));
   } catch (error) {
     if (error instanceof z.ZodError) {
+      console.error('Validation failed payload:', req.body);
+      console.error('Validation errors:', (error as any).errors);
       return res.status(400).json({ error: 'Erreur de validation des données utilisateurs', details: (error as any).errors });
     }
     return res.status(500).json({ error: 'Erreur inattendue' });

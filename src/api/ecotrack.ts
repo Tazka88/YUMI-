@@ -52,4 +52,21 @@ router.get('/get-products', async (req, res) => {
   }
 });
 
+/**
+ * Route: POST /create-order
+ * Crée une nouvelle commande sur Ecotrack
+ */
+router.post('/create-order', async (req, res) => {
+  try {
+    const response = await ecotrackApi.post('/api/v1/create/order', req.body);
+    res.json(response.data);
+  } catch (error: any) {
+    console.error('Erreur lors de la création de commande Ecotrack:', error.response?.data || error.message);
+    res.status(error.response?.status || 500).json({
+      error: "Erreur lors de la communication avec l'API Ecotrack",
+      details: error.response?.data || error.message
+    });
+  }
+});
+
 export default router;

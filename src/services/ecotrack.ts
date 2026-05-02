@@ -17,6 +17,16 @@ export interface EcotrackProductsResponse {
   [key: string]: any;
 }
 
+export interface EcotrackCreateOrderPayload {
+  // Définir la structure selon la requête d'Ecotrack
+  [key: string]: any;
+}
+
+export interface EcotrackCreateOrderResponse {
+  // Définir la structure selon la réponse d'Ecotrack
+  [key: string]: any;
+}
+
 export const ecotrackService = {
   /**
    * Récupère les tarifs (livraison, pickup, etc.)
@@ -64,6 +74,37 @@ export const ecotrackService = {
       return await response.json();
     } catch (error) {
       console.error('Erreur ecotrackService.getProducts:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Créer une commande
+   */
+  async createOrder(payload: EcotrackCreateOrderPayload): Promise<EcotrackCreateOrderResponse> {
+    try {
+      const response = await fetch(`${API_BASE}/create-order`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      });
+      
+      if (!response.ok) {
+        let errorDetails = '';
+        try {
+          const errorData = await response.json();
+          errorDetails = errorData.error || errorData.details || response.statusText;
+        } catch(e) {
+          errorDetails = response.statusText;
+        }
+        throw new Error(`Erreur HTTP: ${response.status} - ${errorDetails}`);
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error('Erreur ecotrackService.createOrder:', error);
       throw error;
     }
   }

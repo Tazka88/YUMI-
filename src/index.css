@@ -166,13 +166,29 @@
     overflow-x: auto;
     scroll-snap-type: x mandatory;
     scrollbar-width: none; /* Firefox */
+    padding-bottom: 0.75rem; /* Space for shadows */
+    margin-left: -0.5rem; /* Compensate for container edges if needed */
+    margin-right: -0.5rem;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
   }
   .bg-gray-900 + .grid::-webkit-scrollbar {
     display: none; /* Chrome/Safari */
   }
   .bg-gray-900 + .grid > * {
-    flex: 0 0 83%; /* 1.2 items visible */
+    flex: 0 0 84%; /* Larger width, around 1.2 items visible */
     scroll-snap-align: start;
-    min-width: 83%;
+    min-width: 84%;
+    border-radius: 1rem;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.08); /* Modern subtle shadow */
+  }
+  
+  /* Image enlargement & cover */
+  .bg-gray-900 + .grid > * .relative.block.h-36 {
+    height: 220px !important;
+  }
+  .bg-gray-900 + .grid > * img {
+    object-fit: cover !important;
+    padding: 0 !important; /* Remove internal padding to allow full cover */
   }
 }

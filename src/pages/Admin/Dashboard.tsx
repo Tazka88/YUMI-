@@ -500,13 +500,14 @@ export default function AdminDashboard() {
       const wilayaId = getEcotrackWilayaId(orderData.wilaya);
       const productsNames = orderData.items?.map((i: any) => `${i.quantity}x ${i.product_name}`).join(', ') || 'Produit';
 
-      const cleanPhone = (orderData.customer_phone || '').replace(/\\D/g, '');
+      const cleanPhone = (orderData.customer_phone || '').replace(/\D/g, '');
 
       const payload = {
         reference: orderData.order_id || `#${orderData.id}`,
         nom_client: orderData.customer_name || 'Client',
         telephone: cleanPhone || '0000000000',
         adresse: orderData.address || 'Aucune adresse',
+        code_wilaya: wilayaId,
         wilaya: wilayaId,
         commune: orderData.commune || 'Centre',
         montant: orderData.total_amount,
@@ -525,9 +526,20 @@ export default function AdminDashboard() {
       const ecoData = await ecoRes.json();
       
       if (!ecoRes.ok) {
-        const detailMsg = ecoData.details && Array.isArray(ecoData.details) 
-          ? ecoData.details.map((d: any) => d.message).join(', ')
-          : '';
+        let detailMsg = '';
+        if (ecoData.details) {
+          if (Array.isArray(ecoData.details)) {
+            detailMsg = ecoData.details.map((d: any) => d.message).join(', ');
+          } else if (ecoData.details.message) {
+            detailMsg = ecoData.details.message;
+            if (ecoData.details.errors) {
+              const errorsList = Object.values(ecoData.details.errors).flat();
+              if (errorsList.length > 0) {
+                 detailMsg += ' : ' + errorsList.join(' | ');
+              }
+            }
+          }
+        }
         throw new Error(detailMsg || ecoData.error || 'Erreur API Ecotrack');
       }
 

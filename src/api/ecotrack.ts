@@ -6,8 +6,8 @@ const router = Router();
 
 // L'URL et le Token doivent rester uniquement côté serveur
 // Ils peuvent être configurés via des variables d'environnement
-const URL_API = process.env.ECOTRACK_API_URL || '[COLLE ICI TON URL]';
-const TOKEN = process.env.ECOTRACK_TOKEN || '[COLLE ICI TON TOKEN]';
+const URL_API = process.env.ECOTRACK_API_URL || '';
+const TOKEN = process.env.ECOTRACK_TOKEN || '';
 
 // Configuration Axios pour Ecotrack
 const ecotrackApi = axios.create({
@@ -17,6 +17,15 @@ const ecotrackApi = axios.create({
     'Accept': 'application/json',
     'Content-Type': 'application/json'
   }
+});
+
+// Wrapper pour simplifier la gestion des erreurs Ecotrack
+// On vérifie ici si l'URL est configurée
+ecotrackApi.interceptors.request.use(config => {
+  if (!config.baseURL || config.baseURL === '[COLLE ICI TON URL]') {
+    throw new Error('ECOTRACK_CONFIG_MISSING');
+  }
+  return config;
 });
 
 // Schéma de validation pour create/order
@@ -71,8 +80,17 @@ const handleEcotrackRequest = async (res: any, requestFn: () => Promise<any>) =>
       console.error('Ecotrack API Error: Pas de réponse du serveur Ecotrack', error.message);
       return res.status(503).json({ error: 'Service de livraison (Ecotrack) temporairement indisponible' });
     } else {
+      if (error.message === 'ECOTRACK_CONFIG_MISSING' || error.message.includes('Invalid URL')) {
+        return res.status(500).json({
+          error: "Veuillez configurer ECOTRACK_API_URL et ECOTRACK_TOKEN dans les paramètres d'environnement.",
+          details: "Configuration invalide."
+        });
+      }
       console.error('Ecotrack API Error:', error.message);
-      return res.status(500).json({ error: 'Erreur interne du serveur lors de la communication avec Ecotrack' });
+      return res.status(500).json({ 
+        error: 'Erreur interne du serveur lors de la communication avec Ecotrack',
+        details: error.message 
+      });
     }
   }
 };

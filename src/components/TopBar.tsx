@@ -24,9 +24,25 @@ export const ZORANDO_TOPBAR_CONFIG = {
 export default function TopBar() {
   const [isVisible, setIsVisible] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [settings, setSettings] = useState<any>(null);
 
   useEffect(() => {
-    if (!ZORANDO_TOPBAR_CONFIG.active || !ZORANDO_TOPBAR_CONFIG.messages || ZORANDO_TOPBAR_CONFIG.messages.length === 0) {
+    fetch('/api/settings')
+      .then(res => res.json())
+      .then(data => {
+        if (data && !data.error) {
+          setSettings(data);
+        }
+      })
+      .catch(console.error);
+  }, []);
+
+  useEffect(() => {
+    const messages = settings?.announcement_text 
+      ? settings.announcement_text.split(/\r?\n/).map((m: string) => m.trim()).filter((m: string) => m.length > 0)
+      : ZORANDO_TOPBAR_CONFIG.messages;
+
+    if (!ZORANDO_TOPBAR_CONFIG.active || !messages || messages.length === 0) {
       return;
     }
 
@@ -38,22 +54,28 @@ export default function TopBar() {
     setIsVisible(true);
 
     const interval = setInterval(() => {
-      setCurrentIndex((prev) => (prev + 1) % ZORANDO_TOPBAR_CONFIG.messages.length);
+      setCurrentIndex((prev) => (prev + 1) % messages.length);
     }, ZORANDO_TOPBAR_CONFIG.rotationSpeed);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [settings]);
 
   if (!isVisible) return null;
+
+  const messages = settings?.announcement_text 
+    ? settings.announcement_text.split(/\r?\n/).map((m: string) => m.trim()).filter((m: string) => m.length > 0)
+    : ZORANDO_TOPBAR_CONFIG.messages;
 
   const handleClose = () => {
     setIsVisible(false);
     localStorage.setItem('zorando_topbar_closed_until', (Date.now() + 24 * 60 * 60 * 1000).toString());
   };
 
-  const bgStyle = ZORANDO_TOPBAR_CONFIG.backgroundGradient 
-    ? `linear-gradient(to right, ${ZORANDO_TOPBAR_CONFIG.backgroundColor}, ${ZORANDO_TOPBAR_CONFIG.backgroundGradient})`
-    : ZORANDO_TOPBAR_CONFIG.backgroundColor;
+  const backgroundColor = settings?.announcement_bg_color || ZORANDO_TOPBAR_CONFIG.backgroundColor;
+  const textColor = settings?.announcement_text_color || ZORANDO_TOPBAR_CONFIG.textColor;
+  const phoneNumber = settings?.announcement_phone || ZORANDO_TOPBAR_CONFIG.phoneNumber;
+
+  const bgStyle = backgroundColor;
 
   const mobileHiddenClass = !ZORANDO_TOPBAR_CONFIG.showOnMobile ? 'zorando-topbar-hide-mobile' : '';
 
@@ -62,14 +84,14 @@ export default function TopBar() {
       className={`zorando-topbar-wrapper ${mobileHiddenClass}`}
       style={{ 
         background: bgStyle, 
-        color: ZORANDO_TOPBAR_CONFIG.textColor,
+        color: textColor,
         '--zorando-fs-desktop': ZORANDO_TOPBAR_CONFIG.fontSizeDesktop,
         '--zorando-fs-mobile': ZORANDO_TOPBAR_CONFIG.fontSizeMobile
       } as React.CSSProperties}
     >
       <div className="zorando-topbar-inner container mx-auto px-4">
         <div className="zorando-topbar-left">
-          {ZORANDO_TOPBAR_CONFIG.messages.map((msg, idx) => (
+          {messages.map((msg: string, idx: number) => (
             <div 
               key={idx} 
               className={`zorando-topbar-message ${idx === currentIndex ? 'zorando-topbar-active' : ''}`}
@@ -82,13 +104,13 @@ export default function TopBar() {
           className="zorando-topbar-right"
           style={{ backgroundColor: ZORANDO_TOPBAR_CONFIG.phoneBackgroundColor }}
         >
-          <a href={`tel:${ZORANDO_TOPBAR_CONFIG.phoneNumber.replace(/\s/g, '')}`} className="zorando-topbar-phone-container" style={{ color: 'inherit' }}>
+          <a href={`tel:${phoneNumber.replace(/\s/g, '')}`} className="zorando-topbar-phone-container" style={{ color: 'inherit' }}>
             <Phone size={18} className="zorando-topbar-icon-phone" />
             <span className="zorando-topbar-phone-text-desktop">
-              {ZORANDO_TOPBAR_CONFIG.phoneText} : <span style={{ fontWeight: 800, fontSize: '1.05em' }}>{ZORANDO_TOPBAR_CONFIG.phoneNumber}</span>
+              {ZORANDO_TOPBAR_CONFIG.phoneText} : <span style={{ fontWeight: 800, fontSize: '1.05em' }}>{phoneNumber}</span>
             </span>
             <span className="zorando-topbar-phone-text-mobile">
-              {ZORANDO_TOPBAR_CONFIG.phoneTextMobile} <span style={{ fontWeight: 800 }}>{ZORANDO_TOPBAR_CONFIG.phoneNumber}</span>
+              {ZORANDO_TOPBAR_CONFIG.phoneTextMobile} <span style={{ fontWeight: 800 }}>{phoneNumber}</span>
             </span>
           </a>
           <button onClick={handleClose} className="zorando-topbar-close" aria-label="Fermer">

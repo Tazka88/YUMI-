@@ -248,7 +248,7 @@ export default function AdminDashboard() {
     if (activeTab === 'settings') {
       fetch('/api/admin/settings', { headers, signal })
         .then(res => res.json())
-        .then(data => { if (data && typeof data === 'object' && !data.error) setSettingsForm(data); })
+        .then(data => { if (data && typeof data === 'object' && !data.error) setSettingsForm(prev => ({ ...prev, ...data })); })
         .catch(handleFetchError);
     }
     
@@ -2258,7 +2258,7 @@ export default function AdminDashboard() {
                               if (file) {
                                 const reader = new FileReader();
                                 reader.onloadend = () => {
-                                  setSettingsForm({...settingsForm, site_logo: reader.result as string});
+                                  setSettingsForm(prev => ({...prev, site_logo: reader.result as string}));
                                 };
                                 reader.readAsDataURL(file);
                               }
@@ -2268,7 +2268,7 @@ export default function AdminDashboard() {
                         {settingsForm.site_logo && (
                           <button 
                             type="button"
-                            onClick={() => setSettingsForm({...settingsForm, site_logo: ''})}
+                            onClick={() => setSettingsForm(prev => ({...prev, site_logo: ''}))}
                             className="text-red-600 text-sm hover:underline text-left"
                           >
                             Réinitialiser par défaut
@@ -2289,7 +2289,7 @@ export default function AdminDashboard() {
                     <select
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all"
                       value={settingsForm.active_theme || 'normal'}
-                      onChange={e => setSettingsForm({...settingsForm, active_theme: e.target.value})}
+                      onChange={e => setSettingsForm(prev => ({...prev, active_theme: e.target.value}))}
                     >
                       <option value="normal">Normal (Défaut)</option>
                       <option value="ramadan">Ramadan</option>
@@ -2322,7 +2322,7 @@ export default function AdminDashboard() {
                             value={settingsForm.overlay_intensity ?? 60}
                             onChange={(e) => {
                               const val = parseInt(e.target.value);
-                              setSettingsForm({...settingsForm, overlay_intensity: val});
+                              setSettingsForm(prev => ({...prev, overlay_intensity: val}));
                               
                               const token = localStorage.getItem('adminToken');
                               fetch('/api/admin/settings', {
@@ -2358,14 +2358,14 @@ export default function AdminDashboard() {
                               accept="image/*"
                               onChange={async (e) => {
                                 const url = await handleFileUpload(e);
-                                if (url) setSettingsForm({...settingsForm, [`theme_image_${settingsForm.active_theme}`]: url});
+                                if (url) setSettingsForm(prev => ({...prev, [`theme_image_${prev.active_theme}`]: url}));
                               }} 
                             />
                           </label>
                           {settingsForm[`theme_image_${settingsForm.active_theme}`] && (
                             <button 
                               type="button"
-                              onClick={() => setSettingsForm({...settingsForm, [`theme_image_${settingsForm.active_theme}`]: ''})}
+                              onClick={() => setSettingsForm(prev => ({...prev, [`theme_image_${prev.active_theme}`]: ''}))}
                               className="text-red-500 text-sm hover:underline text-left"
                             >
                               Supprimer l'image
@@ -2389,7 +2389,7 @@ export default function AdminDashboard() {
                       type="text" 
                       className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500" 
                       value={settingsForm.announcement_phone} 
-                      onChange={e => setSettingsForm({...settingsForm, announcement_phone: e.target.value})} 
+                      onChange={e => setSettingsForm(prev => ({...prev, announcement_phone: e.target.value}))} 
                       placeholder="+213 555 00 00 00"
                     />
                   </div>
@@ -2399,7 +2399,7 @@ export default function AdminDashboard() {
                       rows={4}
                       className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500" 
                       value={settingsForm.announcement_text} 
-                      onChange={e => setSettingsForm({...settingsForm, announcement_text: e.target.value})} 
+                      onChange={e => setSettingsForm(prev => ({...prev, announcement_text: e.target.value}))} 
                       placeholder="📞 Appelez pour commander : 05 22 04 18 18&#10;🚚 Livraison à partir de 149 Dhs&#10;🎉 Spécial Aïd - Jusqu'à -70%"
                     ></textarea>
                     <p className="text-xs text-gray-500 mt-1">Chaque ligne s'affichera pendant 3 secondes avec une animation.</p>
@@ -2412,13 +2412,13 @@ export default function AdminDashboard() {
                           type="color" 
                           className="h-10 w-10 rounded cursor-pointer border-0 p-0" 
                           value={settingsForm.announcement_bg_color || '#000000'} 
-                          onChange={e => setSettingsForm({...settingsForm, announcement_bg_color: e.target.value})} 
+                          onChange={e => setSettingsForm(prev => ({...prev, announcement_bg_color: e.target.value}))} 
                         />
                         <input 
                           type="text" 
                           className="flex-1 px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500" 
                           value={settingsForm.announcement_bg_color || '#000000'} 
-                          onChange={e => setSettingsForm({...settingsForm, announcement_bg_color: e.target.value})} 
+                          onChange={e => setSettingsForm(prev => ({...prev, announcement_bg_color: e.target.value}))} 
                         />
                       </div>
                     </div>
@@ -2429,13 +2429,13 @@ export default function AdminDashboard() {
                           type="color" 
                           className="h-10 w-10 rounded cursor-pointer border-0 p-0" 
                           value={settingsForm.announcement_text_color || '#ffffff'} 
-                          onChange={e => setSettingsForm({...settingsForm, announcement_text_color: e.target.value})} 
+                          onChange={e => setSettingsForm(prev => ({...prev, announcement_text_color: e.target.value}))} 
                         />
                         <input 
                           type="text" 
                           className="flex-1 px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500" 
                           value={settingsForm.announcement_text_color || '#ffffff'} 
-                          onChange={e => setSettingsForm({...settingsForm, announcement_text_color: e.target.value})} 
+                          onChange={e => setSettingsForm(prev => ({...prev, announcement_text_color: e.target.value}))} 
                         />
                       </div>
                     </div>
@@ -2452,7 +2452,7 @@ export default function AdminDashboard() {
                       type="text" 
                       className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500" 
                       value={settingsForm.whatsapp_number || ''} 
-                      onChange={e => setSettingsForm({...settingsForm, whatsapp_number: e.target.value})} 
+                      onChange={e => setSettingsForm(prev => ({...prev, whatsapp_number: e.target.value}))} 
                       placeholder="213555000000"
                     />
                     <p className="text-sm text-gray-500 mt-1">Ce numéro sera utilisé pour le bouton WhatsApp flottant sur le site.</p>
@@ -2469,7 +2469,7 @@ export default function AdminDashboard() {
                       type="text" 
                       className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500" 
                       value={settingsForm.ga_measurement_id || ''} 
-                      onChange={e => setSettingsForm({...settingsForm, ga_measurement_id: e.target.value})} 
+                      onChange={e => setSettingsForm(prev => ({...prev, ga_measurement_id: e.target.value}))} 
                       placeholder="G-XXXXXXXXXX"
                     />
                     <p className="text-sm text-gray-500 mt-1">Laissez vide pour désactiver Google Analytics.</p>
@@ -2480,7 +2480,7 @@ export default function AdminDashboard() {
                       type="text" 
                       className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500" 
                       value={settingsForm.fb_pixel_id || ''} 
-                      onChange={e => setSettingsForm({...settingsForm, fb_pixel_id: e.target.value})} 
+                      onChange={e => setSettingsForm(prev => ({...prev, fb_pixel_id: e.target.value}))} 
                       placeholder="123456789012345"
                     />
                     <p className="text-sm text-gray-500 mt-1">Laissez vide pour désactiver le Pixel Facebook.</p>
@@ -2516,7 +2516,7 @@ export default function AdminDashboard() {
                       type="email" 
                       className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500" 
                       value={settingsForm.admin_email || ''} 
-                      onChange={e => setSettingsForm({...settingsForm, admin_email: e.target.value})} 
+                      onChange={e => setSettingsForm(prev => ({...prev, admin_email: e.target.value}))} 
                       placeholder="nom@exemple.com"
                     />
                     <p className="text-sm text-gray-500 mt-1">Cet email sera utilisé pour recevoir les commandes des clients et les messages via le formulaire de contact.</p>

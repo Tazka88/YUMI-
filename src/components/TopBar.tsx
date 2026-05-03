@@ -25,6 +25,7 @@ export default function TopBar() {
   const [isVisible, setIsVisible] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [settings, setSettings] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     fetch('/api/settings')
@@ -34,10 +35,13 @@ export default function TopBar() {
           setSettings(data);
         }
       })
-      .catch(console.error);
+      .catch(console.error)
+      .finally(() => setIsLoading(false));
   }, []);
 
   useEffect(() => {
+    if (isLoading) return;
+
     const messages = settings?.announcement_text 
       ? settings.announcement_text.split(/\r?\n/).map((m: string) => m.trim()).filter((m: string) => m.length > 0)
       : ZORANDO_TOPBAR_CONFIG.messages;

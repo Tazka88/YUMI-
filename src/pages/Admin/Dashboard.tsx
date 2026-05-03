@@ -6,7 +6,8 @@ import { formatPrice } from '../../utils/formatPrice';
 import FooterSettings from './FooterSettings';
 import PageSettings from './PageSettings';
 import WilayasSettings from './WilayasSettings';
-import { FileText, MapPin, Search, LayoutGrid, List, Printer, Download, Truck } from 'lucide-react';
+import OfficesSettings from './OfficesSettings';
+import { FileText, MapPin, Search, LayoutGrid, List, Printer, Download, Truck, Building2 } from 'lucide-react';
 import OrderKanban from './OrderKanban';
 import SliderImagesAdmin from './SliderImagesAdmin';
 
@@ -502,7 +503,7 @@ export default function AdminDashboard() {
 
       const cleanPhone = (orderData.customer_phone || '').replace(/\D/g, '');
 
-      const payload = {
+      const payload: any = {
         reference: orderData.order_id || `#${orderData.id}`,
         nom_client: orderData.customer_name || 'Client',
         telephone: cleanPhone || '0000000000',
@@ -514,8 +515,12 @@ export default function AdminDashboard() {
         remarque: orderData.note || '',
         produit: productsNames.substring(0, 250),
         type: 1,
-        stop_desk: 0
+        stop_desk: orderData.stop_desk ? 1 : 0
       };
+
+      if (orderData.office_id) {
+        payload.office_id = orderData.office_id;
+      }
 
       const ecoRes = await fetch('/api/ecotrack/create-order', {
         method: 'POST',
@@ -1470,6 +1475,13 @@ export default function AdminDashboard() {
             Wilayas & Livraison
           </button>
           <button 
+            onClick={() => setActiveTab('offices')}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-md transition-colors ${activeTab === 'offices' ? 'bg-orange-500 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white'}`}
+          >
+            <Building2 size={20} />
+            Points Relais (Bureaux)
+          </button>
+          <button 
             onClick={() => setActiveTab('settings')}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-md transition-colors ${activeTab === 'settings' ? 'bg-orange-500 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white'}`}
           >
@@ -2200,6 +2212,7 @@ export default function AdminDashboard() {
         )}
 
         {activeTab === 'wilayas' && <WilayasSettings />}
+        {activeTab === 'offices' && <OfficesSettings />}
 
         {activeTab === 'settings' && (
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">

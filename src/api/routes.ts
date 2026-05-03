@@ -769,7 +769,7 @@ router.get('/orders/user/:userId', async (req, res) => {
 });
 
 router.post('/orders', orderLimiter, async (req, res) => {
-  const { customer_name, customer_email, customer_phone, wilaya, commune, address, note, items, delivery_cost: clientDeliveryCost, customer_user_id } = req.body;
+  const { customer_name, customer_email, customer_phone, wilaya, commune, address, note, items, delivery_cost: clientDeliveryCost, customer_user_id, stop_desk, office_id } = req.body;
   
   if (!items || !Array.isArray(items) || items.length === 0) {
     return res.status(400).json({ error: 'La commande doit contenir au moins un article' });
@@ -807,8 +807,8 @@ router.post('/orders', orderLimiter, async (req, res) => {
 
     const orderData = await sql.begin(async (sql: any) => {
       const [order] = await sql`
-        INSERT INTO orders (customer_name, customer_email, customer_phone, wilaya, commune, address, note, total_amount, delivery_cost, customer_user_id)
-        VALUES (${customer_name || ''}, ${customer_email || null}, ${customer_phone || ''}, ${wilaya || ''}, ${commune || ''}, ${address || ''}, ${note || null}, ${calculatedTotal}, ${delivery_cost}, ${customer_user_id || null})
+        INSERT INTO orders (customer_name, customer_email, customer_phone, wilaya, commune, address, note, total_amount, delivery_cost, customer_user_id, stop_desk, office_id)
+        VALUES (${customer_name || ''}, ${customer_email || null}, ${customer_phone || ''}, ${wilaya || ''}, ${commune || ''}, ${address || ''}, ${note || null}, ${calculatedTotal}, ${delivery_cost}, ${customer_user_id || null}, ${stop_desk ? true : false}, ${office_id || null})
         RETURNING id
       `;
       
@@ -1666,6 +1666,41 @@ router.delete('/admin/wilayas/:id', authenticate, async (req, res) => {
     res.json({ message: 'Wilaya supprimée' });
   } catch (err) {
     res.status(500).json({ error: 'Erreur lors de la suppression de la wilaya' });
+  }
+});
+
+router.get('/offices', async (req, res) => {
+  try {
+    const offices = await sql`SELECT * FROM offices ORDER BY wilaya ASC, name ASC`;
+    res.json(offices);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch offices' });
+  }
+});
+
+router.post('/admin/offices', authenticate, async (req, res) => {
+  const { name, address, wilaya, commune } = req.body;
+  if (!name || !address || !wilaya || !commune) {
+    return res.status(400).json({ error: 'Tous les champs sont obligatoires' });
+  }
+  try {
+    const [info] = await sql`
+      INSERT INTO offices (name, address, wilaya, commune) 
+      VALUES (${name}, ${address}, ${wilaya}, ${commune}) 
+      RETURNING id
+    `;
+    res.status(201).json({ id: info.id });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to add office' });
+  }
+});
+
+router.delete('/admin/offices/:id', authenticate, async (req, res) => {
+  try {
+    await sql`DELETE FROM offices WHERE id = ${req.params.id}`;
+    res.json({ message: 'Office deleted' });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to delete office' });
   }
 });
 

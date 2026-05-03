@@ -45,6 +45,9 @@ export default function Checkout() {
   const [createdOrderId, setCreatedOrderId] = useState<string | null>(null);
   const [trackingIds, setTrackingIds] = useState({ ga: '', fb: '' });
   const [wilayas, setWilayas] = useState<Wilaya[]>([]);
+  const [offices, setOffices] = useState<any[]>([]);
+  const [deliveryMode, setDeliveryMode] = useState<'domicile' | 'bureau'>('domicile');
+  const [officeId, setOfficeId] = useState('');
   const [savedAddresses, setSavedAddresses] = useState<any[]>([]);
   const [showAddressPicker, setShowAddressPicker] = useState(false);
 
@@ -115,17 +118,19 @@ export default function Checkout() {
   };
 
   useEffect(() => {
-    const fetchWilayas = async () => {
+    const fetchWilayasAndOffices = async () => {
       try {
         const data = await fetchWithCache('/api/wilayas');
         if (Array.isArray(data)) {
           setWilayas(data.filter((w: any) => w.is_active === true || w.is_active === 1));
         }
+        const officesData = await fetchWithCache('/api/offices');
+        if (Array.isArray(officesData)) setOffices(officesData);
       } catch (error) {
-        console.error('Failed to fetch wilayas:', error);
+        console.error('Failed to fetch wilayas or offices:', error);
       }
     };
-    fetchWilayas();
+    fetchWilayasAndOffices();
   }, []);
 
   useEffect(() => {
@@ -223,16 +228,22 @@ export default function Checkout() {
     e.preventDefault();
     setIsSubmitting(true);
 
+    const isBureau = deliveryMode === 'bureau';
+    const selectedOffice = isBureau ? offices.find(o => o.id === Number(officeId) || o.id === officeId) : null;
+    const finalAddress = isBureau && selectedOffice ? `Point Relais: ${selectedOffice.name} - ${selectedOffice.address}` : formData.address;
+
     const orderData = {
       customer_name: formData.name,
       customer_email: formData.email,
       customer_phone: formData.phone,
       wilaya: wilayas.find(w => w.number === formData.wilaya)?.name || formData.wilaya,
-      commune: formData.commune,
-      address: formData.address,
+      commune: isBureau && selectedOffice ? selectedOffice.commune : formData.commune,
+      address: finalAddress,
       note: formData.note,
       total_amount: finalTotal,
       delivery_cost: effectiveDeliveryCost,
+      stop_desk: deliveryMode === 'bureau',
+      office_id: deliveryMode === 'bureau' ? officeId : null,
       customer_user_id: user?.id || null,
       items: checkoutItems.map(item => ({
         product_id: item.id,
@@ -501,16 +512,54 @@ export default function Checkout() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Adresse complète *</label>
-              <textarea 
-                required
-                rows={3}
-                className="w-full px-4 py-3 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-shadow resize-none"
-                placeholder="Ex: Cité 100 logements, Bâtiment A, Porte 5"
-                value={formData.address}
-                onChange={e => setFormData({...formData, address: e.target.value})}
-              />
+              <label className="block text-sm font-medium text-gray-700 mb-2">Mode de livraison *</label>
+              <div className="grid grid-cols-2 gap-4">
+                <label className={`cursor-pointer rounded-lg border-2 p-4 flex flex-col items-center justify-center transition-colors ${deliveryMode === 'domicile' ? 'border-orange-500 bg-orange-50' : 'border-gray-200 hover:border-orange-200'}`}>
+                  <input type="radio" className="sr-only" name="deliveryMode" value="domicile" checked={deliveryMode === 'domicile'} onChange={(e) => setDeliveryMode(e.target.value as 'domicile')} />
+                  <Truck className={`h-6 w-6 mb-2 ${deliveryMode === 'domicile' ? 'text-orange-600' : 'text-gray-400'}`} />
+                  <span className={`font-semibold ${deliveryMode === 'domicile' ? 'text-orange-700' : 'text-gray-700'}`}>À domicile</span>
+                </label>
+                <label className={`cursor-pointer rounded-lg border-2 p-4 flex flex-col items-center justify-center transition-colors ${deliveryMode === 'bureau' ? 'border-orange-500 bg-orange-50' : 'border-gray-200 hover:border-orange-200'}`}>
+                  <input type="radio" className="sr-only" name="deliveryMode" value="bureau" checked={deliveryMode === 'bureau'} onChange={(e) => setDeliveryMode(e.target.value as 'bureau')} />
+                  <MapPin className={`h-6 w-6 mb-2 ${deliveryMode === 'bureau' ? 'text-orange-600' : 'text-gray-400'}`} />
+                  <span className={`font-semibold ${deliveryMode === 'bureau' ? 'text-orange-700' : 'text-gray-700'}`}>En point relais</span>
+                </label>
+              </div>
             </div>
+
+            {deliveryMode === 'bureau' && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Choisir un point relais *</label>
+                <select 
+                  required
+                  className="w-full px-4 py-3 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-shadow bg-white"
+                  value={officeId}
+                  onChange={e => setOfficeId(e.target.value)}
+                >
+                  <option value="" disabled>Sélectionnez un point relais</option>
+                  {offices.filter(o => !formData.wilaya || Number(o.wilaya) === Number(formData.wilaya)).map(office => (
+                    <option key={office.id} value={office.id}>{office.name} - {office.address} ({office.commune})</option>
+                  ))}
+                  {offices.filter(o => !formData.wilaya || Number(o.wilaya) === Number(formData.wilaya)).length === 0 && (
+                    <option value="" disabled>Aucun point relais disponible pour cette wilaya</option>
+                  )}
+                </select>
+              </div>
+            )}
+
+            {deliveryMode === 'domicile' && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Adresse complète *</label>
+                <textarea 
+                  required
+                  rows={3}
+                  className="w-full px-4 py-3 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-shadow resize-none"
+                  placeholder="Ex: Cité 100 logements, Bâtiment A, Porte 5"
+                  value={formData.address}
+                  onChange={e => setFormData({...formData, address: e.target.value})}
+                />
+              </div>
+            )}
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Note pour le livreur (Optionnel)</label>
@@ -632,7 +681,7 @@ export default function Checkout() {
             
             <button 
               onClick={handleSubmit}
-              disabled={isSubmitting || !formData.wilaya || !formData.commune || !formData.name || !formData.phone || !formData.address}
+              disabled={isSubmitting || !formData.wilaya || !formData.commune || !formData.name || !formData.phone || (deliveryMode === 'domicile' ? !formData.address : !officeId)}
               className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-4 px-4 rounded-md flex items-center justify-center gap-2 transition-colors shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isSubmitting ? (

@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import axios from 'axios';
 import { z } from 'zod';
+import { sql } from '../db/setup.js';
 
 const router = Router();
 
@@ -114,6 +115,17 @@ router.post('/valid/order', (req, res) => handleEcotrackRequest(res, () => ecotr
 router.post('/create-order', async (req, res) => {
   try {
     const validatedData = createOrderSchema.parse(req.body);
+    
+    if (validatedData.stop_desk === 1 && req.body.office_id) {
+      const [office] = await sql`SELECT name, address, commune, wilaya FROM offices WHERE id = ${req.body.office_id}`;
+      if (office) {
+        const officeNote = `Bureau: ${office.name} - ${office.address}`;
+        validatedData.remarque = validatedData.remarque ? `${validatedData.remarque} | ${officeNote}` : officeNote;
+        validatedData.commune = office.commune; // Override commune as per instructions
+        validatedData.wilaya = Number(office.wilaya); // Override wilaya code
+      }
+    }
+    
     return handleEcotrackRequest(res, () => ecotrackApi.post('/api/v1/create/order', validatedData));
   } catch (error) {
     if (error instanceof z.ZodError) {

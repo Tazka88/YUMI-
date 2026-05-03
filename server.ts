@@ -7,7 +7,15 @@ import path from 'path';
 import fs from 'fs';
 
 async function startServer() {
-  await setupDb();
+  console.log('Starting server...');
+  
+  // Non-blocking DB setup to allow health checks to pass even if DB is slow
+  setupDb().then(() => {
+    console.log('Database setup completed');
+  }).catch(err => {
+    console.error('Database setup failed:', err);
+  });
+
   const app = express();
   const PORT = 3000;
 

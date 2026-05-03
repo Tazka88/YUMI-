@@ -2,21 +2,35 @@ import postgres from 'postgres';
 import fs from 'fs';
 import path from 'path';
 
-const rawConnString = process.env.DATABASE_URL || 'postgresql://postgres:Lifebook88855@db.evvbhalgyffagsesmvhu.supabase.co:5432/postgres';
-const connectionString = rawConnString.replace(':5432/', ':6543/');
+let connectionString = process.env.DATABASE_URL || 'postgresql://postgres:Lifebook88855@db.evvbhalgyffagsesmvhu.supabase.co:5432/postgres';
+
+// Only apply Supavisor port swap if it's a Supabase-like URL on port 5432
+if (connectionString.includes('supabase.co:5432')) {
+  connectionString = connectionString.replace(':5432', ':6543');
+}
+
+console.log('Initializing PostgreSQL connection...');
 
 export const sql = postgres(connectionString, {
-  ssl: 'require',
+  ssl: connectionString.includes('localhost') || connectionString.includes('127.0.0.1') ? false : 'require',
   max: 15,
   idle_timeout: 5,
-  connect_timeout: 10,
-  prepare: false, // Required for Supabase connection pooler (Supavisor)
+  connect_timeout: 15, // Increased timeout
+  prepare: false,
 });
 
 export async function setupDb() {
   try {
-    await sql`SELECT 1`;
-    console.log('Connected to Supabase PostgreSQL successfully.');
+    console.log('Testing database connection...');
+    // Add a race to avoid hanging forever on startup
+    const result = await Promise.race([
+      sql`SELECT 1`,
+      new Promise((_, reject) => setTimeout(() => reject(new Error('Database connection timeout')), 10000))
+    ]);
+    
+    if (result) {
+      console.log('Connected to PostgreSQL successfully.');
+    }
     
     // Initialize schema
     const schemaPath = path.join(process.cwd(), 'src', 'db', 'schema.sql');

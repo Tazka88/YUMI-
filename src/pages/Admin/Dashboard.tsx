@@ -29,6 +29,18 @@ const defaultSections: HomeSection[] = [
 
 import { Helmet } from 'react-helmet-async';
 
+export function generateSlug(text: string) {
+  if (!text) return '';
+  return text
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/[\s-]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState('overview');
   const [productSubTab, setProductSubTab] = useState('products');
@@ -2718,7 +2730,7 @@ export default function AdminDashboard() {
                     value={productForm.name} 
                     onChange={e => {
                       const name = e.target.value;
-                      const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
+                      const slug = generateSlug(name);
                       setProductForm({...productForm, name, slug});
                     }} 
                   />
@@ -2993,7 +3005,7 @@ export default function AdminDashboard() {
                     value={subcategoryForm.name} 
                     onChange={e => {
                       const name = e.target.value;
-                      const slug = name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
+                      const slug = generateSlug(name);
                       setSubcategoryForm({...subcategoryForm, name, slug});
                     }} 
                   />
@@ -3062,7 +3074,7 @@ export default function AdminDashboard() {
                     value={subSubcategoryForm.name} 
                     onChange={e => {
                       const name = e.target.value;
-                      const slug = name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
+                      const slug = generateSlug(name);
                       setSubSubcategoryForm({...subSubcategoryForm, name, slug});
                     }} 
                   />
@@ -3130,7 +3142,7 @@ export default function AdminDashboard() {
                     value={categoryForm.name} 
                     onChange={e => {
                       const name = e.target.value;
-                      const slug = name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
+                      const slug = generateSlug(name);
                       setCategoryForm({...categoryForm, name, slug});
                     }} 
                   />
@@ -3237,7 +3249,7 @@ export default function AdminDashboard() {
                     type="text" 
                     className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500"
                     value={brandForm.name}
-                    onChange={e => setBrandForm({...brandForm, name: e.target.value, slug: e.target.value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '')})}
+                    onChange={e => setBrandForm({...brandForm, name: e.target.value, slug: generateSlug(e.target.value)})}
                   />
                 </div>
                 <div>

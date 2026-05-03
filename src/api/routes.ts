@@ -1348,14 +1348,28 @@ router.get('/admin/export-meta-catalog', authenticate, async (req, res) => {
   }
 });
 
+function generateSlug(str: string): string {
+  if (!str) return '';
+  return str
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9 -]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-');
+}
+
 router.post('/admin/products', authenticate, async (req, res) => {
-  const { category_id, subcategory_id, sub_subcategory_id, brand_id, brand_name, name, slug, description, price, promo_price, stock, image, video_url, is_popular, is_best_seller, is_new, is_recommended, is_fast_delivery, weight, is_active, images, features, key_points, faq_q1, faq_a1, faq_q2, faq_a2, variations } = req.body;
+  const { category_id, subcategory_id, sub_subcategory_id, brand_id, brand_name, name, description, price, promo_price, stock, image, video_url, is_popular, is_best_seller, is_new, is_recommended, is_fast_delivery, weight, is_active, images, features, key_points, faq_q1, faq_a1, faq_q2, faq_a2, variations } = req.body;
   
   try {
+    const generatedSlug = generateSlug(name);
+    
     const productId = await sql.begin(async (sql: any) => {
       const [info] = await sql`
         INSERT INTO products (category_id, subcategory_id, sub_subcategory_id, brand_id, brand_name, name, slug, description, price, promo_price, stock, image, video_url, is_popular, is_best_seller, is_new, is_recommended, is_fast_delivery, weight, is_active, features, key_points, faq_q1, faq_a1, faq_q2, faq_a2, variations)
-        VALUES (${category_id || null}, ${subcategory_id || null}, ${sub_subcategory_id || null}, ${brand_id || null}, ${brand_name || null}, ${name || ''}, ${slug || ''}, ${description || null}, ${price || 0}, ${promo_price || null}, ${stock || 0}, ${image || null}, ${video_url || null}, ${is_popular ? true : false}, ${is_best_seller ? true : false}, ${is_new ? true : false}, ${is_recommended ? true : false}, ${is_fast_delivery ? true : false}, ${weight || null}, ${is_active !== undefined ? is_active : true}, ${features ? JSON.stringify(features) : null}::jsonb, ${key_points ? JSON.stringify(key_points) : null}::jsonb, ${faq_q1 || null}, ${faq_a1 || null}, ${faq_q2 || null}, ${faq_a2 || null}, ${variations ? JSON.stringify(variations) : null}::jsonb)
+        VALUES (${category_id || null}, ${subcategory_id || null}, ${sub_subcategory_id || null}, ${brand_id || null}, ${brand_name || null}, ${name || ''}, ${generatedSlug || ''}, ${description || null}, ${price || 0}, ${promo_price || null}, ${stock || 0}, ${image || null}, ${video_url || null}, ${is_popular ? true : false}, ${is_best_seller ? true : false}, ${is_new ? true : false}, ${is_recommended ? true : false}, ${is_fast_delivery ? true : false}, ${weight || null}, ${is_active !== undefined ? is_active : true}, ${features ? JSON.stringify(features) : null}::jsonb, ${key_points ? JSON.stringify(key_points) : null}::jsonb, ${faq_q1 || null}, ${faq_a1 || null}, ${faq_q2 || null}, ${faq_a2 || null}, ${variations ? JSON.stringify(variations) : null}::jsonb)
         RETURNING id
       `;
       

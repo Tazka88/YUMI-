@@ -515,6 +515,7 @@ export default function Product() {
         description={product.description.substring(0, 150) + '...'} 
         image={product.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(product.name)}&background=random&size=800`}
         url={window.location.href}
+        type="product"
         schema={productSchema}
       />
       {/* Breadcrumb */}

@@ -1,6 +1,5 @@
 import express from 'express';
 import cors from 'cors';
-import compression from 'compression';
 import helmet from 'helmet';
 import apiRoutes from '../src/api/routes.js';
 import path from 'path';
@@ -207,10 +206,23 @@ app.get('*', async (req, res, next) => {
     } else if (req.path.startsWith('/product/')) {
       const slug = req.path.split('/')[2];
       try {
-        const [product] = await sql`SELECT name, description, price, promo_price FROM products WHERE slug = ${slug}`;
+        const [product] = await sql`SELECT id, name, description, price, promo_price, image FROM products WHERE slug = ${slug}`;
         if (product) {
           title = `${product.name} - ZORANDO`;
-          description = product.description ? product.description.substring(0, 160) : `Achetez ${product.name} au meilleur prix sur ZORANDO.`;
+          description = product.description ? product.description.substring(0, 160).replace(/<[^>]+>/g, '') : `Achetez ${product.name} au meilleur prix sur ZORANDO.`;
+          
+          if (product.image) {
+            // Handle image format: Could be an external URL, base64 data, or an internal path
+            if (product.image.startsWith('http')) {
+              ogImage = product.image;
+            } else if (product.image.startsWith('data:image')) {
+              // For data URIs from the DB, we generate the API endpoint URL for the seo image
+              ogImage = `${baseUrl}/api/images/products/${product.id}/image/${slug}.webp?v=${product.image.length}`;
+            } else {
+              ogImage = product.image.startsWith('/') ? `${baseUrl}${product.image}` : `${baseUrl}/${product.image}`;
+            }
+          }
+          
           const displayPrice = product.promo_price || product.price;
           seoHtml = `
             <div id="seo-content" style="display:none;">

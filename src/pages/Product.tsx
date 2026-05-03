@@ -556,6 +556,7 @@ export default function Product() {
                   className="w-full h-full rounded-md"
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                   allowFullScreen
+                  referrerPolicy="no-referrer-when-downgrade"
                 ></iframe>
               ) : (
                 <>
@@ -579,12 +580,13 @@ export default function Product() {
                     if (!videoId) return null;
                     
                     const isShort = product.video_url.includes('youtube.com/shorts/');
-                    const embedUrl = `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&mute=1&loop=1&playlist=${videoId}&controls=0&showinfo=0&rel=0`;
+                    const currentOrigin = typeof window !== 'undefined' ? window.location.origin : '';
+                    const embedUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&loop=1&playlist=${videoId}&controls=0&showinfo=0&rel=0&enablejsapi=1${currentOrigin ? `&origin=${encodeURIComponent(currentOrigin)}` : ''}`;
                     
                     return (
                       <div 
                         className={`absolute bottom-4 right-4 md:bottom-6 md:right-6 ${isShort ? 'w-[30%] max-w-[140px] md:w-[25%] md:max-w-[240px]' : 'w-[40%] max-w-[200px] md:w-[40%] md:max-w-[380px]'} ${isShort ? 'aspect-[9/16]' : 'aspect-video'} rounded-xl overflow-hidden shadow-2xl border-2 md:border-4 border-white cursor-pointer z-20 group transition-transform hover:scale-[1.02]`}
-                        onClick={() => setSelectedMedia({type: 'video', url: `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1`})}
+                        onClick={() => setSelectedMedia({type: 'video', url: `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0&enablejsapi=1${currentOrigin ? `&origin=${encodeURIComponent(currentOrigin)}` : ''}`})}
                       >
                         <iframe
                           src={embedUrl}

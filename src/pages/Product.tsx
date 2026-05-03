@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { ShoppingCart, Star, ShieldCheck, Truck, RotateCcw, ThumbsUp, Facebook, Instagram, MessageCircle, CreditCard, ArrowDown, Phone, Play, ChevronDown, HelpCircle, Camera, X, Heart } from 'lucide-react';
+import { ShoppingCart, Star, ShieldCheck, Truck, RotateCcw, ThumbsUp, Facebook, Instagram, MessageCircle, CreditCard, ArrowDown, Phone, Play, Youtube, ChevronDown, HelpCircle, Camera, X, Heart } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useCartStore, Product as ProductType } from '../store/cartStore';
 import { useAuth } from '../lib/AuthContext';
@@ -585,18 +585,22 @@ export default function Product() {
                     
                     return (
                       <div 
-                        className={`absolute bottom-4 right-4 md:bottom-6 md:right-6 ${isShort ? 'w-[30%] max-w-[140px] md:w-[25%] md:max-w-[240px]' : 'w-[40%] max-w-[200px] md:w-[40%] md:max-w-[380px]'} ${isShort ? 'aspect-[9/16]' : 'aspect-video'} rounded-xl overflow-hidden shadow-2xl border-2 md:border-4 border-white cursor-pointer z-20 group transition-transform hover:scale-[1.02]`}
+                        className={`absolute bottom-4 right-4 md:bottom-6 md:right-6 ${isShort ? 'w-[30%] max-w-[140px] md:w-[25%] md:max-w-[240px]' : 'w-[40%] max-w-[200px] md:w-[40%] md:max-w-[380px]'} ${isShort ? 'aspect-[9/16]' : 'aspect-video'} rounded-xl overflow-hidden shadow-2xl border-2 md:border-4 border-white cursor-pointer z-20 group transition-transform hover:scale-[1.02] bg-gray-900`}
                         onClick={() => setSelectedMedia({type: 'video', url: `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0&enablejsapi=1${currentOrigin ? `&origin=${encodeURIComponent(currentOrigin)}` : ''}`})}
                       >
-                        <iframe
-                          src={embedUrl}
-                          title="Product Video Preview"
-                          className="w-full h-full pointer-events-none"
-                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                        ></iframe>
-                        <div className="absolute inset-0 flex items-center justify-center bg-black/10 group-hover:bg-black/20 transition-colors">
-                          <div className="w-8 h-8 md:w-12 md:h-12 bg-white/90 rounded-full flex items-center justify-center backdrop-blur-sm shadow-lg scale-90 group-hover:scale-100 transition-transform">
-                            <Play size={16} className="text-gray-900 ml-0.5 md:ml-1 md:w-5 md:h-5" />
+                        <img 
+                          src={`https://img.youtube.com/vi/${videoId}/hqdefault.jpg`}
+                          alt="Video Preview"
+                          className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity"
+                          referrerPolicy="no-referrer"
+                        />
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/10 transition-colors">
+                          <div className="w-10 h-10 md:w-14 md:h-14 bg-white/95 rounded-full flex items-center justify-center shadow-2xl group-hover:scale-110 transition-transform duration-300">
+                            <Play size={20} className="text-orange-600 fill-orange-600 ml-1 md:w-6 md:h-6" />
+                          </div>
+                          <div className="absolute bottom-2 left-2 bg-black/60 backdrop-blur-md px-2 py-0.5 rounded text-[10px] md:text-xs text-white font-medium flex items-center gap-1">
+                            <Youtube size={12} className="text-red-500" />
+                            <span>Regarder la vidéo</span>
                           </div>
                         </div>
                       </div>
@@ -624,6 +628,29 @@ export default function Product() {
                     <img src={img.image} alt="Thumbnail" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
                   </button>
                 ))}
+                {product.video_url && (() => {
+                  const match = product.video_url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/))([\w-]{11})/);
+                  const videoId = match ? match[1] : null;
+                  if (!videoId) return null;
+                  const currentOrigin = typeof window !== 'undefined' ? window.location.origin : '';
+                  const videoUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0&enablejsapi=1${currentOrigin ? `&origin=${encodeURIComponent(currentOrigin)}` : ''}`;
+                  return (
+                    <button 
+                      onClick={() => setSelectedMedia({type: 'video', url: videoUrl})}
+                      className={`w-20 h-20 flex-shrink-0 rounded-md overflow-hidden border-2 transition-colors bg-gray-900 border-2 relative ${selectedMedia.type === 'video' ? 'border-orange-500' : 'border-transparent'}`}
+                    >
+                      <img 
+                        src={`https://img.youtube.com/vi/${videoId}/mqdefault.jpg`} 
+                        alt="Video Thumbnail" 
+                        className="w-full h-full object-cover opacity-60" 
+                        referrerPolicy="no-referrer" 
+                      />
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <Play size={16} className="text-white fill-white" />
+                      </div>
+                    </button>
+                  );
+                })()}
               </div>
             )}
           </div>

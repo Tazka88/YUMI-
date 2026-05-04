@@ -1,10 +1,10 @@
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
-import apiRoutes from '../src/api/routes';
+import apiRoutes from '../src/api/routes.js';
 import path from 'path';
 import fs from 'fs';
-import { sql } from '../src/db/setup';
+import { sql } from '../src/db/setup.js';
 
 const app = express();
 

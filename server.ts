@@ -37,7 +37,10 @@ async function startServer() {
   app.use(express.json({ limit: '15mb' })); // Increased to 15mb for larger base64 images
   app.use(express.urlencoded({ limit: '15mb', extended: true }));
   
-  // 1. Robots.txt - Ensuring it is correctly served to fix Facebook crawler 403
+  // 1. API Routes (Mounted early to take precedence)
+  app.use('/api', apiRoutes);
+
+  // 2. Robots.txt - Ensuring it is correctly served to fix Facebook crawler 403
   app.get('/robots.txt', (req, res) => {
     res.header('Content-Type', 'text/plain');
     res.header('X-Robots-Tag', 'all');
@@ -102,9 +105,6 @@ Sitemap: https://zorando.com/sitemap.xml`);
       res.status(500).send('Error generating sitemap');
     }
   });
-
-  // API Routes
-  app.use('/api', apiRoutes);
 
   // Vite middleware for development
   if (process.env.NODE_ENV !== 'production') {

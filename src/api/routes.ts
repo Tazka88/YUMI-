@@ -1,14 +1,14 @@
 import { Router } from 'express';
-import { sql } from '../db/setup.js';
-import { getSupabase } from '../lib/supabase.js';
+import { sql } from '../db/setup.ts';
+import { getSupabase } from '../lib/supabase.ts';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import multer from 'multer';
 import path from 'path';
 import rateLimit from 'express-rate-limit';
 import fs from 'fs';
-import capiRoutes from './capi.js';
-import ecotrackRoutes from './ecotrack.js';
+import capiRoutes from './capi.ts';
+import ecotrackRoutes from './ecotrack.ts';
 
 const router = Router();
 

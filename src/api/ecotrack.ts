@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import axios from 'axios';
 import { z } from 'zod';
-import { sql } from '../db/setup.js';
+import { sql } from '../db/setup';
 
 const router = Router();
 

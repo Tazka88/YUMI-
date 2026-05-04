@@ -1,8 +1,8 @@
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
-import { sql, setupDb } from './src/db/setup.ts';
-import apiRoutes from './src/api/routes.ts';
+import { sql, setupDb } from './src/db/setup';
+import apiRoutes from './src/api/routes';
 import path from 'path';
 import fs from 'fs';
 

@@ -103,6 +103,15 @@ export default function AdminDashboard() {
   const [editingSectionProducts, setEditingSectionProducts] = useState<string | null>(null);
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
   const [productSearch, setProductSearch] = useState('');
+  const [adminProductSearch, setAdminProductSearch] = useState('');
+  const [debouncedAdminProductSearch, setDebouncedAdminProductSearch] = useState('');
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedAdminProductSearch(adminProductSearch);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [adminProductSearch]);
 
   useEffect(() => {
     fetch('/api/settings')
@@ -215,7 +224,10 @@ export default function AdminDashboard() {
     }
 
     if (activeTab === 'products') {
-      fetch('/api/admin/products', { headers, signal })
+      const searchParams = new URLSearchParams();
+      if (debouncedAdminProductSearch) searchParams.append('search', debouncedAdminProductSearch);
+
+      fetch(`/api/admin/products?${searchParams.toString()}`, { headers, signal })
         .then(res => res.json())
         .then(data => { if (Array.isArray(data)) setProducts(data); })
         .catch(handleFetchError);
@@ -253,7 +265,7 @@ export default function AdminDashboard() {
     }
     
     return () => controller.abort();
-  }, [navigate, activeTab]);
+  }, [navigate, activeTab, debouncedAdminProductSearch]);
 
   const toSlug = (text: string) => {
     if (!text) return '';
@@ -1894,9 +1906,31 @@ export default function AdminDashboard() {
 
             {productSubTab === 'products' && (
               <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                <div className="p-6 border-b border-gray-100 flex justify-between items-center">
-                  <h2 className="text-lg font-bold text-gray-800">Gestion des produits</h2>
-                  <div className="flex gap-2">
+                <div className="p-6 border-b border-gray-100 flex flex-col md:flex-row justify-between items-center gap-4">
+                  <div className="flex flex-col gap-1 w-full md:w-auto">
+                    <h2 className="text-lg font-bold text-gray-800">Gestion des produits</h2>
+                    <div className="flex gap-2 mt-2">
+                      <div className="relative flex-1 md:w-96">
+                         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                           <Search className="h-4 w-4 text-gray-400" />
+                         </div>
+                         <input
+                           type="text"
+                           className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-orange-500 focus:border-orange-500 sm:text-sm"
+                           placeholder="Rechercher par nom, description ou ID..."
+                           value={adminProductSearch}
+                           onChange={(e) => setAdminProductSearch(e.target.value)}
+                         />
+                      </div>
+                      <button 
+                        onClick={() => setDebouncedAdminProductSearch(adminProductSearch)}
+                        className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-md font-medium transition-colors border border-gray-300"
+                      >
+                        Rechercher
+                      </button>
+                    </div>
+                  </div>
+                  <div className="flex gap-2 w-full md:w-auto overflow-x-auto">
                     <button 
                       onClick={handleExportMetaCatalog}
                       className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md font-medium flex items-center gap-2 transition-colors"
@@ -1931,45 +1965,57 @@ export default function AdminDashboard() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
-                      {products.map(product => (
-                        <tr key={product.id} className="hover:bg-gray-50">
-                          <td className="px-6 py-4">
-                            <img src={product.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(product.name)}&background=random&size=50`} alt={product.name} className="w-10 h-10 rounded object-cover" referrerPolicy="no-referrer" />
-                          </td>
-                          <td className="px-6 py-4 font-medium text-gray-900">{product.name}</td>
-                          <td className="px-6 py-4">
-                            {product.is_active !== false ? (
-                              <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full font-medium">Actif</span>
-                            ) : (
-                              <span className="px-2 py-1 bg-gray-100 text-gray-800 text-xs rounded-full font-medium">Inactif</span>
-                            )}
-                          </td>
-                          <td className="px-6 py-4">{product.category_name}</td>
-                          <td className="px-6 py-4 text-gray-500">{product.subcategory_name || '-'}</td>
-                          <td className="px-6 py-4 text-gray-500">{product.sub_subcategory_name || '-'}</td>
-                          <td className="px-6 py-4 text-gray-500">{product.brand_name || '-'}</td>
-                          <td className="px-6 py-4 text-gray-500">{product.weight ? `${product.weight} kg` : '-'}</td>
-                          <td className="px-6 py-4">
-                            <div className="font-bold text-gray-900">{formatPrice(product.price)}</div>
-                            {product.promo_price && <div className="text-xs text-orange-500">{formatPrice(product.promo_price)} (Promo)</div>}
-                          </td>
-                          <td className="px-6 py-4">
-                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${product.stock > 10 ? 'bg-green-100 text-green-800' : product.stock > 0 ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'}`}>
-                              {product.stock}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4">
-                            <div className="flex items-center gap-3">
-                              <button onClick={() => openModal(product)} className="text-blue-500 hover:text-blue-700" title="Modifier">
-                                <Edit size={18} />
-                              </button>
-                              <button onClick={() => deleteProduct(product.id)} className="text-red-500 hover:text-red-700" title="Supprimer">
-                                <Trash2 size={18} />
-                              </button>
+                      {products.length === 0 ? (
+                        <tr>
+                          <td colSpan={11} className="px-6 py-12 text-center text-gray-500">
+                            <div className="flex flex-col items-center gap-2">
+                              <Package size={48} className="text-gray-200" />
+                              <p className="text-lg">Aucun produit trouvé</p>
+                              {adminProductSearch && <p className="text-sm">Essayez de modifier votre recherche pour "{adminProductSearch}"</p>}
                             </div>
                           </td>
                         </tr>
-                      ))}
+                      ) : (
+                        products.map(product => (
+                          <tr key={product.id} className="hover:bg-gray-50">
+                            <td className="px-6 py-4">
+                              <img src={product.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(product.name)}&background=random&size=50`} alt={product.name} className="w-10 h-10 rounded object-cover" referrerPolicy="no-referrer" />
+                            </td>
+                            <td className="px-6 py-4 font-medium text-gray-900">{product.name}</td>
+                            <td className="px-6 py-4">
+                              {product.is_active !== false ? (
+                                <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full font-medium">Actif</span>
+                              ) : (
+                                <span className="px-2 py-1 bg-gray-100 text-gray-800 text-xs rounded-full font-medium">Inactif</span>
+                              )}
+                            </td>
+                            <td className="px-6 py-4">{product.category_name}</td>
+                            <td className="px-6 py-4 text-gray-500">{product.subcategory_name || '-'}</td>
+                            <td className="px-6 py-4 text-gray-500">{product.sub_subcategory_name || '-'}</td>
+                            <td className="px-6 py-4 text-gray-500">{product.brand_name || '-'}</td>
+                            <td className="px-6 py-4 text-gray-500">{product.weight ? `${product.weight} kg` : '-'}</td>
+                            <td className="px-6 py-4">
+                              <div className="font-bold text-gray-900">{formatPrice(product.price)}</div>
+                              {product.promo_price && <div className="text-xs text-orange-500">{formatPrice(product.promo_price)} (Promo)</div>}
+                            </td>
+                            <td className="px-6 py-4">
+                              <span className={`px-2 py-1 rounded-full text-xs font-medium ${product.stock > 10 ? 'bg-green-100 text-green-800' : product.stock > 0 ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'}`}>
+                                {product.stock}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4">
+                              <div className="flex items-center gap-3">
+                                <button onClick={() => openModal(product)} className="text-blue-500 hover:text-blue-700" title="Modifier">
+                                  <Edit size={18} />
+                                </button>
+                                <button onClick={() => deleteProduct(product.id)} className="text-red-500 hover:text-red-700" title="Supprimer">
+                                  <Trash2 size={18} />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))
+                      )}
                     </tbody>
                   </table>
                 </div>

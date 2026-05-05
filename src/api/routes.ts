@@ -1224,6 +1224,14 @@ router.delete('/admin/orders/:id', authenticate, async (req, res) => {
 
 router.get('/admin/products', authenticate, async (req, res) => {
   try {
+    const { search } = req.query;
+    let whereClause = sql``;
+    
+    if (search) {
+      const searchTerm = `%${search}%`;
+      whereClause = sql`WHERE p.name ILIKE ${searchTerm} OR p.description ILIKE ${searchTerm} OR p.id::text ILIKE ${searchTerm}`;
+    }
+
     const products = await sql`
       SELECT ${sql.unsafe(PRODUCT_COLS)}, c.name as category_name, s.name as subcategory_name, ss.name as sub_subcategory_name, COALESCE(p.brand_name, b.name) as brand_name 
       FROM products p 
@@ -1231,6 +1239,7 @@ router.get('/admin/products', authenticate, async (req, res) => {
       LEFT JOIN subcategories s ON p.subcategory_id = s.id
       LEFT JOIN sub_subcategories ss ON p.sub_subcategory_id = ss.id
       LEFT JOIN brands b ON p.brand_id = b.id
+      ${whereClause}
       ORDER BY p.id DESC
     `;
     

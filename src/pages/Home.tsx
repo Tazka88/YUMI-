@@ -450,6 +450,56 @@ const CategorySidebar = ({ categories }: { categories: any[] }) => {
   );
 };
 
+const SEOSection = () => (
+  <section className="bg-[#f9f9f9] border-t border-gray-200 py-10 font-serif text-sm leading-relaxed text-[#222]">
+    <div className="container mx-auto px-4">
+      <h2 className="text-xl md:text-2xl font-bold border-b-2 border-gray-200 pb-2 mb-5 text-gray-900">
+        Zorando : Votre Boutique en Ligne de Référence pour Acheter en Algérie
+      </h2>
+
+      <p className="mb-4">
+        Bienvenue sur <strong className="font-bold">Zorando</strong>, la plateforme e-commerce algérienne qui révolutionne votre expérience d'achat en ligne. Zorando, c'est bien plus qu'une simple boutique : c'est une destination complète où acheteurs et vendeurs se retrouvent pour profiter des <strong className="font-bold">meilleurs prix</strong> sur des milliers de produits. Que vous soyez à la recherche d'électronique, de mode, de beauté ou d'articles de maison, Zorando vous garantit une expérience d'achat sûre, rapide et agréable.
+      </p>
+
+      <p className="mb-4">
+        Sur <strong className="font-bold">Zorando.dz</strong>, trouvez facilement tout ce dont vous avez besoin grâce à notre catalogue soigneusement sélectionné. Comparez les offres, bénéficiez de promotions exclusives et profitez d'une <strong className="font-bold">livraison rapide partout en Algérie</strong>. Notre équipe s'engage à vous offrir une plateforme fiable, avec un service client réactif et des moyens de paiement adaptés à vos besoins.
+      </p>
+
+      <h3 className="text-lg font-bold mt-8 mb-3 text-gray-900">
+        Un catalogue complet, des prix compétitifs sur toutes les catégories
+      </h3>
+
+      <p className="mb-4">
+        Chez Zorando, nous proposons une gamme étendue de <strong className="font-bold">produits authentiques et de qualité</strong> pour répondre à toutes vos attentes. Dans la catégorie <strong className="font-bold">électronique</strong>, découvrez les derniers smartphones, laptops, tablettes, casques Bluetooth, écouteurs sans fil et bien d'autres gadgets high-tech. Que vous cherchiez un iPhone, un Samsung Galaxy ou un PC portable de marque, vous trouverez forcément votre bonheur on Zorando.
+      </p>
+
+      <p className="mb-4">
+        Côté <strong className="font-bold">mode</strong>, explorez notre large collection de vêtements pour homme, femme et enfants : chemises, robes, jeans, baskets, sacs à main et accessoires tendance. Pour les amoureux de la beauté, notre rayon <strong className="font-bold">cosmétiques et soins</strong> regorge de produits de marque à des tarifs imbattables. Enfin, pour votre maison, parcourez notre sélection d'électroménagers, de meubles, de décoration et d'articles de cuisine. Zorando, c'est <strong className="font-bold">tout ce dont vous avez besoin en un seul endroit</strong>.
+      </p>
+
+      <h3 className="text-lg font-bold mt-8 mb-3 text-gray-900">
+        Les meilleures offres et promotions avec une livraison rapide
+      </h3>
+
+      <p className="mb-4">
+        Sur Zorando, les bonnes affaires ne s'arrêtent jamais ! Profitez de <strong className="font-bold">promotions quotidiennes</strong>, de ventes flash et de réductions allant jusqu'à -70% sur des centaines d'articles. Inscrivez-vous à notre newsletter pour être le premier informé des offres exclusives et des événements spéciaux comme notre <strong className="font-bold">Grand Sale</strong> ou nos liquidations de fin de saison. De plus, Zorando garantit une <strong className="font-bold">livraison rapide et sécurisée</strong> sur l'ensemble du territoire algérien, avec un suivi en temps réel de vos commandes.
+      </p>
+
+      <p className="mb-4">
+        Nous travaillons avec des transporteurs de confiance pour vous assurer une expérience de livraison sans stress. Dans certaines wilayas, bénéficiez de la <strong className="font-bold">livraison gratuite</strong> à partir d'un certain montant d'achat — une économie supplémentaire qui fait toute la différence !
+      </p>
+
+      <h3 className="text-lg font-bold mt-8 mb-3 text-gray-900">
+        Achetez en toute confiance sur Zorando
+      </h3>
+
+      <p>
+        La sécurité de vos transactions est notre priorité absolue. Sur Zorando, chaque achat est protégé grâce à notre <strong className="font-bold">système de paiement sécurisé</strong> et notre politique de remboursement claire. Vous n'êtes pas satisfait de votre commande ? Notre service client est disponible pour vous accompagner et trouver une solution rapide. Avec des milliers de clients satisfaits et des avis vérifiés, Zorando s'impose comme la référence du shopping en ligne en Algérie. Faites confiance à Zorando pour des <strong className="font-bold">achats malins, sûrs et avantageux</strong> — chaque jour, partout en Algérie.
+      </p>
+    </div>
+  </section>
+);
+
 export default function Home() {
   const [activeTheme, setActiveTheme] = useState<string>("normal");
   const [themeImages, setThemeImages] = useState<Record<string, any>>({});
@@ -797,7 +847,8 @@ export default function Home() {
         }
         return null;
       })}
-    </div>
+      </div>
+      <SEOSection />
     </>
   );
 }

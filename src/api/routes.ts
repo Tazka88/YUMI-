@@ -778,8 +778,8 @@ router.post('/orders', orderLimiter, async (req, res) => {
 
   try {
     let calculatedTotal = 0;
-    const delivery_cost = typeof clientDeliveryCost === 'number' && clientDeliveryCost >= 0 ? clientDeliveryCost : 600;
-
+    let itemCount = 0;
+    
     const validatedItems = [];
     for (const item of items) {
       const [product] = await sql`SELECT price, promo_price, variations FROM products WHERE id = ${item.product_id}`;
@@ -789,8 +789,6 @@ router.post('/orders', orderLimiter, async (req, res) => {
       
       // Calculate active variation price if selected
       if (item.variation && product.variations && Array.isArray(product.variations)) {
-         // Assuming variation string is matching attribute + value from frontend:
-         // item.variation = `${variation.attribute} : ${variation.value}`
          const matchingVariation = product.variations.find(v => `${v.attribute} : ${v.value}` === item.variation);
          if (matchingVariation && matchingVariation.price) {
             actualPrice = Number(matchingVariation.price);
@@ -800,8 +798,15 @@ router.post('/orders', orderLimiter, async (req, res) => {
       const quantity = parseInt(item.quantity, 10);
       if (isNaN(quantity) || quantity <= 0) throw new Error('Quantité invalide');
 
+      itemCount += quantity;
       calculatedTotal += actualPrice * quantity;
       validatedItems.push({ ...item, price: actualPrice, quantity, variation: item.variation || null });
+    }
+
+    // Apply free shipping rule: subtotal >= 10000 AND itemCount >= 3
+    let delivery_cost = typeof clientDeliveryCost === 'number' && clientDeliveryCost >= 0 ? clientDeliveryCost : 600;
+    if (calculatedTotal >= 10000 && itemCount >= 3) {
+      delivery_cost = 0;
     }
 
     calculatedTotal += delivery_cost;

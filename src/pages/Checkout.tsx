@@ -107,7 +107,13 @@ export default function Checkout() {
   const [discountEmail, setDiscountEmail] = useState('');
   const [showDiscountOffer, setShowDiscountOffer] = useState(true);
 
-  const effectiveDeliveryCost = isShippingDiscountApplied ? deliveryCost * (1 - shippingSettings.percent / 100) : deliveryCost;
+  const itemCount = checkoutItems.reduce((acc, item) => acc + item.quantity, 0);
+  const isFreeShipping = checkoutTotal >= 10000 && itemCount >= 3;
+
+  const effectiveDeliveryCost = isFreeShipping 
+    ? 0 
+    : (isShippingDiscountApplied ? deliveryCost * (1 - shippingSettings.percent / 100) : deliveryCost);
+  
   const finalTotal = checkoutTotal + effectiveDeliveryCost;
 
   const handleApplyDiscount = async (e: React.MouseEvent) => {
@@ -643,7 +649,13 @@ export default function Checkout() {
               </div>
               <div className="flex justify-between text-gray-600">
                 <span>Frais de livraison</span>
-                {deliveryCost > 0 ? (
+                {isFreeShipping ? (
+                  <div className="text-right">
+                    <span className="text-xs text-gray-400 line-through mr-2">{formatPrice(deliveryCost)}</span>
+                    <span className="font-bold text-green-600">Gratuit</span>
+                    <div className="text-[10px] text-green-500 font-medium">Offre automatique (10 000 DA + 3 articles)</div>
+                  </div>
+                ) : deliveryCost > 0 ? (
                   <div className="text-right">
                     {isShippingDiscountApplied ? (
                       <div className="flex flex-col items-end">

@@ -1,25 +1,48 @@
 import { Resend } from 'resend';
 import { sql } from '../db/setup.js';
 
-const resend = new Resend(process.env.RESEND_API_KEY || 'no-key-provided');
-
-const logEmail = async (orderId: string | null, recipient: string, subject: string, status: 'success' | 'error', errorMessage?: string) => {
+const logEmail = async (order_id: string | null, recipient: string, subject: string, status: 'success' | 'error', error_message?: string) => {
   try {
     await sql`
       INSERT INTO email_logs (order_id, recipient, subject, status, error_message)
-      VALUES (${orderId}, ${recipient}, ${subject}, ${status}, ${errorMessage || null})
+      VALUES (${order_id}, ${recipient}, ${subject}, ${status}, ${error_message || null})
     `;
   } catch (err) {
     console.error('Failed to log email to database:', err);
   }
 };
 
+const getApiKey = async () => {
+  if (process.env.RESEND_API_KEY && process.env.RESEND_API_KEY !== 're_your_resend_api_key') {
+    return process.env.RESEND_API_KEY;
+  }
+  
+  try {
+    const [row] = await sql`SELECT value FROM settings WHERE key = 'resend_api_key'`;
+    return row?.value || null;
+  } catch (err) {
+    return null;
+  }
+};
+
+const getFromEmail = async () => {
+  if (process.env.RESEND_FROM_EMAIL) return process.env.RESEND_FROM_EMAIL;
+  
+  try {
+    const [row] = await sql`SELECT value FROM settings WHERE key = 'resend_from_email'`;
+    return row?.value || 'ZORANDO <onboarding@resend.dev>';
+  } catch (err) {
+    return 'ZORANDO <onboarding@resend.dev>';
+  }
+};
+
 export const sendOrderConfirmationEmail = async (orderId: string, customerName: string, customerEmail: string, totalAmount: number) => {
   const subject = `Confirmation de votre commande ${orderId} - ZORANDO`;
+  const apiKey = await getApiKey();
   
-  if (!process.env.RESEND_API_KEY) {
+  if (!apiKey) {
     console.error('RESEND_API_KEY is missing. Email skipped.');
-    await logEmail(orderId, customerEmail, subject, 'error', 'RESEND_API_KEY is missing');
+    await logEmail(orderId, customerEmail, subject, 'error', 'RESEND_API_KEY is missing (env & db)');
     return;
   }
 
@@ -29,7 +52,8 @@ export const sendOrderConfirmationEmail = async (orderId: string, customerName: 
   }
 
   try {
-    const fromEmail = process.env.RESEND_FROM_EMAIL || 'ZORANDO <onboarding@resend.dev>';
+    const resend = new Resend(apiKey);
+    const fromEmail = await getFromEmail();
     
     const { data, error } = await resend.emails.send({
       from: fromEmail,
@@ -73,8 +97,9 @@ export const sendOrderConfirmationEmail = async (orderId: string, customerName: 
 
 export const sendOrderStatusEmail = async (orderId: string, customerName: string, customerEmail: string, status: string) => {
   const subject = `Mise à jour de votre commande ${orderId} - ZORANDO`;
+  const apiKey = await getApiKey();
   
-  if (!process.env.RESEND_API_KEY) {
+  if (!apiKey) {
     console.error('RESEND_API_KEY is missing. Status email skipped.');
     return;
   }
@@ -106,7 +131,8 @@ export const sendOrderStatusEmail = async (orderId: string, customerName: string
   }
 
   try {
-    const fromEmail = process.env.RESEND_FROM_EMAIL || 'ZORANDO <onboarding@resend.dev>';
+    const resend = new Resend(apiKey);
+    const fromEmail = await getFromEmail();
 
     const { data, error } = await resend.emails.send({
       from: fromEmail,

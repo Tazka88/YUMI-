@@ -2668,7 +2668,34 @@ export default function AdminDashboard() {
                       onChange={e => setSettingsForm(prev => ({...prev, admin_email: e.target.value}))} 
                       placeholder="nom@exemple.com"
                     />
-                    <p className="text-sm text-gray-500 mt-1">Cet email sera utilisé pour recevoir les commandes des clients et les messages via le formulaire de contact.</p>
+                    <p className="text-sm text-gray-500 mt-1">Cet email sera utilisé pour recevoir les notifications et messages de contact.</p>
+                  </div>
+                  <div className="pt-4 mt-4 border-t border-gray-50">
+                    <h4 className="text-sm font-bold text-gray-700 mb-3">Configuration Emails Automatiques (Resend)</h4>
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Clé API Resend (RESEND_API_KEY)</label>
+                        <input 
+                          type="password" 
+                          className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500" 
+                          value={settingsForm.resend_api_key || ''} 
+                          onChange={e => setSettingsForm(prev => ({...prev, resend_api_key: e.target.value}))} 
+                          placeholder="re_..."
+                        />
+                        <p className="text-xs text-gray-500 mt-1">Obtenez votre clé sur <a href="https://resend.com/api-keys" target="_blank" className="text-orange-500 hover:underline">resend.com</a>. Elle est nécessaire pour les emails de confirmation et de suivi.</p>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Email d'expédition (From Email)</label>
+                        <input 
+                          type="text" 
+                          className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500" 
+                          value={settingsForm.resend_from_email || ''} 
+                          onChange={e => setSettingsForm(prev => ({...prev, resend_from_email: e.target.value}))} 
+                          placeholder="ZORANDO <onboarding@resend.dev>"
+                        />
+                        <p className="text-xs text-gray-500 mt-1">L'expéditeur affiché aux clients. Utilisez "onboarding@resend.dev" si vous n'avez pas encore de domaine vérifié.</p>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>

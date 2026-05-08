@@ -7,7 +7,7 @@ import FooterSettings from './FooterSettings';
 import PageSettings from './PageSettings';
 import WilayasSettings from './WilayasSettings';
 import OfficesSettings from './OfficesSettings';
-import { FileText, MapPin, Search, LayoutGrid, List, Printer, Download, Truck, Building2 } from 'lucide-react';
+import { FileText, MapPin, Search, LayoutGrid, List, Printer, Download, Truck, Building2, Mail } from 'lucide-react';
 import OrderKanban from './OrderKanban';
 import SliderImagesAdmin from './SliderImagesAdmin';
 
@@ -105,6 +105,9 @@ export default function AdminDashboard() {
   const [productSearch, setProductSearch] = useState('');
   const [adminProductSearch, setAdminProductSearch] = useState('');
   const [debouncedAdminProductSearch, setDebouncedAdminProductSearch] = useState('');
+  const [emails, setEmails] = useState<any[]>([]);
+  const [emailSearchTerm, setEmailSearchTerm] = useState('');
+  const [emailSourceFilter, setEmailSourceFilter] = useState('all');
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -240,6 +243,13 @@ export default function AdminDashboard() {
       fetch('/api/brands', { signal })
         .then(res => res.json())
         .then(data => { if (Array.isArray(data)) setBrands(data); })
+        .catch(handleFetchError);
+    }
+
+    if (activeTab === 'emails') {
+      fetch('/api/admin/emails', { headers, signal })
+        .then(res => res.json())
+        .then(data => { if (Array.isArray(data)) setEmails(data); })
         .catch(handleFetchError);
     }
 
@@ -1425,6 +1435,38 @@ export default function AdminDashboard() {
     }
   };
 
+  const exportEmailsToCSV = () => {
+    const filteredEmails = emails.filter(e => {
+        const matchesSearch = (e.email?.toLowerCase().includes(emailSearchTerm.toLowerCase()) || 
+                              e.name?.toLowerCase().includes(emailSearchTerm.toLowerCase()) ||
+                              e.phone?.toLowerCase().includes(emailSearchTerm.toLowerCase()));
+        const matchesSource = emailSourceFilter === 'all' || e.source === emailSourceFilter;
+        return matchesSearch && matchesSource;
+    });
+
+    const headers = ['Email', 'Nom', 'Telephone', 'Source', 'Date'];
+    const csvRows = [
+      headers.join(','),
+      ...filteredEmails.map(e => [
+        `"${e.email || ''}"`,
+        `"${e.name || ''}"`,
+        `"${e.phone || ''}"`,
+        `"${e.source || ''}"`,
+        `"${new Date(e.created_at).toLocaleDateString()}"`
+      ].join(','))
+    ];
+
+    const csvContent = "\uFEFF" + csvRows.join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `emails_zorando_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col md:flex-row">
       <Helmet>
@@ -1504,6 +1546,13 @@ export default function AdminDashboard() {
           >
             <Building2 size={20} />
             Points Relais (Bureaux)
+          </button>
+          <button 
+            onClick={() => setActiveTab('emails')}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-md transition-colors ${activeTab === 'emails' ? 'bg-orange-500 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white'}`}
+          >
+            <Mail size={20} />
+            Liste des Emails
           </button>
           <button 
             onClick={() => setActiveTab('settings')}
@@ -2750,6 +2799,111 @@ export default function AdminDashboard() {
                   </button>
                 </div>
               </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'emails' && (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+            <div className="p-6 border-b border-gray-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <h2 className="text-lg font-bold text-gray-800">Liste des Emails</h2>
+              <div className="flex items-center gap-4 w-full sm:w-auto">
+                <div className="relative flex-1 sm:w-64">
+                  <input 
+                    type="text" 
+                    placeholder="Rechercher par email, nom..." 
+                    value={emailSearchTerm}
+                    onChange={(e) => setEmailSearchTerm(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                  />
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                </div>
+                <button 
+                  onClick={exportEmailsToCSV}
+                  className="flex items-center gap-2 px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-md font-bold transition-colors shadow-sm"
+                >
+                  <Download size={18} />
+                  <span>Exporter Excel</span>
+                </button>
+              </div>
+            </div>
+
+            <div className="p-4 border-b border-gray-100 flex gap-4 overflow-x-auto hide-scrollbar">
+              <button 
+                onClick={() => setEmailSourceFilter('all')}
+                className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${emailSourceFilter === 'all' ? 'bg-orange-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+              >
+                Tous ({emails.length})
+              </button>
+              <button 
+                onClick={() => setEmailSourceFilter('Newsletter')}
+                className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${emailSourceFilter === 'Newsletter' ? 'bg-orange-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+              >
+                Inscriptions Newsletter
+              </button>
+              <button 
+                onClick={() => setEmailSourceFilter('Commande')}
+                className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${emailSourceFilter === 'Commande' ? 'bg-orange-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+              >
+                Emails Commandes
+              </button>
+              <button 
+                onClick={() => setEmailSourceFilter('Compte Client')}
+                className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${emailSourceFilter === 'Compte Client' ? 'bg-orange-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+              >
+                Comptes Clients
+              </button>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm text-gray-600">
+                <thead className="bg-gray-50 text-gray-700 font-medium">
+                  <tr>
+                    <th className="px-6 py-3">Email</th>
+                    <th className="px-6 py-3">Nom</th>
+                    <th className="px-6 py-3">Téléphone</th>
+                    <th className="px-6 py-3">Source</th>
+                    <th className="px-6 py-3">Date d'inscription</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {emails
+                    .filter(e => {
+                        const matchesSearch = (e.email?.toLowerCase().includes(emailSearchTerm.toLowerCase()) || 
+                                              e.name?.toLowerCase().includes(emailSearchTerm.toLowerCase()) ||
+                                              e.phone?.toLowerCase().includes(emailSearchTerm.toLowerCase()));
+                        const matchesSource = emailSourceFilter === 'all' || e.source === emailSourceFilter;
+                        return matchesSearch && matchesSource;
+                    })
+                    .map((item, idx) => (
+                    <tr key={idx} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 font-medium text-gray-900">{item.email}</td>
+                      <td className="px-6 py-4">{item.name || <span className="text-gray-400 italic">Non renseigné</span>}</td>
+                      <td className="px-6 py-4">{item.phone || <span className="text-gray-400 italic">Non renseigné</span>}</td>
+                      <td className="px-6 py-4">
+                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                          item.source === 'Newsletter' ? 'bg-blue-50 text-blue-600' :
+                          item.source === 'Commande' ? 'bg-green-50 text-green-600' :
+                          'bg-purple-50 text-purple-600'
+                        }`}>
+                          {item.source}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">{new Date(item.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</td>
+                    </tr>
+                  ))}
+                  {emails.length === 0 && (
+                    <tr>
+                      <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
+                        <div className="flex flex-col items-center gap-2">
+                           <Mail className="w-12 h-12 text-gray-300" />
+                           <p>Aucun email trouvé.</p>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
         )}

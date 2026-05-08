@@ -243,6 +243,13 @@ CREATE TABLE IF NOT EXISTS reviews (
 -- Force add column if it was created before
 ALTER TABLE reviews ADD COLUMN IF NOT EXISTS image_url TEXT;
 
+CREATE TABLE IF NOT EXISTS subscribers (
+  id SERIAL PRIMARY KEY,
+  email VARCHAR(255) UNIQUE NOT NULL,
+  source VARCHAR(50) DEFAULT 'discount_offer',
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE IF NOT EXISTS wilayas (
   id SERIAL PRIMARY KEY,
   number VARCHAR(10) UNIQUE NOT NULL,

@@ -105,16 +105,28 @@ export default function Checkout() {
   const effectiveDeliveryCost = isShippingDiscountApplied ? deliveryCost * 0.7 : deliveryCost;
   const finalTotal = checkoutTotal + effectiveDeliveryCost;
 
-  const handleApplyDiscount = (e: React.MouseEvent) => {
+  const handleApplyDiscount = async (e: React.MouseEvent) => {
     e.preventDefault();
     if (!discountEmail || !/^\S+@\S+\.\S+$/.test(discountEmail)) {
       toast.error('Veuillez entrer une adresse email valide');
       return;
     }
-    setFormData({ ...formData, email: discountEmail });
-    setIsShippingDiscountApplied(true);
-    setShowDiscountOffer(false);
-    toast.success('Réduction appliquée avec succès !');
+    
+    try {
+      // Save to subscribers table
+      fetch('/api/subscribers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: discountEmail, source: 'discount_offer' })
+      }).catch(err => console.error('Failed to subscribe:', err));
+
+      setFormData({ ...formData, email: discountEmail });
+      setIsShippingDiscountApplied(true);
+      setShowDiscountOffer(false);
+      toast.success('Réduction appliquée avec succès !');
+    } catch (error) {
+      console.error('Error applying discount:', error);
+    }
   };
 
   useEffect(() => {

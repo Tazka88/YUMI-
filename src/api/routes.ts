@@ -1156,6 +1156,53 @@ router.get('/admin/stats', authenticate, async (req, res) => {
   }
 });
 
+router.post('/subscribers', async (req, res) => {
+  const { email, source } = req.body;
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return res.status(400).json({ error: 'Email invalide' });
+  }
+  try {
+    await sql`
+      INSERT INTO subscribers (email, source) 
+      VALUES (${email}, ${source || 'discount_offer'})
+      ON CONFLICT (email) DO NOTHING
+    `;
+    res.json({ message: 'Inscription réussie' });
+  } catch (err) {
+    res.status(500).json({ error: 'Erreur lors de l\'inscription' });
+  }
+});
+
+router.get('/admin/emails', authenticate, async (req, res) => {
+  try {
+    const emails = await sql`
+      SELECT DISTINCT ON (LOWER(email)) 
+        email, 
+        name, 
+        phone, 
+        source, 
+        created_at 
+      FROM (
+        SELECT customer_email as email, customer_name as name, customer_phone as phone, 'Commande' as source, created_at 
+        FROM orders 
+        WHERE customer_email IS NOT NULL AND customer_email != ''
+        UNION ALL
+        SELECT email, NULL as name, NULL as phone, 'Newsletter' as source, created_at 
+        FROM subscribers
+        UNION ALL
+        SELECT email, CONCAT(first_name, ' ', last_name) as name, phone, 'Compte Client' as source, created_at 
+        FROM profiles
+        WHERE email IS NOT NULL AND email != ''
+      ) combined
+      ORDER BY LOWER(email), created_at DESC
+    `;
+    res.json(emails);
+  } catch (err) {
+    console.error('Failed to fetch emails:', err);
+    res.status(500).json({ error: 'Failed to fetch emails' });
+  }
+});
+
 router.get('/admin/orders', authenticate, async (req, res) => {
   try {
     const orders = await sql`SELECT * FROM orders ORDER BY created_at DESC LIMIT 500`;

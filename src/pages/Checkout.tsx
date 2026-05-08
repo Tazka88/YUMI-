@@ -50,6 +50,11 @@ export default function Checkout() {
   const [officeId, setOfficeId] = useState('');
   const [savedAddresses, setSavedAddresses] = useState<any[]>([]);
   const [showAddressPicker, setShowAddressPicker] = useState(false);
+  const [shippingSettings, setShippingSettings] = useState({
+    percent: 30,
+    message: "Profitez de -30% sur les frais de livraison aujourd'hui",
+    show: true
+  });
 
   useEffect(() => {
     if (user && supabase) {
@@ -102,7 +107,7 @@ export default function Checkout() {
   const [discountEmail, setDiscountEmail] = useState('');
   const [showDiscountOffer, setShowDiscountOffer] = useState(true);
 
-  const effectiveDeliveryCost = isShippingDiscountApplied ? deliveryCost * 0.7 : deliveryCost;
+  const effectiveDeliveryCost = isShippingDiscountApplied ? deliveryCost * (1 - shippingSettings.percent / 100) : deliveryCost;
   const finalTotal = checkoutTotal + effectiveDeliveryCost;
 
   const handleApplyDiscount = async (e: React.MouseEvent) => {
@@ -149,10 +154,19 @@ export default function Checkout() {
     const controller = new AbortController();
     fetchWithCache('/api/settings', { signal: controller.signal })
       .then(data => {
+        const settings = data as any;
         setTrackingIds({
-          ga: (data as any).ga_measurement_id || import.meta.env.VITE_GA_MEASUREMENT_ID || '',
-          fb: (data as any).fb_pixel_id || import.meta.env.VITE_FB_PIXEL_ID || ''
+          ga: settings.ga_measurement_id || import.meta.env.VITE_GA_MEASUREMENT_ID || '',
+          fb: settings.fb_pixel_id || import.meta.env.VITE_FB_PIXEL_ID || ''
         });
+
+        if (settings.shipping_discount_percent !== undefined) {
+          setShippingSettings({
+            percent: parseInt(settings.shipping_discount_percent) || 30,
+            message: settings.shipping_discount_message || "Profitez de -30% sur les frais de livraison aujourd'hui",
+            show: settings.show_shipping_discount !== 'false'
+          });
+        }
       })
       .catch(err => {
         if (err.name !== 'AbortError') console.error(err);
@@ -652,13 +666,13 @@ export default function Checkout() {
             </div>
             
             {/* Discount Offer Block */}
-            {!formData.email && !isShippingDiscountApplied && showDiscountOffer && deliveryCost > 0 && (
+            {!formData.email && !isShippingDiscountApplied && showDiscountOffer && deliveryCost > 0 && shippingSettings.show && (
               <div className="mb-6 bg-gradient-to-r from-orange-50 to-red-50 border border-orange-200 rounded-lg p-4 shadow-sm animate-fade-in transition-all duration-500">
                 <div className="flex items-start gap-3 mb-3">
                   <div className="text-2xl">🎁</div>
                   <div>
                     <h3 className="font-bold text-orange-800 text-sm">Offre spéciale</h3>
-                    <p className="text-xs text-orange-700 font-medium mt-0.5">Profitez de -30% sur les frais de livraison aujourd'hui</p>
+                    <p className="text-xs text-orange-700 font-medium mt-0.5">{shippingSettings.message.replace('{percent}', shippingSettings.percent.toString())}</p>
                     <p className="text-[10px] text-red-500 font-bold mt-1 flex items-center gap-1">
                       <span>⏳</span> Offre limitée aujourd'hui
                     </p>

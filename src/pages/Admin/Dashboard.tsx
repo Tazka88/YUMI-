@@ -2537,6 +2537,45 @@ export default function AdminDashboard() {
                   </div>
                 </div>
               </div>
+
+              <div>
+                <h3 className="text-md font-bold text-gray-800 mb-4 border-b pb-2">Offre de Réduction (Panier)</h3>
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Activer l'offre de livraison</label>
+                      <select 
+                        className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500"
+                        value={settingsForm.show_shipping_discount ?? 'true'}
+                        onChange={e => setSettingsForm(prev => ({...prev, show_shipping_discount: e.target.value}))}
+                      >
+                        <option value="true">Activé</option>
+                        <option value="false">Désactivé</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Réduction sur la livraison (%)</label>
+                      <input 
+                        type="number" 
+                        className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500" 
+                        value={settingsForm.shipping_discount_percent ?? '30'} 
+                        onChange={e => setSettingsForm(prev => ({...prev, shipping_discount_percent: e.target.value}))} 
+                        placeholder="30"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Message d'offre spéciale</label>
+                    <textarea 
+                      rows={2}
+                      className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500" 
+                      value={settingsForm.shipping_discount_message ?? "Profitez de -30% sur les frais de livraison aujourd'hui"} 
+                      onChange={e => setSettingsForm(prev => ({...prev, shipping_discount_message: e.target.value}))} 
+                    ></textarea>
+                    <p className="text-xs text-gray-500 mt-1">S'affiche dans le panier lors de la saisie de l'email.</p>
+                  </div>
+                </div>
+              </div>
               
               <div>
                 <h3 className="text-md font-bold text-gray-800 mb-4 border-b pb-2">Bouton WhatsApp</h3>

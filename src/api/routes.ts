@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { sql } from '../db/setup.js';
 import { getSupabase } from '../lib/supabase.js';
+import { sendOrderConfirmationEmail, sendOrderStatusEmail } from '../lib/email.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import multer from 'multer';
@@ -836,9 +837,7 @@ router.post('/orders', orderLimiter, async (req, res) => {
     }
 
     if (customer_email) {
-      import('../lib/email.js').then(({ sendOrderConfirmationEmail }) => {
-        sendOrderConfirmationEmail(orderData.order_id, customer_name, customer_email, calculatedTotal);
-      }).catch(err => console.error('Failed to load email module:', err));
+      sendOrderConfirmationEmail(orderData.order_id, customer_name, customer_email, calculatedTotal);
     }
     
     res.status(201).json({ id: orderData.id, order_id: orderData.order_id, message: 'Order created successfully' });
@@ -1203,6 +1202,16 @@ router.get('/admin/emails', authenticate, async (req, res) => {
   }
 });
 
+router.get('/admin/email-logs', authenticate, async (req, res) => {
+  try {
+    const logs = await sql`SELECT * FROM email_logs ORDER BY created_at DESC LIMIT 200`;
+    res.json(logs);
+  } catch (err) {
+    console.error('Failed to fetch email logs:', err);
+    res.status(500).json({ error: 'Failed to fetch email logs' });
+  }
+});
+
 router.get('/admin/orders', authenticate, async (req, res) => {
   try {
     const orders = await sql`SELECT * FROM orders ORDER BY created_at DESC LIMIT 500`;
@@ -1246,9 +1255,7 @@ router.put('/admin/orders/:id/status', authenticate, async (req, res) => {
     `;
     
     if (order && order.customer_email) {
-      import('../lib/email.js').then(({ sendOrderStatusEmail }) => {
-        sendOrderStatusEmail(order.order_id, order.customer_name, order.customer_email, status);
-      }).catch(err => console.error('Failed to load email module:', err));
+      sendOrderStatusEmail(order.order_id, order.customer_name, order.customer_email, status);
     }
     
     res.json({ message: 'Status updated' });

@@ -108,6 +108,7 @@ export default function AdminDashboard() {
   const [emails, setEmails] = useState<any[]>([]);
   const [emailSearchTerm, setEmailSearchTerm] = useState('');
   const [emailSourceFilter, setEmailSourceFilter] = useState('all');
+  const [emailLogs, setEmailLogs] = useState<any[]>([]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -250,6 +251,13 @@ export default function AdminDashboard() {
       fetch('/api/admin/emails', { headers, signal })
         .then(res => res.json())
         .then(data => { if (Array.isArray(data)) setEmails(data); })
+        .catch(handleFetchError);
+    }
+
+    if (activeTab === 'email-logs') {
+      fetch('/api/admin/email-logs', { headers, signal })
+        .then(res => res.json())
+        .then(data => { if (Array.isArray(data)) setEmailLogs(data); })
         .catch(handleFetchError);
     }
 
@@ -1553,6 +1561,13 @@ export default function AdminDashboard() {
           >
             <Mail size={20} />
             Liste des Emails
+          </button>
+          <button 
+            onClick={() => setActiveTab('email-logs')}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-md transition-colors ${activeTab === 'email-logs' ? 'bg-orange-500 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white'}`}
+          >
+            <FileText size={20} />
+            Logs Emails
           </button>
           <button 
             onClick={() => setActiveTab('settings')}
@@ -2937,6 +2952,74 @@ export default function AdminDashboard() {
                         <div className="flex flex-col items-center gap-2">
                            <Mail className="w-12 h-12 text-gray-300" />
                            <p>Aucun email trouvé.</p>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'email-logs' && (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+            <div className="p-6 border-b border-gray-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <h2 className="text-lg font-bold text-gray-800">Logs des Emails Automatiques</h2>
+              <div className="flex items-center gap-2 text-sm text-gray-500">
+                <AlertCircle size={16} />
+                <span>Historique des envois Resend</span>
+              </div>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm text-gray-600">
+                <thead className="bg-gray-50 text-gray-700 font-medium">
+                  <tr>
+                    <th className="px-6 py-3">Commande</th>
+                    <th className="px-6 py-3">Destinataire</th>
+                    <th className="px-6 py-3">Sujet</th>
+                    <th className="px-6 py-3">Statut</th>
+                    <th className="px-6 py-3">Date</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {emailLogs.map((log, idx) => (
+                    <tr key={idx} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 font-medium text-gray-900">{log.order_id || 'N/A'}</td>
+                      <td className="px-6 py-4">{log.recipient}</td>
+                      <td className="px-6 py-4 truncate max-w-[200px]">{log.subject}</td>
+                      <td className="px-6 py-4">
+                        <div className="flex flex-col">
+                          <span className={`w-fit px-3 py-1 rounded-full text-xs font-medium ${
+                            log.status === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                          }`}>
+                            {log.status === 'success' ? 'Émail Envoyé' : 'Échec Envoi'}
+                          </span>
+                          {log.error_message && (
+                            <span className="text-[10px] text-red-500 mt-1 max-w-[200px] truncate" title={log.error_message}>
+                              {log.error_message}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {new Date(log.created_at).toLocaleString('fr-FR', {
+                          day: '2-digit',
+                          month: '2-digit',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </td>
+                    </tr>
+                  ))}
+                  {emailLogs.length === 0 && (
+                    <tr>
+                      <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
+                        <div className="flex flex-col items-center gap-2">
+                          <Mail className="w-12 h-12 text-gray-200" />
+                          <p>Aucun log d'email trouvé.</p>
                         </div>
                       </td>
                     </tr>

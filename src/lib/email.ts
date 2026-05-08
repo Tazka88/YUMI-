@@ -1,34 +1,85 @@
 import { Resend } from 'resend';
+import { sql } from '../db/setup.js';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+const resend = new Resend(process.env.RESEND_API_KEY || 'no-key-provided');
+
+const logEmail = async (orderId: string | null, recipient: string, subject: string, status: 'success' | 'error', errorMessage?: string) => {
+  try {
+    await sql`
+      INSERT INTO email_logs (order_id, recipient, subject, status, error_message)
+      VALUES (${orderId}, ${recipient}, ${subject}, ${status}, ${errorMessage || null})
+    `;
+  } catch (err) {
+    console.error('Failed to log email to database:', err);
+  }
+};
 
 export const sendOrderConfirmationEmail = async (orderId: string, customerName: string, customerEmail: string, totalAmount: number) => {
-  if (!process.env.RESEND_API_KEY || !customerEmail) return;
+  const subject = `Confirmation de votre commande ${orderId} - ZORANDO`;
+  
+  if (!process.env.RESEND_API_KEY) {
+    console.error('RESEND_API_KEY is missing. Email skipped.');
+    await logEmail(orderId, customerEmail, subject, 'error', 'RESEND_API_KEY is missing');
+    return;
+  }
+
+  if (!customerEmail) {
+    console.error('Customer email is missing for order:', orderId);
+    return;
+  }
 
   try {
-    await resend.emails.send({
-      from: 'ZORANDO <contact@zorando.com>', // Update this with a verified domain if needed, or use a default Resend testing email if not verified. Actually, Resend requires a verified domain or uses onboarding@resend.dev for testing. Let's use onboarding@resend.dev as fallback or a generic one.
+    const fromEmail = process.env.RESEND_FROM_EMAIL || 'ZORANDO <onboarding@resend.dev>';
+    
+    const { data, error } = await resend.emails.send({
+      from: fromEmail,
       to: customerEmail,
-      subject: `Confirmation de votre commande ${orderId} - ZORANDO`,
+      subject: subject,
       html: `
-        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2>Merci pour votre commande, ${customerName} !</h2>
-          <p>Votre commande <strong>${orderId}</strong> a bien été enregistrée.</p>
-          <p>Le montant total est de <strong>${totalAmount} DZD</strong>.</p>
-          <p>Nous préparons votre commande et vous contacterons très bientôt pour la livraison.</p>
-          <br/>
-          <p>L'équipe ZORANDO</p>
+        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; color: #333;">
+          <div style="text-align: center; padding: 20px 0;">
+            <h1 style="color: #f97316;">ZORANDO</h1>
+          </div>
+          <div style="background-color: #f9fafb; padding: 30px; rounded: 8px; border: 1px solid #e5e7eb;">
+            <h2 style="margin-top: 0;">Merci pour votre commande, ${customerName} !</h2>
+            <p>Nous avons bien reçu votre commande <strong>#${orderId}</strong>.</p>
+            <p>Nous préparons actuellement vos articles avec le plus grand soin. Notre service client vous contactera par téléphone pour confirmer les détails de la livraison.</p>
+            
+            <div style="margin: 30px 0; padding: 20px; background-color: #fff; border-radius: 4px; border-left: 4px solid #f97316;">
+              <p style="margin: 0; font-size: 18px;">Total de la commande : <strong>${totalAmount} DA</strong></p>
+            </div>
+
+            <p style="font-size: 14px; color: #666;">Si vous avez des questions, n'hésitez pas à nous contacter.</p>
+          </div>
+          <div style="text-align: center; padding-top: 20px; font-size: 12px; color: #999;">
+            <p>© ${new Date().getFullYear()} ZORANDO Algérie. Tous droits réservés.</p>
+          </div>
         </div>
       `
     });
-    console.log(`Confirmation email sent to ${customerEmail} for order ${orderId}`);
-  } catch (error) {
+
+    if (error) {
+      console.error('Resend API error:', error);
+      await logEmail(orderId, customerEmail, subject, 'error', JSON.stringify(error));
+    } else {
+      console.log(`Confirmation email sent via Resend: ${data?.id}`);
+      await logEmail(orderId, customerEmail, subject, 'success');
+    }
+  } catch (error: any) {
     console.error('Failed to send order confirmation email:', error);
+    await logEmail(orderId, customerEmail, subject, 'error', error.message);
   }
 };
 
 export const sendOrderStatusEmail = async (orderId: string, customerName: string, customerEmail: string, status: string) => {
-  if (!process.env.RESEND_API_KEY || !customerEmail) return;
+  const subject = `Mise à jour de votre commande ${orderId} - ZORANDO`;
+  
+  if (!process.env.RESEND_API_KEY) {
+    console.error('RESEND_API_KEY is missing. Status email skipped.');
+    return;
+  }
+
+  if (!customerEmail) return;
 
   let statusText = '';
   let statusMessage = '';
@@ -36,38 +87,66 @@ export const sendOrderStatusEmail = async (orderId: string, customerName: string
   switch (status) {
     case 'processing':
       statusText = 'en préparation';
-      statusMessage = 'Votre commande est actuellement en cours de préparation dans nos locaux.';
+      statusMessage = 'Votre commande est en cours de préparation. Nous vérifions la qualité de vos articles avant l\'expédition.';
       break;
     case 'shipped':
       statusText = 'expédiée';
-      statusMessage = 'Bonne nouvelle ! Votre commande a été remise à notre livreur et est en route vers vous.';
+      statusMessage = 'Bonne nouvelle ! Votre commande a été remise au transporteur et est en route vers chez vous.';
       break;
     case 'delivered':
       statusText = 'livrée';
-      statusMessage = 'Votre commande a été livrée. Merci d\'avoir fait confiance à ZORANDO !';
+      statusMessage = 'Votre commande a été marquée comme livrée. Nous espérons que vos achats vous plaisent !';
+      break;
+    case 'cancelled':
+      statusText = 'annulée';
+      statusMessage = 'Votre commande a été annulée. Si vous n\'êtes pas à l\'origine de cette annulation, veuillez contacter notre support.';
       break;
     default:
-      return; // Don't send email for other statuses like 'pending' or 'cancelled' unless requested
+      return; 
   }
 
   try {
-    await resend.emails.send({
-      from: 'ZORANDO <contact@zorando.com>',
+    const fromEmail = process.env.RESEND_FROM_EMAIL || 'ZORANDO <onboarding@resend.dev>';
+
+    const { data, error } = await resend.emails.send({
+      from: fromEmail,
       to: customerEmail,
-      subject: `Mise à jour de votre commande ${orderId} - ZORANDO`,
+      subject: subject,
       html: `
-        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2>Bonjour ${customerName},</h2>
-          <p>Le statut de votre commande <strong>${orderId}</strong> a été mis à jour.</p>
-          <p>Votre commande est maintenant : <strong>${statusText}</strong>.</p>
-          <p>${statusMessage}</p>
-          <br/>
-          <p>L'équipe ZORANDO</p>
+        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; color: #333;">
+          <div style="text-align: center; padding: 20px 0;">
+            <h1 style="color: #f97316;">ZORANDO</h1>
+          </div>
+          <div style="background-color: #f9fafb; padding: 30px; rounded: 8px; border: 1px solid #e5e7eb;">
+            <h2>Mise à jour de votre commande</h2>
+            <p>Bonjour ${customerName},</p>
+            <p>Le statut de votre commande <strong>#${orderId}</strong> a changé.</p>
+            
+            <div style="margin: 30px 0; padding: 20px; background-color: #fff; border-radius: 4px; border-left: 4px solid #f97316; text-align: center;">
+              <p style="margin: 0; font-size: 16px;">Nouveau statut : <span style="font-weight: bold; text-transform: uppercase; color: #f97316;">${statusText}</span></p>
+            </div>
+
+            <p>${statusMessage}</p>
+            
+            <br/>
+            <p style="font-size: 14px; color: #666;">L'équipe ZORANDO Algérie</p>
+          </div>
+          <div style="text-align: center; padding-top: 20px; font-size: 12px; color: #999;">
+            <p>© ${new Date().getFullYear()} ZORANDO Algérie. Tous droits réservés.</p>
+          </div>
         </div>
       `
     });
-    console.log(`Status update email sent to ${customerEmail} for order ${orderId} (Status: ${status})`);
-  } catch (error) {
+
+    if (error) {
+      console.error('Resend API error (status update):', error);
+      await logEmail(orderId, customerEmail, subject, 'error', JSON.stringify(error));
+    } else {
+      console.log(`Status update email sent: ${data?.id}`);
+      await logEmail(orderId, customerEmail, subject, 'success');
+    }
+  } catch (error: any) {
     console.error('Failed to send order status email:', error);
+    await logEmail(orderId, customerEmail, subject, 'error', error.message);
   }
 };

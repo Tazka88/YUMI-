@@ -13,27 +13,38 @@ const logEmail = async (order_id: string | null, recipient: string, subject: str
 };
 
 const getApiKey = async () => {
-  if (process.env.RESEND_API_KEY && process.env.RESEND_API_KEY !== 're_your_resend_api_key') {
-    return process.env.RESEND_API_KEY;
-  }
-  
+  // Check settings first, as user-provided settings should take priority
   try {
     const [row] = await sql`SELECT value FROM settings WHERE key = 'resend_api_key'`;
-    return row?.value || null;
+    if (row?.value && row.value.trim() !== '' && !row.value.includes('your_resend_api_key')) {
+      return row.value.trim();
+    }
   } catch (err) {
-    return null;
+    // Ignore db error here
   }
+
+  // Fallback to env
+  if (process.env.RESEND_API_KEY && 
+      process.env.RESEND_API_KEY.trim() !== '' && 
+      process.env.RESEND_API_KEY !== 're_your_resend_api_key') {
+    return process.env.RESEND_API_KEY.trim();
+  }
+  
+  return null;
 };
 
 const getFromEmail = async () => {
-  if (process.env.RESEND_FROM_EMAIL) return process.env.RESEND_FROM_EMAIL;
-  
   try {
     const [row] = await sql`SELECT value FROM settings WHERE key = 'resend_from_email'`;
-    return row?.value || 'ZORANDO <onboarding@resend.dev>';
+    if (row?.value && row.value.trim() !== '') {
+      return row.value.trim();
+    }
   } catch (err) {
-    return 'ZORANDO <onboarding@resend.dev>';
+    // Ignore db error
   }
+
+  if (process.env.RESEND_FROM_EMAIL) return process.env.RESEND_FROM_EMAIL.trim();
+  return 'ZORANDO <onboarding@resend.dev>';
 };
 
 export const sendOrderConfirmationEmail = async (orderId: string, customerName: string, customerEmail: string, totalAmount: number) => {

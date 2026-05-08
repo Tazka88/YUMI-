@@ -2697,7 +2697,7 @@ export default function AdminDashboard() {
                           onChange={e => setSettingsForm(prev => ({...prev, resend_from_email: e.target.value}))} 
                           placeholder="ZORANDO <onboarding@resend.dev>"
                         />
-                        <p className="text-xs text-gray-500 mt-1">L'expéditeur affiché aux clients. Utilisez "onboarding@resend.dev" si vous n'avez pas encore de domaine vérifié.</p>
+                        <p className="text-xs text-gray-500 mt-1">L'expéditeur affiché aux clients. Utilisez "onboarding@resend.dev" uniquement pour des tests sur votre propre email. <span className="font-bold text-orange-600">Pour envoyer des emails à vos clients, vous devez vérifier votre domaine sur Resend et utiliser un email pro.</span></p>
                       </div>
                     </div>
                   </div>

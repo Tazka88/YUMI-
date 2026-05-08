@@ -66,6 +66,9 @@ export const sendOrderConfirmationEmail = async (orderId: string, customerName: 
     const resend = new Resend(apiKey);
     const fromEmail = await getFromEmail();
     
+    // Check if using onboarding email and trying to send to someone else
+    const isUsingOnboarding = fromEmail.includes('onboarding@resend.dev');
+    
     const { data, error } = await resend.emails.send({
       from: fromEmail,
       to: customerEmail,
@@ -95,7 +98,15 @@ export const sendOrderConfirmationEmail = async (orderId: string, customerName: 
 
     if (error) {
       console.error('Resend API error:', error);
-      await logEmail(orderId, customerEmail, subject, 'error', JSON.stringify(error));
+      let errorMsg = JSON.stringify(error);
+      if (errorMsg.includes('422') || errorMsg.includes('validation_error')) {
+        if (fromEmail.includes('onboarding@resend.dev')) {
+          errorMsg = "Erreur 422 : L'email 'onboarding@resend.dev' ne peut envoyer qu'à votre adresse Resend. Changez-le dans Paramètres > Compte pour envoyer aux clients.";
+        } else {
+          errorMsg = `Erreur 422 : L'email d'expédition '${fromEmail}' n'est pas autorisé par Resend. Vérifiez que votre domaine est validé.`;
+        }
+      }
+      await logEmail(orderId, customerEmail, subject, 'error', errorMsg);
     } else {
       console.log(`Confirmation email sent via Resend: ${data?.id}`);
       await logEmail(orderId, customerEmail, subject, 'success');
@@ -127,7 +138,7 @@ export const sendAdminNotificationEmail = async (adminEmail: string, orderId: st
       </tr>
     `).join('');
 
-    await resend.emails.send({
+    const { data, error } = await resend.emails.send({
       from: fromEmail,
       to: adminEmail,
       subject: subject,
@@ -165,8 +176,21 @@ export const sendAdminNotificationEmail = async (adminEmail: string, orderId: st
       `
     });
     
-    console.log(`Admin notification sent for order ${orderId}`);
-    await logEmail(orderId, adminEmail, subject, 'success');
+    if (error) {
+      console.error('Resend API error (admin notification):', error);
+      let errorMsg = JSON.stringify(error);
+      if (errorMsg.includes('422') || errorMsg.includes('validation_error')) {
+        if (fromEmail.includes('onboarding@resend.dev')) {
+          errorMsg = "Erreur 422 : Notifications impossibles via 'onboarding@resend.dev' vers cet email. Changez l'Email d'expédition dans Paramètres > Compte.";
+        } else {
+          errorMsg = `Erreur 422 : L'email d'expédition '${fromEmail}' n'est pas autorisé par Resend. Vérifiez que votre domaine est validé.`;
+        }
+      }
+      await logEmail(orderId, adminEmail, subject, 'error', errorMsg);
+    } else {
+      console.log(`Admin notification sent for order ${orderId}`);
+      await logEmail(orderId, adminEmail, subject, 'success');
+    }
   } catch (error: any) {
     console.error('Failed to send admin notification:', error);
     await logEmail(orderId, adminEmail, subject, 'error', error.message);
@@ -186,7 +210,7 @@ export const sendContactEmail = async (adminEmail: string, name: string, email: 
     const resend = new Resend(apiKey);
     const fromEmail = await getFromEmail();
     
-    await resend.emails.send({
+    const { data, error } = await resend.emails.send({
       from: fromEmail,
       to: adminEmail,
       subject: subject,
@@ -211,8 +235,21 @@ export const sendContactEmail = async (adminEmail: string, name: string, email: 
       `
     });
     
-    console.log(`Contact email sent from ${name}`);
-    await logEmail(null, adminEmail, subject, 'success');
+    if (error) {
+      console.error('Resend API error (contact):', error);
+      let errorMsg = JSON.stringify(error);
+      if (errorMsg.includes('422') || errorMsg.includes('validation_error')) {
+        if (fromEmail.includes('onboarding@resend.dev')) {
+          errorMsg = "Erreur 422 : Impossible de recevoir via 'onboarding@resend.dev'. Utilisez un email d'expédition de votre propre domaine verified.";
+        } else {
+          errorMsg = `Erreur 422 : L'email d'expédition '${fromEmail}' n'est pas autorisé.`;
+        }
+      }
+      await logEmail(null, adminEmail, subject, 'error', errorMsg);
+    } else {
+      console.log(`Contact email sent from ${name}`);
+      await logEmail(null, adminEmail, subject, 'success');
+    }
   } catch (error: any) {
     console.error('Failed to send contact email:', error);
     await logEmail(null, adminEmail, subject, 'error', error.message);
@@ -290,7 +327,15 @@ export const sendOrderStatusEmail = async (orderId: string, customerName: string
 
     if (error) {
       console.error('Resend API error (status update):', error);
-      await logEmail(orderId, customerEmail, subject, 'error', JSON.stringify(error));
+      let errorMsg = JSON.stringify(error);
+      if (errorMsg.includes('422') || errorMsg.includes('validation_error')) {
+        if (fromEmail.includes('onboarding@resend.dev')) {
+          errorMsg = "Erreur 422 : Impossible d'envoyer aux clients avec 'onboarding@resend.dev'. Changez l'email d'expédition.";
+        } else {
+          errorMsg = `Erreur 422 : L'email '${fromEmail}' n'est pas autorisé par Resend.`;
+        }
+      }
+      await logEmail(orderId, customerEmail, subject, 'error', errorMsg);
     } else {
       console.log(`Status update email sent: ${data?.id}`);
       await logEmail(orderId, customerEmail, subject, 'success');

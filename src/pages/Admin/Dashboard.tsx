@@ -2697,7 +2697,7 @@ export default function AdminDashboard() {
                           onChange={e => setSettingsForm(prev => ({...prev, resend_from_email: e.target.value}))} 
                           placeholder="ZORANDO <onboarding@resend.dev>"
                         />
-                        <p className="text-xs text-gray-500 mt-1">L'expéditeur affiché aux clients. Utilisez "onboarding@resend.dev" uniquement pour des tests sur votre propre email. <span className="font-bold text-orange-600">Pour envoyer des emails à vos clients, vous devez vérifier votre domaine sur Resend et utiliser un email pro.</span></p>
+                        <p className="text-xs text-gray-500 mt-1">L'expéditeur affiché aux clients. Utilisez "onboarding@resend.dev" uniquement pour des tests sur votre propre email. <span className="font-bold text-orange-600">IMPORTANT : Si vous voyez une "Erreur 422", c'est que vous essayez d'envoyer un email à un client sans avoir vérifié votre propre domaine sur Resend.</span></p>
                       </div>
                     </div>
                   </div>
@@ -3028,9 +3028,9 @@ export default function AdminDashboard() {
                             {log.status === 'success' ? 'Émail Envoyé' : 'Échec Envoi'}
                           </span>
                           {log.error_message && (
-                            <span className="text-[10px] text-red-500 mt-1 max-w-[200px] truncate" title={log.error_message}>
+                            <div className="mt-2 text-[10px] leading-tight font-medium bg-red-50 p-2 rounded border border-red-100 text-red-600 max-w-[250px] whitespace-pre-wrap break-words">
                               {log.error_message}
-                            </span>
+                            </div>
                           )}
                         </div>
                       </td>

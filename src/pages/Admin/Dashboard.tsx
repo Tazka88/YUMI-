@@ -275,7 +275,7 @@ export default function AdminDashboard() {
         .catch(handleFetchError);
     }
 
-    if (activeTab === 'settings') {
+    if (activeTab === 'settings' || activeTab === 'account') {
       fetch('/api/admin/settings', { headers, signal })
         .then(res => res.json())
         .then(data => { if (data && typeof data === 'object' && !data.error) setSettingsForm(prev => ({ ...prev, ...data })); })
@@ -1354,7 +1354,11 @@ export default function AdminDashboard() {
       const res = await fetch('/api/admin/settings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ admin_email: settingsForm.admin_email })
+        body: JSON.stringify({ 
+          admin_email: settingsForm.admin_email,
+          resend_api_key: settingsForm.resend_api_key,
+          resend_from_email: settingsForm.resend_from_email
+        })
       });
       
       if (!res.ok) {

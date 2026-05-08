@@ -816,6 +816,18 @@ router.post('/orders', orderLimiter, async (req, res) => {
       const generatedOrderId = `CMD-${1000 + order.id}`;
       await sql`UPDATE orders SET order_id = ${generatedOrderId} WHERE id = ${order.id}`;
       
+      // Persist customer email in subscribers table if provided
+      if (customer_email) {
+        await sql`
+          INSERT INTO subscribers (email, name, phone, source)
+          VALUES (${customer_email.toLowerCase()}, ${customer_name || null}, ${customer_phone || null}, 'Commande')
+          ON CONFLICT (email) DO UPDATE SET 
+            name = COALESCE(EXCLUDED.name, subscribers.name),
+            phone = COALESCE(EXCLUDED.phone, subscribers.phone),
+            source = CASE WHEN subscribers.source = 'Newsletter' THEN 'Commande' ELSE subscribers.source END
+        `;
+      }
+      
       for (const item of validatedItems) {
         const result = await sql`
           UPDATE products SET stock = stock - ${item.quantity}, sales_count = COALESCE(sales_count, 0) + ${item.quantity} WHERE id = ${item.product_id} AND stock >= ${item.quantity}
@@ -1185,7 +1197,7 @@ router.get('/admin/emails', authenticate, async (req, res) => {
         FROM orders 
         WHERE customer_email IS NOT NULL AND customer_email != ''
         UNION ALL
-        SELECT email, NULL as name, NULL as phone, 'Newsletter' as source, created_at 
+        SELECT email, name, phone, source, created_at 
         FROM subscribers
         UNION ALL
         SELECT email, CONCAT(first_name, ' ', last_name) as name, phone, 'Compte Client' as source, created_at 

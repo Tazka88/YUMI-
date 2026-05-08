@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { sql } from '../db/setup.js';
 import { getSupabase } from '../lib/supabase.js';
-import { sendOrderConfirmationEmail, sendOrderStatusEmail } from '../lib/email.js';
+import { sendOrderConfirmationEmail, sendOrderStatusEmail, sendAdminNotificationEmail, sendContactEmail } from '../lib/email.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import multer from 'multer';
@@ -833,7 +833,7 @@ router.post('/orders', orderLimiter, async (req, res) => {
     
     const [adminEmailSetting] = await sql`SELECT value FROM settings WHERE key = 'admin_email'`;
     if (adminEmailSetting && adminEmailSetting.value) {
-      console.log(`[EMAIL SIMULATION] Nouvelle commande ${orderData.order_id} envoyée à l'administrateur : ${adminEmailSetting.value}`);
+      sendAdminNotificationEmail(adminEmailSetting.value, orderData.order_id, customer_name, customer_email, customer_phone, calculatedTotal, items);
     }
 
     if (customer_email) {
@@ -856,8 +856,7 @@ router.post('/contact', async (req, res) => {
   try {
     const [adminEmailSetting] = await sql`SELECT value FROM settings WHERE key = 'admin_email'`;
     if (adminEmailSetting && adminEmailSetting.value) {
-      console.log(`[EMAIL SIMULATION] Nouveau message de contact de ${name} (${email}) envoyé à l'administrateur : ${adminEmailSetting.value}`);
-      console.log(`Message: ${message}`);
+      sendContactEmail(adminEmailSetting.value, name, email, message);
     }
     res.status(200).json({ success: true, message: 'Message envoyé avec succès' });
   } catch (err) {

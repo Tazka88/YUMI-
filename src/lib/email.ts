@@ -95,6 +95,119 @@ export const sendOrderConfirmationEmail = async (orderId: string, customerName: 
   }
 };
 
+export const sendAdminNotificationEmail = async (adminEmail: string, orderId: string, customerName: string, customerEmail: string, customerPhone: string, totalAmount: number, items: any[]) => {
+  const subject = `NOUVELLE COMMANDE - ${orderId} - ZORANDO`;
+  const apiKey = await getApiKey();
+  
+  if (!apiKey || !adminEmail) {
+    console.error('Missing API Key or Admin Email for notification');
+    return;
+  }
+
+  try {
+    const resend = new Resend(apiKey);
+    const fromEmail = await getFromEmail();
+    
+    const itemsHtml = items.map(item => `
+      <tr>
+        <td style="padding: 10px; border-bottom: 1px solid #eee;">${item.name || 'Produit'} ${item.variation ? `(${item.variation})` : ''}</td>
+        <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: center;">x${item.quantity}</td>
+        <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: right;">${item.price} DA</td>
+      </tr>
+    `).join('');
+
+    await resend.emails.send({
+      from: fromEmail,
+      to: adminEmail,
+      subject: subject,
+      html: `
+        <div style="font-family: sans-serif; color: #333; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #f97316;">Une nouvelle commande a été passée !</h2>
+          <p><strong>Commande:</strong> #${orderId}</p>
+          <hr style="border: 0; border-top: 1px solid #eee;" />
+          
+          <h3>Détails du Client :</h3>
+          <p><strong>Nom:</strong> ${customerName}</p>
+          <p><strong>Email:</strong> ${customerEmail || 'Non fourni'}</p>
+          <p><strong>Téléphone:</strong> ${customerPhone}</p>
+          
+          <h3>Articles :</h3>
+          <table style="width: 100%; border-collapse: collapse;">
+            <thead style="background: #f9fafb;">
+              <tr>
+                <th style="padding: 10px; text-align: left;">Produit</th>
+                <th style="padding: 10px; text-align: center;">Qté</th>
+                <th style="padding: 10px; text-align: right;">Prix</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${itemsHtml}
+            </tbody>
+          </table>
+          
+          <p style="font-size: 18px; margin-top: 20px;"><strong>Total : ${totalAmount} DA</strong></p>
+          
+          <div style="margin-top: 30px; padding: 15px; background: #fffbeb; border: 1px solid #fef3c7; color: #92400e;">
+            Connectez-vous au tableau de bord pour gérer cette commande.
+          </div>
+        </div>
+      `
+    });
+    
+    console.log(`Admin notification sent for order ${orderId}`);
+    await logEmail(orderId, adminEmail, subject, 'success');
+  } catch (error: any) {
+    console.error('Failed to send admin notification:', error);
+    await logEmail(orderId, adminEmail, subject, 'error', error.message);
+  }
+};
+
+export const sendContactEmail = async (adminEmail: string, name: string, email: string, message: string) => {
+  const subject = `NOUVEAU MESSAGE DE CONTACT - ${name} - ZORANDO`;
+  const apiKey = await getApiKey();
+  
+  if (!apiKey || !adminEmail) {
+    console.error('Missing API Key or Admin Email for contact message');
+    return;
+  }
+
+  try {
+    const resend = new Resend(apiKey);
+    const fromEmail = await getFromEmail();
+    
+    await resend.emails.send({
+      from: fromEmail,
+      to: adminEmail,
+      subject: subject,
+      replyTo: email,
+      html: `
+        <div style="font-family: sans-serif; color: #333; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #f97316;">Nouveau message de contact</h2>
+          <hr style="border: 0; border-top: 1px solid #eee;" />
+          
+          <p><strong>De:</strong> ${name}</p>
+          <p><strong>Email:</strong> ${email}</p>
+          
+          <div style="margin-top: 20px; padding: 20px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px;">
+            <p style="margin-top: 0; font-weight: bold; color: #666;">Message :</p>
+            <p style="white-space: pre-wrap;">${message}</p>
+          </div>
+          
+          <p style="font-size: 12px; color: #999; margin-top: 30px;">
+            Vous pouvez répondre directement à cet email pour contacter l'expéditeur.
+          </p>
+        </div>
+      `
+    });
+    
+    console.log(`Contact email sent from ${name}`);
+    await logEmail(null, adminEmail, subject, 'success');
+  } catch (error: any) {
+    console.error('Failed to send contact email:', error);
+    await logEmail(null, adminEmail, subject, 'error', error.message);
+  }
+};
+
 export const sendOrderStatusEmail = async (orderId: string, customerName: string, customerEmail: string, status: string) => {
   const subject = `Mise à jour de votre commande ${orderId} - ZORANDO`;
   const apiKey = await getApiKey();

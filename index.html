@@ -83,6 +83,22 @@
   <body>
     <div id="root"></div>
 
+    <script>
+      // Nettoyage des anciens Service Workers qui pourraient créer des conflits
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(function(registrations) {
+          for (let registration of registrations) {
+            // On ne touche pas au worker de Webpushr
+            if (registration.active && registration.active.scriptURL.includes('webpushr-sw.js')) continue;
+            
+            registration.unregister().then(function(success) {
+              if (success) console.log('Ancien Service Worker nettoyé pour laisser place à Webpushr.');
+            });
+          }
+        });
+      }
+    </script>
+
     <!--seo-injection-->
     <script type="module" src="/src/main.tsx"></script>
     <!-- start webpushr code -->

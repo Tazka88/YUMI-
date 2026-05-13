@@ -71,11 +71,12 @@ export default function Checkout() {
             setSavedAddresses(data);
             
             // Pre-fill with primary if form is empty
-            const primary = data.find((a: any) => a.is_primary);
+            const primary = data.find((a: any) => (a.is_primary || a.isPrimary));
             if (primary && !formData.wilaya) {
               setFormData(prev => ({
                 ...prev,
                 wilaya: primary.wilaya?.split(' ')[0] || '',
+                commune: primary.commune || '',
                 address: primary.address,
                 phone: primary.phone || prev.phone
               }));
@@ -90,17 +91,32 @@ export default function Checkout() {
   }, [user]);
 
   useEffect(() => {
-    if (user && profile) {
+    if (user && profile && wilayas.length > 0) {
+      // Find wilaya number from name if stored as name
+      let wilayaNum = profile.wilaya || '';
+      if (isNaN(Number(wilayaNum))) {
+        const found = wilayas.find(w => w.name === profile.wilaya);
+        if (found) wilayaNum = found.number;
+      }
+
       setFormData(prev => ({
         ...prev,
         name: (profile.first_name || profile.firstName) ? `${profile.first_name || profile.firstName} ${profile.last_name || profile.lastName || ''}`.trim() : (user.user_metadata?.first_name || prev.name),
         email: user.email || prev.email,
         phone: profile.phone || prev.phone,
-        wilaya: profile.wilaya || prev.wilaya,
+        wilaya: wilayaNum,
+        commune: profile.commune || prev.commune,
         address: profile.full_address || profile.fullAddress || prev.address
       }));
+
+      // Set delivery cost if wilaya found
+      const selectedWilaya = wilayas.find(w => w.number === wilayaNum);
+      if (selectedWilaya) {
+        setDeliveryCost(Number(selectedWilaya.delivery_cost));
+        setDeliveryTime('24h-72h');
+      }
     }
-  }, [user, profile]);
+  }, [user, profile, wilayas]);
 
   // Shipping discount state
   const [isShippingDiscountApplied, setIsShippingDiscountApplied] = useState(false);
@@ -239,10 +255,16 @@ export default function Checkout() {
   };
 
   const handleSelectSavedAddress = (addr: any) => {
-    const wilayaNumber = addr.wilaya?.split(' ')[0] || '';
+    let wilayaNumber = addr.wilaya?.split(' ')[0] || '';
+    if (isNaN(Number(wilayaNumber)) && wilayas.length > 0) {
+      const found = wilayas.find(w => w.name === addr.wilaya);
+      if (found) wilayaNumber = found.number;
+    }
+
     setFormData(prev => ({
       ...prev,
       wilaya: wilayaNumber,
+      commune: addr.commune || '',
       address: addr.address,
       phone: addr.phone || prev.phone
     }));

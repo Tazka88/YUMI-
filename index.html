@@ -83,28 +83,8 @@
   <body>
     <div id="root"></div>
 
-    <script>
-      // Nettoyage des anciens Service Workers qui pourraient créer des conflits
-      if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.getRegistrations().then(function(registrations) {
-          for (let registration of registrations) {
-            // On ne touche pas au worker de Webpushr
-            if (registration.active && registration.active.scriptURL.includes('webpushr-sw.js')) continue;
-            
-            registration.unregister().then(function(success) {
-              if (success) console.log('Ancien Service Worker nettoyé pour laisser place à Webpushr.');
-            });
-          }
-        });
-      }
-    </script>
-
     <!--seo-injection-->
     <script type="module" src="/src/main.tsx"></script>
-    <!-- start webpushr code -->
-    <script>(function(w,d, s, id) {if(typeof(w.webpushr)!=='undefined') return;w.webpushr=w.webpushr||function(){(w.webpushr.q=w.webpushr.q||[]).push(arguments)};var js, fjs = d.getElementsByTagName(s)[0];js = d.createElement(s); js.id = id;js.async=1;js.src = "https://cdn.webpushr.com/app.min.js";
-    fjs.parentNode.appendChild(js);}(window,document, 'script', 'webpushr-jssdk'));webpushr('setup',{'key':'BAatSTB2Bl4fH7NvhObeSlEvJUx3hjEWWpfKtAMxZLj-e4sCHL8YB_Okv23trmDacsIzYtZlCCWpYGil9cPaCQ' });</script>
-    <!-- end webpushr code -->
   </body>
 </html>
 

@@ -44,7 +44,11 @@ export function generateSlug(text: string) {
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState('overview');
   const [productSubTab, setProductSubTab] = useState('products');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [itemsPerPage] = useState(20);
   const [stats, setStats] = useState({ orders: 0, revenue: 0, lowStock: 0 });
+  const [refreshToggle, setRefreshToggle] = useState(0);
   const [orders, setOrders] = useState<any[]>([]);
   const [selectedOrders, setSelectedOrders] = useState<number[]>([]);
   const [orderSearchTerm, setOrderSearchTerm] = useState('');
@@ -113,6 +117,7 @@ export default function AdminDashboard() {
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedAdminProductSearch(adminProductSearch);
+      setCurrentPage(1); // Reset to first page on search
     }, 500);
     return () => clearTimeout(timer);
   }, [adminProductSearch]);
@@ -230,10 +235,19 @@ export default function AdminDashboard() {
     if (activeTab === 'products') {
       const searchParams = new URLSearchParams();
       if (debouncedAdminProductSearch) searchParams.append('search', debouncedAdminProductSearch);
+      searchParams.append('page', currentPage.toString());
+      searchParams.append('limit', itemsPerPage.toString());
 
       fetch(`/api/admin/products?${searchParams.toString()}`, { headers, signal })
         .then(res => res.json())
-        .then(data => { if (Array.isArray(data)) setProducts(data); })
+        .then(data => { 
+          if (data && Array.isArray(data.products)) {
+            setProducts(data.products);
+            setTotalPages(data.totalPages);
+          } else if (Array.isArray(data)) {
+            setProducts(data);
+          }
+        })
         .catch(handleFetchError);
       
       fetch('/api/categories', { signal })
@@ -283,7 +297,7 @@ export default function AdminDashboard() {
     }
     
     return () => controller.abort();
-  }, [navigate, activeTab, debouncedAdminProductSearch]);
+  }, [navigate, activeTab, debouncedAdminProductSearch, currentPage, refreshToggle]);
 
   const toSlug = (text: string) => {
     if (!text) return '';
@@ -1011,10 +1025,7 @@ export default function AdminDashboard() {
 
       toast.success(editingProduct ? 'Produit modifié avec succès' : 'Produit créé avec succès');
       setIsModalOpen(false);
-      fetch('/api/admin/products', { headers: { 'Authorization': `Bearer ${token}` } })
-        .then(res => res.json())
-        .then(data => { if (Array.isArray(data)) setProducts(data); })
-        .catch(console.error);
+      setRefreshToggle(prev => prev + 1);
     } catch (err) {
       console.error(err);
       toast.error('Erreur de connexion au serveur');
@@ -1032,10 +1043,7 @@ export default function AdminDashboard() {
             method: 'DELETE',
             headers: { 'Authorization': `Bearer ${token}` }
           });
-          fetch('/api/admin/products', { headers: { 'Authorization': `Bearer ${token}` } })
-            .then(res => res.json())
-            .then(data => { if (Array.isArray(data)) setProducts(data); })
-            .catch(console.error);
+          setRefreshToggle(prev => prev + 1);
           setConfirmModal({ ...confirmModal, isOpen: false });
         } catch (err) {
           console.error(err);
@@ -2087,6 +2095,57 @@ export default function AdminDashboard() {
                     </tbody>
                   </table>
                 </div>
+                
+                {/* Pagination */}
+                {totalPages > 1 && (
+                  <div className="px-6 py-4 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <div className="text-sm text-gray-500">
+                      Affichage de la page <span className="font-medium">{currentPage}</span> sur <span className="font-medium">{totalPages}</span>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                        disabled={currentPage === 1}
+                        className={`px-4 py-2 text-sm font-medium rounded-md border ${currentPage === 1 ? 'border-gray-200 text-gray-400 bg-gray-50 cursor-not-allowed' : 'border-gray-300 text-gray-700 bg-white hover:bg-gray-50 transition-colors'}`}
+                      >
+                        Précédent
+                      </button>
+                      <div className="flex items-center gap-1">
+                        {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                          // Show pages around current page
+                          let pageNum = i + 1;
+                          if (totalPages > 5) {
+                            if (currentPage > 3) {
+                              pageNum = currentPage - 2 + i;
+                              if (pageNum + (4 - i) > totalPages) {
+                                pageNum = totalPages - 4 + i;
+                              }
+                            }
+                          }
+                          
+                          if (pageNum > totalPages) return null;
+
+                          return (
+                            <button
+                              key={pageNum}
+                              onClick={() => setCurrentPage(pageNum)}
+                              className={`w-10 h-10 flex items-center justify-center rounded-md text-sm font-medium transition-colors ${currentPage === pageNum ? 'bg-orange-500 text-white' : 'hover:bg-gray-100 text-gray-700'}`}
+                            >
+                              {pageNum}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      <button
+                        onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                        disabled={currentPage === totalPages}
+                        className={`px-4 py-2 text-sm font-medium rounded-md border ${currentPage === totalPages ? 'border-gray-200 text-gray-400 bg-gray-50 cursor-not-allowed' : 'border-gray-300 text-gray-700 bg-white hover:bg-gray-50 transition-colors'}`}
+                      >
+                        Suivant
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 

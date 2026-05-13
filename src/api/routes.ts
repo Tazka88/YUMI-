@@ -1297,13 +1297,23 @@ router.delete('/admin/orders/:id', authenticate, async (req, res) => {
 
 router.get('/admin/products', authenticate, async (req, res) => {
   try {
-    const { search } = req.query;
+    const { search, page = '1', limit = '20' } = req.query;
+    const pageNum = parseInt(page as string) || 1;
+    const limitNum = parseInt(limit as string) || 20;
+    const offset = (pageNum - 1) * limitNum;
+
     let whereClause = sql``;
     
     if (search) {
       const searchTerm = `%${search}%`;
-      whereClause = sql`WHERE p.name ILIKE ${searchTerm} OR p.description ILIKE ${searchTerm} OR p.id::text ILIKE ${searchTerm}`;
+      whereClause = sql`WHERE p.name ILIKE ${searchTerm} OR p.description ILIKE ${searchTerm} OR p.id::text ILIKE ${searchTerm} OR p.sku ILIKE ${searchTerm}`;
     }
+
+    const [totalCount] = await sql`
+      SELECT COUNT(*) as count 
+      FROM products p
+      ${whereClause}
+    `;
 
     const products = await sql`
       SELECT ${sql.unsafe(PRODUCT_COLS)}, c.name as category_name, s.name as subcategory_name, ss.name as sub_subcategory_name, COALESCE(p.brand_name, b.name) as brand_name 
@@ -1314,6 +1324,7 @@ router.get('/admin/products', authenticate, async (req, res) => {
       LEFT JOIN brands b ON p.brand_id = b.id
       ${whereClause}
       ORDER BY p.id DESC
+      LIMIT ${limitNum} OFFSET ${offset}
     `;
     
     const productIds = products.map((p: any) => p.id);
@@ -1352,9 +1363,16 @@ router.get('/admin/products', authenticate, async (req, res) => {
         });
       }
     });
-    res.json(products);
+
+    res.json({
+      products,
+      total: parseInt(totalCount.count),
+      page: pageNum,
+      totalPages: Math.ceil(parseInt(totalCount.count) / limitNum)
+    });
 
   } catch (err) {
+    console.error('Failed to fetch admin products:', err);
     res.status(500).json({ error: 'Failed to fetch products' });
   }
 });

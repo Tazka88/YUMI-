@@ -1,8 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../lib/AuthContext';
 import { getSupabase } from '../../lib/supabase';
-import { MapPin, Plus, Trash2, Edit2, CheckCircle2, Home, Briefcase, User } from 'lucide-react';
+import { MapPin, Plus, Trash2, Edit2, CheckCircle2, Home, Briefcase, User, Navigation } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import { ALGERIA_COMMUNES } from '../../utils/communes';
+import { fetchWithCache } from '../../lib/utils';
+
+interface Wilaya {
+  number: string;
+  name: string;
+}
 
 export default function Addresses() {
   const { user } = useAuth();
@@ -10,6 +17,7 @@ export default function Addresses() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [wilayas, setWilayas] = useState<Wilaya[]>([]);
   const [formData, setFormData] = useState({
     title: '',
     wilaya: '',
@@ -19,6 +27,20 @@ export default function Addresses() {
     isPrimary: false
   });
   const supabase = getSupabase();
+
+  useEffect(() => {
+    const fetchWilayas = async () => {
+      try {
+        const data = await fetchWithCache('/api/wilayas');
+        if (Array.isArray(data)) {
+          setWilayas(data.filter((w: any) => w.is_active === true || w.is_active === 1));
+        }
+      } catch (error) {
+        console.error('Failed to fetch wilayas:', error);
+      }
+    };
+    fetchWilayas();
+  }, []);
 
   useEffect(() => {
     if (!user || !supabase) return;
@@ -107,13 +129,20 @@ export default function Addresses() {
   };
 
   const startEdit = (addr: any) => {
+    // Attempt to find wilaya number from name if it was stored as string previously
+    let wilayaNum = addr.wilaya || '';
+    if (isNaN(Number(wilayaNum)) && wilayas.length > 0) {
+      const found = wilayas.find(w => w.name === addr.wilaya);
+      if (found) wilayaNum = found.number;
+    }
+
     setFormData({
       title: addr.title,
-      wilaya: addr.wilaya,
+      wilaya: wilayaNum,
       commune: addr.commune || '',
       address: addr.address,
       phone: addr.phone,
-      isPrimary: addr.isPrimary
+      isPrimary: addr.is_primary || addr.isPrimary
     });
     setEditingId(addr.id);
     setShowForm(true);
@@ -157,23 +186,38 @@ export default function Addresses() {
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Wilaya</label>
-                  <input 
-                    required
-                    value={formData.wilaya}
-                    onChange={e => setFormData({...formData, wilaya: e.target.value})}
-                    className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none text-sm transition-all"
-                    placeholder="16 Alger"
-                  />
+                  <div className="relative">
+                    <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400 z-10" />
+                    <select
+                      required
+                      value={formData.wilaya}
+                      onChange={e => setFormData({...formData, wilaya: e.target.value, commune: ''})}
+                      className="w-full pl-8 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none text-sm transition-all appearance-none"
+                    >
+                      <option value="" disabled>Sélectionnez</option>
+                      {wilayas.map(w => (
+                        <option key={w.number} value={w.number}>{w.number} - {w.name}</option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Commune</label>
-                  <input 
-                    required
-                    value={formData.commune}
-                    onChange={e => setFormData({...formData, commune: e.target.value})}
-                    className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none text-sm transition-all"
-                    placeholder="Commune"
-                  />
+                  <div className="relative">
+                    <Navigation className="absolute left-3 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400 z-10" />
+                    <select
+                      required
+                      disabled={!formData.wilaya}
+                      value={formData.commune}
+                      onChange={e => setFormData({...formData, commune: e.target.value})}
+                      className="w-full pl-8 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none text-sm transition-all appearance-none disabled:bg-gray-50"
+                    >
+                      <option value="" disabled>Sélectionnez</option>
+                      {formData.wilaya && ALGERIA_COMMUNES[formData.wilaya]?.map(commune => (
+                        <option key={commune} value={commune}>{commune}</option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
               </div>
             </div>

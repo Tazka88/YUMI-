@@ -11,6 +11,9 @@ import fs from 'fs';
 import capiRoutes from './capi.js';
 import ecotrackRoutes from './ecotrack.js';
 
+// Ensure profiles table has commune column
+sql`ALTER TABLE profiles ADD COLUMN IF NOT EXISTS commune VARCHAR(255)`.catch(err => console.error('Failed to add commune to profiles:', err));
+
 const router = Router();
 
 // Mount CAPI routes (renamed to metrics to bypass adblockers)

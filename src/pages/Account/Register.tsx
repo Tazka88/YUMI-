@@ -1,8 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { getSupabase } from '../../lib/supabase';
 import { toast } from 'react-hot-toast';
-import { UserPlus, Mail, Lock, User, Phone } from 'lucide-react';
+import { UserPlus, Mail, Lock, User, Phone, MapPin, Navigation } from 'lucide-react';
+import { ALGERIA_COMMUNES } from '../../utils/communes';
+import { fetchWithCache } from '../../lib/utils';
+
+interface Wilaya {
+  number: string;
+  name: string;
+}
 
 export default function Register() {
   const [formData, setFormData] = useState({
@@ -10,12 +17,29 @@ export default function Register() {
     lastName: '',
     email: '',
     phone: '',
+    wilaya: '',
+    commune: '',
     password: '',
     confirmPassword: '',
   });
   const [loading, setLoading] = useState(false);
+  const [wilayas, setWilayas] = useState<Wilaya[]>([]);
   const navigate = useNavigate();
   const supabase = getSupabase();
+
+  useEffect(() => {
+    const fetchWilayas = async () => {
+      try {
+        const data = await fetchWithCache('/api/wilayas');
+        if (Array.isArray(data)) {
+          setWilayas(data.filter((w: any) => w.is_active === true || w.is_active === 1));
+        }
+      } catch (error) {
+        console.error('Failed to fetch wilayas:', error);
+      }
+    };
+    fetchWilayas();
+  }, []);
 
   const handleGoogleLogin = async () => {
     if (!supabase) {
@@ -75,6 +99,8 @@ export default function Register() {
               last_name: formData.lastName,
               email: formData.email,
               phone: formData.phone,
+              wilaya: formData.wilaya,
+              commune: formData.commune,
               created_at: new Date().toISOString(),
               updated_at: new Date().toISOString(),
             }
@@ -82,8 +108,6 @@ export default function Register() {
         
         if (profileError) {
           console.error('Error creating profile:', profileError);
-          // Don't fail the whole registration if profile creation fails
-          // as auth succeeded and Supabase triggers or metadata might handle it
         }
       }
 
@@ -171,6 +195,44 @@ export default function Register() {
                 className="block w-full pl-9 pr-3 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none text-sm transition-all"
                 placeholder="05 55 55 55 55"
               />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Wilaya</label>
+              <div className="relative">
+                <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 z-10" />
+                <select
+                  required
+                  value={formData.wilaya}
+                  onChange={(e) => setFormData({...formData, wilaya: e.target.value, commune: ''})}
+                  className="block w-full pl-9 pr-8 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none text-sm transition-all appearance-none bg-white"
+                >
+                  <option value="" disabled>Sélectionnez</option>
+                  {wilayas.map(w => (
+                    <option key={w.number} value={w.number}>{w.number} - {w.name}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Commune</label>
+              <div className="relative">
+                <Navigation className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 z-10" />
+                <select
+                  required
+                  disabled={!formData.wilaya}
+                  value={formData.commune}
+                  onChange={(e) => setFormData({...formData, commune: e.target.value})}
+                  className="block w-full pl-9 pr-8 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none text-sm transition-all appearance-none bg-white disabled:bg-gray-50 disabled:text-gray-400"
+                >
+                  <option value="" disabled>Sélectionnez</option>
+                  {formData.wilaya && ALGERIA_COMMUNES[formData.wilaya]?.map(commune => (
+                    <option key={commune} value={commune}>{commune}</option>
+                  ))}
+                </select>
+              </div>
             </div>
           </div>
 

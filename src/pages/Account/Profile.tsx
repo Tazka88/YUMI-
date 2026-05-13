@@ -1,8 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../lib/AuthContext';
 import { getSupabase } from '../../lib/supabase';
-import { User, Mail, Phone, MapPin, Save, Shield, Calendar } from 'lucide-react';
+import { User, Mail, Phone, MapPin, Save, Shield, Calendar, Navigation } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import { ALGERIA_COMMUNES } from '../../utils/communes';
+import { fetchWithCache } from '../../lib/utils';
+
+interface Wilaya {
+  number: string;
+  name: string;
+}
 
 export default function Profile() {
   const { user, profile } = useAuth();
@@ -11,22 +18,46 @@ export default function Profile() {
     lastName: '',
     phone: '',
     wilaya: '',
+    commune: '',
     fullAddress: ''
   });
   const [loading, setLoading] = useState(false);
+  const [wilayas, setWilayas] = useState<Wilaya[]>([]);
   const supabase = getSupabase();
 
   useEffect(() => {
+    const fetchWilayas = async () => {
+      try {
+        const data = await fetchWithCache('/api/wilayas');
+        if (Array.isArray(data)) {
+          setWilayas(data.filter((w: any) => w.is_active === true || w.is_active === 1));
+        }
+      } catch (error) {
+        console.error('Failed to fetch wilayas:', error);
+      }
+    };
+    fetchWilayas();
+  }, []);
+
+  useEffect(() => {
     if (profile) {
+      // Find wilaya number from name if stored as name
+      let wilayaNum = profile.wilaya || '';
+      if (isNaN(Number(wilayaNum)) && wilayas.length > 0) {
+        const found = wilayas.find(w => w.name === profile.wilaya);
+        if (found) wilayaNum = found.number;
+      }
+
       setFormData({
         firstName: profile.first_name || profile.firstName || '',
         lastName: profile.last_name || profile.lastName || '',
         phone: profile.phone || '',
-        wilaya: profile.wilaya || '',
+        wilaya: wilayaNum,
+        commune: profile.commune || '',
         fullAddress: profile.full_address || profile.fullAddress || ''
       });
     }
-  }, [profile]);
+  }, [profile, wilayas]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,6 +65,9 @@ export default function Profile() {
 
     setLoading(true);
     try {
+      const selectedWilaya = wilayas.find(w => w.number === formData.wilaya);
+      const wilayaValue = selectedWilaya ? `${selectedWilaya.number} ${selectedWilaya.name}` : formData.wilaya;
+
       const { error } = await supabase
         .from('profiles')
         .upsert({
@@ -41,7 +75,8 @@ export default function Profile() {
           first_name: formData.firstName,
           last_name: formData.lastName,
           phone: formData.phone,
-          wilaya: formData.wilaya,
+          wilaya: formData.wilaya, // We'll store the number to keep it consistent with selects
+          commune: formData.commune,
           full_address: formData.fullAddress,
           updated_at: new Date().toISOString()
         });
@@ -129,13 +164,39 @@ export default function Profile() {
           <div className="space-y-1.5">
             <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider">Wilaya</label>
             <div className="relative">
-              <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <input
+              <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 z-10" />
+              <select
+                required
                 value={formData.wilaya}
-                onChange={e => setFormData({...formData, wilaya: e.target.value})}
-                className="w-full pl-10 pr-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none text-sm transition-all"
-                placeholder="Ex: 16 Alger"
-              />
+                onChange={e => setFormData({...formData, wilaya: e.target.value, commune: ''})}
+                className="w-full pl-10 pr-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none text-sm transition-all appearance-none"
+              >
+                <option value="" disabled>Sélectionnez votre wilaya</option>
+                {wilayas.map(w => (
+                  <option key={w.number} value={w.number}>{w.number} - {w.name}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+          <div className="space-y-1.5">
+            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider">Commune</label>
+            <div className="relative">
+              <Navigation className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 z-10" />
+              <select
+                required
+                disabled={!formData.wilaya}
+                value={formData.commune}
+                onChange={e => setFormData({...formData, commune: e.target.value})}
+                className="w-full pl-10 pr-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none text-sm transition-all appearance-none disabled:bg-gray-50 disabled:text-gray-400"
+              >
+                <option value="" disabled>{!formData.wilaya ? 'D\'abord choisir une wilaya' : 'Sélectionnez votre commune'}</option>
+                {formData.wilaya && ALGERIA_COMMUNES[formData.wilaya]?.map(commune => (
+                  <option key={commune} value={commune}>{commune}</option>
+                ))}
+              </select>
             </div>
           </div>
         </div>

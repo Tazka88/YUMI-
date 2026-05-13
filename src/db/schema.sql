@@ -113,6 +113,7 @@ CREATE TABLE IF NOT EXISTS profiles (
   email VARCHAR(255),
   phone VARCHAR(255),
   wilaya VARCHAR(255),
+  commune VARCHAR(255),
   full_address TEXT,
   role VARCHAR(50) DEFAULT 'user',
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,

@@ -78,7 +78,7 @@ export default function OfficesSettings() {
     <div className="bg-white rounded-lg shadow-sm">
       <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50 rounded-t-lg">
         <div>
-          <h2 className="text-xl font-bold text-gray-800">Gestion des Points Relais (Bureaux Ecotrack)</h2>
+          <h2 className="text-xl font-bold text-gray-800">Gestion des Points Relais</h2>
           <p className="text-sm text-gray-500 mt-1">Gérez les adresses des bureaux Stop Desk</p>
         </div>
         <button 
@@ -162,7 +162,7 @@ export default function OfficesSettings() {
                   className="w-full px-3 py-2 border rounded-md focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500"
                   value={formData.name}
                   onChange={(e) => setFormData({...formData, name: e.target.value})}
-                  placeholder="Ex: Bureau Ecotrack Centre"
+                  placeholder="Ex: Bureau Centre"
                 />
               </div>
               

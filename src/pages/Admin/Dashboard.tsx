@@ -7,7 +7,7 @@ import FooterSettings from './FooterSettings';
 import PageSettings from './PageSettings';
 import WilayasSettings from './WilayasSettings';
 import OfficesSettings from './OfficesSettings';
-import { FileText, MapPin, Search, LayoutGrid, List, Printer, Download, Truck, Building2, Mail } from 'lucide-react';
+import { FileText, MapPin, Search, LayoutGrid, List, Printer, Download, Building2, Mail } from 'lucide-react';
 import OrderKanban from './OrderKanban';
 import SliderImagesAdmin from './SliderImagesAdmin';
 
@@ -518,115 +518,6 @@ export default function AdminDashboard() {
       console.error(err);
       toast.error('Erreur lors de la préparation de l\'impression');
     }
-  };
-
-  const ALGERIA_WILAYAS: Record<string, number> = {
-    "adrar": 1, "chlef": 2, "laghouat": 3, "oum el bouaghi": 4, "batna": 5, "béjaïa": 6, "biskra": 7, "béchar": 8, "blida": 9,
-    "bouira": 10, "tamanrasset": 11, "tébessa": 12, "tlemcen": 13, "tiaret": 14, "tizi ouzou": 15, "alger": 16, "djelfa": 17,
-    "jijel": 18, "sétif": 19, "saïda": 20, "skikda": 21, "sidi bel abbès": 22, "annaba": 23, "guelma": 24, "constantine": 25,
-    "médéa": 26, "mostaganem": 27, "m'sila": 28, "mascara": 29, "ouargla": 30, "oran": 31, "el bayadh": 32, "illizi": 33,
-    "bordj bou arreridj": 34, "boumerdès": 35, "el tarf": 36, "tindouf": 37, "tissemsilt": 38, "el oued": 39, "khenchela": 40,
-    "souk ahras": 41, "tipaza": 42, "mila": 43, "aïn defla": 44, "naâma": 45, "aïn témouchent": 46, "ghardaïa": 47,
-    "relizane": 48, "timimoun": 49, "bordj badji mokhtar": 50, "ouled djellal": 51, "béni abbès": 52, "in salah": 53,
-    "in guezzam": 54, "touggourt": 55, "djanet": 56, "el m'ghair": 57, "el meniaa": 58
-  };
-
-  const getEcotrackWilayaId = (wilayaName: string): number => {
-    if (!wilayaName) return 16;
-    const str = wilayaName.toString().toLowerCase().trim();
-    const match = str.match(/^\\d+/);
-    if (match) return parseInt(match[0]);
-    for (const [name, id] of Object.entries(ALGERIA_WILAYAS)) {
-      if (str.includes(name) || str === name) return id;
-    }
-    return 16; // default
-  };
-
-  const sendToEcotrack = async (id: number, silent = false) => {
-    const token = localStorage.getItem('adminToken');
-    let loadId;
-    if (!silent) loadId = toast.loading('Envoi vers Ecotrack...');
-    try {
-      const res = await fetch(`/api/admin/orders/${id}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const orderData = await res.json();
-      
-      if (!res.ok) throw new Error(orderData.error);
-      
-      const wilayaId = getEcotrackWilayaId(orderData.wilaya);
-      const productsNames = orderData.items?.map((i: any) => `${i.quantity}x ${i.product_name}`).join(', ') || 'Produit';
-
-      const cleanPhone = (orderData.customer_phone || '').replace(/\D/g, '');
-
-      const payload: any = {
-        reference: orderData.order_id || `#${orderData.id}`,
-        nom_client: orderData.customer_name || 'Client',
-        telephone: cleanPhone || '0000000000',
-        adresse: orderData.address || 'Aucune adresse',
-        code_wilaya: wilayaId,
-        wilaya: wilayaId,
-        commune: orderData.commune || 'Centre',
-        montant: orderData.total_amount,
-        remarque: orderData.note || '',
-        produit: productsNames.substring(0, 250),
-        type: 1,
-        stop_desk: orderData.stop_desk ? 1 : 0
-      };
-
-      if (orderData.office_id) {
-        payload.office_id = orderData.office_id;
-      }
-
-      const ecoRes = await fetch('/api/ecotrack/create-order', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-      
-      const ecoData = await ecoRes.json();
-      
-      if (!ecoRes.ok) {
-        let detailMsg = '';
-        if (ecoData.details) {
-          if (Array.isArray(ecoData.details)) {
-            detailMsg = ecoData.details.map((d: any) => d.message).join(', ');
-          } else if (ecoData.details.message) {
-            detailMsg = ecoData.details.message;
-            if (ecoData.details.errors) {
-              const errorsList = Object.values(ecoData.details.errors).flat();
-              if (errorsList.length > 0) {
-                 detailMsg += ' : ' + errorsList.join(' | ');
-              }
-            }
-          }
-        }
-        throw new Error(detailMsg || ecoData.error || 'Erreur API Ecotrack');
-      }
-
-      if (!silent) toast.success('Commande envoyée avec succès', { id: loadId });
-      
-      await updateOrderStatus(id, 'expédiée');
-      return true;
-    } catch (err: any) {
-      console.error(err);
-      if (!silent) toast.error(err.message, { id: loadId });
-      return false;
-    }
-  };
-
-  const handleBulkEcotrack = async () => {
-    if (selectedOrders.length === 0) return;
-    const loadId = toast.loading(`Envoi de ${selectedOrders.length} commandes...`);
-    let successCount = 0;
-    
-    for (const id of selectedOrders) {
-      const success = await sendToEcotrack(id, true);
-      if (success) successCount++;
-    }
-    
-    toast.success(`${successCount}/${selectedOrders.length} envoyée(s) à Ecotrack`, { id: loadId });
-    setSelectedOrders([]);
   };
 
   const handleSelectAllOrders = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1777,7 +1668,6 @@ export default function AdminDashboard() {
                   orderSearchTerm={orderSearchTerm} 
                   onDeleteOrder={deleteOrder}
                   onPrintOrder={printOrder}
-                  onSendToEcotrack={sendToEcotrack}
                 />
               </div>
             ) : (
@@ -1819,12 +1709,6 @@ export default function AdminDashboard() {
                         {selectedOrders.length} commande(s) sélectionnée(s)
                       </span>
                       <div className="flex gap-2">
-                        <button
-                          onClick={handleBulkEcotrack}
-                          className="text-sm bg-orange-500 border border-transparent text-white px-3 py-1.5 rounded hover:bg-orange-600 transition-colors flex items-center gap-1"
-                        >
-                          <Truck size={14} /> Envoyer à Ecotrack
-                        </button>
                         <button
                           onClick={handleBulkPrint}
                           className="text-sm bg-white border border-orange-200 text-orange-700 px-3 py-1.5 rounded hover:bg-orange-100 transition-colors"
@@ -1918,13 +1802,6 @@ export default function AdminDashboard() {
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2">
-                          <button 
-                            onClick={() => sendToEcotrack(order.id)}
-                            className="p-1.5 text-orange-500 hover:text-orange-700 hover:bg-orange-50 rounded-md transition-colors"
-                            title="Envoyer à Ecotrack"
-                          >
-                            <Truck size={16} />
-                          </button>
                           <button 
                             onClick={() => printOrder(order.id)}
                             className="p-1.5 text-blue-500 hover:text-blue-700 hover:bg-blue-50 rounded-md transition-colors"

@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useCartStore } from '../store/cartStore';
 import { useAuth } from '../lib/AuthContext';
-import { CheckCircle, Truck, MapPin, Phone, User as UserIcon, Navigation, ChevronDown, Plus } from 'lucide-react';
+import { CheckCircle, Truck, MapPin, Phone, User as UserIcon, Navigation, ChevronDown, Plus, Building2 } from 'lucide-react';
 import { getSupabase } from '../lib/supabase';
 import { formatPrice } from '../utils/formatPrice';
 import { fetchWithCache } from '../lib/utils';
@@ -259,13 +259,15 @@ export default function Checkout() {
     }
   }, [items, navigate, orderSuccess, directBuyItem]);
 
+  const handleCommuneChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setFormData({ ...formData, commune: e.target.value });
+    setOfficeId('');
+  };
+
   const handleWilayaChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const wilayaNumber = e.target.value;
     setFormData({ ...formData, wilaya: wilayaNumber, commune: '' });
-  };
-
-  const handleCommuneChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setFormData({ ...formData, commune: e.target.value });
+    setOfficeId('');
   };
 
   const handleSelectSavedAddress = (addr: any) => {
@@ -282,6 +284,7 @@ export default function Checkout() {
       address: addr.address,
       phone: addr.phone || prev.phone
     }));
+    setOfficeId('');
     
     setShowAddressPicker(false);
     toast.success('Adresse sélectionnée');
@@ -593,31 +596,73 @@ export default function Checkout() {
             {deliveryMode === 'bureau' && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Choisir un point relais *</label>
-                <select 
-                  required
-                  className="w-full px-4 py-3 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-shadow bg-white"
-                  value={officeId}
-                  onChange={e => setOfficeId(e.target.value)}
-                >
-                  <option value="" disabled>Sélectionnez un point relais</option>
-                  {offices.filter(o => !formData.wilaya || Number(o.wilaya) === Number(formData.wilaya)).map(office => (
-                    <option key={office.id} value={office.id}>
-                      BUREAU: {office.name.toUpperCase()} - {office.address} ({office.commune}){office.phone ? ` - Tél: ${office.phone.split(',').map((p: string) => p.trim()).join(' / ')}` : ''}
-                    </option>
-                  ))}
-                  {offices.filter(o => !formData.wilaya || Number(o.wilaya) === Number(formData.wilaya)).length === 0 && (
-                    <option value="" disabled>Aucun point relais disponible pour cette wilaya</option>
-                  )}
-                </select>
+                
+                {(() => {
+                  const filteredOffices = offices.filter(o => {
+                    const matchWilaya = !formData.wilaya || Number(o.wilaya) === Number(formData.wilaya);
+                    const matchCommune = !formData.commune || o.commune.toLowerCase() === formData.commune.toLowerCase();
+                    return matchWilaya && matchCommune;
+                  });
 
-                {officeId && offices.find(o => String(o.id) === String(officeId)) && (
-                  <div className="mt-2 text-sm">
-                    <span className="text-gray-600">Point relais : </span>
-                    <span className="text-red-600 font-black text-lg uppercase tracking-tight">
-                      {offices.find(o => String(o.id) === String(officeId))?.name}
-                    </span>
-                  </div>
-                )}
+                  if (!formData.wilaya) {
+                    return (
+                      <div className="p-4 bg-orange-50 text-orange-800 rounded-lg border border-orange-200 text-sm">
+                        Sélectionnez d'abord une wilaya et une commune pour voir les points relais.
+                      </div>
+                    );
+                  }
+
+                  if (filteredOffices.length === 0) {
+                    return (
+                      <div className="p-4 bg-gray-50 text-gray-600 rounded-lg border border-gray-200 text-sm flex items-center justify-center min-h-[100px] text-center">
+                        Aucun point relais disponible pour la wilaya / commune sélectionnée.
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div className="space-y-3 max-h-[350px] overflow-y-auto pr-2 custom-scrollbar">
+                      {filteredOffices.map(office => (
+                        <label 
+                          key={office.id} 
+                          className={`block p-4 rounded-xl border-2 cursor-pointer transition-all ${String(officeId) === String(office.id) ? 'border-orange-500 bg-orange-50 shadow-sm' : 'border-gray-200 hover:border-orange-300 hover:bg-orange-50/30'}`}
+                        >
+                          <div className="flex items-start gap-4">
+                            <div className="flex-shrink-0 mt-1">
+                              <input 
+                                type="radio" 
+                                name="selectedOffice" 
+                                value={office.id}
+                                checked={String(officeId) === String(office.id)}
+                                onChange={(e) => setOfficeId(e.target.value)}
+                                className="w-5 h-5 text-orange-600 focus:ring-orange-500 border-gray-300"
+                              />
+                            </div>
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-2">
+                                <Building2 size={18} className="text-gray-500" />
+                                <h4 className="font-bold text-gray-900 uppercase">{office.name}</h4>
+                              </div>
+                              <div className="space-y-1.5 text-sm text-gray-600 ml-6">
+                                <p className="flex items-start gap-2">
+                                  <MapPin size={16} className="text-gray-400 mt-0.5 flex-shrink-0" />
+                                  <span>{office.address} <span className="font-bold text-gray-800">({office.commune})</span></span>
+                                </p>
+                                {office.phone && (
+                                  <p className="flex items-start gap-2">
+                                    <Phone size={16} className="text-gray-400 mt-0.5 flex-shrink-0" />
+                                    <span>{office.phone.split(',').map((p: string) => p.trim()).join(' / ')}</span>
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </label>
+                      ))}
+                    </div>
+                  );
+                })()}
+
               </div>
             )}
 

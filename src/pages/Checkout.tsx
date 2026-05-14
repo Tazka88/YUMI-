@@ -255,12 +255,12 @@ export default function Checkout() {
     }
   }, [items, navigate, orderSuccess, directBuyItem]);
 
-  const handleWilayaChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+  const handleWilayaChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const wilayaNumber = e.target.value;
     setFormData({ ...formData, wilaya: wilayaNumber, commune: '' });
   };
 
-  const handleCommuneChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+  const handleCommuneChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const newCommune = e.target.value;
     setFormData({ ...formData, commune: newCommune });
     // Reset office selection since a new commune is selected
@@ -537,17 +537,20 @@ export default function Checkout() {
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <MapPin size={18} className="text-gray-400" />
                   </div>
-                  <select 
+                  <input 
+                    type="text"
                     required
-                    className="w-full pl-10 pr-4 py-3 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-shadow appearance-none bg-white"
+                    list="checkout-wilayas-list"
+                    className="w-full pl-10 pr-4 py-3 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-shadow bg-white"
+                    placeholder="Saisir ou sélectionner votre wilaya"
                     value={formData.wilaya}
-                    onChange={handleWilayaChange}
-                  >
-                    <option value="" disabled>Sélectionnez votre wilaya</option>
+                    onChange={(e: any) => handleWilayaChange(e)}
+                  />
+                  <datalist id="checkout-wilayas-list">
                     {wilayas.map(w => (
                       <option key={w.number} value={w.number}>{w.number} - {w.name}</option>
                     ))}
-                  </select>
+                  </datalist>
                 </div>
               </div>
 
@@ -557,27 +560,31 @@ export default function Checkout() {
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <Navigation size={18} className="text-gray-400" />
                   </div>
-                  <select 
+                  <input 
+                    type="text"
                     required
+                    list="checkout-communes-list"
                     disabled={!formData.wilaya}
-                    className="w-full pl-10 pr-4 py-3 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-shadow appearance-none bg-white disabled:bg-gray-100 disabled:cursor-not-allowed"
+                    className="w-full pl-10 pr-4 py-3 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-shadow bg-white disabled:bg-gray-100 disabled:cursor-not-allowed"
+                    placeholder="Saisir ou sélectionner votre commune"
                     value={formData.commune}
-                    onChange={handleCommuneChange}
-                  >
-                    <option value="" disabled>{!formData.wilaya ? 'D\'abord choisir une wilaya' : 'Sélectionnez votre commune'}</option>
+                    onChange={(e: any) => handleCommuneChange(e)}
+                  />
+                  <datalist id="checkout-communes-list">
                     {(() => {
                       if (!formData.wilaya) return null;
-                      const selectedWilaya = wilayas.find(w => w.number === String(formData.wilaya));
+                      const selectedWilaya = wilayas.find(w => w.number === String(formData.wilaya) || w.name.toLowerCase() === String(formData.wilaya).toLowerCase().trim() || `${w.number} - ${w.name}` === String(formData.wilaya));
                       if (selectedWilaya && selectedWilaya.communes && selectedWilaya.communes.trim().length > 0) {
                         return selectedWilaya.communes.split(',').map((c: string) => c.trim()).filter((c: string) => c).map((commune: string) => (
                           <option key={commune} value={commune}>{commune}</option>
                         ));
                       }
-                      return ALGERIA_COMMUNES[formData.wilaya as keyof typeof ALGERIA_COMMUNES]?.map(commune => (
+                      const wilayaKey = selectedWilaya ? selectedWilaya.number : formData.wilaya;
+                      return ALGERIA_COMMUNES[wilayaKey as keyof typeof ALGERIA_COMMUNES]?.map(commune => (
                         <option key={commune} value={commune}>{commune}</option>
                       ));
                     })()}
-                  </select>
+                  </datalist>
                 </div>
               </div>
             </div>
@@ -625,7 +632,8 @@ export default function Checkout() {
                         wilayaMatch = String(o.wilaya).trim().toLowerCase() === String(formData.wilaya).trim().toLowerCase();
                       }
                     }
-                    const communeMatch = !formData.commune || o.commune.trim().toLowerCase() === String(formData.commune).trim().toLowerCase();
+                    const normalizeStr = (s: string) => s ? String(s).normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase() : '';
+                    const communeMatch = !formData.commune || normalizeStr(o.commune) === normalizeStr(String(formData.commune));
                     return wilayaMatch && communeMatch;
                   }).map(office => (
                     <option key={office.id} value={office.id}>
@@ -649,7 +657,8 @@ export default function Checkout() {
                         wilayaMatch = String(o.wilaya).trim().toLowerCase() === String(formData.wilaya).trim().toLowerCase();
                       }
                     }
-                    const communeMatch = !formData.commune || o.commune.trim().toLowerCase() === String(formData.commune).trim().toLowerCase();
+                    const normalizeStr = (s: string) => s ? String(s).normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase() : '';
+                    const communeMatch = !formData.commune || normalizeStr(o.commune) === normalizeStr(String(formData.commune));
                     return wilayaMatch && communeMatch;
                   }).length === 0 && (
                     <option value="" disabled>Aucun point relais disponible pour cette sélection</option>

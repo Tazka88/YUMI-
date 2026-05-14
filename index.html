@@ -78,22 +78,6 @@
         }, 3500); // Delayed by 3.5s to let the main thread breathe
       });
     </script>
-    <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
-    <script>
-      window.OneSignalDeferred = window.OneSignalDeferred || [];
-      OneSignalDeferred.push(async function(OneSignal) {
-        // Only initialize on production domain to avoid "Can only be used on: https://zorando.com" errors
-        if (window.location.hostname === 'zorando.com' || window.location.hostname === 'www.zorando.com') {
-          await OneSignal.init({
-            appId: "06ead21c-2a7e-4d73-b52e-d01e4b6462df",
-            safari_web_id: "web.onesignal.auto.09714a24-a3bb-414f-8109-d75a4f07e6fa",
-            notifyButton: { 
-              enable: true 
-            },
-          });
-        }
-      });
-    </script>
     <!--head-injection-->
   </head>
   <body>

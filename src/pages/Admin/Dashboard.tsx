@@ -6,8 +6,9 @@ import { formatPrice } from '../../utils/formatPrice';
 import FooterSettings from './FooterSettings';
 import PageSettings from './PageSettings';
 import WilayasSettings from './WilayasSettings';
+import CommunesSettings from './CommunesSettings';
 import OfficesSettings from './OfficesSettings';
-import { FileText, MapPin, Search, LayoutGrid, List, Printer, Download, Truck, Building2, Mail } from 'lucide-react';
+import { FileText, MapPin, Search, LayoutGrid, List, Printer, Download, Truck, Building2, Mail, Navigation } from 'lucide-react';
 import OrderKanban from './OrderKanban';
 import SliderImagesAdmin from './SliderImagesAdmin';
 
@@ -1561,6 +1562,13 @@ export default function AdminDashboard() {
             Wilayas & Livraison
           </button>
           <button 
+            onClick={() => setActiveTab('communes')}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-md transition-colors ${activeTab === 'communes' ? 'bg-orange-500 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white'}`}
+          >
+            <Navigation size={20} />
+            Communes
+          </button>
+          <button 
             onClick={() => setActiveTab('offices')}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-md transition-colors ${activeTab === 'offices' ? 'bg-orange-500 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white'}`}
           >
@@ -2397,6 +2405,7 @@ export default function AdminDashboard() {
         )}
 
         {activeTab === 'wilayas' && <WilayasSettings />}
+        {activeTab === 'communes' && <CommunesSettings />}
         {activeTab === 'offices' && <OfficesSettings />}
 
         {activeTab === 'settings' && (

@@ -1838,4 +1838,39 @@ router.delete('/admin/offices/:id', authenticate, async (req, res) => {
   }
 });
 
+// --- Communes ---
+router.get('/communes/public', async (req, res) => {
+  try {
+    const communesList = await sql`SELECT wilaya, name FROM communes ORDER BY wilaya ASC, name ASC`;
+    const communesDict: Record<string, string[]> = {};
+    for (const c of communesList) {
+      if (!communesDict[c.wilaya]) communesDict[c.wilaya] = [];
+      communesDict[c.wilaya].push(c.name);
+    }
+    res.json(communesDict);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to fetch communes' });
+  }
+});
+
+router.get('/admin/communes', authenticate, async (req, res) => {
+  try {
+    const communesList = await sql`SELECT id, wilaya, name FROM communes ORDER BY wilaya ASC, name ASC`;
+    res.json(communesList);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch admin communes' });
+  }
+});
+
+router.put('/admin/communes/:id', authenticate, async (req, res) => {
+  try {
+    const { name } = req.body;
+    await sql`UPDATE communes SET name = ${name} WHERE id = ${req.params.id}`;
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to update commune' });
+  }
+});
+
 export default router;

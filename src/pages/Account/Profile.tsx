@@ -3,7 +3,7 @@ import { useAuth } from '../../lib/AuthContext';
 import { getSupabase } from '../../lib/supabase';
 import { User, Mail, Phone, MapPin, Save, Shield, Calendar, Navigation } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import { ALGERIA_COMMUNES } from '../../utils/communes';
+import { useCommunesStore } from '../../store/useCommunesStore';
 import { fetchWithCache } from '../../lib/utils';
 
 interface Wilaya {
@@ -24,8 +24,10 @@ export default function Profile() {
   const [loading, setLoading] = useState(false);
   const [wilayas, setWilayas] = useState<Wilaya[]>([]);
   const supabase = getSupabase();
+  const { communes: ALGERIA_COMMUNES, fetchCommunes } = useCommunesStore();
 
   useEffect(() => {
+    fetchCommunes();
     const fetchWilayas = async () => {
       try {
         const data = await fetchWithCache('/api/wilayas');

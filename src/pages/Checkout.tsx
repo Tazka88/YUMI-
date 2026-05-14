@@ -8,7 +8,7 @@ import { getSupabase } from '../lib/supabase';
 import { formatPrice } from '../utils/formatPrice';
 import { fetchWithCache } from '../lib/utils';
 import { sendCapiEvent, generateEventId } from '../lib/capi';
-import { ALGERIA_COMMUNES } from '../utils/communes';
+import { useCommunesStore } from '../store/useCommunesStore';
 
 interface Wilaya {
   id: number;
@@ -24,7 +24,8 @@ export default function Checkout() {
   const navigate = useNavigate();
   const location = useLocation();
   const supabase = getSupabase();
-  
+  const { communes: ALGERIA_COMMUNES, fetchCommunes } = useCommunesStore();
+
   const directBuyItem = location.state?.directBuyItem;
   const checkoutItems = directBuyItem ? [directBuyItem] : items;
   const checkoutTotal = directBuyItem ? (directBuyItem.selectedVariation?.price || directBuyItem.promo_price || directBuyItem.price) * directBuyItem.quantity : total();
@@ -48,6 +49,10 @@ export default function Checkout() {
   const [wilayas, setWilayas] = useState<Wilaya[]>([]);
   const [offices, setOffices] = useState<any[]>([]);
   const [deliveryMode, setDeliveryMode] = useState<'domicile' | 'bureau'>('domicile');
+
+  useEffect(() => {
+    fetchCommunes();
+  }, [fetchCommunes]);
   const [officeId, setOfficeId] = useState('');
   const [savedAddresses, setSavedAddresses] = useState<any[]>([]);
   const [showAddressPicker, setShowAddressPicker] = useState(false);

@@ -1,11 +1,13 @@
 import toast from 'react-hot-toast';
 import React, { useState, useEffect } from 'react';
 import { Plus, Edit, Trash2, Search, X, MapPin, Phone, Navigation } from 'lucide-react';
-import { ALGERIA_COMMUNES } from '../../utils/communes';
+import { useCommunesStore } from '../../store/useCommunesStore';
 
 export default function OfficesSettings() {
   const [offices, setOffices] = useState<any[]>([]);
   const [wilayas, setWilayas] = useState<any[]>([]);
+  const { communes: ALGERIA_COMMUNES, fetchCommunes } = useCommunesStore();
+
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingOffice, setEditingOffice] = useState<any>(null);
@@ -42,7 +44,8 @@ export default function OfficesSettings() {
   useEffect(() => {
     fetchOffices();
     fetchWilayas();
-  }, []);
+    fetchCommunes();
+  }, [fetchCommunes]);
 
   const filteredOffices = offices.filter(o => 
     o.name.toLowerCase().includes(searchTerm.toLowerCase()) || 

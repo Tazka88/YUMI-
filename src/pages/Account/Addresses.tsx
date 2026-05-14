@@ -3,7 +3,7 @@ import { useAuth } from '../../lib/AuthContext';
 import { getSupabase } from '../../lib/supabase';
 import { MapPin, Plus, Trash2, Edit2, CheckCircle2, Home, Briefcase, User, Navigation } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import { ALGERIA_COMMUNES } from '../../utils/communes';
+import { useCommunesStore } from '../../store/useCommunesStore';
 import { fetchWithCache } from '../../lib/utils';
 
 interface Wilaya {
@@ -18,6 +18,8 @@ export default function Addresses() {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [wilayas, setWilayas] = useState<Wilaya[]>([]);
+  const { communes: ALGERIA_COMMUNES, fetchCommunes } = useCommunesStore();
+
   const [formData, setFormData] = useState({
     title: '',
     wilaya: '',
@@ -29,6 +31,7 @@ export default function Addresses() {
   const supabase = getSupabase();
 
   useEffect(() => {
+    fetchCommunes();
     const fetchWilayas = async () => {
       try {
         const data = await fetchWithCache('/api/wilayas');

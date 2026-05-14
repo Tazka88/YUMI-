@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { getSupabase } from '../../lib/supabase';
 import { toast } from 'react-hot-toast';
 import { UserPlus, Mail, Lock, User, Phone, MapPin, Navigation } from 'lucide-react';
-import { ALGERIA_COMMUNES } from '../../utils/communes';
+import { useCommunesStore } from '../../store/useCommunesStore';
 import { fetchWithCache } from '../../lib/utils';
 
 interface Wilaya {
@@ -24,10 +24,13 @@ export default function Register() {
   });
   const [loading, setLoading] = useState(false);
   const [wilayas, setWilayas] = useState<Wilaya[]>([]);
+  const { communes: ALGERIA_COMMUNES, fetchCommunes } = useCommunesStore();
+
   const navigate = useNavigate();
   const supabase = getSupabase();
 
   useEffect(() => {
+    fetchCommunes();
     const fetchWilayas = async () => {
       try {
         const data = await fetchWithCache('/api/wilayas');

@@ -275,9 +275,13 @@ CREATE TABLE IF NOT EXISTS wilayas (
   number VARCHAR(10) UNIQUE NOT NULL,
   name VARCHAR(255) NOT NULL,
   delivery_cost DECIMAL(10, 2) NOT NULL,
+  stop_desk_cost DECIMAL(10, 2) DEFAULT 0,
   is_active BOOLEAN DEFAULT TRUE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Force add stop_desk_cost column if table already exists
+ALTER TABLE wilayas ADD COLUMN IF NOT EXISTS stop_desk_cost DECIMAL(10, 2) DEFAULT 0;
 
 -- Enable Row Level Security (RLS) on all tables to satisfy Supabase Security Advisor
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;

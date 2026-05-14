@@ -11,6 +11,7 @@ export default function WilayasSettings() {
     number: '',
     name: '',
     delivery_cost: 600,
+    stop_desk_cost: 400,
     is_active: true
   });
   const [confirmModal, setConfirmModal] = useState({
@@ -44,6 +45,7 @@ export default function WilayasSettings() {
         number: wilaya.number,
         name: wilaya.name,
         delivery_cost: wilaya.delivery_cost,
+        stop_desk_cost: wilaya.stop_desk_cost || 0,
         is_active: !!wilaya.is_active
       });
     } else {
@@ -52,6 +54,7 @@ export default function WilayasSettings() {
         number: '',
         name: '',
         delivery_cost: 600,
+        stop_desk_cost: 400,
         is_active: true
       });
     }
@@ -155,7 +158,8 @@ export default function WilayasSettings() {
               <tr className="bg-gray-50 text-gray-600 text-sm">
                 <th className="p-4 font-medium">N°</th>
                 <th className="p-4 font-medium">Nom de la Wilaya</th>
-                <th className="p-4 font-medium">Tarif de livraison (DA)</th>
+                <th className="p-4 font-medium">Tarif Domicile (DA)</th>
+                <th className="p-4 font-medium">Tarif Stop Desk (DA)</th>
                 <th className="p-4 font-medium">Statut</th>
                 <th className="p-4 font-medium text-right">Actions</th>
               </tr>
@@ -166,7 +170,8 @@ export default function WilayasSettings() {
                   <tr key={wilaya.id} className="hover:bg-gray-50 transition-colors">
                     <td className="p-4 font-medium text-gray-900">{wilaya.number}</td>
                     <td className="p-4 text-gray-800">{wilaya.name}</td>
-                    <td className="p-4 font-medium text-orange-600">{wilaya.delivery_cost} DA</td>
+                    <td className="p-4 font-medium text-blue-600">{wilaya.delivery_cost} DA</td>
+                    <td className="p-4 font-medium text-orange-600">{wilaya.stop_desk_cost || 0} DA</td>
                     <td className="p-4">
                       <button 
                         onClick={() => toggleStatus(wilaya)}
@@ -245,7 +250,7 @@ export default function WilayasSettings() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Tarif de livraison (DA)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Tarif Domicile (DA)</label>
                 <input 
                   type="number" 
                   required
@@ -253,6 +258,18 @@ export default function WilayasSettings() {
                   step="10"
                   value={formData.delivery_cost}
                   onChange={(e) => setFormData({...formData, delivery_cost: parseFloat(e.target.value)})}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Tarif Stop Desk (DA)</label>
+                <input 
+                  type="number" 
+                  required
+                  min="0"
+                  step="10"
+                  value={formData.stop_desk_cost}
+                  onChange={(e) => setFormData({...formData, stop_desk_cost: parseFloat(e.target.value)})}
                   className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
                 />
               </div>

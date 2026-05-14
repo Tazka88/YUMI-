@@ -15,6 +15,7 @@ interface Wilaya {
   number: string;
   name: string;
   delivery_cost: number;
+  stop_desk_cost: number;
   is_active: number;
 }
 export default function Checkout() {
@@ -112,7 +113,10 @@ export default function Checkout() {
       // Set delivery cost if wilaya found
       const selectedWilaya = wilayas.find(w => w.number === wilayaNum);
       if (selectedWilaya) {
-        setDeliveryCost(Number(selectedWilaya.delivery_cost));
+        const cost = deliveryMode === 'domicile' 
+          ? Number(selectedWilaya.delivery_cost) 
+          : Number(selectedWilaya.stop_desk_cost || 0);
+        setDeliveryCost(cost);
         setDeliveryTime('24h-72h');
       }
     }
@@ -196,6 +200,20 @@ export default function Checkout() {
     return () => controller.abort();
   }, []);
 
+  useEffect(() => {
+    const selectedWilaya = wilayas.find(w => w.number === formData.wilaya);
+    if (selectedWilaya) {
+      const cost = deliveryMode === 'domicile' 
+        ? Number(selectedWilaya.delivery_cost) 
+        : Number(selectedWilaya.stop_desk_cost || 0);
+      setDeliveryCost(cost);
+      setDeliveryTime('24h-72h'); // On pourrait rendre cela dynamique aussi
+    } else {
+      setDeliveryCost(0);
+      setDeliveryTime('');
+    }
+  }, [deliveryMode, formData.wilaya, wilayas]);
+
   const initiateCheckoutTrackedRef = React.useRef(false);
 
   useEffect(() => {
@@ -239,15 +257,6 @@ export default function Checkout() {
   const handleWilayaChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const wilayaNumber = e.target.value;
     setFormData({ ...formData, wilaya: wilayaNumber, commune: '' });
-    
-    const selectedWilaya = wilayas.find(w => w.number === wilayaNumber);
-    if (selectedWilaya) {
-      setDeliveryCost(Number(selectedWilaya.delivery_cost));
-      setDeliveryTime('24h-72h'); // Default time or could be added to DB
-    } else {
-      setDeliveryCost(0);
-      setDeliveryTime('');
-    }
   };
 
   const handleCommuneChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -269,11 +278,6 @@ export default function Checkout() {
       phone: addr.phone || prev.phone
     }));
     
-    const selectedWilaya = wilayas.find(w => w.number === wilayaNumber);
-    if (selectedWilaya) {
-      setDeliveryCost(Number(selectedWilaya.delivery_cost));
-      setDeliveryTime('24h-72h');
-    }
     setShowAddressPicker(false);
     toast.success('Adresse sélectionnée');
   };
@@ -672,7 +676,7 @@ export default function Checkout() {
                 <span className="font-medium">{formatPrice(checkoutTotal)}</span>
               </div>
               <div className="flex justify-between text-gray-600">
-                <span>Frais de livraison</span>
+                <span>{deliveryMode === 'domicile' ? 'Frais de livraison' : 'Tarif Point Relais'}</span>
                 {isFreeShipping ? (
                   <div className="text-right">
                     <span className="text-xs text-gray-400 line-through mr-2">{formatPrice(deliveryCost)}</span>

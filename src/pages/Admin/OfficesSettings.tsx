@@ -78,7 +78,7 @@ export default function OfficesSettings() {
     <div className="bg-white rounded-lg shadow-sm">
       <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50 rounded-t-lg">
         <div>
-          <h2 className="text-xl font-bold text-gray-800">Gestion des Points Relais</h2>
+          <h2 className="text-xl font-bold text-gray-800">Gestion des Points Relais (DHD Livraison)</h2>
           <p className="text-sm text-gray-500 mt-1">Gérez les adresses des bureaux Stop Desk</p>
         </div>
         <button 

@@ -9,6 +9,7 @@ import path from 'path';
 import rateLimit from 'express-rate-limit';
 import fs from 'fs';
 import capiRoutes from './capi.js';
+import dhdRoutes from './dhd.js';
 
 // Ensure profiles table has commune column
 sql`ALTER TABLE profiles ADD COLUMN IF NOT EXISTS commune VARCHAR(255)`.catch(err => console.error('Failed to add commune to profiles:', err));
@@ -17,6 +18,9 @@ const router = Router();
 
 // Mount CAPI routes (renamed to metrics to bypass adblockers)
 router.use('/metrics/v1', capiRoutes);
+
+// Mount DHD routes
+router.use('/delivery', dhdRoutes);
 
 
 // Helper to process images to avoid Vercel 4.5MB payload limit

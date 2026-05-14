@@ -9,6 +9,7 @@ import { fetchWithCache } from '../../lib/utils';
 interface Wilaya {
   number: string;
   name: string;
+  communes?: string | null;
 }
 
 export default function Profile() {
@@ -193,9 +194,18 @@ export default function Profile() {
                 className="w-full pl-10 pr-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none text-sm transition-all appearance-none disabled:bg-gray-50 disabled:text-gray-400"
               >
                 <option value="" disabled>{!formData.wilaya ? 'D\'abord choisir une wilaya' : 'Sélectionnez votre commune'}</option>
-                {formData.wilaya && ALGERIA_COMMUNES[formData.wilaya]?.map(commune => (
-                  <option key={commune} value={commune}>{commune}</option>
-                ))}
+                {(() => {
+                  if (!formData.wilaya) return null;
+                  const selectedWilaya = wilayas.find(w => w.number === String(formData.wilaya));
+                  if (selectedWilaya && selectedWilaya.communes && selectedWilaya.communes.trim().length > 0) {
+                    return selectedWilaya.communes.split(',').map((c: string) => c.trim()).filter((c: string) => c).map((commune: string) => (
+                      <option key={commune} value={commune}>{commune}</option>
+                    ));
+                  }
+                  return ALGERIA_COMMUNES[formData.wilaya as keyof typeof ALGERIA_COMMUNES]?.map(commune => (
+                    <option key={commune} value={commune}>{commune}</option>
+                  ));
+                })()}
               </select>
             </div>
           </div>

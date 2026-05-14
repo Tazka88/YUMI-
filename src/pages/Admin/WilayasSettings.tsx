@@ -12,7 +12,8 @@ export default function WilayasSettings() {
     name: '',
     delivery_cost: 600,
     stop_desk_cost: 400,
-    is_active: true
+    is_active: true,
+    communes: ''
   });
   const [confirmModal, setConfirmModal] = useState({
     isOpen: false,
@@ -46,7 +47,8 @@ export default function WilayasSettings() {
         name: wilaya.name,
         delivery_cost: wilaya.delivery_cost,
         stop_desk_cost: wilaya.stop_desk_cost || 0,
-        is_active: !!wilaya.is_active
+        is_active: !!wilaya.is_active,
+        communes: wilaya.communes || ''
       });
     } else {
       setEditingWilaya(null);
@@ -55,7 +57,8 @@ export default function WilayasSettings() {
         name: '',
         delivery_cost: 600,
         stop_desk_cost: 400,
-        is_active: true
+        is_active: true,
+        communes: ''
       });
     }
     setIsModalOpen(true);
@@ -272,6 +275,16 @@ export default function WilayasSettings() {
                   onChange={(e) => setFormData({...formData, stop_desk_cost: parseFloat(e.target.value)})}
                   className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
                 />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Communes Liées (séparées par des virgules)</label>
+                <textarea 
+                  value={formData.communes}
+                  onChange={(e) => setFormData({...formData, communes: e.target.value})}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 min-h-[100px]"
+                  placeholder="Ex: Alger Centre, Sidi M'Hamed, Bab El Oued..."
+                />
+                <p className="text-xs text-gray-500 mt-1">Si vide, la liste automatique sera utilisée.</p>
               </div>
               <div className="flex items-center gap-2 mt-4">
                 <input 

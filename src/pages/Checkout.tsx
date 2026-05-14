@@ -17,6 +17,7 @@ interface Wilaya {
   delivery_cost: number;
   stop_desk_cost: number;
   is_active: number;
+  communes?: string | null;
 }
 export default function Checkout() {
   const { items, total, clearCart } = useCartStore();
@@ -564,9 +565,18 @@ export default function Checkout() {
                     onChange={handleCommuneChange}
                   >
                     <option value="" disabled>{!formData.wilaya ? 'D\'abord choisir une wilaya' : 'Sélectionnez votre commune'}</option>
-                    {formData.wilaya && ALGERIA_COMMUNES[formData.wilaya as keyof typeof ALGERIA_COMMUNES]?.map(commune => (
-                      <option key={commune} value={commune}>{commune}</option>
-                    ))}
+                    {(() => {
+                      if (!formData.wilaya) return null;
+                      const selectedWilaya = wilayas.find(w => w.number === String(formData.wilaya));
+                      if (selectedWilaya && selectedWilaya.communes && selectedWilaya.communes.trim().length > 0) {
+                        return selectedWilaya.communes.split(',').map((c: string) => c.trim()).filter((c: string) => c).map((commune: string) => (
+                          <option key={commune} value={commune}>{commune}</option>
+                        ));
+                      }
+                      return ALGERIA_COMMUNES[formData.wilaya as keyof typeof ALGERIA_COMMUNES]?.map(commune => (
+                        <option key={commune} value={commune}>{commune}</option>
+                      ));
+                    })()}
                   </select>
                 </div>
               </div>

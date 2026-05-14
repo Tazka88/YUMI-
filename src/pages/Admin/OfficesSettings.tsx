@@ -263,6 +263,17 @@ export default function OfficesSettings() {
                       w.name.toLowerCase() === searchVal ||
                       `${w.number} - ${w.name}`.toLowerCase() === searchVal
                     );
+                    
+                    if (wilayaMatch && wilayaMatch.communes && wilayaMatch.communes.trim().length > 0) {
+                      return (
+                        <datalist id="communes-list">
+                          {wilayaMatch.communes.split(',').map((c: string) => c.trim()).filter((c: string) => c).map((commune: string) => (
+                            <option key={commune} value={commune}>{commune}</option>
+                          ))}
+                        </datalist>
+                      );
+                    }
+
                     const wilayaKey = wilayaMatch ? wilayaMatch.number : formData.wilaya;
                     return wilayaKey && ALGERIA_COMMUNES[wilayaKey as keyof typeof ALGERIA_COMMUNES] ? (
                       <datalist id="communes-list">

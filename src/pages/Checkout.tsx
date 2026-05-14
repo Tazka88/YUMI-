@@ -260,7 +260,10 @@ export default function Checkout() {
   };
 
   const handleCommuneChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setFormData({ ...formData, commune: e.target.value });
+    const newCommune = e.target.value;
+    setFormData({ ...formData, commune: newCommune });
+    // Reset office selection since a new commune is selected
+    setOfficeId('');
   };
 
   const handleSelectSavedAddress = (addr: any) => {
@@ -595,24 +598,65 @@ export default function Checkout() {
                   onChange={e => setOfficeId(e.target.value)}
                 >
                   <option value="" disabled>Sélectionnez un point relais</option>
-                  {offices.filter(o => !formData.wilaya || Number(o.wilaya) === Number(formData.wilaya)).map(office => (
+                  {offices.filter(o => 
+                    (!formData.wilaya || Number(o.wilaya) === Number(formData.wilaya)) && 
+                    (!formData.commune || o.commune === formData.commune)
+                  ).map(office => (
                     <option key={office.id} value={office.id}>
                       BUREAU: {office.name.toUpperCase()} - {office.address} ({office.commune}){office.phone ? ` - Tél: ${office.phone.split(',').map((p: string) => p.trim()).join(' / ')}` : ''}
                     </option>
                   ))}
-                  {offices.filter(o => !formData.wilaya || Number(o.wilaya) === Number(formData.wilaya)).length === 0 && (
-                    <option value="" disabled>Aucun point relais disponible pour cette wilaya</option>
+                  {offices.filter(o => 
+                    (!formData.wilaya || Number(o.wilaya) === Number(formData.wilaya)) && 
+                    (!formData.commune || o.commune === formData.commune)
+                  ).length === 0 && (
+                    <option value="" disabled>Aucun point relais disponible pour cette sélection</option>
                   )}
                 </select>
 
-                {officeId && offices.find(o => String(o.id) === String(officeId)) && (
-                  <div className="mt-2 text-sm">
-                    <span className="text-gray-600">Point relais : </span>
-                    <span className="text-red-600 font-black text-lg uppercase tracking-tight">
-                      {offices.find(o => String(o.id) === String(officeId))?.name}
-                    </span>
-                  </div>
-                )}
+                {officeId && offices.find(o => String(o.id) === String(officeId)) && (() => {
+                  const selectedOffice = offices.find(o => String(o.id) === String(officeId));
+                  return (
+                    <div className="mt-4 p-4 bg-gray-50 border border-gray-200 rounded-xl shadow-sm animate-fade-in sm:flex sm:items-start sm:gap-4">
+                      <div className="hidden sm:flex shrink-0 w-12 h-12 bg-white border border-gray-100 rounded-lg items-center justify-center text-orange-500 shadow-sm mt-1">
+                        <MapPin size={24} />
+                      </div>
+                      <div className="flex-1 space-y-2.5">
+                        <div className="flex flex-col">
+                          <span className="text-[10px] uppercase tracking-widest text-gray-400 font-bold mb-1">Bureau de Réception Sélectionné</span>
+                          <h4 className="text-xl font-black text-red-600 uppercase tracking-tight leading-tight">
+                            {selectedOffice?.name}
+                          </h4>
+                        </div>
+                        
+                        <div className="bg-white/60 p-3 rounded-lg border border-gray-100 space-y-2">
+                          <p className="text-sm text-gray-700 leading-relaxed">
+                            <span className="font-bold text-gray-900 block text-xs uppercase mb-0.5">Adresse :</span>
+                            {selectedOffice?.address} ({selectedOffice?.commune})
+                          </p>
+                          
+                          {selectedOffice?.phone && (
+                            <div>
+                               <span className="font-bold text-gray-900 block text-xs uppercase mb-1.5">Téléphones :</span>
+                               <div className="flex flex-wrap gap-2">
+                                {selectedOffice.phone.split(',').map((p: string, i: number) => (
+                                  <a 
+                                    key={i} 
+                                    href={`tel:${p.trim().replace(/\s/g, '')}`}
+                                    className="inline-flex items-center gap-1.5 bg-white border border-gray-200 hover:border-orange-200 hover:text-orange-600 px-3 py-1.5 rounded-lg text-sm text-gray-700 font-bold shadow-sm transition-all"
+                                  >
+                                    <Phone size={14} className="text-orange-500" /> 
+                                    {p.trim()}
+                                  </a>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
             )}
 

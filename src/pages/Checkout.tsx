@@ -592,7 +592,9 @@ export default function Checkout() {
                 >
                   <option value="" disabled>Sélectionnez un point relais</option>
                   {offices.filter(o => !formData.wilaya || Number(o.wilaya) === Number(formData.wilaya)).map(office => (
-                    <option key={office.id} value={office.id}>{office.name} - {office.address} ({office.commune})</option>
+                    <option key={office.id} value={office.id}>
+                      {office.name} - {office.address} ({office.commune}){office.phone ? ` - Tél: ${office.phone}` : ''}
+                    </option>
                   ))}
                   {offices.filter(o => !formData.wilaya || Number(o.wilaya) === Number(formData.wilaya)).length === 0 && (
                     <option value="" disabled>Aucun point relais disponible pour cette wilaya</option>

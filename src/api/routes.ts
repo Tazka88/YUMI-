@@ -1794,19 +1794,38 @@ router.get('/offices', async (req, res) => {
 });
 
 router.post('/admin/offices', authenticate, async (req, res) => {
-  const { name, address, wilaya, commune } = req.body;
+  const { name, address, wilaya, commune, phone } = req.body;
   if (!name || !address || !wilaya || !commune) {
     return res.status(400).json({ error: 'Tous les champs sont obligatoires' });
   }
   try {
     const [info] = await sql`
-      INSERT INTO offices (name, address, wilaya, commune) 
-      VALUES (${name}, ${address}, ${wilaya}, ${commune}) 
+      INSERT INTO offices (name, address, wilaya, commune, phone) 
+      VALUES (${name}, ${address}, ${wilaya}, ${commune}, ${phone || null}) 
       RETURNING id
     `;
     res.status(201).json({ id: info.id });
   } catch (err) {
     res.status(500).json({ error: 'Failed to add office' });
+  }
+});
+
+router.put('/admin/offices/:id', authenticate, async (req, res) => {
+  const { name, address, wilaya, commune, phone } = req.body;
+  if (!name || !address || !wilaya || !commune) {
+    return res.status(400).json({ error: 'Tous les champs sont obligatoires' });
+  }
+  try {
+    const [info] = await sql`
+      UPDATE offices 
+      SET name = ${name}, address = ${address}, wilaya = ${wilaya}, commune = ${commune}, phone = ${phone || null}
+      WHERE id = ${req.params.id}
+      RETURNING id
+    `;
+    if (!info) return res.status(404).json({ error: 'Point relais non trouvé' });
+    res.json({ id: info.id });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to update office' });
   }
 });
 

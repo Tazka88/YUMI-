@@ -1,16 +1,20 @@
 import toast from 'react-hot-toast';
 import React, { useState, useEffect } from 'react';
-import { Plus, Edit, Trash2, Search, X } from 'lucide-react';
+import { Plus, Edit, Trash2, Search, X, MapPin, Phone, Navigation } from 'lucide-react';
+import { ALGERIA_COMMUNES } from '../../utils/communes';
 
 export default function OfficesSettings() {
   const [offices, setOffices] = useState<any[]>([]);
+  const [wilayas, setWilayas] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingOffice, setEditingOffice] = useState<any>(null);
   const [formData, setFormData] = useState({
     name: '',
     address: '',
     wilaya: '',
-    commune: ''
+    commune: '',
+    phone: ''
   });
 
   const fetchOffices = async () => {
@@ -23,8 +27,21 @@ export default function OfficesSettings() {
     }
   };
 
+  const fetchWilayas = async () => {
+    try {
+      const res = await fetch('/api/wilayas');
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        setWilayas(data.filter((w: any) => w.is_active === true || w.is_active === 1));
+      }
+    } catch (err) {
+      console.error('Failed to fetch wilayas', err);
+    }
+  };
+
   useEffect(() => {
     fetchOffices();
+    fetchWilayas();
   }, []);
 
   const filteredOffices = offices.filter(o => 
@@ -34,9 +51,11 @@ export default function OfficesSettings() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const url = editingOffice ? `/api/admin/offices/${editingOffice.id}` : '/api/admin/offices';
+    const method = editingOffice ? 'PUT' : 'POST';
     try {
-      const res = await fetch('/api/admin/offices', {
-        method: 'POST',
+      const res = await fetch(url, {
+        method,
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
@@ -44,12 +63,12 @@ export default function OfficesSettings() {
         body: JSON.stringify(formData)
       });
       if (res.ok) {
-        toast.success("Point relais ajouté");
+        toast.success(editingOffice ? "Point relais mis à jour" : "Point relais ajouté");
         fetchOffices();
         setIsModalOpen(false);
       } else {
         const error = await res.json();
-        toast.error(error.error || "Erreur lors de l'ajout");
+        toast.error(error.error || "Erreur lors de l'opération");
       }
     } catch (e) {
       toast.error("Erreur de connexion");
@@ -83,7 +102,8 @@ export default function OfficesSettings() {
         </div>
         <button 
           onClick={() => {
-             setFormData({name: '', address: '', wilaya: '', commune: ''});
+             setFormData({name: '', address: '', wilaya: '', commune: '', phone: ''});
+             setEditingOffice(null);
              setIsModalOpen(true);
           }}
           className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors font-medium shadow-sm"
@@ -110,8 +130,26 @@ export default function OfficesSettings() {
             <div key={office.id} className="bg-white border rounded-lg p-5 shadow-sm hover:shadow-md transition-shadow relative group">
               <div className="absolute top-4 right-4 flex gap-2">
                 <button 
+                  onClick={() => {
+                    setEditingOffice(office);
+                    setFormData({
+                      name: office.name,
+                      address: office.address,
+                      wilaya: office.wilaya,
+                      commune: office.commune,
+                      phone: office.phone || ''
+                    });
+                    setIsModalOpen(true);
+                  }}
+                  className="p-1.5 text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded-md transition-colors"
+                  title="Modifier"
+                >
+                  <Edit size={18} />
+                </button>
+                <button 
                   onClick={() => handleDelete(office.id)}
                   className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-md transition-colors"
+                  title="Supprimer"
                 >
                   <Trash2 size={18} />
                 </button>
@@ -132,6 +170,12 @@ export default function OfficesSettings() {
                   <span className="text-gray-500">Adresse</span>
                   <span className="font-medium">{office.address}</span>
                 </div>
+                {office.phone && (
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-gray-500">Téléphone</span>
+                    <span className="font-medium">{office.phone}</span>
+                  </div>
+                )}
               </div>
             </div>
           ))}
@@ -147,7 +191,7 @@ export default function OfficesSettings() {
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden animate-fade-in">
             <div className="flex justify-between items-center p-6 border-b border-gray-100">
-              <h3 className="text-lg font-bold text-gray-900">Ajouter un point relais</h3>
+              <h3 className="text-lg font-bold text-gray-900">{editingOffice ? 'Modifier le point relais' : 'Ajouter un point relais'}</h3>
               <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-gray-600 hover:bg-gray-100 p-1 rounded-full transition-colors">
                 <X size={24} />
               </button>
@@ -167,27 +211,60 @@ export default function OfficesSettings() {
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Wilaya (Code) *</label>
-                <input 
-                  type="text" 
-                  required
-                  className="w-full px-3 py-2 border rounded-md focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500"
-                  value={formData.wilaya}
-                  onChange={(e) => setFormData({...formData, wilaya: e.target.value})}
-                  placeholder="Ex: 16"
-                />
+                <label className="block text-sm font-medium text-gray-700 mb-1">Wilaya *</label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <MapPin size={18} className="text-gray-400" />
+                  </div>
+                  <select 
+                    required
+                    className="w-full pl-10 pr-4 py-2 border rounded-md focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 appearance-none bg-white"
+                    value={formData.wilaya}
+                    onChange={(e) => setFormData({...formData, wilaya: e.target.value, commune: ''})}
+                  >
+                    <option value="" disabled>Sélectionnez une wilaya</option>
+                    {wilayas.map(w => (
+                      <option key={w.number} value={w.number}>{w.number} - {w.name}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Commune *</label>
-                <input 
-                  type="text" 
-                  required
-                  className="w-full px-3 py-2 border rounded-md focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500"
-                  value={formData.commune}
-                  onChange={(e) => setFormData({...formData, commune: e.target.value})}
-                  placeholder="Ex: Alger Centre"
-                />
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Navigation size={18} className="text-gray-400" />
+                  </div>
+                  <select 
+                    required
+                    disabled={!formData.wilaya}
+                    className="w-full pl-10 pr-4 py-2 border rounded-md focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 appearance-none bg-white disabled:bg-gray-50"
+                    value={formData.commune}
+                    onChange={(e) => setFormData({...formData, commune: e.target.value})}
+                  >
+                    <option value="" disabled>{!formData.wilaya ? 'D\'abord choisir une wilaya' : 'Sélectionnez une commune'}</option>
+                    {formData.wilaya && ALGERIA_COMMUNES[formData.wilaya]?.map(commune => (
+                      <option key={commune} value={commune}>{commune}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Téléphone du bureau</label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Phone size={18} className="text-gray-400" />
+                  </div>
+                  <input 
+                    type="tel" 
+                    className="w-full pl-10 pr-4 py-2 border rounded-md focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500"
+                    value={formData.phone}
+                    onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                    placeholder="Ex: 0555000000"
+                  />
+                </div>
               </div>
 
               <div>
@@ -214,7 +291,7 @@ export default function OfficesSettings() {
                   type="submit"
                   className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-2 rounded-lg transition-colors font-medium shadow-sm"
                 >
-                  Ajouter
+                  {editingOffice ? 'Mettre à jour' : 'Ajouter'}
                 </button>
               </div>
             </form>

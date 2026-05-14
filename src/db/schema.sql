@@ -180,8 +180,12 @@ CREATE TABLE IF NOT EXISTS offices (
   address TEXT NOT NULL,
   wilaya VARCHAR(50) NOT NULL,
   commune VARCHAR(255) NOT NULL,
+  phone VARCHAR(50),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Force add phone column if table already exists
+ALTER TABLE offices ADD COLUMN IF NOT EXISTS phone VARCHAR(50);
 
 CREATE TABLE IF NOT EXISTS pages (
   id SERIAL PRIMARY KEY,

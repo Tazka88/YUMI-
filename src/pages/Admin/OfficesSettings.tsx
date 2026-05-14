@@ -171,9 +171,17 @@ export default function OfficesSettings() {
                   <span className="font-medium">{office.address}</span>
                 </div>
                 {office.phone && (
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="text-gray-500">Téléphone</span>
-                    <span className="font-medium">{office.phone}</span>
+                  <div className="flex flex-col text-sm pt-2">
+                    <span className="text-gray-500 mb-1 flex items-center gap-1">
+                      <Phone size={14} /> Téléphones
+                    </span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {office.phone.split(',').map((p: string, idx: number) => (
+                        <span key={idx} className="bg-gray-50 text-gray-700 border border-gray-200 px-2 py-0.5 rounded text-xs font-medium">
+                          {p.trim()}
+                        </span>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
@@ -252,17 +260,17 @@ export default function OfficesSettings() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Téléphone du bureau</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Téléphone(s) du bureau (Séparez par des virgules)</label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <Phone size={18} className="text-gray-400" />
                   </div>
                   <input 
-                    type="tel" 
+                    type="text" 
                     className="w-full pl-10 pr-4 py-2 border rounded-md focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500"
                     value={formData.phone}
                     onChange={(e) => setFormData({...formData, phone: e.target.value})}
-                    placeholder="Ex: 0555000000"
+                    placeholder="Ex: 0555000000, 0666000000"
                   />
                 </div>
               </div>

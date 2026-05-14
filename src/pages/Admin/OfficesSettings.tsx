@@ -224,20 +224,17 @@ export default function OfficesSettings() {
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <MapPin size={18} className="text-gray-400" />
                   </div>
-                  <input 
-                    type="text"
+                  <select 
                     required
-                    list="wilayas-list"
-                    className="w-full pl-10 pr-4 py-2 border rounded-md focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 bg-white"
+                    className="w-full pl-10 pr-4 py-2 border rounded-md focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 appearance-none bg-white"
                     value={formData.wilaya}
-                    onChange={(e) => setFormData({...formData, wilaya: e.target.value})}
-                    placeholder="Saisir ou sélectionner une wilaya"
-                  />
-                  <datalist id="wilayas-list">
+                    onChange={(e) => setFormData({...formData, wilaya: e.target.value, commune: ''})}
+                  >
+                    <option value="" disabled>Sélectionnez une wilaya</option>
                     {wilayas.map(w => (
-                      <option key={w.number} value={w.name}>{w.number} - {w.name}</option>
+                      <option key={w.number} value={w.number}>{w.number} - {w.name}</option>
                     ))}
-                  </datalist>
+                  </select>
                 </div>
               </div>
 
@@ -247,42 +244,18 @@ export default function OfficesSettings() {
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <Navigation size={18} className="text-gray-400" />
                   </div>
-                  <input 
-                    type="text"
+                  <select 
                     required
-                    list="communes-list"
-                    className="w-full pl-10 pr-4 py-2 border rounded-md focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 bg-white"
+                    disabled={!formData.wilaya}
+                    className="w-full pl-10 pr-4 py-2 border rounded-md focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 appearance-none bg-white disabled:bg-gray-50"
                     value={formData.commune}
                     onChange={(e) => setFormData({...formData, commune: e.target.value})}
-                    placeholder="Saisir ou sélectionner une commune"
-                  />
-                  {(() => {
-                    const searchVal = String(formData.wilaya).trim().toLowerCase();
-                    const wilayaMatch = wilayas.find(w => 
-                      w.number === searchVal || 
-                      w.name.toLowerCase() === searchVal ||
-                      `${w.number} - ${w.name}`.toLowerCase() === searchVal
-                    );
-                    
-                    if (wilayaMatch && wilayaMatch.communes && wilayaMatch.communes.trim().length > 0) {
-                      return (
-                        <datalist id="communes-list">
-                          {wilayaMatch.communes.split(',').map((c: string) => c.trim()).filter((c: string) => c).map((commune: string) => (
-                            <option key={commune} value={commune}>{commune}</option>
-                          ))}
-                        </datalist>
-                      );
-                    }
-
-                    const wilayaKey = wilayaMatch ? wilayaMatch.number : formData.wilaya;
-                    return wilayaKey && ALGERIA_COMMUNES[wilayaKey as keyof typeof ALGERIA_COMMUNES] ? (
-                      <datalist id="communes-list">
-                        {ALGERIA_COMMUNES[wilayaKey as keyof typeof ALGERIA_COMMUNES]?.map(commune => (
-                          <option key={commune} value={commune}>{commune}</option>
-                        ))}
-                      </datalist>
-                    ) : null;
-                  })()}
+                  >
+                    <option value="" disabled>{!formData.wilaya ? 'D\'abord choisir une wilaya' : 'Sélectionnez une commune'}</option>
+                    {formData.wilaya && ALGERIA_COMMUNES[formData.wilaya]?.map(commune => (
+                      <option key={commune} value={commune}>{commune}</option>
+                    ))}
+                  </select>
                 </div>
               </div>
 

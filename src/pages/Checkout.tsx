@@ -17,7 +17,6 @@ interface Wilaya {
   delivery_cost: number;
   stop_desk_cost: number;
   is_active: number;
-  communes?: string | null;
 }
 export default function Checkout() {
   const { items, total, clearCart } = useCartStore();
@@ -255,16 +254,13 @@ export default function Checkout() {
     }
   }, [items, navigate, orderSuccess, directBuyItem]);
 
-  const handleWilayaChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleWilayaChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const wilayaNumber = e.target.value;
     setFormData({ ...formData, wilaya: wilayaNumber, commune: '' });
   };
 
-  const handleCommuneChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const newCommune = e.target.value;
-    setFormData({ ...formData, commune: newCommune });
-    // Reset office selection since a new commune is selected
-    setOfficeId('');
+  const handleCommuneChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setFormData({ ...formData, commune: e.target.value });
   };
 
   const handleSelectSavedAddress = (addr: any) => {
@@ -537,20 +533,17 @@ export default function Checkout() {
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <MapPin size={18} className="text-gray-400" />
                   </div>
-                  <input 
-                    type="text"
+                  <select 
                     required
-                    list="checkout-wilayas-list"
-                    className="w-full pl-10 pr-4 py-3 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-shadow bg-white"
-                    placeholder="Saisir ou sélectionner votre wilaya"
+                    className="w-full pl-10 pr-4 py-3 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-shadow appearance-none bg-white"
                     value={formData.wilaya}
-                    onChange={(e: any) => handleWilayaChange(e)}
-                  />
-                  <datalist id="checkout-wilayas-list">
+                    onChange={handleWilayaChange}
+                  >
+                    <option value="" disabled>Sélectionnez votre wilaya</option>
                     {wilayas.map(w => (
                       <option key={w.number} value={w.number}>{w.number} - {w.name}</option>
                     ))}
-                  </datalist>
+                  </select>
                 </div>
               </div>
 
@@ -560,31 +553,18 @@ export default function Checkout() {
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <Navigation size={18} className="text-gray-400" />
                   </div>
-                  <input 
-                    type="text"
+                  <select 
                     required
-                    list="checkout-communes-list"
                     disabled={!formData.wilaya}
-                    className="w-full pl-10 pr-4 py-3 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-shadow bg-white disabled:bg-gray-100 disabled:cursor-not-allowed"
-                    placeholder="Saisir ou sélectionner votre commune"
+                    className="w-full pl-10 pr-4 py-3 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-shadow appearance-none bg-white disabled:bg-gray-100 disabled:cursor-not-allowed"
                     value={formData.commune}
-                    onChange={(e: any) => handleCommuneChange(e)}
-                  />
-                  <datalist id="checkout-communes-list">
-                    {(() => {
-                      if (!formData.wilaya) return null;
-                      const selectedWilaya = wilayas.find(w => w.number === String(formData.wilaya) || w.name.toLowerCase() === String(formData.wilaya).toLowerCase().trim() || `${w.number} - ${w.name}` === String(formData.wilaya));
-                      if (selectedWilaya && selectedWilaya.communes && selectedWilaya.communes.trim().length > 0) {
-                        return selectedWilaya.communes.split(',').map((c: string) => c.trim()).filter((c: string) => c).map((commune: string) => (
-                          <option key={commune} value={commune}>{commune}</option>
-                        ));
-                      }
-                      const wilayaKey = selectedWilaya ? selectedWilaya.number : formData.wilaya;
-                      return ALGERIA_COMMUNES[wilayaKey as keyof typeof ALGERIA_COMMUNES]?.map(commune => (
-                        <option key={commune} value={commune}>{commune}</option>
-                      ));
-                    })()}
-                  </datalist>
+                    onChange={handleCommuneChange}
+                  >
+                    <option value="" disabled>{!formData.wilaya ? 'D\'abord choisir une wilaya' : 'Sélectionnez votre commune'}</option>
+                    {formData.wilaya && ALGERIA_COMMUNES[formData.wilaya]?.map(commune => (
+                      <option key={commune} value={commune}>{commune}</option>
+                    ))}
+                  </select>
                 </div>
               </div>
             </div>
@@ -615,99 +595,24 @@ export default function Checkout() {
                   onChange={e => setOfficeId(e.target.value)}
                 >
                   <option value="" disabled>Sélectionnez un point relais</option>
-                  {offices.filter(o => {
-                    let wilayaMatch = true;
-                    if (formData.wilaya) {
-                      const inputNum = Number(formData.wilaya);
-                      if (!isNaN(inputNum)) {
-                        const selectedWilaya = wilayas.find(w => Number(w.number) === inputNum);
-                        if (selectedWilaya) {
-                          wilayaMatch = 
-                            Number(o.wilaya) === inputNum || 
-                            String(o.wilaya).trim().toLowerCase() === String(selectedWilaya.name).trim().toLowerCase();
-                        } else {
-                          wilayaMatch = Number(o.wilaya) === inputNum;
-                        }
-                      } else {
-                        wilayaMatch = String(o.wilaya).trim().toLowerCase() === String(formData.wilaya).trim().toLowerCase();
-                      }
-                    }
-                    const normalizeStr = (s: string) => s ? String(s).normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase() : '';
-                    const communeMatch = !formData.commune || normalizeStr(o.commune) === normalizeStr(String(formData.commune));
-                    return wilayaMatch && communeMatch;
-                  }).map(office => (
+                  {offices.filter(o => !formData.wilaya || Number(o.wilaya) === Number(formData.wilaya)).map(office => (
                     <option key={office.id} value={office.id}>
                       BUREAU: {office.name.toUpperCase()} - {office.address} ({office.commune}){office.phone ? ` - Tél: ${office.phone.split(',').map((p: string) => p.trim()).join(' / ')}` : ''}
                     </option>
                   ))}
-                  {offices.filter(o => {
-                    let wilayaMatch = true;
-                    if (formData.wilaya) {
-                      const inputNum = Number(formData.wilaya);
-                      if (!isNaN(inputNum)) {
-                        const selectedWilaya = wilayas.find(w => Number(w.number) === inputNum);
-                        if (selectedWilaya) {
-                          wilayaMatch = 
-                            Number(o.wilaya) === inputNum || 
-                            String(o.wilaya).trim().toLowerCase() === String(selectedWilaya.name).trim().toLowerCase();
-                        } else {
-                          wilayaMatch = Number(o.wilaya) === inputNum;
-                        }
-                      } else {
-                        wilayaMatch = String(o.wilaya).trim().toLowerCase() === String(formData.wilaya).trim().toLowerCase();
-                      }
-                    }
-                    const normalizeStr = (s: string) => s ? String(s).normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase() : '';
-                    const communeMatch = !formData.commune || normalizeStr(o.commune) === normalizeStr(String(formData.commune));
-                    return wilayaMatch && communeMatch;
-                  }).length === 0 && (
-                    <option value="" disabled>Aucun point relais disponible pour cette sélection</option>
+                  {offices.filter(o => !formData.wilaya || Number(o.wilaya) === Number(formData.wilaya)).length === 0 && (
+                    <option value="" disabled>Aucun point relais disponible pour cette wilaya</option>
                   )}
                 </select>
 
-                {officeId && offices.find(o => String(o.id) === String(officeId)) && (() => {
-                  const selectedOffice = offices.find(o => String(o.id) === String(officeId));
-                  return (
-                    <div className="mt-4 p-4 bg-gray-50 border border-gray-200 rounded-xl shadow-sm animate-fade-in sm:flex sm:items-start sm:gap-4">
-                      <div className="hidden sm:flex shrink-0 w-12 h-12 bg-white border border-gray-100 rounded-lg items-center justify-center text-orange-500 shadow-sm mt-1">
-                        <MapPin size={24} />
-                      </div>
-                      <div className="flex-1 space-y-2.5">
-                        <div className="flex flex-col">
-                          <span className="text-[10px] uppercase tracking-widest text-gray-400 font-bold mb-1">Bureau de Réception Sélectionné</span>
-                          <h4 className="text-xl font-black text-red-600 uppercase tracking-tight leading-tight">
-                            {selectedOffice?.name}
-                          </h4>
-                        </div>
-                        
-                        <div className="bg-white/60 p-3 rounded-lg border border-gray-100 space-y-2">
-                          <p className="text-sm text-gray-700 leading-relaxed">
-                            <span className="font-bold text-gray-900 block text-xs uppercase mb-0.5">Adresse :</span>
-                            {selectedOffice?.address} ({selectedOffice?.commune})
-                          </p>
-                          
-                          {selectedOffice?.phone && (
-                            <div>
-                               <span className="font-bold text-gray-900 block text-xs uppercase mb-1.5">Téléphones :</span>
-                               <div className="flex flex-wrap gap-2">
-                                {selectedOffice.phone.split(',').map((p: string, i: number) => (
-                                  <a 
-                                    key={i} 
-                                    href={`tel:${p.trim().replace(/\s/g, '')}`}
-                                    className="inline-flex items-center gap-1.5 bg-white border border-gray-200 hover:border-orange-200 hover:text-orange-600 px-3 py-1.5 rounded-lg text-sm text-gray-700 font-bold shadow-sm transition-all"
-                                  >
-                                    <Phone size={14} className="text-orange-500" /> 
-                                    {p.trim()}
-                                  </a>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })()}
+                {officeId && offices.find(o => String(o.id) === String(officeId)) && (
+                  <div className="mt-2 text-sm">
+                    <span className="text-gray-600">Point relais : </span>
+                    <span className="text-red-600 font-black text-lg uppercase tracking-tight">
+                      {offices.find(o => String(o.id) === String(officeId))?.name}
+                    </span>
+                  </div>
+                )}
               </div>
             )}
 

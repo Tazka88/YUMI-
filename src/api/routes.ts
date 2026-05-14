@@ -1740,14 +1740,14 @@ router.get('/wilayas', async (req, res) => {
 });
 
 router.post('/admin/wilayas', authenticate, async (req, res) => {
-  const { number, name, delivery_cost, stop_desk_cost, is_active, communes } = req.body;
+  const { number, name, delivery_cost, stop_desk_cost, is_active } = req.body;
   
   if (!number || !name || delivery_cost === undefined) {
     return res.status(400).json({ error: 'Numéro, nom et tarif sont requis' });
   }
 
   try {
-    const [info] = await sql`INSERT INTO wilayas (number, name, delivery_cost, stop_desk_cost, is_active, communes) VALUES (${number}, ${name}, ${delivery_cost}, ${stop_desk_cost || 0}, ${is_active !== undefined ? (is_active ? true : false) : true}, ${communes || null}) RETURNING id`;
+    const [info] = await sql`INSERT INTO wilayas (number, name, delivery_cost, stop_desk_cost, is_active) VALUES (${number}, ${name}, ${delivery_cost}, ${stop_desk_cost || 0}, ${is_active !== undefined ? (is_active ? true : false) : true}) RETURNING id`;
     res.status(201).json({ id: info.id, message: 'Wilaya ajoutée' });
   } catch (err: any) {
     if (err.code === '23505') {
@@ -1758,14 +1758,14 @@ router.post('/admin/wilayas', authenticate, async (req, res) => {
 });
 
 router.put('/admin/wilayas/:id', authenticate, async (req, res) => {
-  const { number, name, delivery_cost, stop_desk_cost, is_active, communes } = req.body;
+  const { number, name, delivery_cost, stop_desk_cost, is_active } = req.body;
   
   if (!number || !name || delivery_cost === undefined) {
     return res.status(400).json({ error: 'Numéro, nom et tarif sont requis' });
   }
 
   try {
-    await sql`UPDATE wilayas SET number = ${number}, name = ${name}, delivery_cost = ${delivery_cost}, stop_desk_cost = ${stop_desk_cost || 0}, is_active = ${is_active ? true : false}, communes = ${communes !== undefined ? communes : null} WHERE id = ${req.params.id}`;
+    await sql`UPDATE wilayas SET number = ${number}, name = ${name}, delivery_cost = ${delivery_cost}, stop_desk_cost = ${stop_desk_cost || 0}, is_active = ${is_active ? true : false} WHERE id = ${req.params.id}`;
     res.json({ message: 'Wilaya modifiée' });
   } catch (err: any) {
     if (err.code === '23505') {

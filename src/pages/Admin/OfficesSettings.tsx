@@ -235,7 +235,7 @@ export default function OfficesSettings() {
                   />
                   <datalist id="wilayas-list">
                     {wilayas.map(w => (
-                      <option key={w.number} value={w.number}>{w.number} - {w.name}</option>
+                      <option key={w.number} value={w.name}>{w.number} - {w.name}</option>
                     ))}
                   </datalist>
                 </div>
@@ -256,13 +256,22 @@ export default function OfficesSettings() {
                     onChange={(e) => setFormData({...formData, commune: e.target.value})}
                     placeholder="Saisir ou sélectionner une commune"
                   />
-                  {formData.wilaya && ALGERIA_COMMUNES[formData.wilaya as keyof typeof ALGERIA_COMMUNES] && (
-                    <datalist id="communes-list">
-                      {ALGERIA_COMMUNES[formData.wilaya as keyof typeof ALGERIA_COMMUNES]?.map(commune => (
-                        <option key={commune} value={commune}>{commune}</option>
-                      ))}
-                    </datalist>
-                  )}
+                  {(() => {
+                    const searchVal = String(formData.wilaya).trim().toLowerCase();
+                    const wilayaMatch = wilayas.find(w => 
+                      w.number === searchVal || 
+                      w.name.toLowerCase() === searchVal ||
+                      `${w.number} - ${w.name}`.toLowerCase() === searchVal
+                    );
+                    const wilayaKey = wilayaMatch ? wilayaMatch.number : formData.wilaya;
+                    return wilayaKey && ALGERIA_COMMUNES[wilayaKey as keyof typeof ALGERIA_COMMUNES] ? (
+                      <datalist id="communes-list">
+                        {ALGERIA_COMMUNES[wilayaKey as keyof typeof ALGERIA_COMMUNES]?.map(commune => (
+                          <option key={commune} value={commune}>{commune}</option>
+                        ))}
+                      </datalist>
+                    ) : null;
+                  })()}
                 </div>
               </div>
 

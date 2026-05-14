@@ -201,7 +201,12 @@ export default function Checkout() {
   }, []);
 
   useEffect(() => {
-    const selectedWilaya = wilayas.find(w => w.number === formData.wilaya);
+    const searchVal = String(formData.wilaya).trim().toLowerCase();
+    const selectedWilaya = wilayas.find(w => 
+      w.number === searchVal || 
+      w.name.toLowerCase() === searchVal ||
+      `${w.number} - ${w.name}`.toLowerCase() === searchVal
+    );
     if (selectedWilaya) {
       const cost = deliveryMode === 'domicile' 
         ? Number(selectedWilaya.delivery_cost) 
@@ -547,7 +552,7 @@ export default function Checkout() {
                   />
                   <datalist id="checkout-wilayas-list">
                     {wilayas.map(w => (
-                      <option key={w.number} value={w.number}>{w.number} - {w.name}</option>
+                      <option key={w.number} value={w.name}>{w.number} - {w.name}</option>
                     ))}
                   </datalist>
                 </div>
@@ -568,13 +573,22 @@ export default function Checkout() {
                     onChange={handleCommuneChange}
                     placeholder="Saisir ou sélectionner votre commune"
                   />
-                  {formData.wilaya && ALGERIA_COMMUNES[formData.wilaya as keyof typeof ALGERIA_COMMUNES] && (
-                    <datalist id="checkout-communes-list">
-                      {ALGERIA_COMMUNES[formData.wilaya as keyof typeof ALGERIA_COMMUNES]?.map(commune => (
-                        <option key={commune} value={commune}>{commune}</option>
-                      ))}
-                    </datalist>
-                  )}
+                  {(() => {
+                    const searchVal = String(formData.wilaya).trim().toLowerCase();
+                    const wilayaMatch = wilayas.find(w => 
+                      w.number === searchVal || 
+                      w.name.toLowerCase() === searchVal ||
+                      `${w.number} - ${w.name}`.toLowerCase() === searchVal
+                    );
+                    const wilayaKey = wilayaMatch ? wilayaMatch.number : formData.wilaya;
+                    return wilayaKey && ALGERIA_COMMUNES[wilayaKey as keyof typeof ALGERIA_COMMUNES] ? (
+                      <datalist id="checkout-communes-list">
+                        {ALGERIA_COMMUNES[wilayaKey as keyof typeof ALGERIA_COMMUNES]?.map(commune => (
+                          <option key={commune} value={commune}>{commune}</option>
+                        ))}
+                      </datalist>
+                    ) : null;
+                  })()}
                 </div>
               </div>
             </div>
@@ -605,28 +619,54 @@ export default function Checkout() {
                   onChange={e => setOfficeId(e.target.value)}
                 >
                   <option value="" disabled>Sélectionnez un point relais</option>
-                  {offices.filter(o => 
-                    (!formData.wilaya || 
-                     Number(o.wilaya) === Number(formData.wilaya) || 
-                     String(o.wilaya).trim().toLowerCase() === String(formData.wilaya).trim().toLowerCase()
-                    ) && 
-                    (!formData.commune || 
-                     o.commune.trim().toLowerCase() === formData.commune.trim().toLowerCase()
-                    )
-                  ).map(office => (
+                  {offices.filter(o => {
+                    let wilayaMatch = true;
+                    if (formData.wilaya) {
+                      const inputStr = String(formData.wilaya).trim().toLowerCase();
+                      const officeWilayaStr = String(o.wilaya).trim().toLowerCase();
+                      const selectedWilaya = wilayas.find(w => 
+                        w.number === inputStr || 
+                        w.name.toLowerCase() === inputStr || 
+                        `${w.number} - ${w.name}`.toLowerCase() === inputStr
+                      );
+                      if (selectedWilaya) {
+                        wilayaMatch = 
+                          officeWilayaStr === selectedWilaya.number || 
+                          officeWilayaStr === selectedWilaya.name.toLowerCase() ||
+                          officeWilayaStr === `${selectedWilaya.number} - ${selectedWilaya.name}`.toLowerCase();
+                      } else {
+                        wilayaMatch = officeWilayaStr === inputStr;
+                      }
+                    }
+                    const communeMatch = !formData.commune || o.commune.trim().toLowerCase() === String(formData.commune).trim().toLowerCase();
+                    return wilayaMatch && communeMatch;
+                  }).map(office => (
                     <option key={office.id} value={office.id}>
                       BUREAU: {office.name.toUpperCase()} - {office.address} ({office.commune}){office.phone ? ` - Tél: ${office.phone.split(',').map((p: string) => p.trim()).join(' / ')}` : ''}
                     </option>
                   ))}
-                  {offices.filter(o => 
-                    (!formData.wilaya || 
-                     Number(o.wilaya) === Number(formData.wilaya) || 
-                     String(o.wilaya).trim().toLowerCase() === String(formData.wilaya).trim().toLowerCase()
-                    ) && 
-                    (!formData.commune || 
-                     o.commune.trim().toLowerCase() === formData.commune.trim().toLowerCase()
-                    )
-                  ).length === 0 && (
+                  {offices.filter(o => {
+                    let wilayaMatch = true;
+                    if (formData.wilaya) {
+                      const inputStr = String(formData.wilaya).trim().toLowerCase();
+                      const officeWilayaStr = String(o.wilaya).trim().toLowerCase();
+                      const selectedWilaya = wilayas.find(w => 
+                        w.number === inputStr || 
+                        w.name.toLowerCase() === inputStr || 
+                        `${w.number} - ${w.name}`.toLowerCase() === inputStr
+                      );
+                      if (selectedWilaya) {
+                        wilayaMatch = 
+                          officeWilayaStr === selectedWilaya.number || 
+                          officeWilayaStr === selectedWilaya.name.toLowerCase() ||
+                          officeWilayaStr === `${selectedWilaya.number} - ${selectedWilaya.name}`.toLowerCase();
+                      } else {
+                        wilayaMatch = officeWilayaStr === inputStr;
+                      }
+                    }
+                    const communeMatch = !formData.commune || o.commune.trim().toLowerCase() === String(formData.commune).trim().toLowerCase();
+                    return wilayaMatch && communeMatch;
+                  }).length === 0 && (
                     <option value="" disabled>Aucun point relais disponible pour cette sélection</option>
                   )}
                 </select>

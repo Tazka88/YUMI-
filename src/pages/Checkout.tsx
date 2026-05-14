@@ -606,38 +606,11 @@ export default function Checkout() {
                 </select>
 
                 {officeId && offices.find(o => String(o.id) === String(officeId)) && (
-                  <div className="mt-4 p-4 bg-red-50 border-2 border-red-200 rounded-xl animate-fade-in">
-                    <div className="flex items-start gap-4">
-                      <div className="p-2.5 bg-red-100 rounded-lg text-red-600 shadow-sm shrink-0">
-                        <MapPin size={24} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[10px] uppercase tracking-[0.15em] text-red-500 font-black mb-1.5 flex items-center gap-1.5">
-                          <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span>
-                          Bureau de Réception Sélectionné
-                        </p>
-                        <h4 className="text-xl font-black text-red-600 leading-tight break-words uppercase">
-                          {offices.find(o => String(o.id) === String(officeId))?.name}
-                        </h4>
-                        <p className="text-sm text-gray-700 mt-2 font-medium bg-white/50 p-2 rounded-md border border-red-100/50 italic">
-                          {offices.find(o => String(o.id) === String(officeId))?.address} ({offices.find(o => String(o.id) === String(officeId))?.commune})
-                        </p>
-                        {offices.find(o => String(o.id) === String(officeId))?.phone && (
-                          <div className="flex flex-wrap gap-2 mt-3">
-                            {offices.find(o => String(o.id) === String(officeId))?.phone.split(',').map((p: string, i: number) => (
-                              <a 
-                                key={i} 
-                                href={`tel:${p.trim().replace(/\s/g, '')}`}
-                                className="flex items-center gap-1.5 bg-white border border-red-200 hover:border-red-400 px-3 py-1.5 rounded-lg text-sm text-red-700 font-bold shadow-sm transition-all hover:scale-105 active:scale-95"
-                              >
-                                <Phone size={14} className="animate-bounce-slow" /> 
-                                {p.trim()}
-                              </a>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    </div>
+                  <div className="mt-2 text-sm">
+                    <span className="text-gray-600">Point relais : </span>
+                    <span className="text-red-600 font-black text-lg uppercase tracking-tight">
+                      {offices.find(o => String(o.id) === String(officeId))?.name}
+                    </span>
                   </div>
                 )}
               </div>

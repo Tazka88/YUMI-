@@ -254,12 +254,12 @@ export default function Checkout() {
     }
   }, [items, navigate, orderSuccess, directBuyItem]);
 
-  const handleWilayaChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+  const handleWilayaChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const wilayaNumber = e.target.value;
     setFormData({ ...formData, wilaya: wilayaNumber, commune: '' });
   };
 
-  const handleCommuneChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+  const handleCommuneChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const newCommune = e.target.value;
     setFormData({ ...formData, commune: newCommune });
     // Reset office selection since a new commune is selected
@@ -536,17 +536,20 @@ export default function Checkout() {
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <MapPin size={18} className="text-gray-400" />
                   </div>
-                  <select 
+                  <input 
+                    type="text"
                     required
-                    className="w-full pl-10 pr-4 py-3 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-shadow appearance-none bg-white"
+                    list="checkout-wilayas-list"
+                    className="w-full pl-10 pr-4 py-3 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-shadow bg-white"
                     value={formData.wilaya}
                     onChange={handleWilayaChange}
-                  >
-                    <option value="" disabled>Sélectionnez votre wilaya</option>
+                    placeholder="Saisir ou sélectionner votre wilaya"
+                  />
+                  <datalist id="checkout-wilayas-list">
                     {wilayas.map(w => (
                       <option key={w.number} value={w.number}>{w.number} - {w.name}</option>
                     ))}
-                  </select>
+                  </datalist>
                 </div>
               </div>
 
@@ -556,18 +559,22 @@ export default function Checkout() {
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <Navigation size={18} className="text-gray-400" />
                   </div>
-                  <select 
+                  <input 
+                    type="text"
                     required
-                    disabled={!formData.wilaya}
-                    className="w-full pl-10 pr-4 py-3 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-shadow appearance-none bg-white disabled:bg-gray-100 disabled:cursor-not-allowed"
+                    list="checkout-communes-list"
+                    className="w-full pl-10 pr-4 py-3 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-shadow bg-white"
                     value={formData.commune}
                     onChange={handleCommuneChange}
-                  >
-                    <option value="" disabled>{!formData.wilaya ? 'D\'abord choisir une wilaya' : 'Sélectionnez votre commune'}</option>
-                    {formData.wilaya && ALGERIA_COMMUNES[formData.wilaya]?.map(commune => (
-                      <option key={commune} value={commune}>{commune}</option>
-                    ))}
-                  </select>
+                    placeholder="Saisir ou sélectionner votre commune"
+                  />
+                  {formData.wilaya && ALGERIA_COMMUNES[formData.wilaya as keyof typeof ALGERIA_COMMUNES] && (
+                    <datalist id="checkout-communes-list">
+                      {ALGERIA_COMMUNES[formData.wilaya as keyof typeof ALGERIA_COMMUNES]?.map(commune => (
+                        <option key={commune} value={commune}>{commune}</option>
+                      ))}
+                    </datalist>
+                  )}
                 </div>
               </div>
             </div>
@@ -599,16 +606,26 @@ export default function Checkout() {
                 >
                   <option value="" disabled>Sélectionnez un point relais</option>
                   {offices.filter(o => 
-                    (!formData.wilaya || Number(o.wilaya) === Number(formData.wilaya)) && 
-                    (!formData.commune || o.commune === formData.commune)
+                    (!formData.wilaya || 
+                     Number(o.wilaya) === Number(formData.wilaya) || 
+                     String(o.wilaya).trim().toLowerCase() === String(formData.wilaya).trim().toLowerCase()
+                    ) && 
+                    (!formData.commune || 
+                     o.commune.trim().toLowerCase() === formData.commune.trim().toLowerCase()
+                    )
                   ).map(office => (
                     <option key={office.id} value={office.id}>
                       BUREAU: {office.name.toUpperCase()} - {office.address} ({office.commune}){office.phone ? ` - Tél: ${office.phone.split(',').map((p: string) => p.trim()).join(' / ')}` : ''}
                     </option>
                   ))}
                   {offices.filter(o => 
-                    (!formData.wilaya || Number(o.wilaya) === Number(formData.wilaya)) && 
-                    (!formData.commune || o.commune === formData.commune)
+                    (!formData.wilaya || 
+                     Number(o.wilaya) === Number(formData.wilaya) || 
+                     String(o.wilaya).trim().toLowerCase() === String(formData.wilaya).trim().toLowerCase()
+                    ) && 
+                    (!formData.commune || 
+                     o.commune.trim().toLowerCase() === formData.commune.trim().toLowerCase()
+                    )
                   ).length === 0 && (
                     <option value="" disabled>Aucun point relais disponible pour cette sélection</option>
                   )}

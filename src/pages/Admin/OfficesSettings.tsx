@@ -224,17 +224,20 @@ export default function OfficesSettings() {
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <MapPin size={18} className="text-gray-400" />
                   </div>
-                  <select 
+                  <input 
+                    type="text"
                     required
-                    className="w-full pl-10 pr-4 py-2 border rounded-md focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 appearance-none bg-white"
+                    list="wilayas-list"
+                    className="w-full pl-10 pr-4 py-2 border rounded-md focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 bg-white"
                     value={formData.wilaya}
-                    onChange={(e) => setFormData({...formData, wilaya: e.target.value, commune: ''})}
-                  >
-                    <option value="" disabled>Sélectionnez une wilaya</option>
+                    onChange={(e) => setFormData({...formData, wilaya: e.target.value})}
+                    placeholder="Saisir ou sélectionner une wilaya"
+                  />
+                  <datalist id="wilayas-list">
                     {wilayas.map(w => (
                       <option key={w.number} value={w.number}>{w.number} - {w.name}</option>
                     ))}
-                  </select>
+                  </datalist>
                 </div>
               </div>
 
@@ -244,18 +247,22 @@ export default function OfficesSettings() {
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <Navigation size={18} className="text-gray-400" />
                   </div>
-                  <select 
+                  <input 
+                    type="text"
                     required
-                    disabled={!formData.wilaya}
-                    className="w-full pl-10 pr-4 py-2 border rounded-md focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 appearance-none bg-white disabled:bg-gray-50"
+                    list="communes-list"
+                    className="w-full pl-10 pr-4 py-2 border rounded-md focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 bg-white"
                     value={formData.commune}
                     onChange={(e) => setFormData({...formData, commune: e.target.value})}
-                  >
-                    <option value="" disabled>{!formData.wilaya ? 'D\'abord choisir une wilaya' : 'Sélectionnez une commune'}</option>
-                    {formData.wilaya && ALGERIA_COMMUNES[formData.wilaya]?.map(commune => (
-                      <option key={commune} value={commune}>{commune}</option>
-                    ))}
-                  </select>
+                    placeholder="Saisir ou sélectionner une commune"
+                  />
+                  {formData.wilaya && ALGERIA_COMMUNES[formData.wilaya as keyof typeof ALGERIA_COMMUNES] && (
+                    <datalist id="communes-list">
+                      {ALGERIA_COMMUNES[formData.wilaya as keyof typeof ALGERIA_COMMUNES]?.map(commune => (
+                        <option key={commune} value={commune}>{commune}</option>
+                      ))}
+                    </datalist>
+                  )}
                 </div>
               </div>
 

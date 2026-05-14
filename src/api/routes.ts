@@ -1863,13 +1863,36 @@ router.get('/admin/communes', authenticate, async (req, res) => {
   }
 });
 
+router.post('/admin/communes', authenticate, async (req, res) => {
+  try {
+    const { wilaya, name } = req.body;
+    if (!wilaya || !name) {
+      return res.status(400).json({ error: 'Wilaya et nom de commune requis' });
+    }
+    const [info] = await sql`INSERT INTO communes (wilaya, name) VALUES (${wilaya}, ${name}) RETURNING id`;
+    res.json({ id: info.id });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to add commune' });
+  }
+});
+
 router.put('/admin/communes/:id', authenticate, async (req, res) => {
   try {
     const { name } = req.body;
+    if (!name) return res.status(400).json({ error: 'Nom de commune requis' });
     await sql`UPDATE communes SET name = ${name} WHERE id = ${req.params.id}`;
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: 'Failed to update commune' });
+  }
+});
+
+router.delete('/admin/communes/:id', authenticate, async (req, res) => {
+  try {
+    await sql`DELETE FROM communes WHERE id = ${req.params.id}`;
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to delete commune' });
   }
 });
 

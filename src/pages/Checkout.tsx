@@ -233,7 +233,7 @@ export default function Checkout() {
         (window as any).fbq('track', 'InitiateCheckout', {
           value: safeValue,
           currency: 'DZD',
-          content_ids: checkoutItems.map(item => item.id.toString()),
+          content_ids: checkoutItems.map(item => item.sku ? item.sku.toString() : item.id.toString()),
           content_type: 'product',
           num_items: checkoutItems.reduce((acc, item) => acc + item.quantity, 0)
         }, { eventID: eventId });
@@ -245,7 +245,7 @@ export default function Checkout() {
         customData: {
           value: safeValue,
           currency: 'DZD',
-          content_ids: checkoutItems.map(item => item.id.toString()),
+          content_ids: checkoutItems.map(item => item.sku ? item.sku.toString() : item.id.toString()),
           content_type: 'product',
           num_items: checkoutItems.reduce((acc, item) => acc + item.quantity, 0)
         }
@@ -366,7 +366,7 @@ export default function Checkout() {
               (window as any).fbq('track', 'Purchase', {
                 value: safeValue,
                 currency: 'DZD',
-                content_ids: checkoutItems.map(item => item.id.toString()),
+                content_ids: checkoutItems.map(item => item.sku ? item.sku.toString() : item.id.toString()),
                 content_type: 'product'
               }, { eventID: eventId });
             }
@@ -388,7 +388,7 @@ export default function Checkout() {
               customData: {
                 value: safeValue,
                 currency: 'DZD',
-                content_ids: checkoutItems.map(item => item.id.toString()),
+                content_ids: checkoutItems.map(item => item.sku ? item.sku.toString() : item.id.toString()),
                 content_type: 'product'
               }
             });

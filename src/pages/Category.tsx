@@ -131,9 +131,22 @@ export default function Category() {
               }
             } catch (e) {}
           }
+        } else if (searchParams.get('ids')) {
+          url += `?ids=${searchParams.get('ids')}`;
+          newCategoryName = searchParams.get('title') || 'Notre Sélection';
         } else if (searchQuery) {
           url += `?search=${encodeURIComponent(searchQuery)}`;
           newCategoryName = `Résultats pour "${searchQuery}"`;
+        }
+        
+        if (searchParams.get('sort')) {
+          url += (url.includes('?') ? '&' : '?') + `sort=${searchParams.get('sort')}`;
+        }
+        if (searchParams.get('special_offers')) {
+          url += (url.includes('?') ? '&' : '?') + `special_offers=${searchParams.get('special_offers')}`;
+        }
+        if (searchParams.get('title') && !searchParams.get('ids') && !searchQuery) {
+          newCategoryName = searchParams.get('title') || newCategoryName;
         }
 
         if (url.includes('?')) {

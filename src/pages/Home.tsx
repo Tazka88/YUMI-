@@ -806,7 +806,7 @@ export default function Home() {
         if (section.type === 'flash_sales' && promotions.length > 0) {
           return (
             <section key={section.id}>
-              <FlashSalesHeader link="/category/all" />
+              <FlashSalesHeader link={`/category/all?special_offers=true&title=${encodeURIComponent('Ventes Flash')}`} />
               <div className="flex overflow-x-auto snap-x hide-scrollbar md:grid md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-4 pb-4 md:pb-0 px-4 -mx-4 md:px-0 md:mx-0">
                 {promotions.slice(0, 10).map((p, i) => (
                   <div key={p.id} className="w-[160px] sm:w-[200px] shrink-0 snap-start md:w-auto">
@@ -820,7 +820,7 @@ export default function Home() {
         if (section.type === 'best_sellers' && bestSellers.length > 0) {
           return (
             <section key={section.id}>
-              <SectionHeader title={section.title || "Meilleures Ventes 🏆"} link="/category/all" />
+              <SectionHeader title={section.title || "Meilleures Ventes 🏆"} link={`/category/all?sort=top_sales&title=${encodeURIComponent(section.title || 'Meilleures Ventes')}`} />
               <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-4">
                 {bestSellers.slice(0, 10).map((p, i) => <ProductCard key={p.id} product={p} priority={i < 4} />)}
               </div>
@@ -830,7 +830,7 @@ export default function Home() {
         if (section.type === 'popular' && popularProducts.length > 0) {
           return (
             <section key={section.id}>
-              <SectionHeader title={section.title || "Produits Populaires 🔥"} link="/category/all" />
+              <SectionHeader title={section.title || "Produits Populaires 🔥"} link={`/category/all?sort=trending&title=${encodeURIComponent(section.title || 'Produits Populaires')}`} />
               <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-4">
                 {popularProducts.slice(0, 10).map((p, i) => <ProductCard key={p.id} product={p} priority={i < 4} />)}
               </div>
@@ -840,7 +840,7 @@ export default function Home() {
         if (section.type === 'new' && newProducts.length > 0) {
           return (
             <section key={section.id}>
-              <SectionHeader title={section.title || "Nouveautés 🆕"} link="/category/all" />
+              <SectionHeader title={section.title || "Nouveautés 🆕"} link={`/category/all?sort=newest&title=${encodeURIComponent(section.title || 'Nouveautés')}`} />
               <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-4">
                 {newProducts.slice(0, 10).map((p, i) => <ProductCard key={p.id} product={p} priority={i < 4} />)}
               </div>
@@ -850,7 +850,7 @@ export default function Home() {
         if (section.type === 'random' && randomProducts.length > 0) {
           return (
             <section key={section.id}>
-              <SectionHeader title={section.title || "Découverte Aléatoire 🎲"} link="/category/all" />
+              <SectionHeader title={section.title || "Découverte Aléatoire 🎲"} link={`/category/all?sort=random&title=${encodeURIComponent(section.title || 'Découverte Aléatoire')}`} />
               <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-4">
                 {randomProducts.slice(0, 10).map((p, i) => <ProductCard key={p.id} product={p} priority={i < 4} />)}
               </div>
@@ -868,6 +868,8 @@ export default function Home() {
           } else if (section.type === 'brand' && section.brandId) {
             const brand = brands.find(b => b.id == section.brandId);
             if (brand) link = `/brands/${brand.slug}`;
+          } else if (section.type === 'custom' && section.productIds && section.productIds.length > 0) {
+            link = `/category/all?ids=${section.productIds.join(',')}&title=${encodeURIComponent(section.title)}`;
           }
 
           const isCarousel = section.isCarouselOnMobile ?? true;

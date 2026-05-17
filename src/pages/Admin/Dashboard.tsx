@@ -14,11 +14,13 @@ import SliderImagesAdmin from './SliderImagesAdmin';
 
 export interface HomeSection {
   id: string;
-  type: 'flash_sales' | 'best_sellers' | 'popular' | 'new' | 'custom';
+  type: 'flash_sales' | 'best_sellers' | 'popular' | 'new' | 'custom' | 'category' | 'brand';
   title: string;
   emoji?: string;
   isVisible: boolean;
   productIds?: string[];
+  categoryId?: number | string;
+  brandId?: number | string;
 }
 
 const defaultSections: HomeSection[] = [
@@ -105,6 +107,8 @@ export default function AdminDashboard() {
   const [homeSections, setHomeSections] = useState<HomeSection[]>([]);
   const [newSectionTitle, setNewSectionTitle] = useState('');
   const [newSectionEmoji, setNewSectionEmoji] = useState('✨');
+  const [newSectionType, setNewSectionType] = useState<'custom' | 'category' | 'brand'>('custom');
+  const [newSectionTargetId, setNewSectionTargetId] = useState('');
   const [editingSectionProducts, setEditingSectionProducts] = useState<string | null>(null);
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
   const [productSearch, setProductSearch] = useState('');
@@ -160,17 +164,23 @@ export default function AdminDashboard() {
 
   const handleAddSection = () => {
     if (!newSectionTitle.trim()) return;
+    if (newSectionType === 'category' && !newSectionTargetId) return toast.error('Veuillez sélectionner une catégorie');
+    if (newSectionType === 'brand' && !newSectionTargetId) return toast.error('Veuillez sélectionner une marque');
+
     const newSection: HomeSection = {
       id: Date.now().toString(),
-      type: 'custom',
+      type: newSectionType as any,
       title: newSectionTitle,
       emoji: newSectionEmoji || '✨',
       isVisible: true,
-      productIds: []
+      productIds: [],
+      ...(newSectionType === 'category' ? { categoryId: newSectionTargetId } : {}),
+      ...(newSectionType === 'brand' ? { brandId: newSectionTargetId } : {})
     };
     saveHomeSections([...homeSections, newSection]);
     setNewSectionTitle('');
     setNewSectionEmoji('✨');
+    setNewSectionTargetId('');
   };
 
   const handleToggleSection = (id: string) => {
@@ -2877,7 +2887,7 @@ export default function AdminDashboard() {
                       <div className="flex items-center gap-3">
                         <span className="text-2xl">{section.emoji}</span>
                         <span className="font-medium text-gray-800">{section.title}</span>
-                        {section.type !== 'custom' && (
+                        {!['custom', 'category', 'brand'].includes(section.type) && (
                           <span className="text-xs bg-gray-200 text-gray-600 px-2 py-1 rounded-full">Par défaut</span>
                         )}
                         {section.type === 'custom' && (
@@ -2900,6 +2910,12 @@ export default function AdminDashboard() {
                           Gérer les produits
                         </button>
                       )}
+                      {section.type === 'category' && (
+                         <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full uppercase tracking-wide font-bold">Catégorie</span>
+                      )}
+                      {section.type === 'brand' && (
+                         <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded-full uppercase tracking-wide font-bold">Marque</span>
+                      )}
                       <button 
                         onClick={() => handleToggleSection(section.id)}
                         className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${section.isVisible ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-600'}`}
@@ -2909,9 +2925,9 @@ export default function AdminDashboard() {
                       <button 
                         onClick={() => handleDeleteSection(section.id)}
                         className="text-red-500 hover:bg-red-50 p-2 rounded-full transition-colors"
-                        title={section.type !== 'custom' ? "Vous pouvez seulement masquer les sections par défaut" : "Supprimer"}
-                        disabled={section.type !== 'custom'}
-                        style={{ opacity: section.type !== 'custom' ? 0.3 : 1 }}
+                        title={!['custom', 'category', 'brand'].includes(section.type) ? "Vous pouvez seulement masquer les sections par défaut" : "Supprimer"}
+                        disabled={!['custom', 'category', 'brand'].includes(section.type)}
+                        style={{ opacity: !['custom', 'category', 'brand'].includes(section.type) ? 0.3 : 1 }}
                       >
                         🗑️
                       </button>
@@ -2925,11 +2941,61 @@ export default function AdminDashboard() {
 
               <div className="border border-gray-200 rounded-lg p-4 bg-white">
                 <h3 className="text-sm font-bold text-gray-800 mb-4">+ Ajouter une section</h3>
+                
+                <div className="flex flex-col gap-4 mb-4">
+                  <div className="flex flex-col sm:flex-row gap-4">
+                    <div className="w-full sm:w-1/3">
+                      <select
+                        value={newSectionType}
+                        onChange={e => {
+                          setNewSectionType(e.target.value as any);
+                          setNewSectionTargetId('');
+                        }}
+                        className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500"
+                      >
+                        <option value="custom">Produits Personnalisés</option>
+                        <option value="category">Catégorie</option>
+                        <option value="brand">Marque</option>
+                      </select>
+                    </div>
+
+                    {(newSectionType === 'category') && (
+                      <div className="w-full sm:w-2/3">
+                        <select
+                          value={newSectionTargetId}
+                          onChange={e => setNewSectionTargetId(e.target.value)}
+                          className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500"
+                        >
+                          <option value="">Sélectionner une catégorie...</option>
+                          {categories.map(c => (
+                            <option key={c.id} value={c.id}>{c.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+
+                    {(newSectionType === 'brand') && (
+                      <div className="w-full sm:w-2/3">
+                        <select
+                          value={newSectionTargetId}
+                          onChange={e => setNewSectionTargetId(e.target.value)}
+                          className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500"
+                        >
+                          <option value="">Sélectionner une marque...</option>
+                          {brands.map(b => (
+                            <option key={b.id} value={b.id}>{b.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
                 <div className="flex gap-4">
                   <div className="flex-1">
                     <input 
                       type="text" 
-                      placeholder="Titre de la section (ex: Moins de 1000 DA)"
+                      placeholder="Titre de la section"
                       value={newSectionTitle}
                       onChange={e => setNewSectionTitle(e.target.value)}
                       className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500"

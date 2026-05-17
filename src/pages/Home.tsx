@@ -559,15 +559,25 @@ export default function Home() {
           }
           setHomeSections(sections);
           
-          // Fetch products for custom sections
-          sections.filter((s: any) => s.type === 'custom' && s.isVisible && s.productIds?.length > 0).forEach((section: any) => {
-            fetchDynamic(`/api/products?ids=${section.productIds.join(',')}`)
-              .then(products => {
-                if (Array.isArray(products)) {
-                  setCustomProducts(prev => ({ ...prev, [section.id]: products }));
-                }
-              })
-              .catch(handleFetchError);
+          // Fetch products for custom, category, and brand sections
+          sections.filter((s: any) => ['custom', 'category', 'brand'].includes(s.type) && s.isVisible).forEach((section: any) => {
+            let url = '';
+            if (section.type === 'custom' && section.productIds?.length > 0) {
+              url = `/api/products?ids=${section.productIds.join(',')}`;
+            } else if (section.type === 'category' && section.categoryId) {
+              url = `/api/products?category_id=${section.categoryId}&limit=12`;
+            } else if (section.type === 'brand' && section.brandId) {
+              url = `/api/products?brand_id=${section.brandId}&limit=12`;
+            }
+            if (url) {
+              fetchDynamic(url)
+                .then(products => {
+                  if (Array.isArray(products)) {
+                    setCustomProducts(prev => ({ ...prev, [section.id]: products }));
+                  }
+                })
+                .catch(handleFetchError);
+            }
           });
         } catch (e) {}
       }
@@ -594,15 +604,26 @@ export default function Home() {
               const sections = JSON.parse((data as any).home_sections);
               setHomeSections(sections);
               
-              sections.filter((s: any) => s.type === 'custom' && s.isVisible && s.productIds?.length > 0).forEach((section: any) => {
-                fetch(`/api/products?ids=${section.productIds.join(',')}`)
-                  .then(res => res.json())
-                  .then(products => {
-                    if (Array.isArray(products)) {
-                      setCustomProducts(prev => ({ ...prev, [section.id]: products }));
-                    }
-                  })
-                  .catch(console.error);
+              sections.filter((s: any) => ['custom', 'category', 'brand'].includes(s.type) && s.isVisible).forEach((section: any) => {
+                let url = '';
+                if (section.type === 'custom' && section.productIds?.length > 0) {
+                  url = `/api/products?ids=${section.productIds.join(',')}`;
+                } else if (section.type === 'category' && section.categoryId) {
+                  url = `/api/products?category_id=${section.categoryId}&limit=12`;
+                } else if (section.type === 'brand' && section.brandId) {
+                  url = `/api/products?brand_id=${section.brandId}&limit=12`;
+                }
+                
+                if (url) {
+                  fetch(url)
+                    .then(res => res.json())
+                    .then(products => {
+                      if (Array.isArray(products)) {
+                        setCustomProducts(prev => ({ ...prev, [section.id]: products }));
+                      }
+                    })
+                    .catch(console.error);
+                }
               });
             } catch (e) {}
           }
@@ -833,12 +854,22 @@ export default function Home() {
             </section>
           );
         }
-        if (section.type === 'custom') {
+        if (['custom', 'category', 'brand'].includes(section.type)) {
           const sectionProducts = customProducts[section.id] || [];
           if (sectionProducts.length === 0) return null;
+          
+          let link = "/category/all";
+          if (section.type === 'category' && section.categoryId) {
+            const cat = categories.find(c => c.id == section.categoryId);
+            if (cat) link = `/category/${cat.slug}`;
+          } else if (section.type === 'brand' && section.brandId) {
+            const brand = brands.find(b => b.id == section.brandId);
+            if (brand) link = `/brands/${brand.slug}`;
+          }
+
           return (
             <section key={section.id}>
-              <SectionHeader title={`${section.title} ${section.emoji || ''}`} link="/category/all" />
+              <SectionHeader title={`${section.title} ${section.emoji || ''}`} link={link} />
               <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-4">
                 {sectionProducts.map((p, i) => <ProductCard key={`${section.id}-${p.id}`} product={p} priority={i < 4} />)}
               </div>

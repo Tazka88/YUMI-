@@ -299,9 +299,9 @@ export default function Category() {
         {/* Main Content */}
         <div className="flex-1">
           {loading ? (
-            <div className="mb-8 rounded-xl overflow-hidden shadow-md relative w-full aspect-[4/5] sm:aspect-[1/1] md:aspect-[16/5] bg-gray-200 animate-pulse"></div>
+            <div className="mb-8 rounded-xl overflow-hidden shadow-md relative w-full aspect-[16/5] bg-gray-200 animate-pulse hidden md:block"></div>
           ) : categoryImage ? (
-            <div className={`mb-8 rounded-xl overflow-hidden shadow-md relative w-full aspect-[4/5] sm:aspect-[1/1] md:aspect-[16/5] bg-gray-100 items-center justify-center ${!mobileCategoryImage ? 'hidden md:flex' : 'flex'}`}>
+            <div className="mb-8 rounded-xl overflow-hidden shadow-md relative w-full md:aspect-[16/5] bg-gray-100 items-center justify-center hidden md:flex">
               <picture className="w-full h-full">
                 {mobileCategoryImage && (
                   <source media="(max-width: 767px)" srcSet={getResizedImageUrl(mobileCategoryImage, 800)} />
@@ -317,7 +317,9 @@ export default function Category() {
               </picture>
             </div>
           ) : categoryId ? (
-            <Slider categoryId={categoryId} />
+            <div className="hidden md:block mb-8">
+              <Slider categoryId={categoryId} />
+            </div>
           ) : null}
           <div className="bg-white p-4 rounded-lg shadow-sm mb-6 flex justify-between items-center">
             <h1 className="text-xl font-bold text-gray-800">{categoryName}</h1>

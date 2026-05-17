@@ -565,9 +565,9 @@ export default function Home() {
             if (section.type === 'custom' && section.productIds?.length > 0) {
               url = `/api/products?ids=${section.productIds.join(',')}`;
             } else if (section.type === 'category' && section.categoryId) {
-              url = `/api/products?category_id=${section.categoryId}&limit=12`;
+              url = `/api/products?category=${section.categoryId}&limit=12`;
             } else if (section.type === 'brand' && section.brandId) {
-              url = `/api/products?brand_id=${section.brandId}&limit=12`;
+              url = `/api/products?brand=${section.brandId}&limit=12`;
             }
             if (url) {
               fetchDynamic(url)
@@ -597,7 +597,7 @@ export default function Home() {
     fetchDynamic('/api/products?promo_active=true&limit=12').then(data => { if (Array.isArray(data)) setPromotions(data); }).catch(handleFetchError);
 
     const loadSections = () => {
-      fetchWithCache('/api/settings')
+      fetchDynamic('/api/settings')
         .then(data => {
           if ((data as any).home_sections) {
             try {
@@ -609,14 +609,13 @@ export default function Home() {
                 if (section.type === 'custom' && section.productIds?.length > 0) {
                   url = `/api/products?ids=${section.productIds.join(',')}`;
                 } else if (section.type === 'category' && section.categoryId) {
-                  url = `/api/products?category_id=${section.categoryId}&limit=12`;
+                  url = `/api/products?category=${section.categoryId}&limit=12`;
                 } else if (section.type === 'brand' && section.brandId) {
-                  url = `/api/products?brand_id=${section.brandId}&limit=12`;
+                  url = `/api/products?brand=${section.brandId}&limit=12`;
                 }
                 
                 if (url) {
-                  fetch(url)
-                    .then(res => res.json())
+                  fetchDynamic(url)
                     .then(products => {
                       if (Array.isArray(products)) {
                         setCustomProducts(prev => ({ ...prev, [section.id]: products }));

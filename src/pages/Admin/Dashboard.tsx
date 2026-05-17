@@ -116,7 +116,47 @@ export default function AdminDashboard() {
   const [productSearch, setProductSearch] = useState('');
   const [adminProductSearch, setAdminProductSearch] = useState('');
   const [debouncedAdminProductSearch, setDebouncedAdminProductSearch] = useState('');
+  const [debouncedProductSearch, setDebouncedProductSearch] = useState('');
+  const [modalFilters, setModalFilters] = useState({ category_id: '', brand_id: '', max_price: '' });
+  const [modalProducts, setModalProducts] = useState<any[]>([]);
+  const [loadingModalProducts, setLoadingModalProducts] = useState(false);
   const [emails, setEmails] = useState<any[]>([]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedProductSearch(productSearch);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [productSearch]);
+
+  useEffect(() => {
+    if (!editingSectionProducts) return;
+    const token = localStorage.getItem('adminToken');
+    if (!token) return;
+
+    setLoadingModalProducts(true);
+    const searchParams = new URLSearchParams();
+    searchParams.append('limit', '50');
+    if (debouncedProductSearch) searchParams.append('search', debouncedProductSearch);
+    if (modalFilters.category_id) searchParams.append('category_id', modalFilters.category_id);
+    if (modalFilters.brand_id) searchParams.append('brand_id', modalFilters.brand_id);
+    if (modalFilters.max_price) searchParams.append('max_price', modalFilters.max_price);
+
+    fetch(`/api/admin/products?${searchParams.toString()}`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data && Array.isArray(data.products)) {
+          setModalProducts(data.products);
+        } else if (Array.isArray(data)) {
+          setModalProducts(data);
+        }
+      })
+      .catch(console.error)
+      .finally(() => setLoadingModalProducts(false));
+  }, [editingSectionProducts, debouncedProductSearch, modalFilters]);
+
   const [emailSearchTerm, setEmailSearchTerm] = useState('');
   const [emailSourceFilter, setEmailSourceFilter] = useState('all');
   const [emailLogs, setEmailLogs] = useState<any[]>([]);
@@ -3895,19 +3935,84 @@ export default function AdminDashboard() {
                 <X size={24} />
               </button>
             </div>
-            <div className="p-4 border-b border-gray-100 shrink-0">
-              <input 
-                type="text" 
-                placeholder="Rechercher un produit..."
-                value={productSearch}
-                onChange={e => setProductSearch(e.target.value)}
-                className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500"
-              />
+            <div className="p-4 border-b border-gray-100 shrink-0 flex flex-col md:flex-row gap-4 bg-gray-50">
+              <div className="w-full md:w-1/3">
+                <input 
+                  type="text" 
+                  placeholder="Rechercher par nom..."
+                  value={productSearch}
+                  onChange={e => setProductSearch(e.target.value)}
+                  className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500"
+                />
+              </div>
+              <div className="w-full md:w-1/4">
+                <select
+                  value={modalFilters.category_id}
+                  onChange={e => setModalFilters({ ...modalFilters, category_id: e.target.value })}
+                  className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500 bg-white"
+                >
+                  <option value="">Toutes les catégories</option>
+                  {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              </div>
+              <div className="w-full md:w-1/4">
+                <select
+                  value={modalFilters.brand_id}
+                  onChange={e => setModalFilters({ ...modalFilters, brand_id: e.target.value })}
+                  className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500 bg-white"
+                >
+                  <option value="">Toutes les marques</option>
+                  {brands.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                </select>
+              </div>
+              <div className="w-full md:w-1/4">
+                <input 
+                  type="number" 
+                  placeholder="Prix Max (DA)"
+                  value={modalFilters.max_price}
+                  onChange={e => setModalFilters({ ...modalFilters, max_price: e.target.value })}
+                  className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500 bg-white"
+                />
+              </div>
+            </div>
+            <div className="p-4 border-b border-gray-100 shrink-0 flex justify-between items-center bg-white">
+              <span className="text-sm text-gray-500">
+                {modalProducts.length} produits trouvés
+              </span>
+              <div className="flex gap-4">
+                <button
+                  onClick={() => {
+                    const allIds = modalProducts.map(p => p.id.toString());
+                    const newSelection = Array.from(new Set([...selectedProducts, ...allIds]));
+                    setSelectedProducts(newSelection);
+                  }}
+                  className="text-sm text-blue-600 hover:underline font-medium"
+                >
+                  Tout sélectionner
+                </button>
+                <button
+                  onClick={() => {
+                    const allIdsToUnselect = modalProducts.map(p => p.id.toString());
+                    const newSelection = selectedProducts.filter(id => !allIdsToUnselect.includes(id));
+                    setSelectedProducts(newSelection);
+                  }}
+                  className="text-sm text-red-600 hover:underline font-medium"
+                >
+                  Tout désélectionner
+                </button>
+              </div>
             </div>
             <div className="p-6 overflow-y-auto flex-1">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {products.filter(p => p.name.toLowerCase().includes(productSearch.toLowerCase())).map(product => (
-                  <label key={product.id} className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
+              {loadingModalProducts ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
+                </div>
+              ) : modalProducts.length === 0 ? (
+                <div className="text-center py-12 text-gray-500">Aucun produit trouvé</div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {modalProducts.map(product => (
+                    <label key={product.id} className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
                     <input 
                       type="checkbox" 
                       checked={selectedProducts.includes(product.id.toString())}
@@ -3932,6 +4037,7 @@ export default function AdminDashboard() {
                   </label>
                 ))}
               </div>
+            )}
             </div>
             <div className="p-6 border-t border-gray-100 shrink-0 flex justify-end gap-3 bg-gray-50 rounded-b-xl">
               <button 

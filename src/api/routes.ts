@@ -1298,17 +1298,33 @@ router.delete('/admin/orders/:id', authenticate, async (req, res) => {
 
 router.get('/admin/products', authenticate, async (req, res) => {
   try {
-    const { search, page = '1', limit = '20' } = req.query;
+    const { search, page = '1', limit = '20', category_id, brand_id, max_price } = req.query;
     const pageNum = parseInt(page as string) || 1;
     const limitNum = parseInt(limit as string) || 20;
     const offset = (pageNum - 1) * limitNum;
 
-    let whereClause = sql``;
+    let conditions = [];
     
     if (search) {
       const searchTerm = `%${search}%`;
-      whereClause = sql`WHERE p.name ILIKE ${searchTerm} OR p.description ILIKE ${searchTerm} OR p.id::text ILIKE ${searchTerm} OR p.sku ILIKE ${searchTerm}`;
+      conditions.push(sql`(p.name ILIKE ${searchTerm} OR p.description ILIKE ${searchTerm} OR p.id::text ILIKE ${searchTerm} OR p.sku ILIKE ${searchTerm})`);
     }
+
+    if (category_id) {
+      conditions.push(sql`p.category_id = ${parseInt(category_id as string)}`);
+    }
+
+    if (brand_id) {
+      conditions.push(sql`p.brand_id = ${parseInt(brand_id as string)}`);
+    }
+
+    if (max_price) {
+      conditions.push(sql`p.price <= ${parseFloat(max_price as string)}`);
+    }
+
+    const whereClause = conditions.length > 0 
+      ? sql`WHERE ${conditions.reduce((acc, curr, idx) => idx === 0 ? curr : sql`${acc} AND ${curr}`, sql``)}`
+      : sql``;
 
     const [totalCount] = await sql`
       SELECT COUNT(*) as count 

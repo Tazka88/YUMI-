@@ -808,8 +808,12 @@ export default function Home() {
           return (
             <section key={section.id}>
               <FlashSalesHeader link="/category/all" />
-              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-4">
-                {promotions.slice(0, 10).map((p, i) => <ProductCard key={p.id} product={p} priority={i < 4} isFlashSale={true} />)}
+              <div className="flex overflow-x-auto snap-x hide-scrollbar md:grid md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-4 pb-4 md:pb-0 px-4 -mx-4 md:px-0 md:mx-0">
+                {promotions.slice(0, 10).map((p, i) => (
+                  <div key={p.id} className="w-[160px] sm:w-[200px] shrink-0 snap-start md:w-auto">
+                    <ProductCard product={p} priority={i < 4} isFlashSale={true} />
+                  </div>
+                ))}
               </div>
             </section>
           );
@@ -867,12 +871,23 @@ export default function Home() {
             if (brand) link = `/brands/${brand.slug}`;
           }
 
+          const isCarousel = section.isCarouselOnMobile ?? true;
           return (
             <section key={section.id}>
               <SectionHeader title={`${section.title} ${section.emoji || ''}`} link={link} />
-              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-4">
-                {sectionProducts.map((p, i) => <ProductCard key={`${section.id}-${p.id}`} product={p} priority={i < 4} />)}
-              </div>
+              {isCarousel ? (
+                <div className="flex overflow-x-auto snap-x hide-scrollbar md:grid md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-4 pb-4 md:pb-0 px-4 -mx-4 md:px-0 md:mx-0">
+                  {sectionProducts.map((p, i) => (
+                    <div key={`${section.id}-${p.id}`} className="w-[160px] sm:w-[200px] shrink-0 snap-start md:w-auto">
+                      <ProductCard product={p} priority={i < 4} />
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-4">
+                  {sectionProducts.map((p, i) => <ProductCard key={`${section.id}-${p.id}`} product={p} priority={i < 4} />)}
+                </div>
+              )}
             </section>
           );
         }

@@ -21,6 +21,7 @@ export interface HomeSection {
   productIds?: string[];
   categoryId?: number | string;
   brandId?: number | string;
+  isCarouselOnMobile?: boolean;
 }
 
 const defaultSections: HomeSection[] = [
@@ -109,6 +110,7 @@ export default function AdminDashboard() {
   const [newSectionEmoji, setNewSectionEmoji] = useState('✨');
   const [newSectionType, setNewSectionType] = useState<'custom' | 'category' | 'brand'>('custom');
   const [newSectionTargetId, setNewSectionTargetId] = useState('');
+  const [newSectionIsCarousel, setNewSectionIsCarousel] = useState(true);
   const [editingSectionProducts, setEditingSectionProducts] = useState<string | null>(null);
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
   const [productSearch, setProductSearch] = useState('');
@@ -175,16 +177,23 @@ export default function AdminDashboard() {
       isVisible: true,
       productIds: [],
       ...(newSectionType === 'category' ? { categoryId: newSectionTargetId } : {}),
-      ...(newSectionType === 'brand' ? { brandId: newSectionTargetId } : {})
+      ...(newSectionType === 'brand' ? { brandId: newSectionTargetId } : {}),
+      isCarouselOnMobile: newSectionIsCarousel
     };
     saveHomeSections([...homeSections, newSection]);
     setNewSectionTitle('');
     setNewSectionEmoji('✨');
     setNewSectionTargetId('');
+    setNewSectionIsCarousel(true);
   };
 
   const handleToggleSection = (id: string) => {
     const updated = homeSections.map(s => s.id === id ? { ...s, isVisible: !s.isVisible } : s);
+    saveHomeSections(updated);
+  };
+
+  const handleToggleCarousel = (id: string) => {
+    const updated = homeSections.map(s => s.id === id ? { ...s, isCarouselOnMobile: !s.isCarouselOnMobile } : s);
     saveHomeSections(updated);
   };
 
@@ -2916,6 +2925,17 @@ export default function AdminDashboard() {
                       {section.type === 'brand' && (
                          <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded-full uppercase tracking-wide font-bold">Marque</span>
                       )}
+                      {['custom', 'category', 'brand'].includes(section.type) && (
+                        <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-700 mr-2">
+                          <input 
+                            type="checkbox" 
+                            checked={section.isCarouselOnMobile ?? true} 
+                            onChange={() => handleToggleCarousel(section.id)}
+                            className="rounded text-orange-500 focus:ring-orange-500"
+                          />
+                          Carrousel Mobile
+                        </label>
+                      )}
                       <button 
                         onClick={() => handleToggleSection(section.id)}
                         className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${section.isVisible ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-600'}`}
@@ -2991,8 +3011,8 @@ export default function AdminDashboard() {
                   </div>
                 </div>
 
-                <div className="flex gap-4">
-                  <div className="flex-1">
+                <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+                  <div className="flex-1 w-full">
                     <input 
                       type="text" 
                       placeholder="Titre de la section"
@@ -3001,7 +3021,7 @@ export default function AdminDashboard() {
                       className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500"
                     />
                   </div>
-                  <div className="w-24">
+                  <div className="w-24 shrink-0">
                     <input 
                       type="text" 
                       placeholder="Emoji"
@@ -3010,9 +3030,18 @@ export default function AdminDashboard() {
                       className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500 text-center"
                     />
                   </div>
+                  <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-700 whitespace-nowrap">
+                    <input 
+                      type="checkbox" 
+                      checked={newSectionIsCarousel} 
+                      onChange={e => setNewSectionIsCarousel(e.target.checked)}
+                      className="rounded text-orange-500 focus:ring-orange-500"
+                    />
+                    Carrousel sur mobile
+                  </label>
                   <button 
                     onClick={handleAddSection}
-                    className="px-6 py-2 bg-orange-500 text-white rounded-md hover:bg-orange-600 font-medium transition-colors"
+                    className="w-full sm:w-auto px-6 py-2 bg-orange-500 text-white rounded-md hover:bg-orange-600 font-medium transition-colors whitespace-nowrap"
                   >
                     Créer
                   </button>

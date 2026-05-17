@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useSearchParams, Link } from 'react-router-dom';
-import { ShoppingCart, Star } from 'lucide-react';
+import { ShoppingCart, Star, Filter, ChevronDown, ChevronUp } from 'lucide-react';
 import { useCartStore, Product } from '../store/cartStore';
 import { formatPrice } from '../utils/formatPrice';
 import { ProductCard } from '../components/ProductCard';
@@ -23,6 +23,7 @@ export default function Category() {
   const [categories, setCategories] = useState<any[]>([]);
   const [currentSubcategories, setCurrentSubcategories] = useState<any[]>([]);
   const [currentSubSubcategories, setCurrentSubSubcategories] = useState<any[]>([]);
+  const [showMobileFilters, setShowMobileFilters] = useState(false);
   const [priceFilters, setPriceFilters] = useState({
     under5k: false,
     between5kAnd15k: false,
@@ -190,6 +191,11 @@ export default function Category() {
     return false;
   });
 
+  useEffect(() => {
+    // Close mobile filters when navigating
+    setShowMobileFilters(false);
+  }, [slug, searchParams]);
+
   return (
     <div className="container mx-auto px-4 py-8">
       <SEO 
@@ -199,8 +205,22 @@ export default function Category() {
       />
 
       <div className="flex flex-col md:flex-row gap-6">
+        {/* Mobile Filter Toggle */}
+        <div className="md:hidden">
+          <button 
+            onClick={() => setShowMobileFilters(!showMobileFilters)}
+            className="w-full bg-white px-4 py-3 rounded-xl shadow-sm flex items-center justify-between font-bold text-gray-800"
+          >
+            <div className="flex items-center gap-2">
+              <Filter size={20} className="text-orange-500" />
+              <span>Catégories et Filtres</span>
+            </div>
+            {showMobileFilters ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+          </button>
+        </div>
+
         {/* Sidebar Filters */}
-        <div className="w-full md:w-64 shrink-0">
+        <div className={`w-full md:w-64 shrink-0 transition-all duration-300 ${showMobileFilters ? 'block' : 'hidden md:block'}`}>
           <div className="bg-white p-4 rounded-lg shadow-sm mb-4">
             <h3 className="font-bold text-lg mb-4 border-b pb-2">Catégories</h3>
             <ul className="space-y-2">

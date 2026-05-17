@@ -309,6 +309,19 @@ export default function AdminDashboard() {
         .catch(handleFetchError);
     }
 
+    if (activeTab === 'sections') {
+      fetch('/api/categories', { signal })
+        .then(res => res.json())
+        .then(data => { if (Array.isArray(data)) setCategories(data); })
+        .catch(handleFetchError);
+
+      fetch('/api/brands', { signal })
+        .then(res => res.json())
+        .then(data => { if (Array.isArray(data)) setBrands(data); })
+        .catch(handleFetchError);
+    }
+
+
     if (activeTab === 'settings' || activeTab === 'account') {
       fetch('/api/admin/settings', { headers, signal })
         .then(res => res.json())

@@ -107,6 +107,25 @@ Sitemap: https://zorando.com/sitemap.xml`);
     }
   });
 
+  // SEO Redirects
+  const redirects: Record<string, string> = {
+    '/brands/bestway': '/brands/piscines-bestway-algerie',
+    '/brands/hoco': '/brands/accessoires-hoco-algerie',
+    '/brands/kemei': '/brands/tondeuses-kemei-algerie',
+    '/brands/moulinex': '/brands/electromenager-moulinex-algerie'
+  };
+
+  app.use((req, res, next) => {
+    // Exact match for the path (ignores query string)
+    const newUrl = redirects[req.path];
+    if (newUrl) {
+      // Append query string if present
+      const qs = req.url.includes('?') ? req.url.substring(req.url.indexOf('?')) : '';
+      return res.redirect(301, newUrl + qs);
+    }
+    next();
+  });
+
   // Vite middleware for development
   if (process.env.NODE_ENV !== 'production') {
     const { createServer: createViteServer } = await import('vite');

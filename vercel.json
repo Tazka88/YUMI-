@@ -3,6 +3,28 @@
   "framework": "vite",
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
+  "redirects": [
+    {
+      "source": "/brands/bestway",
+      "destination": "/brands/piscines-bestway-algerie",
+      "permanent": true
+    },
+    {
+      "source": "/brands/hoco",
+      "destination": "/brands/accessoires-hoco-algerie",
+      "permanent": true
+    },
+    {
+      "source": "/brands/kemei",
+      "destination": "/brands/tondeuses-kemei-algerie",
+      "permanent": true
+    },
+    {
+      "source": "/brands/moulinex",
+      "destination": "/brands/electromenager-moulinex-algerie",
+      "permanent": true
+    }
+  ],
   "headers": [
     {
       "source": "/assets/(.*)",

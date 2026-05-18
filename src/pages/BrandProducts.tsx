@@ -103,32 +103,38 @@ export default function BrandProducts() {
         </div>
       </div>
 
-      {/* SEO Content Block */}
-      {brand.seo_content && (
-        <div className="bg-gray-50 rounded-lg p-6 mb-8 max-w-5xl mx-auto leading-relaxed text-gray-800 text-base seo-description">
-          <div dangerouslySetInnerHTML={{ __html: brand.seo_content }} />
+      <div className="flex flex-col lg:flex-row gap-6 md:gap-8 items-start">
+        {/* Products Area */}
+        <div className="flex-1 w-full">
+          {products.length > 0 ? (
+            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
+              {products.map(product => (
+                <ProductCard key={product.id} product={product} />
+              ))}
+            </div>
+          ) : (
+            <div className="bg-white rounded-xl shadow-sm p-12 text-center">
+              <div className="inline-flex items-center justify-center w-16 h-16 bg-gray-100 rounded-full mb-4">
+                <span className="text-2xl">📦</span>
+              </div>
+              <h3 className="text-xl font-bold text-gray-800 mb-2">Aucun produit pour le moment</h3>
+              <p className="text-gray-500 mb-6">Cette marque n'a pas encore de produits disponibles dans notre catalogue.</p>
+              <Link to="/" className="text-orange-500 hover:text-orange-600 font-medium">
+                Retour à l'accueil
+              </Link>
+            </div>
+          )}
         </div>
-      )}
 
-      {/* Products Grid */}
-      {products.length > 0 ? (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6">
-          {products.map(product => (
-            <ProductCard key={product.id} product={product} />
-          ))}
-        </div>
-      ) : (
-        <div className="bg-white rounded-xl shadow-sm p-12 text-center">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-gray-100 rounded-full mb-4">
-            <span className="text-2xl">📦</span>
+        {/* SEO Sidebar */}
+        {brand.seo_content && (
+          <div className="w-full lg:w-[320px] xl:w-[380px] shrink-0 mt-8 lg:mt-0">
+            <div className="bg-gray-50 rounded-xl p-6 border border-gray-100 seo-description sticky top-24">
+              <div dangerouslySetInnerHTML={{ __html: brand.seo_content }} />
+            </div>
           </div>
-          <h3 className="text-xl font-bold text-gray-800 mb-2">Aucun produit pour le moment</h3>
-          <p className="text-gray-500 mb-6">Cette marque n'a pas encore de produits disponibles dans notre catalogue.</p>
-          <Link to="/" className="text-orange-500 hover:text-orange-600 font-medium">
-            Retour à l'accueil
-          </Link>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }

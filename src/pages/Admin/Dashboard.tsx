@@ -93,7 +93,7 @@ export default function AdminDashboard() {
     name: '', slug: '', subcategory_id: '', image: ''
   });
   const [brandForm, setBrandForm] = useState({
-    name: '', slug: '', image: '', description: ''
+    name: '', slug: '', image: '', description: '', seo_title: '', seo_description: '', h1_title: '', seo_content: ''
   });
   const [settingsForm, setSettingsForm] = useState<Record<string, any>>({
     announcement_phone: '', announcement_text: '', announcement_bg_color: '#000000', announcement_text_color: '#ffffff', whatsapp_number: '', admin_email: '', site_logo: '', active_theme: 'normal'
@@ -1021,12 +1021,16 @@ export default function AdminDashboard() {
     if (brand) {
       setEditingBrand(brand);
       setBrandForm({
-        name: brand.name, slug: brand.slug, image: brand.image || '', description: brand.description || ''
+        name: brand.name, slug: brand.slug, image: brand.image || '', description: brand.description || '',
+        seo_title: brand.seo_title || '',
+        seo_description: brand.seo_description || '',
+        h1_title: brand.h1_title || '',
+        seo_content: brand.seo_content || ''
       });
     } else {
       setEditingBrand(null);
       setBrandForm({
-        name: '', slug: '', image: '', description: ''
+        name: '', slug: '', image: '', description: '', seo_title: '', seo_description: '', h1_title: '', seo_content: ''
       });
     }
     setIsBrandModalOpen(true);
@@ -3802,7 +3806,7 @@ export default function AdminDashboard() {
       {/* Brand Modal */}
       {isBrandModalOpen && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col">
             <div className="flex justify-between items-center p-6 border-b border-gray-100 shrink-0">
               <h2 className="text-xl font-bold text-gray-800">{editingBrand ? 'Modifier la marque' : 'Ajouter une marque'}</h2>
               <button onClick={() => setIsBrandModalOpen(false)} className="text-gray-400 hover:text-gray-600">
@@ -3811,73 +3815,145 @@ export default function AdminDashboard() {
             </div>
             <form onSubmit={handleBrandSubmit} className="flex flex-col overflow-hidden">
               <div className="p-6 overflow-y-auto">
-                <div className="space-y-4 mb-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Nom de la marque</label>
-                  <input 
-                    type="text" 
-                    className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500"
-                    value={brandForm.name}
-                    onChange={e => setBrandForm({...brandForm, name: e.target.value, slug: generateSlug(e.target.value)})}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Slug (URL)</label>
-                  <input 
-                    type="text" 
-                    className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500 bg-gray-50"
-                    value={brandForm.slug}
-                    onChange={e => setBrandForm({...brandForm, slug: e.target.value})}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Logo de la marque</label>
-                  <div className="flex items-center gap-4">
-                    {brandForm.image && (
-                      <img src={brandForm.image} alt="Preview" className="w-16 h-16 object-contain rounded-md border border-gray-200" />
-                    )}
-                    <div className="flex-1">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                  {/* Left Column - General Info */}
+                  <div className="space-y-4">
+                    <h3 className="font-bold text-gray-800 border-b pb-2">Informations Générales</h3>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Nom de la marque</label>
                       <input 
-                        type="file" 
-                        accept="image/*"
-                        onChange={async (e) => {
-                          if (e.target.files && e.target.files[0]) {
-                            const file = e.target.files[0];
-                            const formData = new FormData();
-                            formData.append('image', file);
-                            
-                            try {
-                              const token = localStorage.getItem('adminToken');
-                              const res = await fetch('/api/admin/upload', {
-                                method: 'POST',
-                                headers: { 'Authorization': `Bearer ${token}` },
-                                body: formData
-                              });
-                              
-                              if (res.ok) {
-                                const data = await res.json();
-                                setBrandForm({...brandForm, image: data.url});
-                              }
-                            } catch (err) {
-                              console.error("Erreur lors de l'upload", err);
-                            }
-                          }
-                        }}
-                        className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100"
+                        type="text" 
+                        className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500"
+                        value={brandForm.name}
+                        onChange={e => setBrandForm({...brandForm, name: e.target.value, slug: generateSlug(e.target.value)})}
                       />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Slug (URL)</label>
+                      <input 
+                        type="text" 
+                        className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500 bg-gray-50"
+                        value={brandForm.slug}
+                        onChange={e => setBrandForm({...brandForm, slug: generateSlug(e.target.value)})}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Logo de la marque</label>
+                      <div className="flex items-center gap-4">
+                        {brandForm.image && (
+                          <img src={brandForm.image} alt="Preview" className="w-16 h-16 object-contain rounded-md border border-gray-200" />
+                        )}
+                        <div className="flex-1">
+                          <input 
+                            type="file" 
+                            accept="image/*"
+                            onChange={async (e) => {
+                              if (e.target.files && e.target.files[0]) {
+                                const file = e.target.files[0];
+                                const formData = new FormData();
+                                formData.append('image', file);
+                                
+                                try {
+                                  const token = localStorage.getItem('adminToken');
+                                  const res = await fetch('/api/admin/upload', {
+                                    method: 'POST',
+                                    headers: { 'Authorization': `Bearer ${token}` },
+                                    body: formData
+                                  });
+                                  
+                                  if (res.ok) {
+                                    const data = await res.json();
+                                    setBrandForm({...brandForm, image: data.url});
+                                  }
+                                } catch (err) {
+                                  console.error("Erreur lors de l'upload", err);
+                                }
+                              }
+                            }}
+                            className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Description courte (optionnelle)</label>
+                      <textarea 
+                        rows={3}
+                        className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500"
+                        value={brandForm.description}
+                        onChange={e => setBrandForm({...brandForm, description: e.target.value})}
+                      ></textarea>
+                    </div>
+                  </div>
+
+                  {/* Right Column - SEO Info */}
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center border-b pb-2">
+                      <h3 className="font-bold text-gray-800">SEO & Contenu (Optionnel)</h3>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (!brandForm.seo_title) setBrandForm(f => ({...f, seo_title: `${f.name} | ZORANDO - Boutique en ligne Algérie`}));
+                          if (!brandForm.seo_description) setBrandForm(f => ({...f, seo_description: `Découvrez tous les produits ${f.name} disponibles chez ZORANDO. Livraison gratuite à partir de 10 000 DA en Algérie.`}));
+                          if (!brandForm.h1_title) setBrandForm(f => ({...f, h1_title: f.name}));
+                        }}
+                        className="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 px-2 py-1 rounded"
+                        title="Générer automatiquement des suggestions"
+                      >
+                        Suggérer
+                      </button>
+                    </div>
+                    <div>
+                      <label className="flex justify-between text-sm font-medium text-gray-700 mb-1">
+                        Titre SEO (&lt;title&gt;) <span className={`text-xs ${brandForm.seo_title?.length > 60 ? 'text-red-500' : 'text-gray-400'}`}>{brandForm.seo_title?.length || 0}/60</span>
+                      </label>
+                      <input 
+                        type="text" 
+                        placeholder="Ex: Piscines Bestway Algérie | ZORANDO - Livraison Gratuite"
+                        className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500 text-sm"
+                        value={brandForm.seo_title || ''}
+                        onChange={e => setBrandForm({...brandForm, seo_title: e.target.value})}
+                      />
+                    </div>
+                    <div>
+                      <label className="flex justify-between text-sm font-medium text-gray-700 mb-1">
+                        Meta Description <span className={`text-xs ${brandForm.seo_description?.length > 160 ? 'text-red-500' : 'text-gray-400'}`}>{brandForm.seo_description?.length || 0}/160</span>
+                      </label>
+                      <textarea 
+                        rows={3}
+                        placeholder="Ex: Achetez vos piscines Bestway en Algérie chez ZORANDO. Large choix, stock disponible, livraison gratuite..."
+                        className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500 text-sm"
+                        value={brandForm.seo_description || ''}
+                        onChange={e => setBrandForm({...brandForm, seo_description: e.target.value})}
+                      ></textarea>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Titre H1 (Titre principal affiché)
+                      </label>
+                      <input 
+                        type="text" 
+                        placeholder="Ex: Piscines Bestway Algérie - Stock Disponible"
+                        className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500 text-sm"
+                        value={brandForm.h1_title || ''}
+                        onChange={e => setBrandForm({...brandForm, h1_title: e.target.value})}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Description SEO (Texte enrichi, HTML autorisé)
+                      </label>
+                      <textarea 
+                        rows={5}
+                        placeholder="<p>Texte enrichi à afficher au-dessus des produits...</p>"
+                        className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500 text-sm font-mono"
+                        value={brandForm.seo_content || ''}
+                        onChange={e => setBrandForm({...brandForm, seo_content: e.target.value})}
+                      ></textarea>
+                      <p className="text-xs text-gray-500 mt-1">S'affiche entre le titre et les produits. (balises &lt;b&gt;, &lt;h2&gt;, &lt;ul&gt; recommandées, ~200 mots).</p>
                     </div>
                   </div>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Description (optionnelle)</label>
-                  <textarea 
-                    rows={3}
-                    className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500"
-                    value={brandForm.description}
-                    onChange={e => setBrandForm({...brandForm, description: e.target.value})}
-                  ></textarea>
-                </div>
-              </div>
               </div>
               <div className="flex justify-end gap-3 border-t border-gray-100 p-6 shrink-0 bg-gray-50 rounded-b-xl">
                 <button 

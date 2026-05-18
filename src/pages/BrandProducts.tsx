@@ -66,8 +66,9 @@ export default function BrandProducts() {
   return (
     <div className="container mx-auto px-4 py-8">
       <SEO 
-        title={`Produits ${brand.name}`} 
-        description={brand.description || `Découvrez tous les produits de la marque ${brand.name} sur ZORANDO.`}
+        title={brand.seo_title || `Produits ${brand.name}`} 
+        exactTitle={!!brand.seo_title}
+        description={brand.seo_description || brand.description || `Découvrez tous les produits de la marque ${brand.name} sur ZORANDO.`}
         image={brand.image}
       />
       {/* Breadcrumb */}
@@ -92,8 +93,8 @@ export default function BrandProducts() {
         )}
         
         <div className="text-center md:text-left">
-          <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">{brand.name}</h1>
-          {brand.description && (
+          <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">{brand.h1_title || brand.name}</h1>
+          {brand.description && !brand.seo_content && (
             <p className="text-gray-600 max-w-2xl">{brand.description}</p>
           )}
           <div className="mt-4 inline-flex items-center px-3 py-1 bg-orange-50 text-orange-600 rounded-full text-sm font-medium">
@@ -101,6 +102,13 @@ export default function BrandProducts() {
           </div>
         </div>
       </div>
+
+      {/* SEO Content Block */}
+      {brand.seo_content && (
+        <div className="bg-gray-50 rounded-lg p-6 mb-8 max-w-5xl mx-auto leading-relaxed text-gray-800 text-base seo-description">
+          <div dangerouslySetInnerHTML={{ __html: brand.seo_content }} />
+        </div>
+      )}
 
       {/* Products Grid */}
       {products.length > 0 ? (

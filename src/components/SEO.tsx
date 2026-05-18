@@ -7,11 +7,12 @@ interface SEOProps {
   url?: string;
   type?: string;
   schema?: any;
+  exactTitle?: boolean;
 }
 
-export default function SEO({ title, description, image, url, type = 'website', schema }: SEOProps) {
+export default function SEO({ title, description, image, url, type = 'website', schema, exactTitle = false }: SEOProps) {
   const siteName = 'ZORANDO';
-  const fullTitle = `${title} | ${siteName}`;
+  const fullTitle = exactTitle ? title : `${title} | ${siteName}`;
   const defaultImage = 'https://zorando.com/og-image-fb.jpg';
   const finalImage = image || defaultImage;
   const currentUrl = url || (typeof window !== 'undefined' ? window.location.href.split('?')[0] : '');

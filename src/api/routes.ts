@@ -99,7 +99,7 @@ const PRODUCT_COLS = `p.id, p.category_id, p.subcategory_id, p.sub_subcategory_i
 const PRODUCT_IMAGES_COLS = `id, product_id, is_main, CASE WHEN image LIKE 'data:image/%' THEN '/api/images/product_images/' || id || '/image?v=' || LENGTH(image) ELSE image END as image`;
 const CATEGORIES_COLS = `id, name, slug, CASE WHEN image LIKE 'data:image/%' THEN '/api/images/categories/' || id || '/image/' || COALESCE(NULLIF(slug, ''), 'category') || '.webp?v=' || LENGTH(image) ELSE image END as image, CASE WHEN slide_image LIKE 'data:image/%' THEN '/api/images/categories/' || id || '/slide_image/' || COALESCE(NULLIF(slug, ''), 'category') || '-slide.webp?v=' || LENGTH(slide_image) ELSE slide_image END as slide_image, CASE WHEN mobile_slide_image LIKE 'data:image/%' THEN '/api/images/categories/' || id || '/mobile_slide_image/' || COALESCE(NULLIF(slug, ''), 'category') || '-mobile-slide.webp?v=' || LENGTH(mobile_slide_image) ELSE mobile_slide_image END as mobile_slide_image`;
 const SLIDER_IMAGES_COLS = `id, category_id, position, is_active, title, description, button_text, button_link, created_at, CASE WHEN image_url LIKE 'data:image/%' THEN '/api/images/slider_images/' || id || '/image_url?v=' || LENGTH(image_url) ELSE image_url END as image_url, CASE WHEN mobile_image_url LIKE 'data:image/%' THEN '/api/images/slider_images/' || id || '/mobile_image_url?v=' || LENGTH(mobile_image_url) ELSE mobile_image_url END as mobile_image_url`;
-const BRANDS_COLS = `id, name, slug, description, CASE WHEN image LIKE 'data:image/%' THEN '/api/images/brands/' || id || '/image/' || COALESCE(NULLIF(slug, ''), 'brand') || '.webp?v=' || LENGTH(image) ELSE image END as image`;
+const BRANDS_COLS = `id, name, slug, description, seo_title, seo_description, h1_title, seo_content, CASE WHEN image LIKE 'data:image/%' THEN '/api/images/brands/' || id || '/image/' || COALESCE(NULLIF(slug, ''), 'brand') || '.webp?v=' || LENGTH(image) ELSE image END as image`;
 const SUBCAT_COLS = `id, category_id, name, slug, CASE WHEN image LIKE 'data:image/%' THEN '/api/images/subcategories/' || id || '/image/' || COALESCE(NULLIF(slug, ''), 'subcategory') || '.webp?v=' || LENGTH(image) ELSE image END as image`;
 const SUB_SUBCAT_COLS = `id, subcategory_id, name, slug, CASE WHEN image LIKE 'data:image/%' THEN '/api/images/sub_subcategories/' || id || '/image/' || COALESCE(NULLIF(slug, ''), 'subsubcategory') || '.webp?v=' || LENGTH(image) ELSE image END as image`;
 
@@ -1623,9 +1623,9 @@ router.put('/admin/categories/:id', authenticate, async (req, res) => {
 });
 
 router.post('/admin/brands', authenticate, async (req, res) => {
-  const { name, slug, image, description } = req.body;
+  const { name, slug, image, description, seo_title, seo_description, h1_title, seo_content } = req.body;
   try {
-    const [info] = await sql`INSERT INTO brands (name, slug, image, description) VALUES (${name || ''}, ${slug || ''}, ${image || null}, ${description || null}) RETURNING id`;
+    const [info] = await sql`INSERT INTO brands (name, slug, image, description, seo_title, seo_description, h1_title, seo_content) VALUES (${name || ''}, ${slug || ''}, ${image || null}, ${description || null}, ${seo_title || null}, ${seo_description || null}, ${h1_title || null}, ${seo_content || null}) RETURNING id`;
     res.json({ id: info.id });
   } catch (err) {
     res.status(500).json({ error: 'Failed to create brand' });
@@ -1633,12 +1633,12 @@ router.post('/admin/brands', authenticate, async (req, res) => {
 });
 
 router.put('/admin/brands/:id', authenticate, async (req, res) => {
-  const { name, slug, image, description } = req.body;
+  const { name, slug, image, description, seo_title, seo_description, h1_title, seo_content } = req.body;
   try {
     if (image && image.startsWith('/api/images/')) {
-      await sql`UPDATE brands SET name = ${name || ''}, slug = ${slug || ''}, description = ${description || null} WHERE id = ${req.params.id}`;
+      await sql`UPDATE brands SET name = ${name || ''}, slug = ${slug || ''}, description = ${description || null}, seo_title = ${seo_title || null}, seo_description = ${seo_description || null}, h1_title = ${h1_title || null}, seo_content = ${seo_content || null} WHERE id = ${req.params.id}`;
     } else {
-      await sql`UPDATE brands SET name = ${name || ''}, slug = ${slug || ''}, image = ${image || null}, description = ${description || null} WHERE id = ${req.params.id}`;
+      await sql`UPDATE brands SET name = ${name || ''}, slug = ${slug || ''}, image = ${image || null}, description = ${description || null}, seo_title = ${seo_title || null}, seo_description = ${seo_description || null}, h1_title = ${h1_title || null}, seo_content = ${seo_content || null} WHERE id = ${req.params.id}`;
     }
     res.json({ success: true });
   } catch (err) {

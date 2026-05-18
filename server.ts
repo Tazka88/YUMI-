@@ -185,15 +185,16 @@ Sitemap: https://zorando.com/sitemap.xml`);
           `;
         } else if (req.path.startsWith('/brands/')) {
           const slug = req.path.split('/')[2];
-          const [brand] = await sql`SELECT id, name, description FROM brands WHERE slug = ${slug}`;
+          const [brand] = await sql`SELECT id, name, description, seo_title, seo_description, h1_title, seo_content FROM brands WHERE slug = ${slug}`;
           
           if (brand) {
-            title = `${brand.name} - ZORANDO`;
-            description = brand.description || `Découvrez tous les produits de la marque ${brand.name} sur ZORANDO.`;
+            title = brand.seo_title || `${brand.name} - ZORANDO`;
+            description = brand.seo_description || brand.description || `Découvrez tous les produits de la marque ${brand.name} sur ZORANDO.`;
             const products = await sql`SELECT name, slug FROM products WHERE brand_id = ${brand.id}`;
             seoHtml = `
               <div id="seo-content" style="display:none;">
-                <h1>${brand.name}</h1>
+                <h1>${brand.h1_title || brand.name}</h1>
+                ${brand.seo_content ? brand.seo_content : ''}
                 <h2>Produits de marque ${brand.name}</h2>
                 <p>${description}</p>
                 <ul>

@@ -75,6 +75,27 @@ app.use((req, res, next) => {
   next();
 });
 
+// Numeric Category redirect for old indexed IDs
+app.use(async (req, res, next) => {
+  // Dynamic redirects for numeric category IDs
+  if (req.path.match(/^\/category\/\d+$/)) {
+    const id = parseInt(req.path.split('/')[2]);
+    try {
+      let [cat] = await sql`SELECT slug FROM categories WHERE id = ${id}`;
+      if (cat && cat.slug) return res.redirect(301, `/category/${cat.slug}`);
+
+      let [subcat] = await sql`SELECT slug FROM subcategories WHERE id = ${id}`;
+      if (subcat && subcat.slug) return res.redirect(301, `/category/${subcat.slug}?sub=true`);
+
+      let [subsub] = await sql`SELECT slug FROM sub_subcategories WHERE id = ${id}`;
+      if (subsub && subsub.slug) return res.redirect(301, `/category/${subsub.slug}?subsub=true`);
+    } catch (err) {
+      console.error('Error resolving numeric category ID:', err);
+    }
+  }
+  next();
+});
+
 // Serve frontend with SEO injection for non-asset routes
 app.get('*', async (req, res, next) => {
   // If it looks like a static file request (has extension dot), let it fall through

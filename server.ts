@@ -148,7 +148,7 @@ Sitemap: https://zorando.com/sitemap.xml`);
     '/brands/lg': '/brands/high-tech-lg-algerie'
   };
 
-  app.use((req, res, next) => {
+  app.use(async (req, res, next) => {
     // Exact match for the path (ignores query string)
     const newUrl = redirects[req.path];
     if (newUrl) {
@@ -156,6 +156,24 @@ Sitemap: https://zorando.com/sitemap.xml`);
       const qs = req.url.includes('?') ? req.url.substring(req.url.indexOf('?')) : '';
       return res.redirect(301, newUrl + qs);
     }
+
+    // Dynamic redirects for numeric category IDs
+    if (req.path.match(/^\/category\/\d+$/)) {
+      const id = parseInt(req.path.split('/')[2]);
+      try {
+        let [cat] = await sql`SELECT slug FROM categories WHERE id = ${id}`;
+        if (cat && cat.slug) return res.redirect(301, `/category/${cat.slug}`);
+
+        let [subcat] = await sql`SELECT slug FROM subcategories WHERE id = ${id}`;
+        if (subcat && subcat.slug) return res.redirect(301, `/category/${subcat.slug}?sub=true`);
+
+        let [subsub] = await sql`SELECT slug FROM sub_subcategories WHERE id = ${id}`;
+        if (subsub && subsub.slug) return res.redirect(301, `/category/${subsub.slug}?subsub=true`);
+      } catch (err) {
+        console.error('Error resolving numeric category ID:', err);
+      }
+    }
+
     next();
   });
 

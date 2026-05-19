@@ -8,9 +8,10 @@ interface SEOProps {
   type?: string;
   schema?: any;
   exactTitle?: boolean;
+  keywords?: string;
 }
 
-export default function SEO({ title, description, image, url, type = 'website', schema, exactTitle = false }: SEOProps) {
+export default function SEO({ title, description, image, url, type = 'website', schema, exactTitle = false, keywords }: SEOProps) {
   const siteName = 'ZORANDO';
   const fullTitle = exactTitle ? title : `${title} | ${siteName}`;
   const defaultImage = 'https://zorando.com/og-image-fb.jpg';
@@ -21,6 +22,7 @@ export default function SEO({ title, description, image, url, type = 'website', 
     <Helmet>
       <title>{fullTitle}</title>
       <meta name="description" content={description} />
+      {keywords && <meta name="keywords" content={keywords} />}
       
       {/* Open Graph / Facebook */}
       <meta property="og:type" content={type} />

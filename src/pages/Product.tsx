@@ -513,6 +513,7 @@ export default function Product() {
       <SEO 
         title={product.seo_title || product.name || 'Produit'} 
         description={product.seo_description || (product.description ? product.description.substring(0, 150) + '...' : 'Achetez ce produit au meilleur prix.')} 
+        keywords={product.seo_keywords}
         image={product.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(product.name)}&background=random&size=800`}
         url={window.location.href}
         type="product"

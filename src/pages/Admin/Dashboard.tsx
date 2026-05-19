@@ -81,7 +81,7 @@ export default function AdminDashboard() {
   const [productForm, setProductForm] = useState({
     name: '', slug: '', sku: '', category_id: '', subcategory_id: '', sub_subcategory_id: '', brand_id: '', brand_name: '', price: '', promo_price: '', stock: '', weight: '', description: '', image: '', video_url: '',
     is_popular: false, is_best_seller: false, is_new: false, is_recommended: false, is_fast_delivery: false, is_active: true, images: [] as any[], variations: [] as any[],
-    features: '', key_points: '', faq_q1: '', faq_a1: '', faq_q2: '', faq_a2: '', seo_title: '', seo_description: '', main_image_alt: ''
+    features: '', key_points: '', faq_q1: '', faq_a1: '', faq_q2: '', faq_a2: '', seo_title: '', seo_description: '', seo_keywords: '', main_image_alt: ''
   });
   const [subcategoryForm, setSubcategoryForm] = useState({
     name: '', slug: '', category_id: '', image: ''
@@ -959,14 +959,14 @@ export default function AdminDashboard() {
         features: typeof product.features === 'string' ? product.features : (Array.isArray(product.features) ? product.features.map((f: any) => `${f.key}: ${f.value}`).join('\n') : ''),
         key_points: typeof product.key_points === 'string' ? product.key_points : (Array.isArray(product.key_points) ? product.key_points.join('\n') : ''),
         faq_q1: product.faq_q1 || '', faq_a1: product.faq_a1 || '', faq_q2: product.faq_q2 || '', faq_a2: product.faq_a2 || '',
-        seo_title: product.seo_title || '', seo_description: product.seo_description || '', main_image_alt: product.main_image_alt || ''
+        seo_title: product.seo_title || '', seo_description: product.seo_description || '', seo_keywords: product.seo_keywords || '', main_image_alt: product.main_image_alt || ''
       });
     } else {
       setEditingProduct(null);
       setProductForm({
         name: '', slug: '', sku: '', category_id: categories[0]?.id || '', subcategory_id: '', sub_subcategory_id: '', brand_id: '', brand_name: '', price: '', promo_price: '', stock: '', weight: '', description: '', image: '', video_url: '',
         is_popular: false, is_best_seller: false, is_new: false, is_recommended: false, is_fast_delivery: false, is_active: true, images: [], variations: [], features: '', key_points: '',
-        faq_q1: '', faq_a1: '', faq_q2: '', faq_a2: '', seo_title: '', seo_description: '', main_image_alt: ''
+        faq_q1: '', faq_a1: '', faq_q2: '', faq_a2: '', seo_title: '', seo_description: '', seo_keywords: '', main_image_alt: ''
       });
     }
     setIsModalOpen(true);
@@ -3601,6 +3601,18 @@ export default function AdminDashboard() {
                       ></textarea>
                       <p className="text-xs text-gray-400 mt-1">Le texte descriptif sous le titre dans Google.</p>
                     </div>
+                  </div>
+
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Mots-clés SEO (optionnel)</label>
+                    <input 
+                      type="text" 
+                      placeholder="Exemple : écouteurs bluetooth, hoco ew84, sans fil algérie, livraison rapide"
+                      className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500" 
+                      value={productForm.seo_keywords || ''} 
+                      onChange={e => setProductForm({...productForm, seo_keywords: e.target.value})} 
+                    />
+                    <p className="text-xs text-gray-400 mt-1">💡 Séparez par des virgules</p>
                   </div>
 
                   <div className="mb-4">

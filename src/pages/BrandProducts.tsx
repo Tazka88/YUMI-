@@ -53,7 +53,7 @@ export default function BrandProducts() {
   if (!brand) {
     return (
       <div className="container mx-auto px-4 py-16 text-center">
-        <SEO title="Marque introuvable" description="La marque demandée n'existe pas." />
+        <SEO title="Marque introuvable" description="La marque demandée n'existe pas." noindex={true} />
         <h1 className="text-xl md:text-2xl font-bold text-gray-900 mb-4 px-4">Marque introuvable</h1>
         <p className="text-gray-600 mb-8">La marque que vous recherchez n'existe pas ou a été supprimée.</p>
         <Link to="/brands" className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-3 rounded-md font-medium transition-colors">

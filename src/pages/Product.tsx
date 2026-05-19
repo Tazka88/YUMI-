@@ -51,7 +51,7 @@ export default function Product() {
   const [product, setProduct] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
   const [selectedImage, setSelectedImage] = useState<string>('');
-  const [selectedMedia, setSelectedMedia] = useState<{type: 'image' | 'video', url: string}>({type: 'image', url: ''});
+  const [selectedMedia, setSelectedMedia] = useState<{type: 'image' | 'video', url: string, alt_text?: string}>({type: 'image', url: '', alt_text: ''});
   const [selectedVariation, setSelectedVariation] = useState<any>(null);
   const [relatedProducts, setRelatedProducts] = useState<ProductType[]>([]);
   const [reviews, setReviews] = useState<any[]>([]);
@@ -138,7 +138,7 @@ export default function Product() {
         setProduct(data);
         const mainImage = data.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(data.name)}&background=random&size=800`;
         setSelectedImage(mainImage);
-        setSelectedMedia({type: 'image', url: mainImage});
+        setSelectedMedia({type: 'image', url: mainImage, alt_text: data.main_image_alt || data.name});
         
         // Increment view count
         fetch(`/api/products/${data.id}/view`, { method: 'POST', signal }).catch(() => {});
@@ -511,8 +511,8 @@ export default function Product() {
   return (
     <div className="container mx-auto px-4 py-8 pb-24 md:pb-8">
       <SEO 
-        title={product.name} 
-        description={product.description.substring(0, 150) + '...'} 
+        title={product.seo_title || product.name || 'Produit'} 
+        description={product.seo_description || (product.description ? product.description.substring(0, 150) + '...' : 'Achetez ce produit au meilleur prix.')} 
         image={product.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(product.name)}&background=random&size=800`}
         url={window.location.href}
         type="product"
@@ -562,7 +562,7 @@ export default function Product() {
                 <>
                   <img 
                     src={selectedMedia.url} 
-                    alt={product.name}
+                    alt={selectedMedia.alt_text || product.main_image_alt || product.name}
                     className="w-full h-full object-contain"
                     referrerPolicy="no-referrer"
                     fetchPriority="high"
@@ -614,18 +614,18 @@ export default function Product() {
             {(product.images?.length > 0 || product.video_url) && (
               <div className="flex gap-2 overflow-x-auto pb-2">
                 <button 
-                  onClick={() => setSelectedMedia({type: 'image', url: product.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(product.name)}&background=random&size=800`})}
+                  onClick={() => setSelectedMedia({type: 'image', url: product.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(product.name)}&background=random&size=800`, alt_text: product.main_image_alt || product.name})}
                   className={`w-20 h-20 flex-shrink-0 rounded-md overflow-hidden border-2 transition-colors bg-white p-1 ${selectedMedia.url === (product.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(product.name)}&background=random&size=800`) ? 'border-orange-500' : 'border-transparent'}`}
                 >
-                  <img src={product.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(product.name)}&background=random&size=800`} alt="Main" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
+                  <img src={product.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(product.name)}&background=random&size=800`} alt={product.main_image_alt || product.name} className="w-full h-full object-contain" referrerPolicy="no-referrer" />
                 </button>
                 {product.images?.map((img: any) => (
                   <button 
                     key={img.id}
-                    onClick={() => setSelectedMedia({type: 'image', url: img.image})}
+                    onClick={() => setSelectedMedia({type: 'image', url: img.image, alt_text: img.alt_text})}
                     className={`w-20 h-20 flex-shrink-0 rounded-md overflow-hidden border-2 transition-colors bg-white p-1 ${selectedMedia.url === img.image ? 'border-orange-500' : 'border-transparent'}`}
                   >
-                    <img src={img.image} alt="Thumbnail" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
+                    <img src={img.image} alt={img.alt_text || "Vue supplémentaire"} className="w-full h-full object-contain" referrerPolicy="no-referrer" />
                   </button>
                 ))}
                 {product.video_url && (() => {

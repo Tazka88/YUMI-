@@ -81,7 +81,7 @@ export default function AdminDashboard() {
   const [productForm, setProductForm] = useState({
     name: '', slug: '', sku: '', category_id: '', subcategory_id: '', sub_subcategory_id: '', brand_id: '', brand_name: '', price: '', promo_price: '', stock: '', weight: '', description: '', image: '', video_url: '',
     is_popular: false, is_best_seller: false, is_new: false, is_recommended: false, is_fast_delivery: false, is_active: true, images: [] as any[], variations: [] as any[],
-    features: '', key_points: '', faq_q1: '', faq_a1: '', faq_q2: '', faq_a2: ''
+    features: '', key_points: '', faq_q1: '', faq_a1: '', faq_q2: '', faq_a2: '', seo_title: '', seo_description: '', main_image_alt: ''
   });
   const [subcategoryForm, setSubcategoryForm] = useState({
     name: '', slug: '', category_id: '', image: ''
@@ -958,14 +958,15 @@ export default function AdminDashboard() {
         variations: parsedVariations,
         features: typeof product.features === 'string' ? product.features : (Array.isArray(product.features) ? product.features.map((f: any) => `${f.key}: ${f.value}`).join('\n') : ''),
         key_points: typeof product.key_points === 'string' ? product.key_points : (Array.isArray(product.key_points) ? product.key_points.join('\n') : ''),
-        faq_q1: product.faq_q1 || '', faq_a1: product.faq_a1 || '', faq_q2: product.faq_q2 || '', faq_a2: product.faq_a2 || ''
+        faq_q1: product.faq_q1 || '', faq_a1: product.faq_a1 || '', faq_q2: product.faq_q2 || '', faq_a2: product.faq_a2 || '',
+        seo_title: product.seo_title || '', seo_description: product.seo_description || '', main_image_alt: product.main_image_alt || ''
       });
     } else {
       setEditingProduct(null);
       setProductForm({
         name: '', slug: '', sku: '', category_id: categories[0]?.id || '', subcategory_id: '', sub_subcategory_id: '', brand_id: '', brand_name: '', price: '', promo_price: '', stock: '', weight: '', description: '', image: '', video_url: '',
         is_popular: false, is_best_seller: false, is_new: false, is_recommended: false, is_fast_delivery: false, is_active: true, images: [], variations: [], features: '', key_points: '',
-        faq_q1: '', faq_a1: '', faq_q2: '', faq_a2: ''
+        faq_q1: '', faq_a1: '', faq_q2: '', faq_a2: '', seo_title: '', seo_description: '', main_image_alt: ''
       });
     }
     setIsModalOpen(true);
@@ -1049,6 +1050,22 @@ export default function AdminDashboard() {
     }
     if (!productForm.price) {
       toast.error('Le prix est requis');
+      return;
+    }
+    if (!productForm.seo_title) {
+      toast.error('Le Titre SEO est requis');
+      return;
+    }
+    if (!productForm.seo_description) {
+      toast.error('La Meta Description est requise');
+      return;
+    }
+    if (productForm.image && !productForm.main_image_alt) {
+      toast.error('Le texte alternatif (Alt Text) de l\'image principale est requis');
+      return;
+    }
+    if (productForm.images && productForm.images.some(img => !img.alt_text)) {
+      toast.error('Le texte alternatif (Alt Text) de toutes les images supplémentaires est requis');
       return;
     }
 
@@ -3398,39 +3415,67 @@ export default function AdminDashboard() {
                 </div>
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-2">Image Principale</label>
-                  <div className="flex items-center gap-4">
+                  <div className="flex flex-col gap-2">
+                    <div className="flex items-center gap-4">
+                      {productForm.image && (
+                        <img src={productForm.image} alt="Preview" className="w-16 h-16 object-cover rounded border" />
+                      )}
+                      <label className="cursor-pointer bg-white border border-gray-300 px-4 py-2 rounded-md hover:bg-gray-50 flex items-center gap-2">
+                        <Upload size={18} />
+                        Télécharger une image
+                        <input type="file" className="hidden" accept="image/*" onClick={(e) => {
+                          if (!productForm.name) {
+                            e.preventDefault();
+                            toast.error('Veuillez saisir le titre du produit avant d\'ajouter une image (pour le renommer automatiquement en SEO).');
+                          }
+                        }} onChange={async (e) => {
+                          const customName = productForm.name ? `${toSlug(productForm.name)}-1` : undefined;
+                          const url = await handleFileUpload(e, customName);
+                          if (url) setProductForm({...productForm, image: url});
+                        }} />
+                      </label>
+                    </div>
                     {productForm.image && (
-                      <img src={productForm.image} alt="Preview" className="w-16 h-16 object-cover rounded border" />
+                      <input 
+                        type="text"
+                        placeholder="Texte alternatif (Alt Text) de l'image *ex: Chaussure Nike Air Max Rouge"
+                        required
+                        className="w-full text-sm px-3 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-orange-500"
+                        value={productForm.main_image_alt}
+                        onChange={(e) => setProductForm({...productForm, main_image_alt: e.target.value})}
+                      />
                     )}
-                    <label className="cursor-pointer bg-white border border-gray-300 px-4 py-2 rounded-md hover:bg-gray-50 flex items-center gap-2">
-                      <Upload size={18} />
-                      Télécharger une image
-                      <input type="file" className="hidden" accept="image/*" onClick={(e) => {
-                        if (!productForm.name) {
-                          e.preventDefault();
-                          toast.error('Veuillez saisir le titre du produit avant d\'ajouter une image (pour le renommer automatiquement en SEO).');
-                        }
-                      }} onChange={async (e) => {
-                        const customName = productForm.name ? `${toSlug(productForm.name)}-1` : undefined;
-                        const url = await handleFileUpload(e, customName);
-                        if (url) setProductForm({...productForm, image: url});
-                      }} />
-                    </label>
                   </div>
                 </div>
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-2">Images Supplémentaires</label>
-                  <div className="flex flex-wrap gap-4 mb-2">
+                  <div className="flex flex-col gap-4 mb-2">
                     {productForm.images.map((img, idx) => (
-                      <div key={idx} className="relative">
-                        <img src={img.url || img.image} alt="Extra" className="w-16 h-16 object-cover rounded border" />
-                        <button type="button" onClick={() => {
-                          const newImages = [...productForm.images];
-                          newImages.splice(idx, 1);
-                          setProductForm({...productForm, images: newImages});
-                        }} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1">
-                          <X size={12} />
-                        </button>
+                      <div key={idx} className="flex gap-4 items-center">
+                        <div className="relative">
+                          <img src={img.url || img.image} alt="Extra" className="w-16 h-16 object-cover rounded border" />
+                          <button type="button" onClick={() => {
+                            const newImages = [...productForm.images];
+                            newImages.splice(idx, 1);
+                            setProductForm({...productForm, images: newImages});
+                          }} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1">
+                            <X size={12} />
+                          </button>
+                        </div>
+                        <div className="flex-1">
+                          <input 
+                            type="text"
+                            placeholder="Texte alternatif (Alt Text) *ex: Vue de côté"
+                            required
+                            className="w-full text-sm px-3 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-orange-500"
+                            value={img.alt_text || ''}
+                            onChange={(e) => {
+                              const newImages = [...productForm.images];
+                              newImages[idx].alt_text = e.target.value;
+                              setProductForm({...productForm, images: newImages});
+                            }}
+                          />
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -3508,9 +3553,75 @@ export default function AdminDashboard() {
                     </div>
                   </div>
                 </div>
+                
+                <div className="md:col-span-2 border-t pt-4 mt-2">
+                  <div className="flex justify-between items-center mb-4">
+                    <h4 className="font-bold text-gray-800">SEO &amp; Indexation (Optimisation Google)</h4>
+                    <button 
+                      type="button" 
+                      onClick={() => {
+                        const title = productForm.name ? `${productForm.name} en Algérie | ZORANDO Prix Choquant` : '';
+                        const desc = productForm.name ? `Achetez ${productForm.name} au meilleur prix en Algérie. Livraison express 58 wilayas, paiement à la livraison. Découvrez les caractéristiques et avis.` : '';
+                        setProductForm({...productForm, seo_title: title.slice(0, 60), seo_description: desc.slice(0, 160)});
+                      }}
+                      className="px-3 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm rounded-md"
+                    >
+                      💡 Générer suggestions SEO
+                    </button>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div>
+                      <label className="flex justify-between text-sm font-medium text-gray-700 mb-2">
+                        Titre SEO * 
+                        <span className={`text-xs ${(productForm.seo_title || '').length > 60 ? 'text-red-500' : 'text-gray-400'}`}>{(productForm.seo_title || '').length}/60</span>
+                      </label>
+                      <input 
+                        type="text" 
+                        maxLength={60}
+                        required
+                        className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500" 
+                        value={productForm.seo_title || ''} 
+                        onChange={e => setProductForm({...productForm, seo_title: e.target.value})} 
+                      />
+                      <p className="text-xs text-gray-400 mt-1">Le titre bleu qui s'affiche sur Google.</p>
+                    </div>
+                    <div>
+                      <label className="flex justify-between text-sm font-medium text-gray-700 mb-2">
+                        Meta Description * 
+                        <span className={`text-xs ${(productForm.seo_description || '').length > 160 ? 'text-red-500' : 'text-gray-400'}`}>{(productForm.seo_description || '').length}/160</span>
+                      </label>
+                      <textarea 
+                        rows={3} 
+                        maxLength={160}
+                        required
+                        className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500" 
+                        value={productForm.seo_description || ''} 
+                        onChange={e => setProductForm({...productForm, seo_description: e.target.value})}
+                      ></textarea>
+                      <p className="text-xs text-gray-400 mt-1">Le texte descriptif sous le titre dans Google.</p>
+                    </div>
+                  </div>
+
+                  <div className="mb-4">
+                     <p className="text-sm font-medium text-gray-700 mb-2">Aperçu Google (Aperçu en direct)</p>
+                     <div className="p-4 border rounded-md bg-white">
+                        <div className="text-[14px] text-[#1a0dab] truncate whitespace-nowrap mb-1">
+                          {productForm.seo_title || "Titre du produit | ZORANDO"}
+                        </div>
+                        <div className="text-[13px] text-[#006621] truncate whitespace-nowrap mb-1">
+                          https://zorando.com/product/{productForm.slug || 'slug-du-produit'}
+                        </div>
+                        <div className="text-[13px] text-[#545454] leading-[1.4] line-clamp-2">
+                          {productForm.seo_description || "Achetez ce produit au meilleur prix en Algérie. Livraison rapide et paiement à la livraison."}
+                        </div>
+                     </div>
+                  </div>
+                </div>
               </div>
+            </div>
               
-              <div className="mb-6 flex flex-wrap gap-6">
+            <div className="mb-6 flex flex-wrap gap-6 px-6">
                 <label className="flex items-center gap-2 text-sm text-gray-700">
                   <input type="checkbox" className="rounded text-orange-500 focus:ring-orange-500" checked={productForm.is_popular} onChange={e => setProductForm({...productForm, is_popular: e.target.checked})} />
                   Produit Populaire
@@ -3542,7 +3653,6 @@ export default function AdminDashboard() {
                     Actif (En ligne)
                   </label>
                 </div>
-              </div>
               </div>
 
               <div className="flex justify-end gap-4 border-t border-gray-100 p-6 shrink-0 bg-gray-50 rounded-b-xl">

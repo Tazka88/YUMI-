@@ -95,8 +95,8 @@ const serveImageData = async (res: any, imageData: string, targetWidth?: number,
   res.status(404).json({ error: 'Invalid image format' });
 };
 
-const PRODUCT_COLS = `p.id, p.category_id, p.subcategory_id, p.sub_subcategory_id, p.brand_id, p.name, p.slug, p.description, p.price, p.promo_price, p.stock, CASE WHEN p.image LIKE 'data:image/%' THEN '/api/images/products/' || p.id || '/image/' || COALESCE(NULLIF(p.slug, ''), 'product') || '.webp?v=' || LENGTH(p.image) ELSE p.image END as image, p.video_url, p.is_popular, p.is_best_seller, p.is_new, p.is_recommended, p.is_fast_delivery, p.weight, p.is_active, p.features, p.key_points, p.faq_q1, p.faq_a1, p.faq_q2, p.faq_a2, p.variations, p.created_at`;
-const PRODUCT_IMAGES_COLS = `id, product_id, is_main, CASE WHEN image LIKE 'data:image/%' THEN '/api/images/product_images/' || id || '/image?v=' || LENGTH(image) ELSE image END as image`;
+const PRODUCT_COLS = `p.id, p.category_id, p.subcategory_id, p.sub_subcategory_id, p.brand_id, p.name, p.slug, p.description, p.price, p.promo_price, p.stock, CASE WHEN p.image LIKE 'data:image/%' THEN '/api/images/products/' || p.id || '/image/' || COALESCE(NULLIF(p.slug, ''), 'product') || '.webp?v=' || LENGTH(p.image) ELSE p.image END as image, p.video_url, p.is_popular, p.is_best_seller, p.is_new, p.is_recommended, p.is_fast_delivery, p.weight, p.is_active, p.features, p.key_points, p.faq_q1, p.faq_a1, p.faq_q2, p.faq_a2, p.variations, p.created_at, p.seo_title, p.seo_description`;
+const PRODUCT_IMAGES_COLS = `id, product_id, is_main, alt_text, CASE WHEN image LIKE 'data:image/%' THEN '/api/images/product_images/' || id || '/image?v=' || LENGTH(image) ELSE image END as image`;
 const CATEGORIES_COLS = `id, name, slug, CASE WHEN image LIKE 'data:image/%' THEN '/api/images/categories/' || id || '/image/' || COALESCE(NULLIF(slug, ''), 'category') || '.webp?v=' || LENGTH(image) ELSE image END as image, CASE WHEN slide_image LIKE 'data:image/%' THEN '/api/images/categories/' || id || '/slide_image/' || COALESCE(NULLIF(slug, ''), 'category') || '-slide.webp?v=' || LENGTH(slide_image) ELSE slide_image END as slide_image, CASE WHEN mobile_slide_image LIKE 'data:image/%' THEN '/api/images/categories/' || id || '/mobile_slide_image/' || COALESCE(NULLIF(slug, ''), 'category') || '-mobile-slide.webp?v=' || LENGTH(mobile_slide_image) ELSE mobile_slide_image END as mobile_slide_image`;
 const SLIDER_IMAGES_COLS = `id, category_id, position, is_active, title, description, button_text, button_link, created_at, CASE WHEN image_url LIKE 'data:image/%' THEN '/api/images/slider_images/' || id || '/image_url?v=' || LENGTH(image_url) ELSE image_url END as image_url, CASE WHEN mobile_image_url LIKE 'data:image/%' THEN '/api/images/slider_images/' || id || '/mobile_image_url?v=' || LENGTH(mobile_image_url) ELSE mobile_image_url END as mobile_image_url`;
 const BRANDS_COLS = `id, name, slug, description, seo_title, seo_description, h1_title, seo_content, CASE WHEN image LIKE 'data:image/%' THEN '/api/images/brands/' || id || '/image/' || COALESCE(NULLIF(slug, ''), 'brand') || '.webp?v=' || LENGTH(image) ELSE image END as image`;
@@ -704,8 +704,9 @@ router.get('/products/:slug', async (req, res) => {
     }
 
     const images = await sql`SELECT ${sql.unsafe(PRODUCT_IMAGES_COLS)} FROM product_images WHERE product_id = ${product.id}`;
-    product.images = images;
-    
+    product.images = images.filter((img: any) => !img.is_main);
+    const mainImgRow = images.find((img: any) => img.is_main);
+    product.main_image_alt = mainImgRow ? (mainImgRow.alt_text || '') : '';
     
     product.image = processImage('products', product.id, 'image', product.image);
     if (product.brand_image) product.brand_image = processImage('brands', product.brand_id, 'image', product.brand_image);
@@ -1348,7 +1349,9 @@ router.get('/admin/products', authenticate, async (req, res) => {
     if (productIds.length > 0) {
       const images = await sql`SELECT ${sql.unsafe(PRODUCT_IMAGES_COLS)} FROM product_images WHERE product_id IN ${sql(productIds)}`;
       products.forEach((p: any) => {
-        p.images = images.filter((img: any) => img.product_id === p.id);
+        p.images = images.filter((img: any) => img.product_id === p.id && !img.is_main);
+        const mainImgRow = images.find((img: any) => img.product_id === p.id && img.is_main);
+        p.main_image_alt = mainImgRow ? (mainImgRow.alt_text || '') : '';
       });
     }
     
@@ -1478,24 +1481,28 @@ function generateSlug(str: string): string {
 }
 
 router.post('/admin/products', authenticate, async (req, res) => {
-  const { category_id, subcategory_id, sub_subcategory_id, brand_id, brand_name, name, description, price, promo_price, stock, image, video_url, is_popular, is_best_seller, is_new, is_recommended, is_fast_delivery, weight, is_active, images, features, key_points, faq_q1, faq_a1, faq_q2, faq_a2, variations } = req.body;
+  const { category_id, subcategory_id, sub_subcategory_id, brand_id, brand_name, name, description, price, promo_price, stock, image, main_image_alt, video_url, is_popular, is_best_seller, is_new, is_recommended, is_fast_delivery, weight, is_active, images, features, key_points, faq_q1, faq_a1, faq_q2, faq_a2, variations, seo_title, seo_description } = req.body;
   
   try {
     const generatedSlug = generateSlug(name);
     
     const productId = await sql.begin(async (sql: any) => {
       const [info] = await sql`
-        INSERT INTO products (category_id, subcategory_id, sub_subcategory_id, brand_id, brand_name, name, slug, description, price, promo_price, stock, image, video_url, is_popular, is_best_seller, is_new, is_recommended, is_fast_delivery, weight, is_active, features, key_points, faq_q1, faq_a1, faq_q2, faq_a2, variations)
-        VALUES (${category_id || null}, ${subcategory_id || null}, ${sub_subcategory_id || null}, ${brand_id || null}, ${brand_name || null}, ${name || ''}, ${generatedSlug || ''}, ${description || null}, ${price || 0}, ${promo_price || null}, ${stock || 0}, ${image || null}, ${video_url || null}, ${is_popular ? true : false}, ${is_best_seller ? true : false}, ${is_new ? true : false}, ${is_recommended ? true : false}, ${is_fast_delivery ? true : false}, ${weight || null}, ${is_active !== undefined ? is_active : true}, ${features ? JSON.stringify(features) : null}::jsonb, ${key_points ? JSON.stringify(key_points) : null}::jsonb, ${faq_q1 || null}, ${faq_a1 || null}, ${faq_q2 || null}, ${faq_a2 || null}, ${variations ? JSON.stringify(variations) : null}::jsonb)
+        INSERT INTO products (category_id, subcategory_id, sub_subcategory_id, brand_id, brand_name, name, slug, description, price, promo_price, stock, image, video_url, is_popular, is_best_seller, is_new, is_recommended, is_fast_delivery, weight, is_active, features, key_points, faq_q1, faq_a1, faq_q2, faq_a2, variations, seo_title, seo_description)
+        VALUES (${category_id || null}, ${subcategory_id || null}, ${sub_subcategory_id || null}, ${brand_id || null}, ${brand_name || null}, ${name || ''}, ${generatedSlug || ''}, ${description || null}, ${price || 0}, ${promo_price || null}, ${stock || 0}, ${image || null}, ${video_url || null}, ${is_popular ? true : false}, ${is_best_seller ? true : false}, ${is_new ? true : false}, ${is_recommended ? true : false}, ${is_fast_delivery ? true : false}, ${weight || null}, ${is_active !== undefined ? is_active : true}, ${features ? JSON.stringify(features) : null}::jsonb, ${key_points ? JSON.stringify(key_points) : null}::jsonb, ${faq_q1 || null}, ${faq_a1 || null}, ${faq_q2 || null}, ${faq_a2 || null}, ${variations ? JSON.stringify(variations) : null}::jsonb, ${seo_title || null}, ${seo_description || null})
         RETURNING id
       `;
       
       const generatedSku = `PROD-${String(info.id).padStart(5, '0')}`;
       await sql`UPDATE products SET sku = ${generatedSku} WHERE id = ${info.id}`;
 
+      if (image) {
+         await sql`INSERT INTO product_images (product_id, image, is_main, alt_text) VALUES (${info.id}, ${image}, true, ${main_image_alt || null})`;
+      }
+
       if (images && Array.isArray(images)) {
         for (const img of images) {
-          await sql`INSERT INTO product_images (product_id, image, is_main) VALUES (${info.id}, ${img.url || img.image}, ${img.is_main ? true : false})`;
+          await sql`INSERT INTO product_images (product_id, image, is_main, alt_text) VALUES (${info.id}, ${img.url || img.image}, ${img.is_main ? true : false}, ${img.alt_text || null})`;
         }
       }
       return info.id;
@@ -1508,22 +1515,29 @@ router.post('/admin/products', authenticate, async (req, res) => {
 });
 
 router.put('/admin/products/:id', authenticate, async (req, res) => {
-  const { category_id, subcategory_id, sub_subcategory_id, brand_id, brand_name, name, slug, description, price, promo_price, stock, image, video_url, is_popular, is_best_seller, is_new, is_recommended, is_fast_delivery, weight, is_active, images, features, key_points, faq_q1, faq_a1, faq_q2, faq_a2, variations } = req.body;
+  const { category_id, subcategory_id, sub_subcategory_id, brand_id, brand_name, name, slug, description, price, promo_price, stock, image, main_image_alt, video_url, is_popular, is_best_seller, is_new, is_recommended, is_fast_delivery, weight, is_active, images, features, key_points, faq_q1, faq_a1, faq_q2, faq_a2, variations, seo_title, seo_description } = req.body;
   
   try {
     await sql.begin(async (sql: any) => {
       if (image && image.startsWith('/api/images/')) {
         await sql`
           UPDATE products 
-          SET category_id = ${category_id || null}, subcategory_id = ${subcategory_id || null}, sub_subcategory_id = ${sub_subcategory_id || null}, brand_id = ${brand_id || null}, brand_name = ${brand_name || null}, name = ${name || ''}, slug = ${slug || ''}, description = ${description || null}, price = ${price || 0}, promo_price = ${promo_price || null}, stock = ${stock || 0}, video_url = ${video_url || null}, is_popular = ${is_popular ? true : false}, is_best_seller = ${is_best_seller ? true : false}, is_new = ${is_new ? true : false}, is_recommended = ${is_recommended ? true : false}, is_fast_delivery = ${is_fast_delivery ? true : false}, weight = ${weight || null}, is_active = ${is_active !== undefined ? is_active : true}, features = ${features ? JSON.stringify(features) : null}::jsonb, key_points = ${key_points ? JSON.stringify(key_points) : null}::jsonb, faq_q1 = ${faq_q1 || null}, faq_a1 = ${faq_a1 || null}, faq_q2 = ${faq_q2 || null}, faq_a2 = ${faq_a2 || null}, variations = ${variations ? JSON.stringify(variations) : null}::jsonb
+          SET category_id = ${category_id || null}, subcategory_id = ${subcategory_id || null}, sub_subcategory_id = ${sub_subcategory_id || null}, brand_id = ${brand_id || null}, brand_name = ${brand_name || null}, name = ${name || ''}, slug = ${slug || ''}, description = ${description || null}, price = ${price || 0}, promo_price = ${promo_price || null}, stock = ${stock || 0}, video_url = ${video_url || null}, is_popular = ${is_popular ? true : false}, is_best_seller = ${is_best_seller ? true : false}, is_new = ${is_new ? true : false}, is_recommended = ${is_recommended ? true : false}, is_fast_delivery = ${is_fast_delivery ? true : false}, weight = ${weight || null}, is_active = ${is_active !== undefined ? is_active : true}, features = ${features ? JSON.stringify(features) : null}::jsonb, key_points = ${key_points ? JSON.stringify(key_points) : null}::jsonb, faq_q1 = ${faq_q1 || null}, faq_a1 = ${faq_a1 || null}, faq_q2 = ${faq_q2 || null}, faq_a2 = ${faq_a2 || null}, variations = ${variations ? JSON.stringify(variations) : null}::jsonb, seo_title = ${seo_title || null}, seo_description = ${seo_description || null}
           WHERE id = ${req.params.id}
         `;
       } else {
         await sql`
           UPDATE products 
-          SET category_id = ${category_id || null}, subcategory_id = ${subcategory_id || null}, sub_subcategory_id = ${sub_subcategory_id || null}, brand_id = ${brand_id || null}, brand_name = ${brand_name || null}, name = ${name || ''}, slug = ${slug || ''}, description = ${description || null}, price = ${price || 0}, promo_price = ${promo_price || null}, stock = ${stock || 0}, image = ${image || null}, video_url = ${video_url || null}, is_popular = ${is_popular ? true : false}, is_best_seller = ${is_best_seller ? true : false}, is_new = ${is_new ? true : false}, is_recommended = ${is_recommended ? true : false}, is_fast_delivery = ${is_fast_delivery ? true : false}, weight = ${weight || null}, is_active = ${is_active !== undefined ? is_active : true}, features = ${features ? JSON.stringify(features) : null}::jsonb, key_points = ${key_points ? JSON.stringify(key_points) : null}::jsonb, faq_q1 = ${faq_q1 || null}, faq_a1 = ${faq_a1 || null}, faq_q2 = ${faq_q2 || null}, faq_a2 = ${faq_a2 || null}, variations = ${variations ? JSON.stringify(variations) : null}::jsonb
+          SET category_id = ${category_id || null}, subcategory_id = ${subcategory_id || null}, sub_subcategory_id = ${sub_subcategory_id || null}, brand_id = ${brand_id || null}, brand_name = ${brand_name || null}, name = ${name || ''}, slug = ${slug || ''}, description = ${description || null}, price = ${price || 0}, promo_price = ${promo_price || null}, stock = ${stock || 0}, image = ${image || null}, video_url = ${video_url || null}, is_popular = ${is_popular ? true : false}, is_best_seller = ${is_best_seller ? true : false}, is_new = ${is_new ? true : false}, is_recommended = ${is_recommended ? true : false}, is_fast_delivery = ${is_fast_delivery ? true : false}, weight = ${weight || null}, is_active = ${is_active !== undefined ? is_active : true}, features = ${features ? JSON.stringify(features) : null}::jsonb, key_points = ${key_points ? JSON.stringify(key_points) : null}::jsonb, faq_q1 = ${faq_q1 || null}, faq_a1 = ${faq_a1 || null}, faq_q2 = ${faq_q2 || null}, faq_a2 = ${faq_a2 || null}, variations = ${variations ? JSON.stringify(variations) : null}::jsonb, seo_title = ${seo_title || null}, seo_description = ${seo_description || null}
           WHERE id = ${req.params.id}
         `;
+      }
+
+      const [existingMainImg] = await sql`SELECT id FROM product_images WHERE product_id = ${req.params.id} AND is_main = true`;
+      if (existingMainImg) {
+        await sql`UPDATE product_images SET alt_text = ${main_image_alt || null} WHERE id = ${existingMainImg.id}`;
+      } else if (image && !image.startsWith('/api/images/')) {
+        await sql`INSERT INTO product_images (product_id, image, is_main, alt_text) VALUES (${req.params.id}, ${image}, true, ${main_image_alt || null})`;
       }
 
       if (images && Array.isArray(images)) {
@@ -1536,7 +1550,7 @@ router.put('/admin/products/:id', authenticate, async (req, res) => {
             const imgId = imgData.split('/')[4];
             if (imgId) {
               imagesToKeep.push(imgId);
-              await sql`UPDATE product_images SET is_main = ${img.is_main ? true : false} WHERE id = ${imgId}`;
+              await sql`UPDATE product_images SET is_main = ${img.is_main ? true : false}, alt_text = ${img.alt_text || null} WHERE id = ${imgId}`;
             }
           } else if (imgData) {
             imagesToInsert.push(img);

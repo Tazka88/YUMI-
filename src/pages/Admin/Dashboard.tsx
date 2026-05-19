@@ -3560,9 +3560,22 @@ export default function AdminDashboard() {
                     <button 
                       type="button" 
                       onClick={() => {
-                        const title = productForm.name ? `${productForm.name} en Algérie | ZORANDO Prix Choquant` : '';
-                        const desc = productForm.name ? `Achetez ${productForm.name} au meilleur prix en Algérie. Livraison express 58 wilayas, paiement à la livraison. Découvrez les caractéristiques et avis.` : '';
-                        setProductForm({...productForm, seo_title: title.slice(0, 60), seo_description: desc.slice(0, 160)});
+                        let title = productForm.name ? `${productForm.name} en Algérie | ZORANDO` : '';
+                        let desc = productForm.name ? `Achetez ${productForm.name} au meilleur prix en Algérie. Livraison express 58 wilayas, paiement à la livraison.` : '';
+                        
+                        // Function to smartly truncate without cutting words completely
+                        const smartTruncate = (text: string, max: number) => {
+                          if (text.length <= max) return text;
+                          const truncated = text.substring(0, max);
+                          const lastSpaceIndex = truncated.lastIndexOf(' ');
+                          return lastSpaceIndex > 0 ? truncated.substring(0, lastSpaceIndex) + '...' : truncated + '...';
+                        };
+
+                        setProductForm({
+                          ...productForm, 
+                          seo_title: smartTruncate(title, 60), 
+                          seo_description: smartTruncate(desc, 157)
+                        });
                       }}
                       className="px-3 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm rounded-md"
                     >
@@ -3578,7 +3591,6 @@ export default function AdminDashboard() {
                       </label>
                       <input 
                         type="text" 
-                        maxLength={60}
                         required
                         className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500" 
                         value={productForm.seo_title || ''} 
@@ -3593,7 +3605,6 @@ export default function AdminDashboard() {
                       </label>
                       <textarea 
                         rows={3} 
-                        maxLength={160}
                         required
                         className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500" 
                         value={productForm.seo_description || ''} 

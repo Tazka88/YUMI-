@@ -8,7 +8,7 @@ import PageSettings from './PageSettings';
 import WilayasSettings from './WilayasSettings';
 import CommunesSettings from './CommunesSettings';
 import OfficesSettings from './OfficesSettings';
-import { FileText, MapPin, Search, LayoutGrid, List, Printer, Download, Truck, Building2, Mail, Navigation } from 'lucide-react';
+import { FileText, MapPin, Search, LayoutGrid, List, Printer, Download, Truck, Building2, Mail, Navigation, ChevronDown, ChevronRight } from 'lucide-react';
 import OrderKanban from './OrderKanban';
 import SliderImagesAdmin from './SliderImagesAdmin';
 
@@ -62,6 +62,7 @@ export default function AdminDashboard() {
   const [categories, setCategories] = useState<any[]>([]);
   const [brands, setBrands] = useState<any[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [expandedOrderId, setExpandedOrderId] = useState<number | null>(null);
   const [isSubcategoryModalOpen, setIsSubcategoryModalOpen] = useState(false);
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [isSubSubcategoryModalOpen, setIsSubSubcategoryModalOpen] = useState(false);
@@ -441,6 +442,34 @@ export default function AdminDashboard() {
       .catch(console.error);
   };
 
+  const updateOrderItemStatus = async (orderId: number, itemId: number, status: string) => {
+    const token = localStorage.getItem('adminToken');
+    const toastId = toast.loading('Mise à jour...');
+    try {
+      const res = await fetch(`/api/admin/orders/${orderId}/items/${itemId}/status`, {
+        method: 'PUT',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ status })
+      });
+      if (res.ok) {
+        toast.success('Statut mis à jour', { id: toastId });
+        
+        // Refresh orders to get updated total_amount
+        fetch('/api/admin/orders', { headers: { 'Authorization': `Bearer ${token}` }, signal: new AbortController().signal })
+          .then(res => res.json())
+          .then(data => { if (Array.isArray(data)) setOrders(data); })
+          .catch(console.error);
+      } else {
+        toast.error('Erreur lors de la mise à jour', { id: toastId });
+      }
+    } catch (err) {
+      toast.error('Erreur de connexion', { id: toastId });
+    }
+  };
+
   const deleteOrder = async (id: number) => {
     setConfirmModal({
       isOpen: true,
@@ -483,7 +512,7 @@ export default function AdminDashboard() {
         return;
       }
 
-      const itemsHtml = orderData.items.map((item: any) => `
+      const itemsHtml = orderData.items.filter((item: any) => item.status !== 'cancelled').map((item: any) => `
         <tr>
           <td style="padding: 10px; border-bottom: 1px solid #eee;">
             ${item.product_name}
@@ -628,7 +657,8 @@ export default function AdminDashboard() {
       if (!res.ok) throw new Error(orderData.error);
       
       const wilayaId = getDhdWilayaId(orderData.wilaya);
-      const productsNames = orderData.items?.map((i: any) => `${i.quantity}x ${i.product_name}`).join(', ') || 'Produit';
+      const activeItems = orderData.items?.filter((i: any) => i.status !== 'cancelled') || [];
+      const productsNames = activeItems.map((i: any) => `${i.quantity}x ${i.product_name}`).join(', ') || 'Produit';
 
       const cleanPhone = (orderData.customer_phone || '').replace(/\D/g, '');
 
@@ -788,7 +818,7 @@ export default function AdminDashboard() {
 
       // Generate HTML for all orders
       const allOrdersHtml = ordersData.map(orderData => {
-        const itemsHtml = orderData.items.map((item: any) => `
+        const itemsHtml = orderData.items.filter((item: any) => item.status !== 'cancelled').map((item: any) => `
           <tr>
             <td style="padding: 10px; border-bottom: 1px solid #eee;">
               ${item.product_name}
@@ -1987,7 +2017,8 @@ export default function AdminDashboard() {
                       (order.customer_name && order.customer_name.toLowerCase().includes(orderSearchTerm.toLowerCase())) ||
                       (order.customer_phone && order.customer_phone.includes(orderSearchTerm)))
                     ).map(order => (
-                      <tr key={order.id} className={`hover:bg-gray-50 ${selectedOrders.includes(order.id) ? 'bg-orange-50/50' : ''}`}>
+                      <React.Fragment key={order.id}>
+                      <tr className={`hover:bg-gray-50 ${selectedOrders.includes(order.id) ? 'bg-orange-50/50' : ''}`}>
                         <td className="px-6 py-4">
                           <input 
                             type="checkbox" 
@@ -1996,7 +2027,12 @@ export default function AdminDashboard() {
                             onChange={() => handleSelectOrder(order.id)}
                           />
                         </td>
-                        <td className="px-6 py-4 font-medium text-gray-900">{order.order_id || `#${order.id}`}</td>
+                        <td className="px-6 py-4 font-medium text-gray-900">
+                          <button onClick={() => setExpandedOrderId(expandedOrderId === order.id ? null : order.id)} className="flex items-center gap-1 hover:text-orange-600">
+                            {expandedOrderId === order.id ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                            {order.order_id || `#${order.id}`}
+                          </button>
+                        </td>
                       <td className="px-6 py-4">
                         <div className="font-medium text-gray-900">{order.customer_name}</div>
                         <div className="text-xs text-gray-500 truncate max-w-[150px]">{order.address}</div>
@@ -2043,6 +2079,56 @@ export default function AdminDashboard() {
                         </div>
                       </td>
                     </tr>
+                    {expandedOrderId === order.id && order.items && (
+                      <tr className="bg-gray-50">
+                        <td colSpan={8} className="px-6 py-4">
+                          <div className="border border-gray-200 rounded-lg bg-white overflow-hidden shadow-inner">
+                            <table className="w-full text-sm">
+                              <thead className="bg-gray-100">
+                                <tr>
+                                  <th className="px-4 py-2 text-left font-medium text-gray-600">Produit</th>
+                                  <th className="px-4 py-2 text-center font-medium text-gray-600">Qté</th>
+                                  <th className="px-4 py-2 text-right font-medium text-gray-600">P.U</th>
+                                  <th className="px-4 py-2 text-right font-medium text-gray-600">Total</th>
+                                  <th className="px-4 py-2 text-right font-medium text-gray-600">Statut</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-gray-100">
+                                {order.items.map((item: any) => (
+                                  <tr key={item.id} className={item.status === 'cancelled' ? 'opacity-50' : ''}>
+                                    <td className="px-4 py-3">
+                                      <div className="flex items-center gap-3">
+                                        {item.product_image && <img src={item.product_image} alt="" className="w-10 h-10 object-cover rounded border border-gray-200" />}
+                                        <div>
+                                          <div className="font-medium text-gray-900 line-clamp-1" title={item.product_name || 'Produit inconnu'}>
+                                            {item.product_name || 'Produit inconnu'}
+                                          </div>
+                                          {item.variation && <div className="text-xs text-gray-500">{item.variation}</div>}
+                                        </div>
+                                      </div>
+                                    </td>
+                                    <td className="px-4 py-3 text-center">{item.quantity}</td>
+                                    <td className="px-4 py-3 text-right">{formatPrice(item.price)}</td>
+                                    <td className="px-4 py-3 text-right font-medium">{formatPrice(item.price * item.quantity)}</td>
+                                    <td className="px-4 py-3 text-right flex justify-end">
+                                      <select 
+                                        value={item.status || 'active'}
+                                        onChange={(e) => updateOrderItemStatus(order.id, item.id, e.target.value)}
+                                        className={`px-2 py-1 rounded text-xs font-medium capitalize cursor-pointer focus:ring-2 focus:ring-orange-500 ${item.status === 'cancelled' ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'} border border-transparent hover:border-gray-300`}
+                                      >
+                                        <option value="active">Actif</option>
+                                        <option value="cancelled">Annulé</option>
+                                      </select>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                    </React.Fragment>
                   ))}
                 </tbody>
               </table>

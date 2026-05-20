@@ -1235,7 +1235,15 @@ router.get('/admin/email-logs', authenticate, async (req, res) => {
 
 router.get('/admin/orders', authenticate, async (req, res) => {
   try {
-    const orders = await sql`SELECT * FROM orders ORDER BY created_at DESC LIMIT 500`;
+    const orders = await sql`
+      SELECT o.*, 
+      (SELECT JSON_AGG(JSON_BUILD_OBJECT('id', oi.id, 'product_id', oi.product_id, 'quantity', oi.quantity, 'price', oi.price, 'variation', oi.variation, 'status', oi.status, 'product_name', p.name, 'product_image', p.image))
+       FROM order_items oi 
+       LEFT JOIN products p ON oi.product_id = p.id 
+       WHERE oi.order_id = o.id) as items
+      FROM orders o 
+      ORDER BY o.created_at DESC LIMIT 500
+    `;
     res.json(orders);
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch orders' });
@@ -1282,6 +1290,52 @@ router.put('/admin/orders/:id/status', authenticate, async (req, res) => {
     res.json({ message: 'Status updated' });
   } catch (err) {
     res.status(500).json({ error: 'Failed to update order status' });
+  }
+});
+
+router.put('/admin/orders/:orderId/items/:itemId/status', authenticate, async (req, res) => {
+  const { status } = req.body;
+  if (!status) return res.status(400).json({ error: 'Status is required' });
+
+  try {
+    await sql.begin(async (sql: any) => {
+      const [item] = await sql`SELECT * FROM order_items WHERE id = ${req.params.itemId} AND order_id = ${req.params.orderId}`;
+      if (!item) throw new Error('Order item not found');
+      
+      const oldStatus = item.status || 'active';
+      if (oldStatus === status) return; // No change
+
+      await sql`UPDATE order_items SET status = ${status} WHERE id = ${req.params.itemId}`;
+
+      // Recalculate order total
+      let priceChange = 0;
+      if (status === 'cancelled' && oldStatus !== 'cancelled') {
+        // We cancelled the item, subtract its price
+        priceChange = -(item.price * item.quantity);
+        
+        // Restore stock
+        if (item.product_id) {
+            await sql`UPDATE products SET stock = stock + ${item.quantity}, sales_count = GREATEST(0, COALESCE(sales_count, 0) - ${item.quantity}) WHERE id = ${item.product_id}`;
+        }
+      } else if (status !== 'cancelled' && oldStatus === 'cancelled') {
+        // We un-cancelled the item, add its price back 
+        priceChange = (item.price * item.quantity);
+        
+        // Deduct stock again
+        if (item.product_id) {
+            await sql`UPDATE products SET stock = GREATEST(0, stock - ${item.quantity}), sales_count = COALESCE(sales_count, 0) + ${item.quantity} WHERE id = ${item.product_id}`;
+        }
+      }
+
+      if (priceChange !== 0) {
+        await sql`UPDATE orders SET total_amount = GREATEST(0, total_amount + ${priceChange}) WHERE id = ${req.params.orderId}`;
+      }
+    });
+
+    res.json({ message: 'Order item status updated' });
+  } catch (err) {
+    console.error('Failed to update order item status:', err);
+    res.status(500).json({ error: 'Failed to update order item status', details: err instanceof Error ? err.message : String(err) });
   }
 });
 

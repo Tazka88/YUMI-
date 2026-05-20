@@ -294,6 +294,14 @@ export default function Checkout() {
     e.preventDefault();
     setIsSubmitting(true);
 
+    const phoneRegex = /^(0[567]\d{8}|(?:\+213|00213)[567]\d{8})$/;
+    const cleanPhone = formData.phone.replace(/\s+/g, '');
+    if (!phoneRegex.test(cleanPhone)) {
+      toast.error('Veuillez entrer un numéro de téléphone valide');
+      setIsSubmitting(false);
+      return;
+    }
+
     const isBureau = deliveryMode === 'bureau';
     const selectedOffice = isBureau ? offices.find(o => o.id === Number(officeId) || o.id === officeId) : null;
     const finalAddress = isBureau && selectedOffice ? `Point Relais: ${selectedOffice.name} - ${selectedOffice.address}` : formData.address;
@@ -509,11 +517,13 @@ export default function Checkout() {
                   <input 
                     type="tel" 
                     required
-                    pattern="[0-9]{10}"
                     className="w-full pl-10 pr-4 py-3 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-shadow"
                     placeholder="Ex: 0555000000"
                     value={formData.phone}
-                    onChange={e => setFormData({...formData, phone: e.target.value})}
+                    onChange={e => {
+                      const val = e.target.value.replace(/[^\d+]/g, '');
+                      setFormData({...formData, phone: val});
+                    }}
                   />
                 </div>
               </div>

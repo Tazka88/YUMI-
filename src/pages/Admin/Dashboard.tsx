@@ -1090,14 +1090,6 @@ export default function AdminDashboard() {
       toast.error('La Meta Description est requise');
       return;
     }
-    if (productForm.image && !productForm.main_image_alt) {
-      toast.error('Le texte alternatif (Alt Text) de l\'image principale est requis');
-      return;
-    }
-    if (productForm.images && productForm.images.some(img => !img.alt_text)) {
-      toast.error('Le texte alternatif (Alt Text) de toutes les images supplémentaires est requis');
-      return;
-    }
 
     const token = localStorage.getItem('adminToken');
     const url = editingProduct ? `/api/admin/products/${editingProduct.id}` : '/api/admin/products';
@@ -3524,8 +3516,7 @@ export default function AdminDashboard() {
                     {productForm.image && (
                       <input 
                         type="text"
-                        placeholder="Texte alternatif (Alt Text) de l'image *ex: Chaussure Nike Air Max Rouge"
-                        required
+                        placeholder="Texte alternatif (Alt Text) ex: Chaussure Nike Air Max Rouge (Optionnel)"
                         className="w-full text-sm px-3 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-orange-500"
                         value={productForm.main_image_alt}
                         onChange={(e) => setProductForm({...productForm, main_image_alt: e.target.value})}
@@ -3551,8 +3542,7 @@ export default function AdminDashboard() {
                         <div className="flex-1">
                           <input 
                             type="text"
-                            placeholder="Texte alternatif (Alt Text) *ex: Vue de côté"
-                            required
+                            placeholder="Texte alternatif (Alt Text) ex: Vue de côté (Optionnel)"
                             className="w-full text-sm px-3 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-orange-500"
                             value={img.alt_text || ''}
                             onChange={(e) => {

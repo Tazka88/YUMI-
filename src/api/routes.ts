@@ -1619,7 +1619,7 @@ router.put('/admin/products/:id', authenticate, async (req, res) => {
         
         for (const img of imagesToInsert) {
           let imgData = img.url || img.image;
-          await sql`INSERT INTO product_images (product_id, image, is_main) VALUES (${req.params.id}, ${imgData}, ${img.is_main ? true : false})`;
+          await sql`INSERT INTO product_images (product_id, image, is_main, alt_text) VALUES (${req.params.id}, ${imgData}, ${img.is_main ? true : false}, ${img.alt_text || null})`;
         }
       }
     });

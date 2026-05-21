@@ -2,6 +2,17 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Pencil, Trash2, Plus, X, Search, Check, Save, Upload } from 'lucide-react';
 import toast from 'react-hot-toast';
 
+const generateSlug = (text: string) => {
+  if (!text) return '';
+  return text
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '');
+};
+
 export default function BlogAdmin() {
   const [posts, setPosts] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
@@ -283,7 +294,7 @@ export default function BlogAdmin() {
                         <label className="block text-sm font-medium text-gray-700 mb-1">Titre de l'article *</label>
                         <input required type="text" className="w-full border-gray-300 rounded-lg p-3 border focus:ring-2 focus:ring-orange-500 text-lg font-medium" value={editingPost.title || ''} onChange={(e) => {
                             const val = e.target.value;
-                            setEditingPost({ ...editingPost, title: val, slug: val.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') });
+                            setEditingPost({ ...editingPost, title: val, slug: generateSlug(val) });
                         }} placeholder="Saisir le titre ici..." />
                     </div>
                     
@@ -311,7 +322,7 @@ export default function BlogAdmin() {
 
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Catégorie</label>
-                        <select className="w-full border-gray-300 rounded-lg p-2.5 border bg-white focus:ring-2 focus:ring-orange-500" value={editingPost.category_id || ''} onChange={(e) => setEditingPost({...editingPost, category_id: e.target.value ? parseInt(e.target.value) : null})}>
+                        <select className="w-full border-gray-300 rounded-lg p-2.5 border bg-white focus:ring-2 focus:ring-orange-500" value={editingPost.category_id || ''} onChange={(e) => setEditingPost({...editingPost, category_id: e.target.value === '' ? null : parseInt(e.target.value)})}>
                             <option value="">Aucune</option>
                             {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                         </select>
@@ -337,7 +348,7 @@ export default function BlogAdmin() {
                         <h4 className="font-semibold text-sm text-gray-900">SEO (Référencement)</h4>
                         <div>
                             <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">SEO Slug</label>
-                            <input type="text" className="w-full border-gray-300 rounded p-2 border font-mono text-xs focus:ring-1 focus:ring-orange-500 bg-white" value={editingPost.slug || ''} onChange={(e) => setEditingPost({...editingPost, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '')})} />
+                            <input type="text" className="w-full border-gray-300 rounded p-2 border font-mono text-xs focus:ring-1 focus:ring-orange-500 bg-white" value={editingPost.slug || ''} onChange={(e) => setEditingPost({...editingPost, slug: generateSlug(e.target.value)})} />
                         </div>
                         <div>
                             <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Meta Title</label>
@@ -378,12 +389,12 @@ export default function BlogAdmin() {
                       <label className="block text-sm font-medium text-gray-700 mb-1">Nom *</label>
                       <input required type="text" className="w-full border-gray-300 rounded-lg p-2.5 border focus:ring-2 focus:ring-orange-500" value={editingCategory.name || ''} onChange={(e) => {
                           const val = e.target.value;
-                          setEditingCategory({ ...editingCategory, name: val, slug: val.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') });
+                          setEditingCategory({ ...editingCategory, name: val, slug: generateSlug(val) });
                       }} />
                   </div>
                   <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Slug *</label>
-                      <input required type="text" className="w-full border-gray-300 rounded-lg p-2.5 border focus:ring-2 focus:ring-orange-500" value={editingCategory.slug || ''} onChange={(e) => setEditingCategory({...editingCategory, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '')})} />
+                      <input required type="text" className="w-full border-gray-300 rounded-lg p-2.5 border focus:ring-2 focus:ring-orange-500" value={editingCategory.slug || ''} onChange={(e) => setEditingCategory({...editingCategory, slug: generateSlug(e.target.value)})} />
                   </div>
                </div>
               <div className="mt-8 pt-4 flex justify-end">

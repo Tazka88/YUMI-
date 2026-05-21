@@ -1059,39 +1059,37 @@ router.post('/reviews/upload', upload.single('image'), async (req, res) => {
 
     const supabase = getSupabase();
     if (supabase) {
-      const { data: bucketData, error: bucketError } = await supabase.storage.getBucket('images');
-      if (bucketError && (bucketError.message.includes('not found') || bucketError.message.includes('does not exist') || (bucketError as any).status === 404 || bucketError.name === 'StorageApiError')) {
-        await supabase.storage.createBucket('images', { public: true });
+      try {
+        const { data: bucketData, error: bucketError } = await supabase.storage.getBucket('images');
+        if (bucketError && (bucketError.message.includes('not found') || bucketError.message.includes('does not exist') || (bucketError as any).status === 404 || bucketError.name === 'StorageApiError')) {
+          await supabase.storage.createBucket('images', { public: true });
+        }
+
+        const fileName = `reviews/${Date.now()}-${Math.random().toString(36).substring(7)}.${ext}`;
+        
+        const { data, error } = await supabase.storage
+          .from('images')
+          .upload(fileName, buffer, {
+            contentType,
+            cacheControl: '3600',
+            upsert: false
+          });
+
+        if (error) throw error;
+        
+        const { data: publicUrlData } = supabase.storage.from('images').getPublicUrl(fileName);
+        return res.json({ url: publicUrlData.publicUrl });
+      } catch (supabaseError) {
+        console.error('Supabase upload failed, falling back to base64:', supabaseError);
+        // Fallback to base64 below
       }
-
-      const fileName = `reviews/${Date.now()}-${Math.random().toString(36).substring(7)}.${ext}`;
-      
-      const { data, error } = await supabase.storage
-        .from('images')
-        .upload(fileName, buffer, {
-          contentType,
-          cacheControl: '3600',
-          upsert: false
-        });
-
-      if (error) throw error;
-      
-      const { data: publicUrlData } = supabase.storage.from('images').getPublicUrl(fileName);
-      return res.json({ url: publicUrlData.publicUrl });
     }
 
-    // Fallback to local storage if no Supabase
-    const fs = await import('fs');
-    const path = await import('path');
-    const uploadsDir = path.join(process.cwd(), 'uploads', 'reviews');
-    if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
-    
-    const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${ext}`;
-    fs.writeFileSync(path.join(uploadsDir, fileName), buffer);
-    
-    res.json({ url: `/uploads/reviews/${fileName}` });
+    // Fallback to base64 if Supabase is not configured or fails
+    const base64 = buffer.toString('base64');
+    res.json({ url: `data:${contentType};base64,${base64}` });
   } catch (err) {
-    console.error('Upload Error:', err);
+    console.error('Upload Error explicitly caught:', err);
     res.status(500).json({ error: 'Failed to upload image' });
   }
 });
@@ -1119,37 +1117,41 @@ router.post('/admin/upload', authenticate, upload.single('image'), async (req, r
     // If Supabase is configured, upload to Storage
     const supabase = getSupabase();
     if (supabase) {
-      // Ensure bucket exists
-      const { data: bucketData, error: bucketError } = await supabase.storage.getBucket('images');
-      if (bucketError && (bucketError.message.includes('not found') || bucketError.message.includes('does not exist') || (bucketError as any).status === 404 || bucketError.name === 'StorageApiError')) {
-        console.log('Bucket "images" not found, creating it...');
-        await supabase.storage.createBucket('images', { public: true });
+      try {
+        // Ensure bucket exists
+        const { data: bucketData, error: bucketError } = await supabase.storage.getBucket('images');
+        if (bucketError && (bucketError.message.includes('not found') || bucketError.message.includes('does not exist') || (bucketError as any).status === 404 || bucketError.name === 'StorageApiError')) {
+          console.log('Bucket "images" not found, creating it...');
+          await supabase.storage.createBucket('images', { public: true });
+        }
+        
+        const customName = req.body.customName ? req.body.customName.replace(/[^a-z0-9-]/g, '') : '';
+        const uniqueId = Math.random().toString(36).substring(7);
+        const fileName = customName 
+          ? `${customName}-${uniqueId}.${ext}`
+          : `${Date.now()}-${uniqueId}.${ext}`;
+        
+        const { data, error } = await supabase.storage
+          .from('images') // The user must create this bucket in Supabase
+          .upload(fileName, buffer, {
+            contentType,
+            cacheControl: '3600',
+            upsert: false
+          });
+
+        if (error) {
+          throw error;
+        }
+
+        const { data: publicUrlData } = supabase.storage
+          .from('images')
+          .getPublicUrl(fileName);
+
+        return res.json({ url: publicUrlData.publicUrl });
+      } catch (supabaseError) {
+        console.error('Supabase upload error, falling back to base64:', supabaseError);
+        // Fallback to base64 below
       }
-      
-      const customName = req.body.customName ? req.body.customName.replace(/[^a-z0-9-]/g, '') : '';
-      const uniqueId = Math.random().toString(36).substring(7);
-      const fileName = customName 
-        ? `${customName}-${uniqueId}.${ext}`
-        : `${Date.now()}-${uniqueId}.${ext}`;
-      
-      const { data, error } = await supabase.storage
-        .from('images') // The user must create this bucket in Supabase
-        .upload(fileName, buffer, {
-          contentType,
-          cacheControl: '3600',
-          upsert: false
-        });
-
-      if (error) {
-        console.error('Supabase upload error:', error);
-        return res.status(500).json({ error: 'Failed to upload image to Supabase' });
-      }
-
-      const { data: publicUrlData } = supabase.storage
-        .from('images')
-        .getPublicUrl(fileName);
-
-      return res.json({ url: publicUrlData.publicUrl });
     }
 
     // Fallback to base64 if Supabase is not configured

@@ -11,6 +11,7 @@ import OfficesSettings from './OfficesSettings';
 import { FileText, MapPin, Search, LayoutGrid, List, Printer, Download, Truck, Building2, Mail, Navigation, ChevronDown, ChevronRight } from 'lucide-react';
 import OrderKanban from './OrderKanban';
 import SliderImagesAdmin from './SliderImagesAdmin';
+import BlogAdmin from './BlogAdmin';
 
 export interface HomeSection {
   id: string;
@@ -1656,6 +1657,13 @@ export default function AdminDashboard() {
             Marques
           </button>
           <button 
+            onClick={() => setActiveTab('blog')}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-md transition-colors ${activeTab === 'blog' ? 'bg-orange-500 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white'}`}
+          >
+            <FileText size={20} />
+            Blog & Actualités
+          </button>
+          <button 
             onClick={() => setActiveTab('images')}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-md transition-colors ${activeTab === 'images' ? 'bg-orange-500 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white'}`}
           >
@@ -3013,6 +3021,10 @@ export default function AdminDashboard() {
 
         {activeTab === 'footer' && (
           <FooterSettings />
+        )}
+
+        {activeTab === 'blog' && (
+          <BlogAdmin />
         )}
 
         {activeTab === 'pages' && (

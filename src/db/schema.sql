@@ -358,3 +358,35 @@ CREATE POLICY "Users can manage their own orders" ON orders FOR ALL USING ((sele
 
 -- If you have a custom backend or edge functions doing admin tasks, you might want a service role policy or an admin policy.
 
+
+CREATE TABLE IF NOT EXISTS blog_categories (
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  slug VARCHAR(255) UNIQUE NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS blog_posts (
+  id SERIAL PRIMARY KEY,
+  category_id INTEGER REFERENCES blog_categories(id) ON DELETE SET NULL,
+  title VARCHAR(255) NOT NULL,
+  slug VARCHAR(255) UNIQUE NOT NULL,
+  excerpt TEXT,
+  content TEXT,
+  image_url TEXT,
+  status VARCHAR(20) DEFAULT 'draft',
+  seo_title VARCHAR(255),
+  seo_description TEXT,
+  published_at TIMESTAMP WITH TIME ZONE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+ALTER TABLE blog_categories ENABLE ROW LEVEL SECURITY;
+ALTER TABLE blog_posts ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Enable read access for all users" ON blog_categories;
+CREATE POLICY "Enable read access for all users" ON blog_categories FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Enable read access for all users" ON blog_posts;
+CREATE POLICY "Enable read access for all users" ON blog_posts FOR SELECT USING (true);

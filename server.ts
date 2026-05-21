@@ -73,6 +73,7 @@ Sitemap: https://zorando.com/sitemap.xml`);
       const products = await sql`SELECT slug FROM products`;
       const categories = await sql`SELECT slug FROM categories`;
       const brands = await sql`SELECT slug FROM brands`;
+      const posts = await sql`SELECT slug FROM blog_posts WHERE status = 'published'`;
       
       const baseUrl = `https://${req.get('host')}`;
       
@@ -81,6 +82,14 @@ Sitemap: https://zorando.com/sitemap.xml`);
       // Home
       xml += `  <url>\n    <loc>${baseUrl}/</loc>\n    <changefreq>daily</changefreq>\n    <priority>1.0</priority>\n  </url>\n`;
       
+      // Blog
+      xml += `  <url>\n    <loc>${baseUrl}/blog</loc>\n    <changefreq>daily</changefreq>\n    <priority>0.9</priority>\n  </url>\n`;
+
+      // Blog Posts
+      posts.forEach(post => {
+        xml += `  <url>\n    <loc>${baseUrl}/blog/${post.slug}</loc>\n    <changefreq>weekly</changefreq>\n    <priority>0.8</priority>\n  </url>\n`;
+      });
+
       // Categories
       categories.forEach(cat => {
         xml += `  <url>\n    <loc>${baseUrl}/category/${cat.slug}</loc>\n    <changefreq>weekly</changefreq>\n    <priority>0.8</priority>\n  </url>\n`;

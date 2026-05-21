@@ -16,6 +16,8 @@ const AdminLogin = React.lazy(() => import('./pages/Admin/Login'));
 const AdminDashboard = React.lazy(() => import('./pages/Admin/Dashboard'));
 const Brands = React.lazy(() => import('./pages/Brands'));
 const BrandProducts = React.lazy(() => import('./pages/BrandProducts'));
+const BlogList = React.lazy(() => import('./pages/Blog/BlogList'));
+const BlogPost = React.lazy(() => import('./pages/Blog/BlogPost'));
 const Page = React.lazy(() => import('./pages/Page'));
 
 import { AuthProvider } from './lib/AuthContext';
@@ -95,6 +97,8 @@ export default function App() {
           <Route path="account/profile" element={<ProtectedRoute><AccountLayout><Profile /></AccountLayout></ProtectedRoute>} />
           <Route path="account/notifications" element={<ProtectedRoute><AccountLayout><Notifications /></AccountLayout></ProtectedRoute>} />
           <Route path="auth/callback" element={<AuthCallback />} />
+          <Route path="blog" element={<BlogList />} />
+          <Route path="blog/:slug" element={<BlogPost />} />
           <Route path=":slug" element={<Page />} />
         </Route>
         <Route path="/admin-7xK9pL2q/login" element={<AdminLogin />} />

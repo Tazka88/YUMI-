@@ -1982,4 +1982,175 @@ router.delete('/admin/communes/:id', authenticate, async (req, res) => {
   }
 });
 
+// ==========================================
+// BLOG FRONT-END
+// ==========================================
+
+router.get('/blog/categories', async (req, res) => {
+  try {
+    const categories = await sql`SELECT * FROM blog_categories ORDER BY name ASC`;
+    res.json(categories);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch blog categories' });
+  }
+});
+
+router.get('/blog/posts', async (req, res) => {
+  try {
+    const { category, search, page = '1', limit = '9' } = req.query;
+    const pageNum = parseInt(page as string) || 1;
+    const limitNum = parseInt(limit as string) || 10;
+    const offset = (pageNum - 1) * limitNum;
+    
+    let conditions = [sql`status = 'published'`];
+    
+    if (category) {
+      conditions.push(sql`category_id = (SELECT id FROM blog_categories WHERE slug = ${category as string} LIMIT 1)`);
+    }
+    if (search) {
+      conditions.push(sql`(title ILIKE ${'%' + search + '%'} OR excerpt ILIKE ${'%' + search + '%'})`);
+    }
+
+    const whereClause = conditions.length > 0 
+      ? sql`WHERE ${conditions.reduce((acc, curr, idx) => idx === 0 ? curr : sql`${acc} AND ${curr}`, sql``)}`
+      : sql``;
+
+    const [totalCount] = await sql`SELECT COUNT(*) as count FROM blog_posts ${whereClause}`;
+    const posts = await sql`
+      SELECT p.*, c.name as category_name, c.slug as category_slug 
+      FROM blog_posts p 
+      LEFT JOIN blog_categories c ON p.category_id = c.id 
+      ${whereClause} 
+      ORDER BY p.published_at DESC NULLS LAST, p.created_at DESC 
+      LIMIT ${limitNum} OFFSET ${offset}
+    `;
+
+    res.json({ posts, totalCount: parseInt(totalCount.count) });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to fetch blog posts' });
+  }
+});
+
+router.get('/blog/posts/:slug', async (req, res) => {
+  try {
+    const [post] = await sql`
+      SELECT p.*, c.name as category_name, c.slug as category_slug 
+      FROM blog_posts p 
+      LEFT JOIN blog_categories c ON p.category_id = c.id 
+      WHERE p.slug = ${req.params.slug} AND p.status = 'published'
+    `;
+    if (!post) return res.status(404).json({ error: 'Post not found' });
+    
+    // get related posts
+    const related = await sql`
+      SELECT * FROM blog_posts
+      WHERE category_id = ${post.category_id} AND id != ${post.id} AND status = 'published'
+      ORDER BY published_at DESC NULLS LAST, created_at DESC
+      LIMIT 3
+    `;
+    post.related = related;
+
+    res.json(post);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch post' });
+  }
+});
+
+// ==========================================
+// BLOG ADMIN (CRUD)
+// ==========================================
+
+router.get('/admin/blog/categories', authenticate, async (req, res) => {
+  try {
+    const categories = await sql`SELECT * FROM blog_categories ORDER BY name ASC`;
+    res.json(categories);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed' });
+  }
+});
+
+router.post('/admin/blog/categories', authenticate, async (req, res) => {
+  try {
+    const { name, slug } = req.body;
+    const [cat] = await sql`INSERT INTO blog_categories (name, slug) VALUES (${name}, ${slug}) RETURNING id`;
+    res.json({ id: cat.id });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed' });
+  }
+});
+
+router.delete('/admin/blog/categories/:id', authenticate, async (req, res) => {
+  try {
+    await sql`DELETE FROM blog_categories WHERE id = ${req.params.id}`;
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Obsolete' });
+  }
+});
+
+router.get('/admin/blog/posts', authenticate, async (req, res) => {
+  try {
+    const posts = await sql`
+      SELECT p.*, c.name as category_name 
+      FROM blog_posts p 
+      LEFT JOIN blog_categories c ON p.category_id = c.id 
+      ORDER BY created_at DESC
+    `;
+    res.json(posts);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed' });
+  }
+});
+
+router.post('/admin/blog/posts', authenticate, async (req, res) => {
+  try {
+    const { category_id, title, slug, excerpt, content, image_url, status, seo_title, seo_description } = req.body;
+    const published_at = status === 'published' ? new Date().toISOString() : null;
+    const [p] = await sql`
+      INSERT INTO blog_posts (category_id, title, slug, excerpt, content, image_url, status, seo_title, seo_description, published_at)
+      VALUES (${category_id || null}, ${title}, ${slug}, ${excerpt}, ${content}, ${image_url}, ${status}, ${seo_title}, ${seo_description}, ${published_at})
+      RETURNING id
+    `;
+    res.json({ id: p.id });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to create post' });
+  }
+});
+
+router.put('/admin/blog/posts/:id', authenticate, async (req, res) => {
+  try {
+    const { category_id, title, slug, excerpt, content, image_url, status, seo_title, seo_description } = req.body;
+    const p = await sql`SELECT * FROM blog_posts WHERE id = ${req.params.id}`;
+    if (!p.length) return res.status(404).json({ error: 'Not found' });
+    
+    let published_at = p[0].published_at;
+    if (status === 'published' && !published_at) {
+        published_at = new Date().toISOString();
+    }
+
+    await sql`
+      UPDATE blog_posts SET 
+        category_id = ${category_id || null}, title = ${title}, slug = ${slug}, excerpt = ${excerpt}, 
+        content = ${content}, image_url = ${image_url}, status = ${status}, 
+        seo_title = ${seo_title}, seo_description = ${seo_description}, 
+        updated_at = CURRENT_TIMESTAMP,
+        published_at = ${published_at}
+      WHERE id = ${req.params.id}
+    `;
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to update post' });
+  }
+});
+
+router.delete('/admin/blog/posts/:id', authenticate, async (req, res) => {
+  try {
+    await sql`DELETE FROM blog_posts WHERE id = ${req.params.id}`;
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed' });
+  }
+});
+
 export default router;

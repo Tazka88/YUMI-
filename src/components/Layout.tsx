@@ -1,5 +1,5 @@
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
-import { ShoppingCart, Search, Menu, User, MessageCircle, X, Phone, LayoutDashboard, Facebook, Instagram, Youtube, Truck, MapPin, ChevronRight, HelpCircle, Package, ClipboardList, Heart, LogOut, LifeBuoy, RotateCcw, CreditCard } from 'lucide-react';
+import { ShoppingCart, Search, Menu, User, MessageCircle, X, Phone, LayoutDashboard, Facebook, Instagram, Youtube, Truck, MapPin, ChevronRight, HelpCircle, Package, ClipboardList, Heart, LogOut, LifeBuoy, RotateCcw, CreditCard, FileText } from 'lucide-react';
 import { useCartStore } from '../store/cartStore';
 import { useAuth } from '../lib/AuthContext';
 import React, { useState, useEffect } from 'react';
@@ -341,6 +341,12 @@ export default function Layout() {
                 </AnimatePresence>
               </div>
 
+              {/* Blog */}
+              <Link to="/blog" className="hidden lg:flex items-center gap-2 group transition-all p-1">
+                <FileText size={24} className="text-gray-800 group-hover:text-orange-600 transition-colors" />
+                <span className="text-sm font-bold text-gray-800 group-hover:text-orange-600">Blog</span>
+              </Link>
+
               {/* Help */}
               <div 
                 className="hidden lg:flex items-center gap-2 group transition-all cursor-pointer p-1 relative"
@@ -468,6 +474,17 @@ export default function Layout() {
                 <Link to="/account/register" onClick={() => setIsMenuOpen(false)} className="flex items-center justify-center px-4 py-2 border border-orange-600 text-orange-600 text-xs font-bold rounded-lg truncate">Inscription</Link>
               </div>
             )}
+
+            <div className="mb-6">
+              <Link 
+                to="/blog" 
+                className="flex items-center gap-3 py-3 px-4 bg-orange-50 rounded-xl text-orange-600 font-bold hover:bg-orange-100 transition-colors border border-orange-100"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                <FileText size={20} />
+                Notre Blog
+              </Link>
+            </div>
 
             <ul className="space-y-4">
               {categories.map(cat => (
@@ -600,6 +617,9 @@ export default function Layout() {
           <div>
             <h4 className="text-white font-bold mb-4 uppercase text-sm tracking-wider">À propos</h4>
             <ul className="space-y-2 text-sm">
+              <li>
+                <Link to="/blog" className="hover:text-orange-500 transition-colors">Notre Blog</Link>
+              </li>
               {footerLinks.filter(l => l.column_id === 2).map(link => (
                 <li key={link.id}>
                   {link.url.startsWith('http') ? (

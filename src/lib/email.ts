@@ -15,6 +15,7 @@ const logEmail = async (order_id: string | null, recipient: string, subject: str
 let cachedApiKey: string | null = null;
 let lastCacheTime = 0;
 const CACHE_TTL = 60000; // 1 minute
+let apiKeyPromise: Promise<string | null> | null = null;
 
 const getApiKey = async () => {
   const now = Date.now();
@@ -22,34 +23,45 @@ const getApiKey = async () => {
     return cachedApiKey;
   }
 
-  // Check settings first, as user-provided settings should take priority
-  try {
-    const [row] = await sql`SELECT value FROM settings WHERE key = 'resend_api_key'`;
-    if (row?.value && row.value.trim() !== '' && !row.value.includes('your_resend_api_key')) {
-      cachedApiKey = row.value.trim();
-      lastCacheTime = now;
-      return cachedApiKey;
-    }
-  } catch (err) {
-    console.warn('Warning: Could not fetch resend_api_key from settings table:', err);
+  if (apiKeyPromise) {
+    return apiKeyPromise;
   }
 
-  // Fallback to env
-  const envKey = process.env.RESEND_API_KEY;
-  if (envKey && 
-      envKey.trim() !== '' && 
-      envKey !== 're_your_resend_api_key' &&
-      !envKey.includes('your_resend_api_key')) {
-    cachedApiKey = envKey.trim();
-    lastCacheTime = now;
-    return cachedApiKey;
-  }
-  
-  return null;
+  apiKeyPromise = (async () => {
+    // Check settings first, as user-provided settings should take priority
+    try {
+      const [row] = await sql`SELECT value FROM settings WHERE key = 'resend_api_key'`;
+      if (row?.value && row.value.trim() !== '' && !row.value.includes('your_resend_api_key')) {
+        cachedApiKey = row.value.trim();
+        lastCacheTime = Date.now();
+        return cachedApiKey;
+      }
+    } catch (err) {
+      console.warn('Warning: Could not fetch resend_api_key from settings table:', err);
+    }
+
+    // Fallback to env
+    const envKey = process.env.RESEND_API_KEY;
+    if (envKey && 
+        envKey.trim() !== '' && 
+        envKey !== 're_your_resend_api_key' &&
+        !envKey.includes('your_resend_api_key')) {
+      cachedApiKey = envKey.trim();
+      lastCacheTime = Date.now();
+      return cachedApiKey;
+    }
+    
+    return null;
+  })().finally(() => {
+    apiKeyPromise = null;
+  });
+
+  return apiKeyPromise;
 };
 
 let cachedFromEmail: string | null = null;
 let lastFromCacheTime = 0;
+let fromEmailPromise: Promise<string | null> | null = null;
 
 const getFromEmail = async () => {
   const now = Date.now();
@@ -57,27 +69,37 @@ const getFromEmail = async () => {
     return cachedFromEmail;
   }
 
-  try {
-    const [row] = await sql`SELECT value FROM settings WHERE key = 'resend_from_email'`;
-    if (row?.value && row.value.trim() !== '') {
-      cachedFromEmail = row.value.trim();
-      lastFromCacheTime = now;
+  if (fromEmailPromise) {
+    return fromEmailPromise;
+  }
+
+  fromEmailPromise = (async () => {
+    try {
+      const [row] = await sql`SELECT value FROM settings WHERE key = 'resend_from_email'`;
+      if (row?.value && row.value.trim() !== '') {
+        cachedFromEmail = row.value.trim();
+        lastFromCacheTime = Date.now();
+        return cachedFromEmail;
+      }
+    } catch (err) {
+      // Ignore db error
+    }
+
+    if (process.env.RESEND_FROM_EMAIL) {
+      cachedFromEmail = process.env.RESEND_FROM_EMAIL.trim();
+      lastFromCacheTime = Date.now();
       return cachedFromEmail;
     }
-  } catch (err) {
-    // Ignore db error
-  }
 
-  if (process.env.RESEND_FROM_EMAIL) {
-    cachedFromEmail = process.env.RESEND_FROM_EMAIL.trim();
-    lastFromCacheTime = now;
-    return cachedFromEmail;
-  }
+    const defaultEmail = 'ZORANDO <onboarding@resend.dev>';
+    cachedFromEmail = defaultEmail;
+    lastFromCacheTime = Date.now();
+    return defaultEmail;
+  })().finally(() => {
+    fromEmailPromise = null;
+  });
 
-  const defaultEmail = 'ZORANDO <onboarding@resend.dev>';
-  cachedFromEmail = defaultEmail;
-  lastFromCacheTime = now;
-  return defaultEmail;
+  return fromEmailPromise;
 };
 
 export const sendOrderConfirmationEmail = async (orderId: string, customerName: string, customerEmail: string, totalAmount: number) => {

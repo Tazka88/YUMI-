@@ -192,7 +192,7 @@ export default function Product() {
         if (isProduction && typeof window !== 'undefined' && (window as any).fbq) {
           (window as any).fbq('track', 'ViewContent', {
             content_name: product.name,
-            content_ids: [product.sku ? product.sku.toString() : product.id.toString()],
+            content_ids: [product.id.toString()],
             content_type: 'product',
             value: safeValue,
             currency: 'DZD'
@@ -204,7 +204,7 @@ export default function Product() {
           eventId: eventId,
           customData: {
             content_name: product.name,
-            content_ids: [product.sku ? product.sku.toString() : product.id.toString()],
+            content_ids: [product.id.toString()],
             content_type: 'product',
             value: safeValue,
             currency: 'DZD'
@@ -313,7 +313,7 @@ export default function Product() {
         if (isProduction && typeof window !== 'undefined' && (window as any).fbq) {
           (window as any).fbq('track', 'AddToCart', {
             content_name: product.name,
-            content_ids: [product.sku ? product.sku.toString() : product.id.toString()],
+            content_ids: [product.id.toString()],
             content_type: 'product',
             value: safeValue,
             currency: 'DZD'
@@ -325,7 +325,7 @@ export default function Product() {
           eventId: eventId,
           customData: {
             content_name: product.name,
-            content_ids: [product.sku ? product.sku.toString() : product.id.toString()],
+            content_ids: [product.id.toString()],
             content_type: 'product',
             value: safeValue,
             currency: 'DZD'
@@ -447,8 +447,8 @@ export default function Product() {
     "name": product.name,
     "image": product.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(product.name)}&background=random&size=800`,
     "description": product.description,
-    "sku": product.sku ? product.sku.toString() : product.id.toString(),
-    "mpn": product.sku ? product.sku.toString() : product.id.toString(),
+    "sku": product.id.toString(),
+    "mpn": product.id.toString(),
     "category": product.category_name || "General",
     "brand": {
       "@type": "Brand",

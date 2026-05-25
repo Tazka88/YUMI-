@@ -1483,7 +1483,7 @@ router.get('/admin/export-meta-catalog', authenticate, async (req, res) => {
     const baseUrl = req.protocol + '://' + req.get('host');
     
     const rows = exportedProducts.map((p: any) => {
-      const id = formatField(p.sku || p.id);
+      const id = formatField(p.id);
       const title = formatField(String(p.name).substring(0, 200), true);
       
       // Description: normal text, no ALL CAPS

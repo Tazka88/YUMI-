@@ -51,6 +51,8 @@ const getApiKey = async () => {
       return cachedApiKey;
     }
     
+    if (cachedApiKey) return cachedApiKey; // Return stale cache if all else fails
+    
     return null;
   })().finally(() => {
     apiKeyPromise = null;
@@ -89,6 +91,10 @@ const getFromEmail = async () => {
       cachedFromEmail = process.env.RESEND_FROM_EMAIL.trim();
       lastFromCacheTime = Date.now();
       return cachedFromEmail;
+    }
+
+    if (cachedFromEmail && cachedFromEmail !== 'ZORANDO <onboarding@resend.dev>') {
+        return cachedFromEmail; // Return stale cache if all else fails
     }
 
     const defaultEmail = 'ZORANDO <onboarding@resend.dev>';

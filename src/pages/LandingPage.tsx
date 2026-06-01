@@ -83,7 +83,7 @@ export default function LandingPage() {
   const cleanImages = imagesList.filter(Boolean);
 
   const config = data.config || {};
-  const heroTitle = config.hero?.title || data.product_name.split(' ').slice(0,8).join(' ');
+  const heroTitle = config.hero?.title || data.product_name;
   const heroSub = config.hero?.subtitle || "Découvrez l'innovation qui va transformer votre quotidien.";
   
   const problem = config.problem || {
@@ -340,8 +340,8 @@ export default function LandingPage() {
             {cleanImages[0] && (
               <img src={cleanImages[0]} alt="Produit" className="w-14 h-14 rounded-full object-cover border border-gray-100 shadow-sm" />
             )}
-            <div className="truncate pr-4">
-              <div className="font-bold text-gray-900 truncate">{data.product_name}</div>
+            <div className="pr-4">
+              <div className="font-bold text-gray-900">{data.product_name}</div>
               <div className="text-sm font-semibold text-gray-600">
                 {data.product_promo_price ? (
                   <span><span className="text-black text-base">{data.product_promo_price} DA</span> <span className="line-through text-gray-400 text-xs ml-1">{data.product_price} DA</span></span>

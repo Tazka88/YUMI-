@@ -17,7 +17,9 @@ export default function LandingPagesAdmin() {
     try {
       setLoading(true);
       const [lpRes, prRes] = await Promise.all([
-        fetch('/api/admin/landing-pages'),
+        fetch('/api/admin/landing-pages', {
+          headers: { 'Authorization': `Bearer ${localStorage.getItem('adminToken')}` }
+        }),
         fetch('/api/products')
       ]);
 

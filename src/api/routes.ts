@@ -1606,6 +1606,15 @@ router.get('/landing-pages/:slug', async (req, res) => {
       WHERE lp.slug = ${slug}
     `;
     if (!landingPage) return res.status(404).json({ error: 'Landing page not found' });
+
+    const images = await sql`SELECT id, image, alt_text, is_main FROM product_images WHERE product_id = ${landingPage.product_id} ORDER BY is_main DESC, id ASC`;
+    images.forEach(img => {
+      img.image = processImage('product_images', img.id, 'image', img.image);
+    });
+    
+    landingPage.images = images;
+    landingPage.product_image = processImage('products', landingPage.product_id, 'image', landingPage.product_image);
+
     res.json(landingPage);
   } catch (err: any) {
     console.error('Failed to fetch landing page:', err);

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
-import { ShoppingCart, Star, CheckCircle } from 'lucide-react';
+import { ShoppingCart, Star, CheckCircle, ArrowRight, ChevronDown, ChevronUp } from 'lucide-react';
 import { useCartStore } from '../store/cartStore';
 
 export default function LandingPage() {
@@ -9,6 +9,7 @@ export default function LandingPage() {
   const navigate = useNavigate();
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [openFaq, setOpenFaq] = useState<number | null>(null);
   const addToCart = useCartStore((state) => state.addItem);
 
   useEffect(() => {
@@ -16,8 +17,7 @@ export default function LandingPage() {
       try {
         const res = await fetch(`/api/landing-pages/${slug}`);
         if (res.ok) {
-          const lpData = await res.json();
-          setData(lpData);
+          setData(await res.json());
         } else {
           navigate('/');
         }
@@ -65,94 +65,173 @@ export default function LandingPage() {
   }
   const cleanImages = imagesList.filter(Boolean);
 
-  const reviews = [
-    { name: "Yassine B.", text: "Produit authentique et qualité au top. La livraison a été hyper rapide !", rating: 5 },
-    { name: "Meriem A.", text: "Très satisfaite de mon achat. Je recommande cette boutique sérieuse.", rating: 5 },
-    { name: "Sofiane D.", text: "Super ! Exactement comme sur les photos. Le livreur était très gentil en plus.", rating: 5 }
+  const config = data.config || {};
+  const heroTitle = config.hero?.title || data.product_name.split(' ').slice(0,8).join(' ');
+  const heroSub = config.hero?.subtitle || "Découvrez l'innovation qui va transformer votre quotidien.";
+  
+  const problem = config.problem || {
+    title: "Marre des solutions qui ne durent pas ?",
+    description: "La plupart des produits sur le marché sont fragiles et ne répondent pas à vos attentes.",
+  };
+
+  const solution = config.solution || {
+    title: "Voici la solution ultime.",
+    description: "Nous avons repensé chaque détail pour vous offrir une expérience sans compromis.",
+  };
+
+  const benefits = config.benefits || [
+    { title: "Design Premium", desc: "Matériaux haut de gamme pour une longévité maximale." },
+    { title: "Performance", desc: "Des résultats rapides et fiables à chaque utilisation." },
+    { title: "Facilité", desc: "Pensé pour être incroyablement intuitif." }
   ];
 
-  // Truncate product name if too long to make it punchy for the hero
-  const words = data.product_name.split(' ');
-  const heroName = words.slice(0, 8).join(' ') + (words.length > 8 ? '...' : '');
+  const reviews = config.reviews || [
+    { name: "Amine K.", text: "C'est exactement ce que je cherchais. La qualité est impressionnante.", rating: 5 },
+    { name: "Sarah M.", text: "Livraison rapide et produit conforme. Je recommande !", rating: 5 },
+    { name: "Karim D.", text: "Le meilleur investissement que j'ai fait cette année.", rating: 5 }
+  ];
+
+  const faqs = config.faq || [
+    { q: "Quels sont les délais de livraison ?", a: "Nous livrons partout en Algérie en un temps record (24h à 48h selon la wilaya)." },
+    { q: "Puis-je payer à la livraison ?", a: "Oui absolument, vous ne payez que lorsque vous recevez le produit en main propre." }
+  ];
 
   return (
-    <div className="min-h-screen bg-black text-white font-sans pb-24 pt-16">
+    <div className="min-h-screen bg-[#fafafa] text-gray-900 font-sans selection:bg-black selection:text-white pb-24 md:pb-0">
       <Helmet>
         <title>{data.product_name} | Zorando</title>
       </Helmet>
 
       {/* HEADER FIXE */}
-      <header className="fixed top-0 left-0 right-0 z-40 bg-black border-b border-gray-800 h-16 flex items-center justify-between px-4 lg:px-8">
-        <div className="font-black text-2xl tracking-tighter text-white uppercase">ZORANDO</div>
+      <header className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-xl border-b border-gray-100 h-16 flex items-center justify-between px-4 lg:px-8">
+        <div className="font-black text-2xl tracking-tighter text-black uppercase">ZORANDO</div>
         <button 
           onClick={handleBuyNow} 
-          className="bg-yellow-500 hover:bg-yellow-400 active:scale-95 transition-transform text-black font-bold px-4 py-2 rounded-lg text-sm flex items-center gap-2 uppercase tracking-wide shadow-md"
+          className="bg-black hover:bg-gray-900 active:scale-95 transition-transform text-white font-bold px-5 py-2 rounded-full text-sm flex items-center gap-2 shadow-lg shadow-black/10"
         >
           Commander
         </button>
       </header>
 
-      {/* HERO SECTION */}
-      <section className="px-4 py-8 md:py-12 text-center flex flex-col items-center">
-        <div className="inline-flex items-center gap-2 bg-red-600 text-white text-[10px] md:text-sm font-black uppercase tracking-widest px-4 py-2 rounded-full mb-6 animate-pulse">
+      {/* HERO SECTION APPLE-STYLE */}
+      <section className="pt-32 pb-16 px-4 md:pt-40 md:pb-24 text-center flex flex-col items-center bg-white">
+        <div className="inline-flex items-center gap-2 text-red-600 text-[10px] md:text-xs font-bold uppercase tracking-widest px-4 py-1.5 rounded-full border border-red-100 bg-red-50 mb-8 animate-pulse">
           ⚡ Offre Limitée
         </div>
-        <h1 className="text-3xl md:text-5xl font-black mb-6 leading-tight max-w-3xl mx-auto uppercase">
-          {heroName}
-        </h1>
         
-        <div className="mb-8 flex flex-col items-center gap-1">
+        <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6 leading-tight max-w-4xl mx-auto tracking-tight text-black">
+          {heroTitle}
+        </h1>
+        <p className="text-lg md:text-2xl text-gray-500 max-w-2xl mx-auto mb-10 font-medium tracking-tight">
+          {heroSub}
+        </p>
+        
+        <div className="mb-10 flex flex-col items-center gap-2">
            {data.product_promo_price ? (
-             <>
-               <span className="text-gray-500 line-through text-lg md:text-xl font-medium">{data.product_price} DA</span>
-               <span className="text-5xl md:text-6xl font-black text-yellow-500 drop-shadow-md">{data.product_promo_price} DA</span>
-             </>
+             <div className="flex items-end gap-3 justify-center">
+               <span className="text-gray-400 line-through text-xl md:text-2xl font-semibold mb-1">{data.product_price} DA</span>
+               <span className="text-5xl md:text-6xl font-bold text-black tracking-tight">{data.product_promo_price} DA</span>
+             </div>
            ) : (
-             <span className="text-5xl md:text-6xl font-black text-yellow-500 drop-shadow-md">{data.product_price} DA</span>
+             <span className="text-5xl md:text-6xl font-bold text-black tracking-tight">{data.product_price} DA</span>
            )}
         </div>
 
         <button 
           onClick={handleBuyNow}
-          className="w-full max-w-sm bg-yellow-500 hover:bg-yellow-400 text-black font-black text-xl px-8 py-5 rounded-xl uppercase tracking-wider mb-4 shadow-[0_0_30px_rgba(234,179,8,0.5)] flex justify-center items-center gap-3 transform active:scale-95 transition-transform"
+          className="w-full max-w-sm bg-black hover:bg-gray-900 text-white font-bold text-lg md:text-xl px-8 py-5 rounded-full shadow-2xl shadow-black/20 flex justify-center items-center gap-3 transform active:scale-95 transition-all mb-6"
         >
-          <ShoppingCart size={28} />
-          Commander Maintenant
+          Commander Maintenant <ArrowRight size={20} />
         </button>
-        <div className="flex items-center justify-center gap-2 text-gray-300 text-sm font-bold bg-white/5 py-2 px-4 rounded-full">
-          <CheckCircle size={18} className="text-green-500" />
-          Paiement à la livraison
+        <div className="flex items-center justify-center gap-2 text-gray-500 text-sm font-medium">
+          <CheckCircle size={16} className="text-green-500" />
+          Paiement à la livraison garanti
         </div>
       </section>
 
-      {/* FULL WIDTH IMAGES */}
-      <section className="w-full bg-black max-w-3xl mx-auto flex flex-col">
-          {cleanImages.map((src: string, idx: number) => (
-            <img 
-              key={idx} 
-              src={src} 
-              alt={`${data.product_name} - Vue ${idx + 1}`} 
-              className="w-full h-auto block m-0 p-0"
-              loading={idx === 0 ? "eager" : "lazy"}
-            />
-          ))}
+      {/* FIRST IMAGE FULL WIDTH */}
+      {cleanImages.length > 0 && (
+        <section className="w-full bg-white pb-20">
+          <div className="max-w-6xl mx-auto px-4">
+            <div className="rounded-[2.5rem] overflow-hidden shadow-2xl border border-gray-100">
+              <img 
+                src={cleanImages[0]} 
+                alt={`${data.product_name} - Vue principale`} 
+                className="w-full h-auto object-cover transform hover:scale-105 transition-transform duration-700"
+              />
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* PROBLEM & SOLUTION SECTION */}
+      <section className="py-32 bg-black text-white px-4 text-center">
+        <div className="max-w-4xl mx-auto">
+          <h2 className="text-3xl md:text-5xl font-bold mb-6 tracking-tight text-gray-500">
+            {problem.title}
+          </h2>
+          <p className="text-xl md:text-2xl font-medium text-gray-400 mb-20 max-w-2xl mx-auto leading-relaxed">
+            {problem.description}
+          </p>
+          
+          <h2 className="text-4xl md:text-6xl font-bold mb-8 tracking-tight text-white leading-tight">
+            {solution.title}
+          </h2>
+          <p className="text-xl md:text-3xl font-medium text-gray-300 max-w-3xl mx-auto leading-relaxed">
+            {solution.description}
+          </p>
+        </div>
       </section>
 
-      {/* REVIEWS */}
-      <section className="py-16 bg-white text-black px-4">
-        <div className="max-w-2xl mx-auto">
-          <h2 className="text-3xl font-black text-center mb-10 uppercase tracking-tight text-gray-900">Avis Clients</h2>
-          <div className="flex flex-col gap-6">
-            {reviews.map((rev, idx) => (
-              <div key={idx} className="bg-gray-50 p-6 rounded-2xl border border-gray-200 shadow-sm">
-                <div className="flex text-yellow-500 mb-3">
-                  {[...Array(rev.rating)].map((_, i) => <Star key={i} size={18} fill="currentColor" />)}
+      {/* BENEFITS BENTO GRID */}
+      <section className="py-32 bg-[#fafafa] px-4">
+        <div className="max-w-6xl mx-auto">
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {benefits.map((ben: any, idx: number) => (
+              <div key={idx} className="bg-white p-10 rounded-[2rem] shadow-sm border border-gray-100 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+                <div className="w-14 h-14 bg-black text-white rounded-2xl flex items-center justify-center mb-6">
+                  <Star size={24} />
                 </div>
-                <p className="text-gray-800 font-medium mb-4 text-base leading-relaxed">"{rev.text}"</p>
-                <div className="flex justify-between items-end border-t border-gray-200 pt-3">
-                  <div className="font-bold text-gray-900 text-lg">{rev.name}</div>
-                  <div className="text-xs text-green-600 flex items-center gap-1.5 font-bold uppercase tracking-wide">
-                    <CheckCircle size={14} strokeWidth={3} /> Acheteur vérifié
+                <h3 className="text-2xl font-bold mb-4 text-black">{ben.title}</h3>
+                <p className="text-gray-500 text-lg leading-relaxed">{ben.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* IMMERSIVE GALLERY */}
+      {cleanImages.length > 1 && (
+        <section className="w-full bg-black flex flex-col">
+            {cleanImages.slice(1).map((src: string, idx: number) => (
+              <img 
+                key={idx} 
+                src={src} 
+                alt={`${data.product_name} - Galerie ${idx + 2}`} 
+                className="w-full h-auto block m-0 p-0 opacity-90 transition-opacity duration-500"
+                loading="lazy"
+              />
+            ))}
+        </section>
+      )}
+
+      {/* REVIEWS */}
+      <section className="py-32 bg-white px-4">
+        <div className="max-w-5xl mx-auto">
+          <h2 className="text-4xl md:text-5xl font-bold text-center mb-20 tracking-tight text-black">
+            L'avis de nos clients
+          </h2>
+          <div className="grid md:grid-cols-3 gap-8">
+            {reviews.map((rev: any, idx: number) => (
+              <div key={idx} className="flex flex-col items-center text-center p-10 bg-[#fafafa] rounded-[2rem] border border-gray-100">
+                <div className="flex text-yellow-400 mb-6">
+                  {[...Array(rev.rating || 5)].map((_, i) => <Star key={i} size={20} fill="currentColor" />)}
+                </div>
+                <p className="text-gray-900 font-medium mb-8 text-lg leading-relaxed flex-grow">"{rev.text}"</p>
+                <div className="mt-auto">
+                  <div className="font-bold text-black">{rev.name}</div>
+                  <div className="text-sm text-gray-500 flex items-center justify-center gap-1.5 mt-2 font-medium">
+                    <CheckCircle size={14} className="text-green-500" /> Acheteur vérifié
                   </div>
                 </div>
               </div>
@@ -161,64 +240,76 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* FINAL PRICE & BENEFITS */}
-      <section className="py-16 bg-black px-4 border-t border-gray-800">
-        <div className="max-w-md mx-auto flex flex-col items-center text-center">
-           <h2 className="text-3xl font-black mb-8 uppercase text-white tracking-tight">Récapitulatif de l'offre</h2>
-           
-           <div className="bg-gradient-to-b from-gray-800 to-gray-900 w-full p-8 rounded-3xl mb-8 border border-gray-700 shadow-2xl">
-              <div className="text-yellow-500 font-black text-5xl mb-8 filter drop-shadow-md">
-                {data.product_promo_price || data.product_price} DA
+      {/* FAQ */}
+      <section className="py-32 bg-[#fafafa] px-4">
+        <div className="max-w-3xl mx-auto">
+          <h2 className="text-4xl md:text-5xl font-bold text-center mb-20 tracking-tight text-black">
+            Questions Fréquentes
+          </h2>
+          <div className="space-y-4">
+            {faqs.map((faq: any, idx: number) => (
+              <div key={idx} className="bg-white rounded-[1.5rem] border border-gray-100 overflow-hidden shadow-sm transition-all hover:shadow-md">
+                <button 
+                  onClick={() => setOpenFaq(openFaq === idx ? null : idx)}
+                  className="w-full px-8 py-6 flex justify-between items-center text-left"
+                >
+                  <span className="font-bold text-lg md:text-xl text-black pr-8">{faq.q}</span>
+                  {openFaq === idx ? <ChevronUp size={24} className="text-gray-400 flex-shrink-0" /> : <ChevronDown size={24} className="text-gray-400 flex-shrink-0" />}
+                </button>
+                {openFaq === idx && (
+                  <div className="px-8 pb-6 text-gray-500 text-lg leading-relaxed">
+                    {faq.a}
+                  </div>
+                )}
               </div>
-              <ul className="space-y-5 text-left inline-block w-full">
-                <li className="flex items-center gap-4 text-white font-bold text-base md:text-lg">
-                  <CheckCircle size={24} className="text-yellow-500 flex-shrink-0" /> Paiement à la réception
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* FINAL OFFER SECTION */}
+      <section className="py-32 bg-black px-4 relative overflow-hidden">
+         {/* Subtle glowing effect */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-[800px] h-[800px] bg-white opacity-5 blur-[120px] rounded-full pointer-events-none"></div>
+        <div className="max-w-2xl mx-auto flex flex-col items-center text-center relative z-10">
+           <h2 className="text-5xl md:text-6xl font-bold mb-6 text-white tracking-tight">Passez à l'action.</h2>
+           <p className="text-xl md:text-2xl text-gray-400 mb-16 font-medium">Ne manquez pas cette opportunité exclusive.</p>
+           
+           <div className="bg-white/5 backdrop-blur-2xl border border-white/10 w-full p-12 md:p-16 rounded-[3rem] mb-12 shadow-2xl">
+              <div className="text-white font-bold text-6xl md:text-7xl tracking-tighter mb-10">
+                {data.product_promo_price || data.product_price} <span className="text-2xl md:text-3xl text-gray-400">DA</span>
+              </div>
+              <ul className="space-y-6 text-left inline-block w-full max-w-sm">
+                <li className="flex items-center gap-4 text-white font-medium text-lg">
+                  <CheckCircle size={24} className="text-green-400 flex-shrink-0" /> Paiement à la réception
                 </li>
-                <li className="flex items-center gap-4 text-white font-bold text-base md:text-lg">
-                  <CheckCircle size={24} className="text-yellow-500 flex-shrink-0" /> Livraison à domicile
+                <li className="flex items-center gap-4 text-white font-medium text-lg">
+                  <CheckCircle size={24} className="text-green-400 flex-shrink-0" /> Livraison à domicile
                 </li>
-                <li className="flex items-center gap-4 text-white font-bold text-base md:text-lg">
-                  <CheckCircle size={24} className="text-yellow-500 flex-shrink-0" /> Qualité supérieure garantie
-                </li>
-                <li className="flex items-center gap-4 text-white font-bold text-base md:text-lg">
-                  <CheckCircle size={24} className="text-yellow-500 flex-shrink-0" /> Service client 7j/7
+                <li className="flex items-center gap-4 text-white font-medium text-lg">
+                  <CheckCircle size={24} className="text-green-400 flex-shrink-0" /> Qualité supérieure garantie
                 </li>
               </ul>
            </div>
 
            <button 
              onClick={handleBuyNow}
-             className="w-full bg-yellow-500 hover:bg-yellow-400 text-black font-black text-2xl px-8 py-6 rounded-2xl uppercase tracking-wider shadow-[0_0_30px_rgba(234,179,8,0.4)] flex justify-center items-center gap-3 transform active:scale-95 transition-transform"
+             className="w-full max-w-md bg-white hover:bg-gray-100 text-black font-bold text-xl px-8 py-6 rounded-full shadow-2xl shadow-white/10 flex justify-center items-center gap-3 transform active:scale-95 transition-transform"
            >
-             <ShoppingCart size={32} />
-             Je Commande
+             Je Commande Maintenant
            </button>
         </div>
       </section>
 
-      {/* FIXED BOTTOM BUTTON */}
-      <div className="fixed bottom-0 left-0 right-0 p-3 bg-black/95 backdrop-blur-md border-t border-gray-800 z-50">
-        <div className="max-w-2xl mx-auto">
-          <button 
-            onClick={handleBuyNow}
-            className="w-full bg-yellow-500 hover:bg-yellow-400 text-black font-black text-xl px-4 py-4 rounded-xl uppercase tracking-widest shadow-[0_0_20px_rgba(234,179,8,0.5)] flex justify-center items-center gap-3 transform active:scale-95 transition-transform animate-bounce-short"
-          >
-            <ShoppingCart size={24} />
-            Commander Maintenant
-          </button>
-        </div>
+      {/* FIXED BOTTOM BUTTON (Mobile Only) */}
+      <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/90 backdrop-blur-xl border-t border-gray-100 z-50 md:hidden">
+        <button 
+          onClick={handleBuyNow}
+          className="w-full bg-black hover:bg-gray-900 text-white font-bold text-lg px-4 py-4 rounded-full shadow-xl flex justify-center items-center gap-2 transform active:scale-95 transition-transform"
+        >
+          Commander Maintenant <ArrowRight size={20} />
+        </button>
       </div>
-      
-      {/* Short bounce animation for the sticky button */}
-      <style dangerouslySetInnerHTML={{__html: `
-        @keyframes bounce-short {
-          0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-3px); }
-        }
-        .animate-bounce-short {
-          animation: bounce-short 3s infinite;
-        }
-      `}} />
     </div>
   );
 }

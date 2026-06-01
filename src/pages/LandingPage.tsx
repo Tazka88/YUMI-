@@ -183,7 +183,7 @@ export default function LandingPage() {
               <img 
                 src={cleanImages[0]} 
                 alt={`${data.product_name} - Vue principale`} 
-                className="w-full h-auto max-h-[70vh] object-contain transform hover:scale-105 transition-transform duration-700"
+                className="w-full h-auto object-cover transform hover:scale-105 transition-transform duration-700"
               />
             </div>
           </div>
@@ -234,7 +234,7 @@ export default function LandingPage() {
                 key={idx} 
                 src={src} 
                 alt={`${data.product_name} - Galerie ${idx + 2}`} 
-                className="w-full max-w-4xl h-auto block m-0 p-0 rounded-[2rem] opacity-95 transition-opacity duration-500 shadow-[0_0_50px_rgba(255,255,255,0.05)] border border-gray-800"
+                className="w-full max-w-4xl h-auto block object-cover m-0 p-0 rounded-[2rem] opacity-95 transition-opacity duration-500 shadow-[0_0_50px_rgba(255,255,255,0.05)] border border-gray-800"
                 loading="lazy"
               />
             ))}

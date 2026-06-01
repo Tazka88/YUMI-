@@ -1600,7 +1600,7 @@ router.get('/landing-pages/:slug', async (req, res) => {
       SELECT lp.*, 
              p.name as product_name, p.description as product_description, 
              p.price as product_price, p.promo_price as product_promo_price, 
-             p.image as product_image, p.images as product_images
+             p.image as product_image
       FROM landing_pages lp
       JOIN products p ON lp.product_id = p.id
       WHERE lp.slug = ${slug}

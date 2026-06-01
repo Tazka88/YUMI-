@@ -104,7 +104,16 @@ export default function LandingPage() {
 
       {/* HEADER FIXE */}
       <header className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-xl border-b border-gray-100 h-16 flex items-center justify-between px-4 lg:px-8">
-        <div className="font-black text-2xl tracking-tighter text-black uppercase">ZORANDO</div>
+        <a href="/" className="flex items-center hover:opacity-90 transition-opacity" aria-label="ZORANDO Accueil">
+          <svg width="190" height="36" viewBox="0 0 190 36" fill="none" xmlns="http://www.w3.org/2000/svg" className="h-7 md:h-8 w-auto">
+            <g transform="translate(2, 2)">
+              <path d="M10 10V6C10 3.79086 11.7909 2 14 2C16.2091 2 18 3.79086 18 6V10" stroke="#f97316" strokeWidth="2.5" strokeLinecap="round"/>
+              <rect x="2" y="10" width="24" height="20" rx="4" fill="#f97316" fillOpacity="0.1" stroke="#f97316" strokeWidth="2.5" strokeLinejoin="round"/>
+              <path d="M9 14.5 H19 L9 24.5 H19" stroke="#f97316" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </g>
+            <text x="38" y="28" fontFamily="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" fontSize="28" fontWeight="900" fill="#111827" letterSpacing="-0.02em"><tspan fill="#f97316" fontSize="36">Z</tspan>ORANDO</text>
+          </svg>
+        </a>
         <button 
           onClick={handleBuyNow} 
           className="bg-black hover:bg-gray-900 active:scale-95 transition-transform text-white font-bold px-5 py-2 rounded-full text-sm flex items-center gap-2 shadow-lg shadow-black/10"
@@ -152,12 +161,12 @@ export default function LandingPage() {
       {/* FIRST IMAGE FULL WIDTH */}
       {cleanImages.length > 0 && (
         <section className="w-full bg-white pb-20">
-          <div className="max-w-6xl mx-auto px-4">
-            <div className="rounded-[2.5rem] overflow-hidden shadow-2xl border border-gray-100">
+          <div className="max-w-6xl mx-auto px-4 flex justify-center">
+            <div className="rounded-[2.5rem] overflow-hidden shadow-xl border border-gray-100 max-w-3xl bg-white w-full">
               <img 
                 src={cleanImages[0]} 
                 alt={`${data.product_name} - Vue principale`} 
-                className="w-full h-auto object-cover transform hover:scale-105 transition-transform duration-700"
+                className="w-full h-auto max-h-[70vh] object-contain transform hover:scale-105 transition-transform duration-700"
               />
             </div>
           </div>
@@ -202,13 +211,13 @@ export default function LandingPage() {
 
       {/* IMMERSIVE GALLERY */}
       {cleanImages.length > 1 && (
-        <section className="w-full bg-black flex flex-col">
+        <section className="w-full bg-black flex flex-col py-16 gap-12 items-center px-4">
             {cleanImages.slice(1).map((src: string, idx: number) => (
               <img 
                 key={idx} 
                 src={src} 
                 alt={`${data.product_name} - Galerie ${idx + 2}`} 
-                className="w-full h-auto block m-0 p-0 opacity-90 transition-opacity duration-500"
+                className="w-full max-w-4xl h-auto block m-0 p-0 rounded-[2rem] opacity-95 transition-opacity duration-500 shadow-[0_0_50px_rgba(255,255,255,0.05)] border border-gray-800"
                 loading="lazy"
               />
             ))}

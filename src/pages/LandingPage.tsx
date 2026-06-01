@@ -113,10 +113,31 @@ export default function LandingPage() {
     { q: "Puis-je payer à la livraison ?", a: "Oui absolument, vous ne payez que lorsque vous recevez le produit en main propre." }
   ];
 
+  const seoTitle = data.seo_title || `${data.product_name} | Zorando`;
+  const seoDescription = data.seo_description || data.product_description?.substring(0, 160) || `Découvrez ${data.product_name} sur Zorando. La meilleure qualité au meilleur prix avec livraison à domicile.`;
+  const canonicalUrl = `https://zorando.com/${slug}`;
+
   return (
     <div className="min-h-screen bg-[#fafafa] text-gray-900 font-sans selection:bg-black selection:text-white pb-24 md:pb-0 relative">
       <Helmet>
-        <title>{data.product_name} | Zorando</title>
+        <title>{seoTitle}</title>
+        <meta name="description" content={seoDescription} />
+        
+        {/* Open Graph / Facebook */}
+        <meta property="og:type" content="product" />
+        <meta property="og:url" content={canonicalUrl} />
+        <meta property="og:title" content={seoTitle} />
+        <meta property="og:description" content={seoDescription} />
+        {data.product_image && <meta property="og:image" content={data.product_image} />}
+        
+        {/* Twitter */}
+        <meta property="twitter:card" content="summary_large_image" />
+        <meta property="twitter:url" content={canonicalUrl} />
+        <meta property="twitter:title" content={seoTitle} />
+        <meta property="twitter:description" content={seoDescription} />
+        {data.product_image && <meta property="twitter:image" content={data.product_image} />}
+
+        <link rel="canonical" href={canonicalUrl} />
       </Helmet>
 
       {/* HEADER FIXE */}

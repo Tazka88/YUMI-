@@ -223,6 +223,8 @@ Sitemap: https://zorando.com/sitemap.xml`);
         let ogImage = `${baseUrl}/og-image-fb.jpg`;
         let ogUrl = `${baseUrl}${req.path}`;
 
+        let isNotFound = false;
+
         if (req.path === '/' || req.path === '/index.html') {
           const categories = await sql`SELECT name, slug FROM categories`;
           const brands = await sql`SELECT name, slug FROM brands`;
@@ -281,6 +283,8 @@ Sitemap: https://zorando.com/sitemap.xml`);
                 </ul>
               </div>
             `;
+          } else {
+            isNotFound = true;
           }
         } else if (req.path.startsWith('/category/')) {
           const slug = req.path.split('/')[2];
@@ -328,6 +332,8 @@ Sitemap: https://zorando.com/sitemap.xml`);
                     </ul>
                   </div>
                 `;
+              } else {
+                isNotFound = true;
               }
             }
           }
@@ -358,6 +364,40 @@ Sitemap: https://zorando.com/sitemap.xml`);
                 <p>Prix: ${displayPrice} DZD</p>
               </div>
             `;
+          } else {
+            isNotFound = true;
+          }
+        } else if (req.path.startsWith('/landing/')) {
+          const slug = req.path.split('/')[2];
+          const [landingPage] = await sql`
+            SELECT lp.*, p.name as product_name, p.description as product_description, p.image as product_image
+            FROM landing_pages lp
+            JOIN products p ON lp.product_id = p.id
+            WHERE lp.slug = ${slug}
+          `;
+          
+          if (landingPage) {
+            title = landingPage.seo_title || `${landingPage.product_name} | ZORANDO`;
+            description = landingPage.seo_description || landingPage.product_description?.substring(0, 160) || `Découvrez ${landingPage.product_name} sur Zorando.`;
+            
+            if (landingPage.product_image) {
+              if (landingPage.product_image.startsWith('http')) {
+                ogImage = landingPage.product_image;
+              } else if (landingPage.product_image.startsWith('data:image')) {
+                ogImage = `${baseUrl}/api/images/products/${landingPage.product_id}/image/${slug}.webp?v=${landingPage.product_image.length}`;
+              } else {
+                ogImage = landingPage.product_image.startsWith('/') ? `${baseUrl}${landingPage.product_image}` : `${baseUrl}/${landingPage.product_image}`;
+              }
+            }
+            
+            seoHtml = `
+              <div id="seo-content" style="display:none;">
+                <h1>${title}</h1>
+                <p>${description}</p>
+              </div>
+            `;
+          } else {
+            isNotFound = true;
           }
         } else if (req.path === '/about') {
           title = 'À propos de nous - ZORANDO';
@@ -375,6 +415,14 @@ Sitemap: https://zorando.com/sitemap.xml`);
           title = 'Suivre ma commande - ZORANDO';
           description = 'Suivez l\'état de votre commande ZORANDO en temps réel.';
           seoHtml = `<div id="seo-content" style="display:none;"><h1>${title}</h1><h2>Tracking de Livraison</h2><p>${description}</p></div>`;
+        }
+
+        if (isNotFound) {
+          title = 'Page Introuvable - ZORANDO';
+          description = 'La page que vous recherchez n\'existe pas ou a été supprimée.';
+          res.status(404);
+        } else {
+          res.status(200);
         }
 
         const globalNav = `
@@ -404,7 +452,7 @@ Sitemap: https://zorando.com/sitemap.xml`);
         
         res.header('X-Robots-Tag', 'all');
         res.header('Cache-Control', 'no-cache');
-        res.status(200).send(finalHtml);
+        res.send(finalHtml);
       } catch (err) {
         console.error('SEO Injection Error:', err);
         res.sendFile(path.join(distPath, 'template.html'));

@@ -102,8 +102,15 @@ export default function LandingPage() {
 
       {/* HEADER FIXE */}
       <header className="absolute top-0 left-0 right-0 z-50 bg-transparent h-20 flex items-center justify-between px-6 lg:px-12">
-        <a href="/" className="font-black text-2xl tracking-[0.2em] text-white uppercase" aria-label="ZORANDO Accueil">
-          ZORANDO
+        <a href="/" className="flex items-center hover:opacity-90 transition-opacity" aria-label="ZORANDO Accueil">
+          <svg width="190" height="36" viewBox="0 0 190 36" fill="none" xmlns="http://www.w3.org/2000/svg" className="h-7 md:h-8 w-auto">
+            <g transform="translate(2, 2)">
+              <path d="M10 10V6C10 3.79086 11.7909 2 14 2C16.2091 2 18 3.79086 18 6V10" stroke="#f97316" strokeWidth="2.5" strokeLinecap="round"/>
+              <rect x="2" y="10" width="24" height="20" rx="4" fill="#f97316" fillOpacity="0.1" stroke="#f97316" strokeWidth="2.5" strokeLinejoin="round"/>
+              <path d="M9 14.5 H19 L9 24.5 H19" stroke="#f97316" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </g>
+            <text x="38" y="28" fontFamily="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" fontSize="28" fontWeight="900" fill="#ffffff" letterSpacing="-0.02em"><tspan fill="#f97316" fontSize="36">Z</tspan>ORANDO</text>
+          </svg>
         </a>
         <button 
           onClick={handleBuyNow} 

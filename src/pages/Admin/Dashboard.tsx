@@ -1171,8 +1171,8 @@ export default function AdminDashboard() {
   };
 
   const createLandingPageForProduct = async (id: number) => {
+    const toastId = toast.loading('Création de la landing page...');
     try {
-      const toastId = toast.loading('Création de la landing page...');
       const res = await fetch('/api/admin/landing-pages', {
         method: 'POST',
         headers: {

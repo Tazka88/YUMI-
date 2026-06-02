@@ -70,10 +70,12 @@ export default function LandingPage() {
   const config = data.config || {};
   const product = {
     id: data.product_id,
-    name: data.product_name,
-    price: data.product_price,
-    promo_price: data.product_promo_price,
+    name: config.custom_name || data.product_name,
+    price: config.custom_price || data.product_price,
+    promo_price: config.custom_promo_price !== undefined ? config.custom_promo_price : data.product_promo_price,
     image: data.product_image,
+    description: config.custom_description || data.product_description,
+    features: config.custom_features && config.custom_features.length > 0 ? config.custom_features : data.features,
   };
 
   // Safe image fallbacks if config images are missing
@@ -115,7 +117,7 @@ export default function LandingPage() {
     <div className="bg-white min-h-screen font-sans text-gray-900 selection:bg-black selection:text-white overflow-x-hidden w-full max-w-[100vw]">
       <Helmet>
         <title>{config.seo_title || `${product.name} - Site Officiel`}</title>
-        <meta name="description" content={config.seo_description || data.product_description?.substring(0, 150)} />
+        <meta name="description" content={config.seo_description || product.description?.substring(0, 150)} />
       </Helmet>
 
       {/* STICKY BUY BAR */}
@@ -168,11 +170,9 @@ export default function LandingPage() {
 
       {/* 1. HERO PLEIN ECRAN */}
       <section className="relative h-[100svh] w-full max-w-[100vw] bg-black flex items-center justify-center overflow-hidden">
-        <div className="absolute inset-0 z-0 flex items-center justify-center">
-          {/* Blurred background for premium aspect ratio handling */}
-          <img src={heroImage} alt="" className="absolute inset-0 w-full h-full object-cover opacity-30 blur-3xl scale-125" />
-          <img src={heroImage} alt="Hero" className="relative w-full h-full object-contain p-4 md:p-12 opacity-90" />
-          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-black/10" />
+        <div className="absolute inset-0 z-0">
+          <img src={heroImage} alt="Hero" className="w-full min-h-full object-cover opacity-60 mix-blend-overlay max-w-none md:max-w-full block" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent" />
         </div>
         
         <div className="relative z-10 text-center px-4 w-full max-w-5xl mx-auto mt-20">
@@ -185,7 +185,7 @@ export default function LandingPage() {
               {product.name}
             </h1>
             <p className="mt-4 md:mt-6 text-lg md:text-2xl text-gray-300 font-light max-w-2xl mx-auto">
-              L'excellence redéfinie. Conçu pour ceux qui n'acceptent aucun compromis.
+              {product.description || "L'excellence redéfinie. Conçu pour ceux qui n'acceptent aucun compromis."}
             </p>
             
             <div className="mt-8 md:mt-10 flex flex-col sm:flex-row items-center justify-center gap-4 md:gap-6 w-full">
@@ -238,7 +238,7 @@ export default function LandingPage() {
                 Vous avez assez perdu de temps avec des solutions qui ne tiennent pas leurs promesses. Découvrez pourquoi des milliers de clients font confiance à notre expertise. Une conception repensée de A à Z.
               </p>
               <ul className="space-y-3 md:space-y-4 mb-8 md:mb-10 w-full">
-                {['Design ergonomique supérieur', 'Matériaux premium ultra-résistants', 'Efficacité d\'action immédiate'].map((item, i) => (
+                {(product.features && product.features.length > 0 ? product.features : ['Design ergonomique supérieur', 'Matériaux premium ultra-résistants', 'Efficacité d\'action immédiate']).map((item: string, i: number) => (
                   <li key={i} className="flex items-start md:items-center gap-3 md:gap-4 text-base md:text-lg font-medium text-gray-800">
                     <div className="w-6 h-6 md:w-8 md:h-8 rounded-full bg-black flex items-center justify-center text-white shrink-0 mt-0.5 md:mt-0">
                       <Check size={14} className="md:w-4 md:h-4" />
@@ -248,11 +248,11 @@ export default function LandingPage() {
                 ))}
               </ul>
             </FadeIn>
-            <FadeIn delay={0.2} className="relative aspect-[4/5] md:aspect-square w-full rounded-2xl md:rounded-3xl overflow-hidden bg-gray-50 flex items-center justify-center p-4">
+            <FadeIn delay={0.2} className="relative aspect-[4/5] w-full rounded-2xl md:rounded-3xl overflow-hidden bg-gray-100">
                {ugc1 ? (
-                <video src={ugc1} autoPlay loop muted playsInline className="w-full h-full object-contain max-w-full block rounded-xl" />
+                <video src={ugc1} autoPlay loop muted playsInline className="w-full h-full object-cover max-w-full block" />
               ) : (
-                <img src={ls1} alt="Solution" className="w-full h-full object-contain max-w-full block mix-blend-multiply" />
+                <img src={ls1} alt="Solution" className="w-full h-full object-cover max-w-full block" />
               )}
             </FadeIn>
           </div>
@@ -261,9 +261,8 @@ export default function LandingPage() {
 
       {/* 4. LIFESTYLE SECTION FULL WIDTH (Apple Style) */}
       <section className="relative h-[60vh] md:h-[80vh] w-full bg-black overflow-hidden max-w-[100vw]">
-        <div className="absolute inset-0 flex items-center justify-center">
-          <img src={ls2} alt="" className="absolute inset-0 w-full h-full object-cover opacity-30 blur-3xl scale-125" />
-          <img src={ls2} alt="Immersive view" className="relative w-full h-full object-contain p-8 md:p-16 opacity-90 block" />
+        <div className="absolute inset-0">
+          <img src={ls2} alt="Immersive view" className="w-full min-h-full object-cover opacity-80 max-w-none md:max-w-full block" />
         </div>
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
         <FadeIn className="absolute bottom-0 left-0 right-0 p-6 md:p-16 text-white text-center md:text-left">
@@ -276,18 +275,16 @@ export default function LandingPage() {
       <section className="py-16 md:py-24 bg-white w-full overflow-hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <div className="grid md:grid-cols-2 gap-4 md:gap-8">
-            <FadeIn className="relative h-[400px] md:h-[500px] w-full rounded-2xl md:rounded-3xl overflow-hidden group bg-black flex items-center justify-center">
-              <img src={ls3} alt="" className="absolute inset-0 w-full h-full object-cover opacity-30 blur-2xl scale-125" />
-              <img src={ls3} alt="Feature" className="relative w-full h-full object-contain p-8 sm:group-hover:scale-105 transition-transform duration-700 block" />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+            <FadeIn className="relative h-[400px] md:h-[500px] w-full rounded-2xl md:rounded-3xl overflow-hidden group bg-gray-100">
+              <img src={ls3} alt="Feature" className="absolute inset-0 w-full h-full object-cover sm:group-hover:scale-105 transition-transform duration-700 max-w-full block" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
               <div className="absolute bottom-0 p-6 md:p-8 text-white w-full">
                 <h3 className="text-2xl md:text-3xl font-bold">Performance Absolue.</h3>
               </div>
             </FadeIn>
-            <FadeIn delay={0.2} className="relative h-[400px] md:h-[500px] w-full rounded-2xl md:rounded-3xl overflow-hidden group bg-black flex items-center justify-center">
-              <img src={ls4} alt="" className="absolute inset-0 w-full h-full object-cover opacity-30 blur-2xl scale-125" />
-              <img src={ls4} alt="Feature" className="relative w-full h-full object-contain p-8 sm:group-hover:scale-105 transition-transform duration-700 block" />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+            <FadeIn delay={0.2} className="relative h-[400px] md:h-[500px] w-full rounded-2xl md:rounded-3xl overflow-hidden group bg-gray-100">
+              <img src={ls4} alt="Feature" className="absolute inset-0 w-full h-full object-cover sm:group-hover:scale-105 transition-transform duration-700 max-w-full block" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
               <div className="absolute bottom-0 p-6 md:p-8 text-white w-full">
                 <h3 className="text-2xl md:text-3xl font-bold">Innovation Discrète.</h3>
               </div>
@@ -314,9 +311,8 @@ export default function LandingPage() {
               <h3 className="text-xl md:text-2xl font-bold mb-3 md:mb-4">Précision Absolue</h3>
               <p className="text-gray-600 text-base md:text-lg">Chaque détail a été méticuleusement pensé et calibré pour offrir une expérience utilisateur parfaite au millimètre près.</p>
             </FadeIn>
-            <FadeIn delay={0.2} className="relative bg-black rounded-2xl md:rounded-3xl overflow-hidden shadow-sm border border-gray-900 md:col-span-2 group min-h-[300px] md:min-h-[400px] w-full max-w-full flex items-center justify-center">
-              <img src={ls3} alt="" className="absolute inset-0 w-full h-full object-cover opacity-30 blur-2xl scale-125 transition-transform duration-700 sm:group-hover:scale-150" />
-              <img src={ls3} alt="Feature" className="relative w-full h-full object-contain p-8 sm:group-hover:scale-105 transition-transform duration-700 block" />
+            <FadeIn delay={0.2} className="relative bg-white rounded-2xl md:rounded-3xl overflow-hidden shadow-sm border border-gray-100 md:col-span-2 group min-h-[300px] md:min-h-[400px] w-full max-w-full">
+              <img src={ls3} alt="Feature" className="absolute inset-0 w-full h-full object-cover sm:group-hover:scale-105 transition-transform duration-700 max-w-full block" />
               <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
               <div className="absolute bottom-0 left-0 p-6 md:p-12 text-white w-full">
                 <h3 className="text-2xl md:text-3xl font-bold mb-2 md:mb-4">Design Sans Précédent.</h3>
@@ -333,8 +329,8 @@ export default function LandingPage() {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 text-center">
             <FadeIn>
               <h2 className="text-3xl md:text-5xl font-black uppercase tracking-tight mb-8 md:mb-12">La Différence.<br/>Instantanée.</h2>
-              <div className="relative rounded-2xl md:rounded-3xl overflow-hidden aspect-[4/3] md:aspect-video w-full max-w-4xl mx-auto bg-gray-50 shadow-2xl flex items-center justify-center p-4">
-                <img src={beforeAfter} alt="Avant/Après" className="w-full h-full object-contain max-w-full block mix-blend-multiply" />
+              <div className="relative rounded-2xl md:rounded-3xl overflow-hidden aspect-[4/3] md:aspect-video w-full max-w-4xl mx-auto bg-gray-100 shadow-2xl">
+                <img src={beforeAfter} alt="Avant/Après" className="w-full h-full object-contain md:object-cover max-w-full block" />
               </div>
             </FadeIn>
           </div>
@@ -350,9 +346,8 @@ export default function LandingPage() {
             </FadeIn>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4 w-full">
               {galleries.map((img, i) => (
-                <FadeIn key={i} delay={i * 0.1} className={`relative overflow-hidden rounded-xl bg-gray-900 group w-full flex items-center justify-center ${i === 0 ? 'col-span-2 row-span-2 aspect-square' : 'aspect-square'}`}>
-                  <img src={img} alt="" className="absolute inset-0 w-full h-full object-cover opacity-20 blur-xl scale-125" />
-                  <img src={img} alt={`Gallery ${i}`} className="relative w-full h-full object-contain p-4 sm:group-hover:scale-105 transition-all duration-700 max-w-full block" />
+                <FadeIn key={i} delay={i * 0.1} className={`relative overflow-hidden rounded-xl bg-gray-900 group w-full ${i === 0 ? 'col-span-2 row-span-2 aspect-square' : 'aspect-square'}`}>
+                  <img src={img} alt={`Gallery ${i}`} className="w-full h-full object-cover opacity-80 sm:group-hover:opacity-100 sm:group-hover:scale-105 transition-all duration-700 max-w-full block" />
                 </FadeIn>
               ))}
             </div>
@@ -406,10 +401,7 @@ export default function LandingPage() {
       {/* 16. FINAL CTA CTA */}
       <section className="relative py-24 md:py-32 bg-black text-white text-center overflow-hidden w-full max-w-[100vw]">
         {promoBanner && (
-           <>
-             <img src={promoBanner} alt="" className="absolute inset-0 w-full h-full object-cover opacity-20 blur-3xl scale-125" />
-             <img src={promoBanner} alt="Promo" className="absolute inset-0 w-full h-full object-contain opacity-30 max-w-none md:max-w-full block" />
-           </>
+           <img src={promoBanner} alt="Promo" className="absolute inset-0 w-full min-h-full object-cover opacity-30 max-w-none md:max-w-full block" />
         )}
         <div className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6">
           <FadeIn>

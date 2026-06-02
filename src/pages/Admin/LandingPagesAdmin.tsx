@@ -200,15 +200,15 @@ export default function LandingPagesAdmin() {
     }
   };
 
-  const ImageInput = ({ label, field, placeholder, hint }: { label: string, field: string, placeholder?: string, hint: React.ReactNode }) => (
-    <div>
+  const renderImageInput = ({ label, field, placeholder, hint }: { label: string, field: string, placeholder?: string, hint: React.ReactNode }) => (
+    <div key={field}>
       <label className="block text-sm font-medium mb-1">{label}</label>
       <div className="flex gap-2 items-center">
         <input
           type="text"
           placeholder={placeholder || 'https://...'}
           value={editForm[field] || ''}
-          onChange={(e) => setEditForm({...editForm, [field]: e.target.value})}
+          onChange={(e) => setEditForm(prev => ({...prev, [field]: e.target.value}))}
           className="flex-1 px-3 py-2 border rounded focus:ring-2 focus:ring-orange-500"
         />
         <label className="cursor-pointer bg-gray-100 p-2 px-3 border rounded-md hover:bg-gray-200 transition-colors flex items-center gap-2" title="Uploader un fichier">
@@ -216,7 +216,7 @@ export default function LandingPagesAdmin() {
           <span className="text-sm font-medium text-gray-700 hidden sm:inline">Upload</span>
           <input type="file" className="hidden" accept="image/*,video/*" onChange={async (e) => {
             const url = await handleFileUpload(e);
-            if (url) setEditForm({...editForm, [field]: url});
+            if (url) setEditForm(prev => ({...prev, [field]: url}));
           }} />
         </label>
       </div>
@@ -382,62 +382,62 @@ export default function LandingPagesAdmin() {
               {/* IMAGES MARKETING */}
               <div className="space-y-4">
                 <h4 className="font-bold text-gray-800 border-b pb-2">Images Marketing (URLs)</h4>
-                <ImageInput 
-                  label="Image Hero Principale" 
-                  field="hero_image" 
-                  placeholder="https://... (doit finir par .jpg, .png, etc.)"
-                  hint={
+                {renderImageInput({
+                  label: "Image Hero Principale",
+                  field: "hero_image",
+                  placeholder: "https://... (doit finir par .jpg, .png, etc.)",
+                  hint: (
                     <>
                       <p className="text-xs text-red-500 mt-1"><strong>Attention :</strong> Utilisez un "Lien direct" vers l'image, ou utilisez le bouton Upload.</p>
                       <p className="text-xs text-gray-500 mt-1"><strong>Dimensions recommandées :</strong> 1080x1920 px (Format vertical type Story/Reels) ou Haute Qualité Carré pour s'adapter au plein écran mobile et PC.</p>
                     </>
-                  }
-                />
-                <ImageInput 
-                  label="Image Lifestyle 1" 
-                  field="lifestyle_image_1" 
-                  hint={<p className="text-xs text-gray-500 mt-1"><strong>Dimensions recommandées :</strong> 1080x1350 px (Format portrait, bloque "Sans Limites").</p>}
-                />
-                <ImageInput 
-                  label="Image Lifestyle 2" 
-                  field="lifestyle_image_2" 
-                  hint={<p className="text-xs text-gray-500 mt-1"><strong>Dimensions recommandées :</strong> 1920x1080 px (Sujet centré, car l'image devient carrée sur mobile mais très panoramique sur PC).</p>}
-                />
-                <ImageInput 
-                  label="Image Lifestyle 3 (Bannière milieu)" 
-                  field="lifestyle_image_3" 
-                  hint={<p className="text-xs text-gray-500 mt-1"><strong>Dimensions recommandées :</strong> 2560x850 px ou 1920x640 px (Bannière horizontale ultra-large "Conception immersive").</p>}
-                />
+                  )
+                })}
+                {renderImageInput({
+                  label: "Image Lifestyle 1",
+                  field: "lifestyle_image_1",
+                  hint: <p className="text-xs text-gray-500 mt-1"><strong>Dimensions recommandées :</strong> 1080x1350 px (Format portrait, bloque "Sans Limites").</p>
+                })}
+                {renderImageInput({
+                  label: "Image Lifestyle 2",
+                  field: "lifestyle_image_2",
+                  hint: <p className="text-xs text-gray-500 mt-1"><strong>Dimensions recommandées :</strong> 1920x1080 px (Sujet centré, car l'image devient carrée sur mobile mais très panoramique sur PC).</p>
+                })}
+                {renderImageInput({
+                  label: "Image Lifestyle 3 (Bannière milieu)",
+                  field: "lifestyle_image_3",
+                  hint: <p className="text-xs text-gray-500 mt-1"><strong>Dimensions recommandées :</strong> 2560x850 px ou 1920x640 px (Bannière horizontale ultra-large "Conception immersive").</p>
+                })}
               </div>
 
               {/* AUTRES MEDIAS MARKETING */}
               <div className="space-y-4">
                 <h4 className="font-bold text-gray-800 border-b pb-2">Vidéos UGC & Promo (URLs)</h4>
-                <ImageInput 
-                  label="Image Avant/Après" 
-                  field="before_after_image" 
-                  hint={<p className="text-xs text-gray-500 mt-1"><strong>Dimensions recommandées :</strong> 1200x800 px (Format Paysage 3:2) ou 1080x1080 px.</p>}
-                />
-                <ImageInput 
-                  label="Bannière Promo Spéciale" 
-                  field="promo_banner_image" 
-                  hint={<p className="text-xs text-gray-500 mt-1"><strong>Dimensions recommandées :</strong> 1920x600 px (Bannière horizontale fine).</p>}
-                />
-                <ImageInput 
-                  label="Vidéo UGC 1 (.mp4, .webm, ou Image)" 
-                  field="ugc_video_1" 
-                  hint={<p className="text-xs text-gray-500 mt-1"><strong>Dimensions recommandées :</strong> 1080x1920 px (Format vertical 9:16, type Reels/TikTok).</p>}
-                />
-                <ImageInput 
-                  label="Vidéo UGC 2" 
-                  field="ugc_video_2" 
-                  hint={null}
-                />
-                <ImageInput 
-                  label="Vidéo UGC 3" 
-                  field="ugc_video_3" 
-                  hint={null}
-                />
+                {renderImageInput({
+                  label: "Image Avant/Après",
+                  field: "before_after_image",
+                  hint: <p className="text-xs text-gray-500 mt-1"><strong>Dimensions recommandées :</strong> 1200x800 px (Format Paysage 3:2) ou 1080x1080 px.</p>
+                })}
+                {renderImageInput({
+                  label: "Bannière Promo Spéciale",
+                  field: "promo_banner_image",
+                  hint: <p className="text-xs text-gray-500 mt-1"><strong>Dimensions recommandées :</strong> 1920x600 px (Bannière horizontale fine).</p>
+                })}
+                {renderImageInput({
+                  label: "Vidéo UGC 1 (.mp4, .webm, ou Image)",
+                  field: "ugc_video_1",
+                  hint: <p className="text-xs text-gray-500 mt-1"><strong>Dimensions recommandées :</strong> 1080x1920 px (Format vertical 9:16, type Reels/TikTok).</p>
+                })}
+                {renderImageInput({
+                  label: "Vidéo UGC 2",
+                  field: "ugc_video_2",
+                  hint: null
+                })}
+                {renderImageInput({
+                  label: "Vidéo UGC 3",
+                  field: "ugc_video_3",
+                  hint: null
+                })}
               </div>
             </div>
 

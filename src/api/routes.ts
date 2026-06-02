@@ -191,13 +191,17 @@ const orderLimiter = rateLimit({
 const storage = multer.memoryStorage();
 const upload = multer({ 
   storage: storage,
-  limits: { fileSize: 15 * 1024 * 1024 },
+  limits: { fileSize: 50 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
-    const allowedTypes = /jpeg|jpg|png|webp|gif|svg|avif|heic|heif/i;
+    const allowedTypes = /jpeg|jpg|png|webp|gif|svg|avif|heic|heif|mp4|webm|mov|avi/i;
     const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-    const mimetype = allowedTypes.test(file.mimetype);
-    if (extname && mimetype) return cb(null, true);
-    cb(new Error('Seules les images sont autorisées !'));
+    const mimetype = allowedTypes.test(file.mimetype) || file.mimetype.startsWith('video/');
+
+    if (extname && mimetype) {
+      return cb(null, true);
+    } else {
+      cb(new Error('Seules les images et les vidéos sont autorisées !'));
+    }
   }
 });
 
@@ -1047,14 +1051,18 @@ router.post('/reviews/upload', upload.single('image'), async (req, res) => {
     let contentType = req.file.mimetype;
     let ext = req.file.originalname.split('.').pop() || 'bin';
 
-    if (req.file.mimetype !== 'image/svg+xml') {
-      const sharp = (await import('sharp')).default;
-      buffer = await sharp(req.file.buffer)
-        .resize({ width: 800, height: 800, fit: 'inside', withoutEnlargement: true })
-        .webp({ quality: 80 })
-        .toBuffer();
-      contentType = 'image/webp';
-      ext = 'webp';
+    if (req.file.mimetype !== 'image/svg+xml' && !req.file.mimetype.startsWith('video/')) {
+      try {
+        const sharp = (await import('sharp')).default;
+        buffer = await sharp(req.file.buffer)
+          .resize({ width: 800, height: 800, fit: 'inside', withoutEnlargement: true })
+          .webp({ quality: 80 })
+          .toBuffer();
+        contentType = 'image/webp';
+        ext = 'webp';
+      } catch (sharpError) {
+        console.warn('Sharp compression failed, using original file:', sharpError);
+      }
     }
 
     const supabase = getSupabase();
@@ -1104,14 +1112,18 @@ router.post('/admin/upload', authenticate, upload.single('image'), async (req, r
     let contentType = req.file.mimetype;
     let ext = req.file.originalname.split('.').pop() || 'bin';
 
-    if (req.file.mimetype !== 'image/svg+xml') {
-      const sharp = (await import('sharp')).default;
-      buffer = await sharp(req.file.buffer)
-        .resize({ width: 1200, height: 1200, fit: 'inside', withoutEnlargement: true })
-        .webp({ quality: 80 })
-        .toBuffer();
-      contentType = 'image/webp';
-      ext = 'webp';
+    if (req.file.mimetype !== 'image/svg+xml' && !req.file.mimetype.startsWith('video/')) {
+      try {
+        const sharp = (await import('sharp')).default;
+        buffer = await sharp(req.file.buffer)
+          .resize({ width: 1200, height: 1200, fit: 'inside', withoutEnlargement: true })
+          .webp({ quality: 80 })
+          .toBuffer();
+        contentType = 'image/webp';
+        ext = 'webp';
+      } catch (sharpError) {
+        console.warn('Sharp compression failed, using original file:', sharpError);
+      }
     }
 
     // If Supabase is configured, upload to Storage

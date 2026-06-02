@@ -1582,6 +1582,34 @@ router.post('/admin/landing-pages', authenticate, async (req, res) => {
   }
 });
 
+router.put('/admin/landing-pages/:id', authenticate, async (req, res) => {
+  const { id } = req.params;
+  const { config, slug, seo_title, seo_description } = req.body;
+  
+  try {
+    const [updated] = await sql`
+      UPDATE landing_pages 
+      SET 
+        config = ${config ? JSON.stringify(config) : '{}'}::jsonb,
+        slug = ${slug || null},
+        seo_title = ${seo_title || null},
+        seo_description = ${seo_description || null},
+        updated_at = NOW()
+      WHERE id = ${id}
+      RETURNING *
+    `;
+    
+    if (!updated) {
+      return res.status(404).json({ error: 'Landing page not found' });
+    }
+    
+    res.json(updated);
+  } catch (err: any) {
+    console.error('Failed to update landing page:', err);
+    res.status(500).json({ error: 'Failed to update landing page: ' + err.message });
+  }
+});
+
 router.delete('/admin/landing-pages/:id', authenticate, async (req, res) => {
   const { id } = req.params;
   try {

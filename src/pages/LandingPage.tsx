@@ -160,56 +160,115 @@ export default function LandingPage() {
         </button>
       </header>
 
-      {/* HERO SECTION APPLE-STYLE */}
-      <section className="pt-32 pb-16 px-4 md:pt-40 md:pb-24 text-center flex flex-col items-center bg-white">
-        <div className="inline-flex items-center gap-2 text-red-600 text-[10px] md:text-xs font-bold uppercase tracking-widest px-4 py-1.5 rounded-full border border-red-100 bg-red-50 mb-8 animate-pulse">
-          ⚡ Offre Limitée
-        </div>
-        
-        <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6 leading-tight max-w-4xl mx-auto tracking-tight text-black">
-          {heroTitle}
-        </h1>
-        <p className="text-lg md:text-2xl text-gray-500 max-w-2xl mx-auto mb-10 font-medium tracking-tight">
-          {heroSub}
-        </p>
-        
-        <div className="mb-10 flex flex-col items-center gap-2">
-           {data.product_promo_price ? (
-             <div className="flex items-end gap-3 justify-center">
-               <span className="text-gray-400 line-through text-xl md:text-2xl font-semibold mb-1">{data.product_price} DA</span>
-               <span className="text-5xl md:text-6xl font-bold text-black tracking-tight">{data.product_promo_price} DA</span>
-             </div>
-           ) : (
-             <span className="text-5xl md:text-6xl font-bold text-black tracking-tight">{data.product_price} DA</span>
-           )}
-        </div>
-
-        <button 
-          onClick={handleBuyNow}
-          className="w-full max-w-sm bg-black hover:bg-gray-900 text-white font-bold text-lg md:text-xl px-8 py-5 rounded-full shadow-2xl shadow-black/20 flex justify-center items-center gap-3 transform active:scale-95 transition-all mb-6"
-        >
-          Commander Maintenant <ArrowRight size={20} />
-        </button>
-        <div className="flex items-center justify-center gap-2 text-gray-500 text-sm font-medium">
-          <CheckCircle size={16} className="text-green-500" />
-          Paiement à la livraison garanti
-        </div>
-      </section>
-
-      {/* FIRST IMAGE FULL WIDTH */}
-      {cleanImages.length > 0 && (
-        <section className="w-full bg-white pb-20">
-          <div className="max-w-6xl mx-auto px-4 flex justify-center">
-            <div className="rounded-[2.5rem] overflow-hidden shadow-xl border border-gray-100 max-w-3xl bg-white w-full">
-              <img 
-                src={cleanImages[0]} 
-                alt={`${data.product_name} - Vue principale`} 
-                className="w-full h-auto object-cover transform hover:scale-105 transition-transform duration-700"
-              />
+      {/* NEW HERO SECTION & IMAGE BENTO */}
+      <section className="pt-24 pb-12 px-4 md:pt-28 md:pb-16 bg-[#fafafa]">
+        <div className="max-w-4xl mx-auto flex flex-col">
+          
+          {/* IMAGE BENTO GRID */}
+          <div className="flex flex-col gap-3 md:gap-4 mb-6">
+            {/* Main image */}
+            {cleanImages[0] && (
+              <div className="relative rounded-3xl overflow-hidden bg-[#efe9e1] aspect-[4/3] md:aspect-[16/9] w-full flex items-center justify-center p-8">
+                <img src={cleanImages[0]} alt="Vue principale" className="w-full h-full object-contain mix-blend-multiply" />
+                <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur-sm px-4 py-2 text-sm font-bold rounded-full text-black shadow-sm">
+                  Photo principale du produit
+                </div>
+              </div>
+            )}
+            
+            {/* Secondary images grid */}
+            <div className="grid grid-cols-2 gap-3 md:gap-4">
+              {cleanImages[1] && (
+                <div className="relative rounded-3xl overflow-hidden bg-[#efe9e1] aspect-square w-full flex items-center justify-center p-6">
+                  <img src={cleanImages[1]} alt="Vue détaillée 1" className="w-full h-full object-contain mix-blend-multiply" />
+                  <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur-sm px-3 py-1.5 text-xs font-bold rounded-full text-black shadow-sm truncate max-w-[90%]">
+                    {benefits[0]?.title || "Détails 1"}
+                  </div>
+                </div>
+              )}
+              {cleanImages[2] ? (
+                <div className="relative rounded-3xl overflow-hidden bg-[#efe9e1] aspect-square w-full flex items-center justify-center p-6">
+                  <img src={cleanImages[2]} alt="Vue détaillée 2" className="w-full h-full object-contain mix-blend-multiply" />
+                  <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur-sm px-3 py-1.5 text-xs font-bold rounded-full text-black shadow-sm truncate max-w-[90%]">
+                    {benefits[1]?.title || "Détails 2"}
+                  </div>
+                </div>
+              ) : cleanImages[1] ? (
+                <div className="relative rounded-3xl overflow-hidden bg-[#efe9e1] aspect-square w-full flex items-center justify-center p-6 text-center">
+                   <div className="flex flex-col items-center">
+                     <Star size={32} className="text-[#f97316] mb-3 opacity-50" />
+                     <p className="font-bold text-gray-800 text-lg mb-1">{benefits[1]?.title || "Qualité"}</p>
+                     <p className="text-sm text-gray-600 line-clamp-2 px-4">{benefits[1]?.desc || "Qualité exceptionnelle"}</p>
+                   </div>
+                </div>
+              ) : null}
             </div>
           </div>
-        </section>
-      )}
+
+          {/* HORIZONTAL FEATURES PILLS */}
+          <div className="flex overflow-x-auto gap-2 md:gap-3 pb-2 mb-6 scrollbar-hide -mx-4 px-4 md:mx-0 md:px-0">
+            {benefits.slice(0, 4).map((ben: any, idx: number) => (
+              <div key={idx} className="flex-none bg-white border border-gray-200 rounded-full px-4 py-2 flex items-center gap-2 text-sm font-medium text-gray-700 shadow-sm">
+                <Star size={14} className="text-yellow-500" fill="currentColor" />
+                {ben.title}
+              </div>
+            ))}
+          </div>
+
+          {/* PRODUCT INFO */}
+          <div className="flex flex-col text-left mb-4">
+            <div className="self-start inline-flex items-center gap-2 text-[#e85d04] text-xs font-bold uppercase tracking-widest px-4 py-1.5 rounded-full border border-[#f97316]/20 bg-[#f97316]/10 mb-4">
+              ⚡ Offre Limitée
+            </div>
+            
+            <h1 className="text-4xl md:text-5xl lg:text-5xl font-black mb-3 leading-tight tracking-tighter text-black">
+              {heroTitle}
+            </h1>
+            
+            <p className="text-lg text-gray-600 mb-4 font-medium tracking-tight">
+              {heroSub}
+            </p>
+
+            <div className="flex items-center gap-2 mb-6 text-sm font-medium text-gray-600">
+              <div className="flex text-yellow-400">
+                <Star size={14} fill="currentColor" />
+                <Star size={14} fill="currentColor" />
+                <Star size={14} fill="currentColor" />
+                <Star size={14} fill="currentColor" />
+                <Star size={14} fill="currentColor" />
+              </div>
+              <span>+1 200 clients satisfaits</span>
+            </div>
+            
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mb-8">
+               {data.product_promo_price ? (
+                 <>
+                   <span className="text-gray-400 line-through text-xl font-semibold">{data.product_price} DA</span>
+                   <span className="text-5xl font-black text-[#e85d04] tracking-tight">{data.product_promo_price} DA</span>
+                   <span className="bg-[#e85d04] text-white px-3 py-1 rounded-full text-sm font-bold ml-2">
+                     -{Math.round((1 - parseInt(data.product_promo_price.toString().replace(/\D/g, '')) / parseInt(data.product_price.toString().replace(/\D/g, ''))) * 100) || 50}%
+                   </span>
+                 </>
+               ) : (
+                 <span className="text-5xl font-black text-[#e85d04] tracking-tight">{data.product_price} DA</span>
+               )}
+            </div>
+
+            <button 
+              onClick={handleBuyNow}
+              className="w-full bg-[#fdfdfd] border border-gray-300 hover:bg-gray-50 text-black font-bold text-lg px-8 py-4 rounded-xl shadow-sm flex justify-center items-center gap-2 transform active:scale-95 transition-all mb-4"
+            >
+              Commander Maintenant <ArrowRight size={18} className="opacity-70" />
+            </button>
+            <div className="flex items-center justify-center gap-2 text-gray-500 text-sm font-medium w-full">
+              <span className="bg-green-100 p-0.5 rounded text-green-600">
+                <CheckCircle size={14} />
+              </span>
+              Paiement à la livraison garanti
+            </div>
+          </div>
+        </div>
+      </section>
 
       {/* PROBLEM & SOLUTION SECTION */}
       <section className="py-32 bg-black text-white px-4 text-center">

@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
-import { ShoppingCart, Star, CheckCircle, ArrowRight, ChevronDown, ChevronUp } from 'lucide-react';
+import { ShoppingCart, Star, CheckCircle, ArrowRight, ShieldCheck, Truck, Clock, RotateCcw, ChevronDown, ChevronRight, Play } from 'lucide-react';
 import { useCartStore } from '../store/cartStore';
 
 export default function LandingPage() {
@@ -34,12 +34,10 @@ export default function LandingPage() {
 
   useEffect(() => {
     const handleScroll = () => {
-      // Toggle sticky bar based on scroll distance
-      setIsScrolled(window.scrollY > 500);
+      setIsScrolled(window.scrollY > window.innerHeight * 0.7);
     };
     
     window.addEventListener('scroll', handleScroll, { passive: true });
-    // Initial check
     handleScroll();
     
     return () => window.removeEventListener('scroll', handleScroll);
@@ -61,7 +59,7 @@ export default function LandingPage() {
       id: data.product_id,
       name: data.product_name,
       price: data.product_promo_price || data.product_price,
-      stock: 100, // mock stock
+      stock: 100,
       image: data.product_image,
       category_id: 0,
       subcategory_id: null,
@@ -84,252 +82,380 @@ export default function LandingPage() {
 
   const config = data.config || {};
   const heroTitle = config.hero?.title || data.product_name;
-  const heroSub = config.hero?.subtitle || "Découvrez l'innovation qui va transformer votre quotidien.";
+  const heroSub = config.hero?.subtitle || "Découvrez l'innovation ultime.";
   
+  // Marketing images directly from config or fallback to product images
+  const hero_image = config.hero_image || cleanImages[0];
+  const lifestyle_image_1 = config.lifestyle_image_1 || cleanImages[1] || hero_image;
+  const lifestyle_image_2 = config.lifestyle_image_2 || cleanImages[2] || hero_image;
+  const lifestyle_image_3 = config.lifestyle_image_3 || cleanImages[0];
+  const before_after_image = config.before_after_image;
+  const promo_banner_image = config.promo_banner_image;
+  const ugc_video_1 = config.ugc_video_1;
+  const ugc_video_2 = config.ugc_video_2;
+  const ugc_video_3 = config.ugc_video_3;
+
   const problem = config.problem || {
-    title: "Marre des solutions qui ne durent pas ?",
-    description: "La plupart des produits sur le marché sont fragiles et ne répondent pas à vos attentes.",
+    title: "VOTRE QUOTIDIEN, REPENSÉ.",
+    description: "Finis les compromis. Découvrez un design conçu pour dépasser vos attentes les plus exigeantes.",
   };
 
   const solution = config.solution || {
-    title: "Voici la solution ultime.",
-    description: "Nous avons repensé chaque détail pour vous offrir une expérience sans compromis.",
+    title: "LA PERFORMANCE À L'ÉTAT PUR.",
+    description: "Chaque millimètre, chaque détail a été optimisé pour une expérience sans précédent.",
   };
 
   const benefits = config.benefits || [
-    { title: "Design Premium", desc: "Matériaux haut de gamme pour une longévité maximale." },
-    { title: "Performance", desc: "Des résultats rapides et fiables à chaque utilisation." },
-    { title: "Facilité", desc: "Pensé pour être incroyablement intuitif." }
+    { title: "Design Premium", desc: "Matériaux haut de gamme pour une robustesse maximale." },
+    { title: "Précision", desc: "Des résultats au-delà de vos espérances." },
+    { title: "Ergonomie", desc: "Confort absolu lors de chaque utilisation." },
+    { title: "Durabilité", desc: "Conçu pour résister à l'épreuve du temps." }
   ];
 
   const reviews = config.reviews || [
     { name: "Amine K.", text: "C'est exactement ce que je cherchais. La qualité est impressionnante.", rating: 5 },
-    { name: "Sarah M.", text: "Livraison rapide et produit conforme. Je recommande !", rating: 5 },
-    { name: "Karim D.", text: "Le meilleur investissement que je fait cette année.", rating: 5 }
+    { name: "Sarah M.", text: "Livraison rapide et produit conforme. Je recommande vivement !", rating: 5 },
+    { name: "Karim D.", text: "Le meilleur investissement de l'année. Une finition impeccable.", rating: 5 }
   ];
 
   const faqs = config.faq || [
     { q: "Quels sont les délais de livraison ?", a: "Nous livrons partout en Algérie en un temps record (24h à 48h selon la wilaya)." },
-    { q: "Puis-je payer à la livraison ?", a: "Oui absolument, vous ne payez que lorsque vous recevez le produit en main propre." }
+    { q: "Puis-je payer à la livraison ?", a: "Oui absolument, vous ne payez que lorsque vous recevez le produit en main propre." },
+    { q: "Le produit est-il garanti ?", a: "Oui, tous nos produits bénéficient d'une garantie satisfaction. Signalez-nous tout souci de conformité." }
   ];
 
   const seoTitle = data.seo_title || `${data.product_name} | Zorando`;
-  const seoDescription = data.seo_description || data.product_description?.substring(0, 160) || `Découvrez ${data.product_name} sur Zorando. La meilleure qualité au meilleur prix avec livraison à domicile.`;
+  const seoDescription = data.seo_description || data.product_description?.substring(0, 160) || `Découvrez ${data.product_name} en exclusivité. Haute performance et design premium.`;
   const canonicalUrl = `https://zorando.com/${slug}`;
 
   return (
-    <div className="min-h-screen bg-white text-[#111] font-sans selection:bg-black selection:text-white pb-0 relative">
+    <div className="min-h-screen bg-black text-white font-sans selection:bg-white selection:text-black pb-0 relative overflow-x-hidden">
       <Helmet>
         <title>{seoTitle}</title>
         <meta name="description" content={seoDescription} />
-        
-        {/* Open Graph / Facebook */}
         <meta property="og:type" content="product" />
         <meta property="og:url" content={canonicalUrl} />
         <meta property="og:title" content={seoTitle} />
         <meta property="og:description" content={seoDescription} />
-        {data.product_image && <meta property="og:image" content={data.product_image} />}
-        
-        {/* Twitter */}
+        {hero_image && <meta property="og:image" content={hero_image} />}
         <meta property="twitter:card" content="summary_large_image" />
-        <meta property="twitter:url" content={canonicalUrl} />
-        <meta property="twitter:title" content={seoTitle} />
-        <meta property="twitter:description" content={seoDescription} />
-        {data.product_image && <meta property="twitter:image" content={data.product_image} />}
-
         <link rel="canonical" href={canonicalUrl} />
       </Helmet>
 
-      {/* HEADER FIXE */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-md border-b border-gray-100 h-16 flex items-center justify-between px-4 lg:px-8">
-        <a href="/" className="flex items-center hover:opacity-90 transition-opacity" aria-label="ZORANDO Accueil">
-          <svg width="190" height="36" viewBox="0 0 190 36" fill="none" xmlns="http://www.w3.org/2000/svg" className="h-6 md:h-7 w-auto">
+      {/* 1. HEADER PREMIUM */}
+      <header className="fixed top-0 left-0 right-0 z-50 mix-blend-difference h-20 flex items-center justify-between px-6 lg:px-12 pointer-events-none">
+        <a href="/" className="flex items-center hover:opacity-70 transition-opacity pointer-events-auto" aria-label="ZORANDO">
+          <svg width="150" height="28" viewBox="0 0 190 36" fill="none" xmlns="http://www.w3.org/2000/svg">
             <g transform="translate(2, 2)">
-              <path d="M10 10V6C10 3.79086 11.7909 2 14 2C16.2091 2 18 3.79086 18 6V10" stroke="#111" strokeWidth="3" strokeLinecap="round"/>
-              <rect x="2" y="10" width="24" height="20" rx="4" fill="#111" fillOpacity="0.1" stroke="#111" strokeWidth="3" strokeLinejoin="round"/>
-              <path d="M9 14.5 H19 L9 24.5 H19" stroke="#111" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M10 10V6C10 3.79086 11.7909 2 14 2C16.2091 2 18 3.79086 18 6V10" stroke="#fff" strokeWidth="3" strokeLinecap="round"/>
+              <rect x="2" y="10" width="24" height="20" rx="4" fill="#fff" fillOpacity="0.1" stroke="#fff" strokeWidth="3" strokeLinejoin="round"/>
+              <path d="M9 14.5 H19 L9 24.5 H19" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
             </g>
-            <text x="38" y="28" fontFamily="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" fontSize="28" fontWeight="900" fill="#111" letterSpacing="-0.02em">ZORANDO</text>
+            <text x="38" y="28" fontFamily="system-ui, -apple-system, sans-serif" fontSize="28" fontWeight="900" fill="#fff" letterSpacing="-0.02em">ZORANDO</text>
           </svg>
         </a>
       </header>
 
-      {/* HERO SECTION */}
-      <section className="relative min-h-[90vh] md:min-h-screen flex items-center px-4 md:px-[8%] bg-black text-white pt-16">
-        <div className="absolute inset-0">
-           {cleanImages[0] ? (
-             <img src={cleanImages[0]} alt="Hero background" className="w-full h-full object-cover opacity-50" />
-           ) : (
+      {/* 2. HERO FULL SCREEN */}
+      <section className="relative h-[100svh] w-full flex flex-col justify-end pb-24 md:pb-32 px-6 lg:px-12">
+        <div className="absolute inset-0 z-0">
+          {hero_image ? (
+            <img src={hero_image} alt="Hero" className="w-full h-full object-cover object-center" />
+          ) : (
              <div className="w-full h-full bg-[#111]"></div>
-           )}
-           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-black/40"></div>
+          )}
+          {/* Gradient Overlay for text readability */}
+          <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/90"></div>
         </div>
-        <div className="relative z-10 w-full max-w-4xl">
-          <div className="inline-block px-5 py-2.5 bg-white/20 border border-white/30 rounded-full mb-8 text-sm md:text-base font-bold tracking-wide backdrop-blur-sm">
-            🔥 BEST SELLER ALGÉRIE
-          </div>
-          <h1 className="text-[clamp(3.5rem,8vw,7.5rem)] font-black mb-6 leading-[0.95] tracking-tighter uppercase whitespace-pre-line text-white shadow-black/50 drop-shadow-xl">
+        
+        <div className="relative z-10 max-w-5xl mx-auto w-full text-center flex flex-col items-center">
+          <h1 className="text-[clamp(3.5rem,10vw,8rem)] font-black text-white leading-[0.85] tracking-tighter uppercase mb-6 drop-shadow-lg">
             {heroTitle}
           </h1>
-          <p className="text-xl md:text-[1.4rem] text-gray-200 mb-10 max-w-2xl leading-relaxed font-medium drop-shadow-md">
+          <p className="text-xl md:text-3xl text-gray-200 mb-10 max-w-2xl mx-auto font-medium tracking-tight drop-shadow-md">
             {heroSub}
           </p>
-          <button 
-            onClick={handleBuyNow}
-            className="bg-white text-black px-10 py-5 rounded-full font-extrabold text-lg transition-transform hover:scale-105 active:scale-95 inline-flex items-center gap-3"
-          >
-            COMMANDER MAINTENANT <ArrowRight size={20} className="stroke-[3]" />
-          </button>
-        </div>
-      </section>
-
-      {/* STATS SECTION */}
-      <section className="py-20 md:py-32 px-4 md:px-[8%] bg-white">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 max-w-7xl mx-auto">
-          <div className="bg-[#f5f5f5] p-6 md:p-10 rounded-[1.5rem] md:rounded-[2rem] text-center">
-             <h3 className="text-3xl md:text-[2.5rem] font-black text-black mb-1 md:mb-2 leading-none">100%</h3>
-             <p className="text-gray-600 font-medium text-sm md:text-base">Qualité Garantie</p>
-          </div>
-          <div className="bg-[#f5f5f5] p-6 md:p-10 rounded-[1.5rem] md:rounded-[2rem] text-center">
-             <h3 className="text-3xl md:text-[2.5rem] font-black text-black mb-1 md:mb-2 leading-none">48h</h3>
-             <p className="text-gray-600 font-medium text-sm md:text-base">Livraison Rapide</p>
-          </div>
-          <div className="bg-[#f5f5f5] p-6 md:p-10 rounded-[1.5rem] md:rounded-[2rem] text-center">
-             <h3 className="text-3xl md:text-[2.5rem] font-black text-black mb-1 md:mb-2 leading-none">12K+</h3>
-             <p className="text-gray-600 font-medium text-sm md:text-base">Clients Satisfaits</p>
-          </div>
-          <div className="bg-[#f5f5f5] p-6 md:p-10 rounded-[1.5rem] md:rounded-[2rem] text-center">
-             <h3 className="text-3xl md:text-[2.5rem] font-black text-black mb-1 md:mb-2 leading-none">58</h3>
-             <p className="text-gray-600 font-medium text-sm md:text-base">Wilayas Livrées</p>
-          </div>
-        </div>
-      </section>
-
-      {/* SPLIT SECTION */}
-      <section className="py-10 md:py-20 px-4 md:px-[8%] bg-white">
-        <div className="grid md:grid-cols-2 gap-10 md:gap-20 items-center max-w-7xl mx-auto">
-          {cleanImages[0] ? (
-            <img src={cleanImages[0]} alt="Vue détaillée" className="w-full rounded-[2rem] object-contain bg-[#f5f5f5] aspect-square p-8 mix-blend-multiply" />
-          ) : (
-            <div className="w-full rounded-[2rem] bg-[#f5f5f5] aspect-square"></div>
-          )}
-          <div className="order-first md:order-last">
-            <h2 className="text-[clamp(2.5rem,5vw,4.5rem)] font-black mb-6 md:mb-8 leading-[1.1] uppercase tracking-tighter text-black">
-              {problem.title}
-            </h2>
-            <p className="text-lg md:text-[1.4rem] text-gray-600 leading-relaxed font-medium">
-              {problem.description}
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* FEATURES SECTION */}
-      <section className="py-20 md:py-32 px-4 md:px-[8%] bg-white text-center">
-        <h2 className="text-[clamp(2.5rem,5vw,4.5rem)] font-black mb-12 md:mb-20 tracking-tighter uppercase text-black leading-tight max-w-4xl mx-auto">
-          POURQUOI LES CHOISIR ?
-        </h2>
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 max-w-7xl mx-auto text-left">
-          {benefits.map((ben: any, idx: number) => (
-            <div key={idx} className="bg-[#f7f7f7] p-8 md:p-10 rounded-[1.5rem] md:rounded-[2rem]">
-               <h3 className="text-2xl font-black mb-3 text-black">
-                 {ben.title}
-               </h3>
-               <p className="text-gray-600 font-medium text-lg leading-relaxed">{ben.desc}</p>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 w-full sm:w-auto">
+            <button 
+              onClick={handleBuyNow}
+              className="w-full sm:w-auto bg-white text-black px-12 py-5 rounded-full font-black text-lg hover:bg-gray-200 active:scale-95 transition-all flex items-center justify-center gap-2"
+            >
+              ACHETER <ArrowRight size={20} className="stroke-[3]" />
+            </button>
+            <div className="text-white text-3xl font-black drop-shadow-lg tracking-tighter">
+              {data.product_promo_price || data.product_price} DA
             </div>
-          ))}
+          </div>
         </div>
       </section>
 
-      {/* FULL IMAGE SECTION */}
-      {(cleanImages[1] || cleanImages[0]) && (
-        <section className="py-10 md:py-20 px-4 md:px-[8%] bg-white">
-          <h2 className="text-[clamp(2.5rem,5vw,4.5rem)] font-black mb-10 md:mb-16 text-center uppercase tracking-tighter text-black max-w-5xl mx-auto leading-tight">
-            {solution.title}
-          </h2>
+      {/* 3. TRUST BAR */}
+      <section className="bg-[#111] py-8 border-y border-[#333]">
+        <div className="max-w-7xl mx-auto px-6 grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8 text-center text-gray-300">
+           <div className="flex flex-col items-center gap-3">
+             <CheckCircle size={32} className="text-white" strokeWidth={1.5} />
+             <span className="text-sm font-bold uppercase tracking-widest">Paiement Livraison</span>
+           </div>
+           <div className="flex flex-col items-center gap-3">
+             <Truck size={32} className="text-white" strokeWidth={1.5} />
+             <span className="text-sm font-bold uppercase tracking-widest">Livraison 58 Wilayas</span>
+           </div>
+           <div className="flex flex-col items-center gap-3">
+             <ShieldCheck size={32} className="text-white" strokeWidth={1.5} />
+             <span className="text-sm font-bold uppercase tracking-widest">Qualité Supérieure</span>
+           </div>
+           <div className="flex flex-col items-center gap-3">
+             <RotateCcw size={32} className="text-white" strokeWidth={1.5} />
+             <span className="text-sm font-bold uppercase tracking-widest">Support Local</span>
+           </div>
+        </div>
+      </section>
+
+      {/* 4. UGC VIDEO SECTION (Dynamic based on config) */}
+      {(ugc_video_1 || ugc_video_2) && (
+        <section className="py-24 bg-black px-4">
           <div className="max-w-7xl mx-auto">
-            <img src={cleanImages[1] || cleanImages[0]} className="w-full rounded-[2rem] md:rounded-[3rem] object-contain bg-[#f9f9f9] max-h-[80vh] mix-blend-multiply border border-gray-100" alt="Détail vue principale" />
+            <h2 className="text-center text-4xl md:text-5xl font-black tracking-tighter uppercase mb-16">EN ACTION</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {[ugc_video_1, ugc_video_2, ugc_video_3].filter(Boolean).map((vid, idx) => (
+                <div key={idx} className="relative aspect-[9/16] bg-[#1a1a1a] rounded-[2rem] overflow-hidden group cursor-pointer">
+                  {/* If it's a direct video link, use video, else assume it might be an image/thumbnail */}
+                  {String(vid).match(/\.(mp4|webm|mov)$/i) ? (
+                    <video src={vid} autoPlay muted loop playsInline className="w-full h-full object-cover" />
+                  ) : (
+                    <img src={vid} alt="UGC" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                  )}
+                  <div className="absolute inset-0 bg-black/20 group-hover:bg-black/0 transition-colors flex items-center justify-center">
+                    {!String(vid).match(/\.(mp4|webm|mov)$/i) && (
+                      <div className="w-16 h-16 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center border border-white/30">
+                        <Play fill="white" className="ml-1" />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </section>
       )}
 
-      {/* REVIEWS SECTION */}
-      <section className="py-24 md:py-32 px-4 md:px-[8%] bg-[#111] text-white">
-        <h2 className="text-[clamp(2.5rem,5vw,4.5rem)] font-black mb-16 md:mb-24 text-center uppercase tracking-tighter leading-tight">
-          AVIS CLIENTS
-        </h2>
-        <div className="grid md:grid-cols-3 gap-6 max-w-7xl mx-auto">
-          {reviews.map((rev: any, idx: number) => (
-             <div key={idx} className="bg-[#1c1c1c] p-8 md:p-10 rounded-[1.5rem] md:rounded-[2rem] flex flex-col h-full">
-               <div className="text-yellow-500 mb-8 text-2xl tracking-[0.2em]">
-                 {"★".repeat(rev.rating || 5)}
+      {/* 5. PROBLEM & SOLUTION BLOCKS */}
+      <section className="py-24 md:py-40 bg-white text-black px-6">
+        <div className="max-w-5xl mx-auto flex flex-col gap-24 md:gap-40">
+           {/* Problem */}
+           <div className="text-left">
+             <h2 className="text-[clamp(3rem,6vw,5.5rem)] font-black leading-[0.9] tracking-tighter uppercase mb-8 text-[#111]">
+               {problem.title}
+             </h2>
+             <p className="text-xl md:text-3xl text-gray-600 font-medium max-w-3xl leading-snug">
+               {problem.description}
+             </p>
+           </div>
+           
+           {/* Solution */}
+           <div className="text-right flex flex-col items-end">
+             <h2 className="text-[clamp(3rem,6vw,5.5rem)] font-black leading-[0.9] tracking-tighter uppercase mb-8 text-[#111]">
+               {solution.title}
+             </h2>
+             <p className="text-xl md:text-3xl text-gray-600 font-medium max-w-3xl leading-snug">
+               {solution.description}
+             </p>
+           </div>
+        </div>
+      </section>
+
+      {/* 6. LIFESTYLE SECTION 1 */}
+      {lifestyle_image_1 && (
+        <section className="w-full h-[70vh] md:h-[90vh] relative bg-[#111]">
+          <img src={lifestyle_image_1} alt="Lifestyle" className="w-full h-full object-cover opacity-80" loading="lazy" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent"></div>
+          <div className="absolute bottom-12 left-6 md:left-12 max-w-2xl">
+             <h3 className="text-4xl md:text-7xl font-black text-white uppercase tracking-tighter shadow-black drop-shadow-xl">SANS LIMITES.</h3>
+          </div>
+        </section>
+      )}
+
+      {/* 7. BÉNÉFICES - GRID */}
+      <section className="py-24 md:py-32 bg-black px-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-px bg-[#333] border border-[#333]">
+            {benefits.map((ben: any, idx: number) => (
+              <div key={idx} className="bg-black p-10 md:p-16 flex flex-col justify-center min-h-[300px]">
+                 <div className="text-white font-black text-4xl md:text-5xl tracking-tighter uppercase mb-6">
+                   {ben.title}
+                 </div>
+                 <p className="text-gray-400 text-lg md:text-2xl font-medium leading-relaxed">
+                   {ben.desc}
+                 </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* 8. LIFESTYLE SECTION 2 */}
+      {lifestyle_image_2 && (
+        <section className="w-full relative bg-white py-24 md:py-32 px-6">
+          <div className="max-w-7xl mx-auto">
+            <div className="aspect-square md:aspect-[21/9] rounded-[2rem] overflow-hidden relative">
+              <img src={lifestyle_image_2} alt="Lifestyle 2" className="w-full h-full object-cover" loading="lazy" />
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* 9. AVANT / APRÈS (If image provided) */}
+      {before_after_image && (
+        <section className="py-24 bg-[#111] px-6 text-center">
+          <h2 className="text-5xl font-black uppercase tracking-tighter mb-12">L'ÉVIDENCE.</h2>
+          <div className="max-w-5xl mx-auto rounded-[2rem] overflow-hidden border border-[#333]">
+             <img src={before_after_image} alt="Avant Après" className="w-full h-auto object-cover" loading="lazy" />
+          </div>
+        </section>
+      )}
+
+      {/* 10. MARKETING GALLERY */}
+      {cleanImages.length > 0 && (
+        <section className="py-24 bg-white px-6">
+          <div className="max-w-7xl mx-auto flex flex-col gap-12 text-center">
+            <h2 className="text-[clamp(3rem,6vw,5rem)] font-black text-black uppercase tracking-tighter leading-none mb-8">
+              CONCEPTION IMMERSIVE
+            </h2>
+            <div className={`grid gap-4 md:gap-6 ${cleanImages.length === 1 ? 'grid-cols-1 text-center' : cleanImages.length === 2 ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'}`}>
+              {cleanImages.map((img: string, idx: number) => (
+                <div key={idx} className="aspect-[4/5] bg-[#f5f5f5] rounded-[1.5rem] overflow-hidden">
+                  <img src={img} alt={`Gallery ${idx}`} className="w-full h-full object-cover mix-blend-multiply transition-transform duration-700 hover:scale-105" loading="lazy" />
+                </div>
+              ))}
+            </div>
+            {lifestyle_image_3 && (
+               <div className="w-full aspect-[21/9] md:aspect-[3/1] rounded-[1.5rem] overflow-hidden mt-6">
+                  <img src={lifestyle_image_3} alt="Hero Banner" className="w-full h-full object-cover" loading="lazy" />
                </div>
-               <p className="text-lg md:text-xl font-medium mb-12 text-gray-200 leading-relaxed flex-grow">"{rev.text}"</p>
-               <div className="font-bold text-white text-lg">{rev.name}</div>
-               <div className="text-gray-500 text-sm mt-1 flex items-center gap-2"><CheckCircle size={14} className="text-green-500" /> Acheteur vérifié</div>
+            )}
+          </div>
+        </section>
+      )}
+
+      {/* PROMO BANNER */}
+      {promo_banner_image && (
+        <section className="w-full">
+           <img src={promo_banner_image} className="w-full h-auto object-cover" alt="Offre Spéciale" />
+        </section>
+      )}
+
+      {/* 11. REVIEWS PREMIUM */}
+      <section className="py-32 bg-black px-6 border-b border-[#222]">
+        <div className="max-w-7xl mx-auto">
+          <h2 className="text-[clamp(3rem,6vw,5rem)] font-black text-white uppercase tracking-tighter mb-20 text-center">
+            ILS L'ONT ADOPTÉ
+          </h2>
+          <div className="grid md:grid-cols-3 gap-6">
+            {reviews.map((rev: any, idx: number) => (
+               <div key={idx} className="bg-[#111] p-10 md:p-12 rounded-[2.5rem] flex flex-col h-full border border-[#222] hover:border-[#444] transition-colors">
+                 <div className="text-white mb-8 text-2xl tracking-[0.3em]">
+                   {"★".repeat(rev.rating || 5)}
+                 </div>
+                 <p className="text-xl md:text-2xl font-medium mb-12 text-gray-300 leading-snug flex-grow">"{rev.text}"</p>
+                 <div>
+                   <div className="font-black text-white text-lg uppercase tracking-wide">{rev.name}</div>
+                   <div className="text-gray-500 text-sm mt-2 font-bold uppercase tracking-widest flex items-center gap-2">✓ ACHAT VÉRIFIÉ</div>
+                 </div>
+               </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* 12. FAQ */}
+      <section className="py-32 bg-[#111] px-6">
+        <div className="max-w-4xl mx-auto">
+          <h2 className="text-[clamp(3rem,5vw,4.5rem)] font-black text-white uppercase tracking-tighter mb-16 text-center">
+            FAQ
+          </h2>
+          <div className="flex flex-col gap-4">
+            {faqs.map((faq: any, idx: number) => (
+              <div key={idx} className="bg-black border border-[#333] rounded-2xl overflow-hidden">
+                <button 
+                  onClick={() => setOpenFaq(openFaq === idx ? null : idx)}
+                  className="w-full text-left p-6 md:p-8 flex justify-between items-center bg-black hover:bg-[#0a0a0a] transition-colors"
+                >
+                  <span className="font-bold text-lg md:text-xl pr-6">{faq.q}</span>
+                  <ChevronDown className={`transform transition-transform duration-300 ${openFaq === idx ? 'rotate-180' : ''}`} />
+                </button>
+                <div 
+                  className={`overflow-hidden transition-all duration-500 ease-in-out ${openFaq === idx ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}`}
+                >
+                  <div className="p-6 md:p-8 pt-0 text-gray-400 text-base md:text-lg">
+                    {faq.a}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* 13. OFFRE & FINAL CTA */}
+      <section className="py-32 md:py-48 bg-white text-black px-6 text-center relative overflow-hidden">
+        <h2 className="text-[clamp(3.5rem,8vw,7rem)] font-black leading-[0.9] tracking-tighter uppercase mb-10 max-w-5xl mx-auto z-10 relative">
+          SÉCURISEZ LE VÔTRE.
+        </h2>
+        
+        <div className="flex flex-col items-center justify-center font-black tracking-tighter z-10 relative mb-12">
+           {data.product_promo_price ? (
+             <div className="flex flex-col items-center">
+               <span className="text-gray-400 line-through text-3xl md:text-4xl">{data.product_price} DA</span>
+               <span className="text-[4rem] md:text-[6rem] leading-none">{data.product_promo_price} DA</span>
              </div>
-          ))}
+           ) : (
+             <span className="text-[4rem] md:text-[6rem] leading-none">{data.product_price} DA</span>
+           )}
         </div>
-      </section>
 
-      {/* FAQ SECTION */}
-      <section className="py-24 md:py-32 px-4 md:px-[8%] bg-white">
-        <h2 className="text-[clamp(2.5rem,5vw,4.5rem)] font-black mb-12 md:mb-20 text-center uppercase tracking-tighter text-black">
-          FAQ
-        </h2>
-        <div className="max-w-4xl mx-auto space-y-4">
-          {faqs.map((faq: any, idx: number) => (
-            <details key={idx} className="bg-[#f5f5f5] p-6 md:p-8 rounded-[1.5rem] group cursor-pointer border border-transparent hover:border-gray-200 transition-colors">
-               <summary className="font-bold text-lg md:text-[1.4rem] list-none flex justify-between items-center text-black leading-tight pr-4 relative">
-                 {faq.q}
-                 <span className="text-3xl text-gray-400 group-open:rotate-45 transition-transform absolute right-0 top-1/2 -translate-y-1/2">+</span>
-               </summary>
-               <p className="mt-6 text-gray-600 font-medium text-base md:text-lg leading-relaxed">{faq.a}</p>
-            </details>
-          ))}
-        </div>
-      </section>
-
-      {/* CTA SECTION */}
-      <section className="pt-24 pb-48 md:pb-52 px-4 md:px-[8%] bg-white text-center">
-        <h2 className="text-[clamp(2.5rem,6vw,5.5rem)] font-black mb-8 uppercase tracking-tighter text-black leading-none mx-auto max-w-5xl">
-          PROTÉGEZ-VOUS MAINTENANT.
-        </h2>
-        <p className="text-lg md:text-[1.4rem] font-medium text-gray-600 mb-12 max-w-2xl mx-auto">
-          Offre spéciale aujourd'hui : {data.product_promo_price || data.product_price} DA {data.product_promo_price && <span className="line-through text-gray-400 ml-2">{data.product_price} DA</span>}
-        </p>
         <button 
           onClick={handleBuyNow}
-          className="bg-[#111] hover:bg-black text-white px-10 md:px-14 py-4 md:py-5 rounded-full font-extrabold text-lg md:text-xl transition-transform hover:scale-105 active:scale-95 inline-flex items-center gap-3 shadow-xl shadow-black/20"
+          className="relative z-10 bg-black text-white px-12 md:px-16 py-6 md:py-8 rounded-full font-black text-xl md:text-2xl hover:scale-105 active:scale-95 transition-all shadow-2xl inline-flex items-center gap-3"
         >
-          COMMANDER <ArrowRight size={24} className="stroke-[3]" />
+          COMMANDER MAINTENANT <ArrowRight size={28} className="stroke-[3]" />
         </button>
       </section>
 
-      {/* FOOTER */}
-      <footer className="py-12 md:py-16 bg-[#111] text-gray-400 text-center font-medium text-sm border-t border-[#222]">
-        © Zorando — Livraison dans toute l'Algérie
+      {/* 14. PREMIUM FOOTER */}
+      <footer className="bg-black text-white pt-20 pb-40 md:pb-20 px-6 border-t border-[#222]">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-10">
+          <div className="text-3xl font-black tracking-tighter">ZORANDO</div>
+          <div className="text-gray-500 font-bold uppercase tracking-widest text-sm flex gap-6 text-center">
+            <span>© {new Date().getFullYear()} Zorando</span>
+            <span>All Rights Reserved.</span>
+          </div>
+        </div>
       </footer>
 
-      {/* STICKY BOTTOM BAR */}
+      {/* 15. STICKY BOTTOM ACTION BAR (Mobile & Desktop) */}
       <div 
-        className={`fixed bottom-[15px] left-1/2 -translate-x-1/2 w-[min(900px,92%)] bg-white px-5 py-4 rounded-[60px] shadow-[0_10px_35px_rgba(0,0,0,0.18)] border border-gray-200 flex justify-between items-center z-[60] transition-transform duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] ${
+        className={`fixed bottom-0 md:bottom-[30px] left-0 md:left-1/2 md:-translate-x-1/2 w-full md:w-[min(600px,90%)] bg-white border-t md:border border-gray-200 md:rounded-full px-6 py-4 md:py-3 shadow-[0_-10px_30px_rgba(0,0,0,0.1)] md:shadow-2xl flex justify-between items-center z-[100] transition-transform duration-500 will-change-transform ${
           isScrolled ? 'translate-y-0' : 'translate-y-[150%]'
         }`}
       >
-        <div className="flex items-center gap-3">
-          <strong className="text-[1.3rem] md:text-[1.6rem] font-black tracking-tight text-black leading-none">{data.product_promo_price || data.product_price} DA</strong>
+        <div className="flex flex-col md:flex-row md:items-center md:gap-4 flex-1">
+          <strong className="text-xl md:text-2xl font-black tracking-tighter text-black leading-none">
+            {data.product_promo_price || data.product_price} DA
+          </strong>
           {data.product_promo_price && (
-            <span className="line-through text-gray-400 text-xs md:text-sm font-bold leading-none hidden sm:inline-block">{data.product_price} DA</span>
+            <span className="line-through text-gray-400 text-xs md:text-sm font-bold uppercase tracking-widest hidden md:inline-block">
+              {data.product_price}
+            </span>
           )}
         </div>
         <button 
           onClick={handleBuyNow} 
-          className="bg-[#111] hover:bg-black text-white px-6 md:px-8 py-3.5 rounded-full font-extrabold text-sm md:text-base whitespace-nowrap active:scale-95 transition-transform"
+          className="bg-black hover:bg-gray-900 active:scale-95 transition-transform text-white px-8 md:px-10 py-4 md:py-3 rounded-full font-black text-sm md:text-base whitespace-nowrap uppercase tracking-wider"
         >
-          ACHETER
+          Acheter
         </button>
       </div>
     </div>
   );
 }
+

@@ -332,7 +332,7 @@ export default function LandingPagesAdmin() {
                     onChange={(e) => setEditForm({...editForm, hero_image: e.target.value})}
                     className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-orange-500"
                   />
-                  <p className="text-xs text-gray-500 mt-1">Image plein écran en haut de la page.</p>
+                  <p className="text-xs text-gray-500 mt-1"><strong>Dimensions recommandées :</strong> 1080x1920 px (Format vertical type Story/Reels) ou Haute Qualité Carré pour s'adapter au plein écran mobile et PC.</p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-1">Image Lifestyle 1</label>
@@ -343,6 +343,7 @@ export default function LandingPagesAdmin() {
                     onChange={(e) => setEditForm({...editForm, lifestyle_image_1: e.target.value})}
                     className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-orange-500"
                   />
+                  <p className="text-xs text-gray-500 mt-1"><strong>Dimensions recommandées :</strong> 1080x1350 px (Format portrait, bloque "Sans Limites").</p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-1">Image Lifestyle 2</label>
@@ -353,6 +354,7 @@ export default function LandingPagesAdmin() {
                     onChange={(e) => setEditForm({...editForm, lifestyle_image_2: e.target.value})}
                     className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-orange-500"
                   />
+                  <p className="text-xs text-gray-500 mt-1"><strong>Dimensions recommandées :</strong> 1920x1080 px (Sujet centré, car l'image devient carrée sur mobile mais très panoramique sur PC).</p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-1">Image Lifestyle 3 (Bannière milieu)</label>
@@ -363,6 +365,7 @@ export default function LandingPagesAdmin() {
                     onChange={(e) => setEditForm({...editForm, lifestyle_image_3: e.target.value})}
                     className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-orange-500"
                   />
+                  <p className="text-xs text-gray-500 mt-1"><strong>Dimensions recommandées :</strong> 2560x850 px ou 1920x640 px (Bannière horizontale ultra-large "Conception immersive").</p>
                 </div>
               </div>
 
@@ -378,6 +381,7 @@ export default function LandingPagesAdmin() {
                     onChange={(e) => setEditForm({...editForm, before_after_image: e.target.value})}
                     className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-orange-500"
                   />
+                  <p className="text-xs text-gray-500 mt-1"><strong>Dimensions recommandées :</strong> 1200x800 px (Format Paysage 3:2) ou 1080x1080 px.</p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-1">Bannière Promo Spéciale</label>
@@ -388,6 +392,7 @@ export default function LandingPagesAdmin() {
                     onChange={(e) => setEditForm({...editForm, promo_banner_image: e.target.value})}
                     className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-orange-500"
                   />
+                  <p className="text-xs text-gray-500 mt-1"><strong>Dimensions recommandées :</strong> 1920x600 px (Bannière horizontale fine).</p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-1">Vidéo UGC 1 (.mp4, .webm, ou Image)</label>
@@ -398,6 +403,7 @@ export default function LandingPagesAdmin() {
                     onChange={(e) => setEditForm({...editForm, ugc_video_1: e.target.value})}
                     className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-orange-500"
                   />
+                  <p className="text-xs text-gray-500 mt-1"><strong>Dimensions recommandées :</strong> 1080x1920 px (Format vertical 9:16, type Reels/TikTok).</p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-1">Vidéo UGC 2</label>

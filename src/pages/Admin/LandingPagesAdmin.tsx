@@ -355,27 +355,27 @@ export default function LandingPagesAdmin() {
                 {renderImageInput({
                   label: "Image Hero Principale",
                   field: "hero_image",
-                  hint: <p className="text-xs text-gray-500 mt-1">Sert pour la grande image plein écran au démarrage. Format Desktop ou Mobile acceptés. Haute résolution.</p>
+                  hint: <p className="text-xs text-gray-500 mt-1">Sert pour la grande image plein écran au démarrage.<br/><strong className="text-blue-600">Recommandé :</strong> Vertical 1080x1920px (9:16) ou Carré 1080x1080px (1:1).</p>
                 })}
                 {renderImageInput({
                   label: "Image Lifestyle 1",
                   field: "lifestyle_image_1",
-                  hint: <p className="text-xs text-gray-500 mt-1">Image pour la section Problème/Solution.</p>
+                  hint: <p className="text-xs text-gray-500 mt-1">Image pour la section Problème/Solution.<br/><strong className="text-blue-600">Recommandé :</strong> Vertical 1080x1350px (4:5) ou Carré (1:1).</p>
                 })}
                 {renderImageInput({
                   label: "Image Lifestyle 2",
                   field: "lifestyle_image_2",
-                  hint: <p className="text-xs text-gray-500 mt-1">Image plein écran style Nike/Apple (très large).</p>
+                  hint: <p className="text-xs text-gray-500 mt-1">Image plein écran style Nike/Apple.<br/><strong className="text-blue-600">Recommandé :</strong> Horizontal 1920x1080px (16:9) ou Carré pour mobile.</p>
                 })}
                 {renderImageInput({
                   label: "Image Lifestyle 3",
                   field: "lifestyle_image_3",
-                  hint: <p className="text-xs text-gray-500 mt-1">Image 3 dynamique.</p>
+                  hint: <p className="text-xs text-gray-500 mt-1">Image 3 dynamique pour features.<br/><strong className="text-blue-600">Recommandé :</strong> Vertical 1080x1350px (4:5) ou Carré (1:1).</p>
                 })}
                 {renderImageInput({
                   label: "Image Lifestyle 4",
                   field: "lifestyle_image_4",
-                  hint: <p className="text-xs text-gray-500 mt-1">Image pour encarts ou features.</p>
+                  hint: <p className="text-xs text-gray-500 mt-1">Image pour encarts ou features.<br/><strong className="text-blue-600">Recommandé :</strong> Vertical 1080x1350px (4:5) ou Carré (1:1).</p>
                 })}
               </div>
 
@@ -384,37 +384,37 @@ export default function LandingPagesAdmin() {
                 {renderImageInput({
                   label: "Image Avant/Après",
                   field: "before_after_image",
-                  hint: <p className="text-xs text-gray-500 mt-1">Utilisé dans la section démonstration.</p>
+                  hint: <p className="text-xs text-gray-500 mt-1">Utilisé dans la section démonstration.<br/><strong className="text-blue-600">Recommandé :</strong> Horizontal 1920x1080px (16:9) ou 1080x810px (4:3).</p>
                 })}
                 {renderImageInput({
                   label: "Bannière Promo",
                   field: "promo_banner_image",
-                  hint: <p className="text-xs text-gray-500 mt-1">Bannière fine ou offre limitée.</p>
+                  hint: <p className="text-xs text-gray-500 mt-1">Bannière fond de section CTA.<br/><strong className="text-blue-600">Recommandé :</strong> Horizontal 1920x1080px (16:9).</p>
                 })}
                 {renderImageInput({
                   label: "Image Galerie 1",
                   field: "gallery_image_1",
-                  hint: null
+                  hint: <p className="text-xs text-gray-500 mt-1"><strong className="text-blue-600">Recommandé :</strong> Carré 1080x1080px (1:1).</p>
                 })}
                 {renderImageInput({
                   label: "Image Galerie 2",
                   field: "gallery_image_2",
-                  hint: null
+                  hint: <p className="text-xs text-gray-500 mt-1"><strong className="text-blue-600">Recommandé :</strong> Carré 1080x1080px (1:1).</p>
                 })}
                 {renderImageInput({
                   label: "Image Galerie 3",
                   field: "gallery_image_3",
-                  hint: null
+                  hint: <p className="text-xs text-gray-500 mt-1"><strong className="text-blue-600">Recommandé :</strong> Carré 1080x1080px (1:1).</p>
                 })}
                 {renderImageInput({
                   label: "Image Galerie 4",
                   field: "gallery_image_4",
-                  hint: null
+                  hint: <p className="text-xs text-gray-500 mt-1"><strong className="text-blue-600">Recommandé :</strong> Carré 1080x1080px (1:1).</p>
                 })}
                 {renderImageInput({
                   label: "Image Galerie 5",
                   field: "gallery_image_5",
-                  hint: null
+                  hint: <p className="text-xs text-gray-500 mt-1"><strong className="text-blue-600">Recommandé :</strong> Carré 1080x1080px (1:1).</p>
                 })}
               </div>
               
@@ -424,19 +424,19 @@ export default function LandingPagesAdmin() {
                   label: "Vidéo UGC 1",
                   field: "ugc_video_1",
                   accept: "image/*,video/*",
-                  hint: <p className="text-xs text-gray-500 mt-1">Vidéo verticale type Reels/TikTok.</p>
+                  hint: <p className="text-xs text-gray-500 mt-1">Vidéo type Reels/TikTok. <strong className="text-blue-600">Recommandé :</strong> Vertical 1080x1920px (9:16).</p>
                 })}
                 {renderImageInput({
                   label: "Vidéo UGC 2",
                   field: "ugc_video_2",
                   accept: "image/*,video/*",
-                  hint: null
+                  hint: <p className="text-xs text-gray-500 mt-1"><strong className="text-blue-600">Recommandé :</strong> Vertical 1080x1920px (9:16).</p>
                 })}
                 {renderImageInput({
                   label: "Vidéo UGC 3",
                   field: "ugc_video_3",
                   accept: "image/*,video/*",
-                  hint: null
+                  hint: <p className="text-xs text-gray-500 mt-1"><strong className="text-blue-600">Recommandé :</strong> Vertical 1080x1920px (9:16).</p>
                 })}
               </div>
 

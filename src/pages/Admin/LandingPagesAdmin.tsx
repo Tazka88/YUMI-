@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Eye, Copy, Trash2, CheckCircle2, AlertCircle, Plus, Edit, X } from 'lucide-react';
+import { Eye, Copy, Trash2, CheckCircle2, AlertCircle, Plus, Edit, X, Upload } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function LandingPagesAdmin() {
@@ -11,6 +11,41 @@ export default function LandingPagesAdmin() {
   const [editingPage, setEditingPage] = useState<any | null>(null);
   const [editForm, setEditForm] = useState<any>({});
   const [isSaving, setIsSaving] = useState(false);
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, customName?: string) => {
+    const file = e.target.files?.[0];
+    if (!file) return null;
+
+    const toastId = toast.loading('Téléchargement de l\'image...');
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+      if (customName) formData.append('customName', customName);
+
+      const token = localStorage.getItem('adminToken');
+      const res = await fetch('/api/admin/upload', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+        body: formData
+      });
+
+      e.target.value = ''; // Reset input
+
+      if (res.ok) {
+        const data = await res.json();
+        toast.success('Image téléchargée avec succès', { id: toastId });
+        return data.url;
+      } else {
+        const err = await res.json();
+        toast.error(`Erreur: ${err.error || 'Échec du téléchargement'}`, { id: toastId });
+        return null;
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error('Erreur de connexion au serveur', { id: toastId });
+      return null;
+    }
+  };
 
   useEffect(() => {
     fetchData();
@@ -164,6 +199,30 @@ export default function LandingPagesAdmin() {
       setIsSaving(false);
     }
   };
+
+  const ImageInput = ({ label, field, placeholder, hint }: { label: string, field: string, placeholder?: string, hint: React.ReactNode }) => (
+    <div>
+      <label className="block text-sm font-medium mb-1">{label}</label>
+      <div className="flex gap-2 items-center">
+        <input
+          type="text"
+          placeholder={placeholder || 'https://...'}
+          value={editForm[field] || ''}
+          onChange={(e) => setEditForm({...editForm, [field]: e.target.value})}
+          className="flex-1 px-3 py-2 border rounded focus:ring-2 focus:ring-orange-500"
+        />
+        <label className="cursor-pointer bg-gray-100 p-2 px-3 border rounded-md hover:bg-gray-200 transition-colors flex items-center gap-2" title="Uploader un fichier">
+          <Upload size={18} className="text-gray-600" />
+          <span className="text-sm font-medium text-gray-700 hidden sm:inline">Upload</span>
+          <input type="file" className="hidden" accept="image/*,video/*" onChange={async (e) => {
+            const url = await handleFileUpload(e);
+            if (url) setEditForm({...editForm, [field]: url});
+          }} />
+        </label>
+      </div>
+      {hint}
+    </div>
+  );
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
@@ -323,109 +382,62 @@ export default function LandingPagesAdmin() {
               {/* IMAGES MARKETING */}
               <div className="space-y-4">
                 <h4 className="font-bold text-gray-800 border-b pb-2">Images Marketing (URLs)</h4>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Image Hero Principale</label>
-                  <input
-                    type="text"
-                    placeholder="https://... (doit finir par .jpg, .png, etc.)"
-                    value={editForm.hero_image}
-                    onChange={(e) => setEditForm({...editForm, hero_image: e.target.value})}
-                    className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-orange-500"
-                  />
-                  <p className="text-xs text-red-500 mt-1"><strong>Attention :</strong> Utilisez un "Lien direct" vers l'image. (Ex: https://i.postimg.cc/mD0vFqVj/image.jpg au lieu d'une page Web).</p>
-                  <p className="text-xs text-gray-500 mt-1"><strong>Dimensions recommandées :</strong> 1080x1920 px (Format vertical type Story/Reels) ou Haute Qualité Carré pour s'adapter au plein écran mobile et PC.</p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Image Lifestyle 1</label>
-                  <input
-                    type="text"
-                    placeholder="https://..."
-                    value={editForm.lifestyle_image_1}
-                    onChange={(e) => setEditForm({...editForm, lifestyle_image_1: e.target.value})}
-                    className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-orange-500"
-                  />
-                  <p className="text-xs text-gray-500 mt-1"><strong>Dimensions recommandées :</strong> 1080x1350 px (Format portrait, bloque "Sans Limites").</p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Image Lifestyle 2</label>
-                  <input
-                    type="text"
-                    placeholder="https://..."
-                    value={editForm.lifestyle_image_2}
-                    onChange={(e) => setEditForm({...editForm, lifestyle_image_2: e.target.value})}
-                    className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-orange-500"
-                  />
-                  <p className="text-xs text-gray-500 mt-1"><strong>Dimensions recommandées :</strong> 1920x1080 px (Sujet centré, car l'image devient carrée sur mobile mais très panoramique sur PC).</p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Image Lifestyle 3 (Bannière milieu)</label>
-                  <input
-                    type="text"
-                    placeholder="https://..."
-                    value={editForm.lifestyle_image_3}
-                    onChange={(e) => setEditForm({...editForm, lifestyle_image_3: e.target.value})}
-                    className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-orange-500"
-                  />
-                  <p className="text-xs text-gray-500 mt-1"><strong>Dimensions recommandées :</strong> 2560x850 px ou 1920x640 px (Bannière horizontale ultra-large "Conception immersive").</p>
-                </div>
+                <ImageInput 
+                  label="Image Hero Principale" 
+                  field="hero_image" 
+                  placeholder="https://... (doit finir par .jpg, .png, etc.)"
+                  hint={
+                    <>
+                      <p className="text-xs text-red-500 mt-1"><strong>Attention :</strong> Utilisez un "Lien direct" vers l'image, ou utilisez le bouton Upload.</p>
+                      <p className="text-xs text-gray-500 mt-1"><strong>Dimensions recommandées :</strong> 1080x1920 px (Format vertical type Story/Reels) ou Haute Qualité Carré pour s'adapter au plein écran mobile et PC.</p>
+                    </>
+                  }
+                />
+                <ImageInput 
+                  label="Image Lifestyle 1" 
+                  field="lifestyle_image_1" 
+                  hint={<p className="text-xs text-gray-500 mt-1"><strong>Dimensions recommandées :</strong> 1080x1350 px (Format portrait, bloque "Sans Limites").</p>}
+                />
+                <ImageInput 
+                  label="Image Lifestyle 2" 
+                  field="lifestyle_image_2" 
+                  hint={<p className="text-xs text-gray-500 mt-1"><strong>Dimensions recommandées :</strong> 1920x1080 px (Sujet centré, car l'image devient carrée sur mobile mais très panoramique sur PC).</p>}
+                />
+                <ImageInput 
+                  label="Image Lifestyle 3 (Bannière milieu)" 
+                  field="lifestyle_image_3" 
+                  hint={<p className="text-xs text-gray-500 mt-1"><strong>Dimensions recommandées :</strong> 2560x850 px ou 1920x640 px (Bannière horizontale ultra-large "Conception immersive").</p>}
+                />
               </div>
 
               {/* AUTRES MEDIAS MARKETING */}
               <div className="space-y-4">
                 <h4 className="font-bold text-gray-800 border-b pb-2">Vidéos UGC & Promo (URLs)</h4>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Image Avant/Après</label>
-                  <input
-                    type="text"
-                    placeholder="https://..."
-                    value={editForm.before_after_image}
-                    onChange={(e) => setEditForm({...editForm, before_after_image: e.target.value})}
-                    className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-orange-500"
-                  />
-                  <p className="text-xs text-gray-500 mt-1"><strong>Dimensions recommandées :</strong> 1200x800 px (Format Paysage 3:2) ou 1080x1080 px.</p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Bannière Promo Spéciale</label>
-                  <input
-                    type="text"
-                    placeholder="https://..."
-                    value={editForm.promo_banner_image}
-                    onChange={(e) => setEditForm({...editForm, promo_banner_image: e.target.value})}
-                    className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-orange-500"
-                  />
-                  <p className="text-xs text-gray-500 mt-1"><strong>Dimensions recommandées :</strong> 1920x600 px (Bannière horizontale fine).</p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Vidéo UGC 1 (.mp4, .webm, ou Image)</label>
-                  <input
-                    type="text"
-                    placeholder="https://..."
-                    value={editForm.ugc_video_1}
-                    onChange={(e) => setEditForm({...editForm, ugc_video_1: e.target.value})}
-                    className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-orange-500"
-                  />
-                  <p className="text-xs text-gray-500 mt-1"><strong>Dimensions recommandées :</strong> 1080x1920 px (Format vertical 9:16, type Reels/TikTok).</p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Vidéo UGC 2</label>
-                  <input
-                    type="text"
-                    placeholder="https://..."
-                    value={editForm.ugc_video_2}
-                    onChange={(e) => setEditForm({...editForm, ugc_video_2: e.target.value})}
-                    className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-orange-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Vidéo UGC 3</label>
-                  <input
-                    type="text"
-                    placeholder="https://..."
-                    value={editForm.ugc_video_3}
-                    onChange={(e) => setEditForm({...editForm, ugc_video_3: e.target.value})}
-                    className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-orange-500"
-                  />
-                </div>
+                <ImageInput 
+                  label="Image Avant/Après" 
+                  field="before_after_image" 
+                  hint={<p className="text-xs text-gray-500 mt-1"><strong>Dimensions recommandées :</strong> 1200x800 px (Format Paysage 3:2) ou 1080x1080 px.</p>}
+                />
+                <ImageInput 
+                  label="Bannière Promo Spéciale" 
+                  field="promo_banner_image" 
+                  hint={<p className="text-xs text-gray-500 mt-1"><strong>Dimensions recommandées :</strong> 1920x600 px (Bannière horizontale fine).</p>}
+                />
+                <ImageInput 
+                  label="Vidéo UGC 1 (.mp4, .webm, ou Image)" 
+                  field="ugc_video_1" 
+                  hint={<p className="text-xs text-gray-500 mt-1"><strong>Dimensions recommandées :</strong> 1080x1920 px (Format vertical 9:16, type Reels/TikTok).</p>}
+                />
+                <ImageInput 
+                  label="Vidéo UGC 2" 
+                  field="ugc_video_2" 
+                  hint={null}
+                />
+                <ImageInput 
+                  label="Vidéo UGC 3" 
+                  field="ugc_video_3" 
+                  hint={null}
+                />
               </div>
             </div>
 

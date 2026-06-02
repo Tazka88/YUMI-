@@ -70,12 +70,10 @@ export default function LandingPage() {
   const config = data.config || {};
   const product = {
     id: data.product_id,
-    name: config.custom_name || data.product_name,
-    price: config.custom_price || data.product_price,
-    promo_price: config.custom_promo_price !== undefined ? config.custom_promo_price : data.product_promo_price,
+    name: data.product_name,
+    price: data.product_price,
+    promo_price: data.product_promo_price,
     image: data.product_image,
-    description: config.custom_description || data.product_description,
-    features: config.custom_features && config.custom_features.length > 0 ? config.custom_features : data.features,
   };
 
   // Safe image fallbacks if config images are missing
@@ -117,7 +115,7 @@ export default function LandingPage() {
     <div className="bg-white min-h-screen font-sans text-gray-900 selection:bg-black selection:text-white overflow-x-hidden w-full max-w-[100vw]">
       <Helmet>
         <title>{config.seo_title || `${product.name} - Site Officiel`}</title>
-        <meta name="description" content={config.seo_description || product.description?.substring(0, 150)} />
+        <meta name="description" content={config.seo_description || data.product_description?.substring(0, 150)} />
       </Helmet>
 
       {/* STICKY BUY BAR */}
@@ -185,7 +183,7 @@ export default function LandingPage() {
               {product.name}
             </h1>
             <p className="mt-4 md:mt-6 text-lg md:text-2xl text-gray-300 font-light max-w-2xl mx-auto">
-              {product.description || "L'excellence redéfinie. Conçu pour ceux qui n'acceptent aucun compromis."}
+              L'excellence redéfinie. Conçu pour ceux qui n'acceptent aucun compromis.
             </p>
             
             <div className="mt-8 md:mt-10 flex flex-col sm:flex-row items-center justify-center gap-4 md:gap-6 w-full">
@@ -238,7 +236,7 @@ export default function LandingPage() {
                 Vous avez assez perdu de temps avec des solutions qui ne tiennent pas leurs promesses. Découvrez pourquoi des milliers de clients font confiance à notre expertise. Une conception repensée de A à Z.
               </p>
               <ul className="space-y-3 md:space-y-4 mb-8 md:mb-10 w-full">
-                {(product.features && product.features.length > 0 ? product.features : ['Design ergonomique supérieur', 'Matériaux premium ultra-résistants', 'Efficacité d\'action immédiate']).map((item: string, i: number) => (
+                {['Design ergonomique supérieur', 'Matériaux premium ultra-résistants', 'Efficacité d\'action immédiate'].map((item, i) => (
                   <li key={i} className="flex items-start md:items-center gap-3 md:gap-4 text-base md:text-lg font-medium text-gray-800">
                     <div className="w-6 h-6 md:w-8 md:h-8 rounded-full bg-black flex items-center justify-center text-white shrink-0 mt-0.5 md:mt-0">
                       <Check size={14} className="md:w-4 md:h-4" />

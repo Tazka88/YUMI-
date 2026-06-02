@@ -327,11 +327,12 @@ export default function LandingPagesAdmin() {
                   <label className="block text-sm font-medium mb-1">Image Hero Principale</label>
                   <input
                     type="text"
-                    placeholder="https://..."
+                    placeholder="https://... (doit finir par .jpg, .png, etc.)"
                     value={editForm.hero_image}
                     onChange={(e) => setEditForm({...editForm, hero_image: e.target.value})}
                     className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-orange-500"
                   />
+                  <p className="text-xs text-red-500 mt-1"><strong>Attention :</strong> Utilisez un "Lien direct" vers l'image. (Ex: https://i.postimg.cc/mD0vFqVj/image.jpg au lieu d'une page Web).</p>
                   <p className="text-xs text-gray-500 mt-1"><strong>Dimensions recommandées :</strong> 1080x1920 px (Format vertical type Story/Reels) ou Haute Qualité Carré pour s'adapter au plein écran mobile et PC.</p>
                 </div>
                 <div>

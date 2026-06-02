@@ -1594,6 +1594,7 @@ router.put('/admin/landing-pages/:id', authenticate, async (req, res) => {
   };
   
   try {
+    console.log('UPDATING landing page:', id, updatedConfig);
     const [updated] = await sql`
       UPDATE landing_pages 
       SET 
@@ -1604,6 +1605,8 @@ router.put('/admin/landing-pages/:id', authenticate, async (req, res) => {
       RETURNING *
     `;
     
+    console.log('UPDATED landing page:', updated);
+
     if (!updated) {
       return res.status(404).json({ error: 'Landing page not found' });
     }

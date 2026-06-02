@@ -5,7 +5,6 @@ import { LayoutDashboard, ShoppingBag, Users, Settings, LogOut, TrendingUp, Aler
 import { formatPrice } from '../../utils/formatPrice';
 import FooterSettings from './FooterSettings';
 import PageSettings from './PageSettings';
-import LandingPagesAdmin from './LandingPagesAdmin';
 import WilayasSettings from './WilayasSettings';
 import CommunesSettings from './CommunesSettings';
 import OfficesSettings from './OfficesSettings';
@@ -1170,30 +1169,6 @@ export default function AdminDashboard() {
     });
   };
 
-  const createLandingPageForProduct = async (id: number) => {
-    const toastId = toast.loading('Création de la landing page...');
-    try {
-      const res = await fetch('/api/admin/landing-pages', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
-        },
-        body: JSON.stringify({ product_id: id })
-      });
-      
-      if (res.ok) {
-        toast.success('Landing page générée avec succès', { id: toastId });
-        setActiveTab('landing-pages');
-      } else {
-        const error = await res.json();
-        toast.error(error.error || 'Erreur lors de la création', { id: toastId });
-      }
-    } catch (err) {
-      toast.error('Erreur lors de la création', { id: toastId });
-    }
-  };
-
   const handleSubcategorySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -2300,9 +2275,6 @@ export default function AdminDashboard() {
                             </td>
                             <td className="px-6 py-4">
                               <div className="flex items-center gap-3">
-                                <button onClick={() => createLandingPageForProduct(product.id)} className="text-orange-500 hover:text-orange-700" title="Créer Landing Page">
-                                  <LayoutTemplate size={18} />
-                                </button>
                                 <button onClick={() => openModal(product)} className="text-blue-500 hover:text-blue-700" title="Modifier">
                                   <Edit size={18} />
                                 </button>
@@ -3064,10 +3036,6 @@ export default function AdminDashboard() {
 
         {activeTab === 'pages' && (
           <PageSettings />
-        )}
-
-        {activeTab === 'landing-pages' && (
-          <LandingPagesAdmin />
         )}
 
         {activeTab === 'sections' && (

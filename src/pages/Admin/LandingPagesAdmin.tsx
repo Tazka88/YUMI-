@@ -124,6 +124,12 @@ export default function LandingPagesAdmin() {
       slug: lp.slug,
       seo_title: lp.config?.seo_title || '',
       seo_description: lp.config?.seo_description || '',
+      // Contenu Override
+      custom_name: lp.config?.custom_name || '',
+      custom_price: lp.config?.custom_price || '',
+      custom_promo_price: lp.config?.custom_promo_price || '',
+      custom_description: lp.config?.custom_description || '',
+      custom_features: lp.config?.custom_features?.join('\n') || '',
       // Marketing images
       hero_image: lp.config?.hero_image || '',
       lifestyle_image_1: lp.config?.lifestyle_image_1 || '',
@@ -148,6 +154,15 @@ export default function LandingPagesAdmin() {
       setIsSaving(true);
       
       const config = { ...editForm };
+      
+      if (typeof config.custom_features === 'string') {
+        config.custom_features = config.custom_features.split('\n').map((f: string) => f.trim()).filter((f: string) => f);
+      }
+      if (config.custom_price) config.custom_price = parseFloat(config.custom_price);
+      else delete config.custom_price;
+      if (config.custom_promo_price) config.custom_promo_price = parseFloat(config.custom_promo_price);
+      else delete config.custom_promo_price;
+
       const slug = config.slug;
       const seo_title = config.seo_title;
       const seo_description = config.seo_description;
@@ -345,6 +360,64 @@ export default function LandingPagesAdmin() {
                     onChange={(e) => setEditForm({...editForm, seo_description: e.target.value})}
                     className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-orange-500"
                     rows={2}
+                  />
+                </div>
+              </div>
+
+              {/* CONTENU OVERRIDE */}
+              <div className="space-y-4">
+                <h4 className="font-bold text-gray-800 border-b pb-2">Contenu de la Landing Page</h4>
+                <p className="text-xs text-gray-500">Laissez vide pour utiliser les données par défaut du produit.</p>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Titre Personnalisé</label>
+                  <input
+                    type="text"
+                    placeholder="Ex: Titre exclusif de la LP"
+                    value={editForm.custom_name}
+                    onChange={(e) => setEditForm({...editForm, custom_name: e.target.value})}
+                    className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-orange-500"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Prix Personnalisé</label>
+                    <input
+                      type="number"
+                      placeholder="Ex: 5000"
+                      value={editForm.custom_price}
+                      onChange={(e) => setEditForm({...editForm, custom_price: e.target.value})}
+                      className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-orange-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Prix Promo Personnalisé</label>
+                    <input
+                      type="number"
+                      placeholder="Ex: 3500"
+                      value={editForm.custom_promo_price}
+                      onChange={(e) => setEditForm({...editForm, custom_promo_price: e.target.value})}
+                      className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-orange-500"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Description / Accroche</label>
+                  <textarea
+                    placeholder="Courte description affichée sous le titre..."
+                    value={editForm.custom_description}
+                    onChange={(e) => setEditForm({...editForm, custom_description: e.target.value})}
+                    className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-orange-500"
+                    rows={3}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Avantages (Un par ligne)</label>
+                  <textarea
+                    placeholder="Design ergonomique&#10;Matériaux premium&#10;Livraison gratuite"
+                    value={editForm.custom_features}
+                    onChange={(e) => setEditForm({...editForm, custom_features: e.target.value})}
+                    className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-orange-500"
+                    rows={4}
                   />
                 </div>
               </div>

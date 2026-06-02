@@ -5,6 +5,7 @@ import { LayoutDashboard, ShoppingBag, Users, Settings, LogOut, TrendingUp, Aler
 import { formatPrice } from '../../utils/formatPrice';
 import FooterSettings from './FooterSettings';
 import PageSettings from './PageSettings';
+import LandingPagesAdmin from './LandingPagesAdmin';
 import WilayasSettings from './WilayasSettings';
 import CommunesSettings from './CommunesSettings';
 import OfficesSettings from './OfficesSettings';
@@ -3036,6 +3037,10 @@ export default function AdminDashboard() {
 
         {activeTab === 'pages' && (
           <PageSettings />
+        )}
+
+        {activeTab === 'landing-pages' && (
+          <LandingPagesAdmin />
         )}
 
         {activeTab === 'sections' && (

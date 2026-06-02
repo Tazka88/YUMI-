@@ -124,8 +124,8 @@ export default function LandingPage() {
     { q: "Le produit est-il garanti ?", a: "Oui, tous nos produits bénéficient d'une garantie satisfaction. Signalez-nous tout souci de conformité." }
   ];
 
-  const seoTitle = data.seo_title || `${data.product_name} | Zorando`;
-  const seoDescription = data.seo_description || data.product_description?.substring(0, 160) || `Découvrez ${data.product_name} en exclusivité. Haute performance et design premium.`;
+  const seoTitle = config.seo_title || data.seo_title || `${data.product_name} | Zorando`;
+  const seoDescription = config.seo_description || data.seo_description || data.product_description?.substring(0, 160) || `Découvrez ${data.product_name} en exclusivité. Haute performance et design premium.`;
   const canonicalUrl = `https://zorando.com/${slug}`;
 
   return (

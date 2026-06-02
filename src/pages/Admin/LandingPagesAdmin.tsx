@@ -106,8 +106,8 @@ export default function LandingPagesAdmin() {
     setEditingPage(lp);
     setEditForm({
       slug: lp.slug,
-      seo_title: lp.seo_title || '',
-      seo_description: lp.seo_description || '',
+      seo_title: lp.config?.seo_title || lp.seo_title || '',
+      seo_description: lp.config?.seo_description || lp.seo_description || '',
       hero_image: lp.config?.hero_image || '',
       lifestyle_image_1: lp.config?.lifestyle_image_1 || '',
       lifestyle_image_2: lp.config?.lifestyle_image_2 || '',

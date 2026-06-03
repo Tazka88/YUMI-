@@ -9,6 +9,43 @@ export default function LandingPagesAdmin() {
   const [editingPage, setEditingPage] = useState<any>(null);
   const [editForm, setEditForm] = useState<any>({});
   const [isSaving, setIsSaving] = useState(false);
+  const [oneBladeSlug, setOneBladeSlug] = useState('');
+
+  const fetchSettings = async () => {
+    try {
+      const res = await fetch('/api/settings');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.oneblade_product_slug) {
+          setOneBladeSlug(data.oneblade_product_slug);
+        }
+      }
+    } catch(err) {
+      console.error(err);
+    }
+  };
+
+  const saveOneBladeSlug = async () => {
+    try {
+      const res = await fetch('/api/admin/settings', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
+        },
+        body: JSON.stringify({
+          settings: {
+            oneblade_product_slug: oneBladeSlug || 'philips-oneblade-360-qp2824'
+          }
+        })
+      });
+      if (res.ok) {
+        toast.success("Lien OneBlade mis à jour");
+      }
+    } catch(err) {
+      toast.error("Erreur de sauvegarde");
+    }
+  };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, customName?: string) => {
     const file = e.target.files?.[0];
@@ -47,6 +84,7 @@ export default function LandingPagesAdmin() {
 
   useEffect(() => {
     fetchData();
+    fetchSettings();
   }, []);
 
   const fetchData = async () => {
@@ -210,6 +248,44 @@ export default function LandingPagesAdmin() {
   );
 
   return (
+    <div className="space-y-8">
+    <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden p-6">
+       <div className="mb-6">
+         <h2 className="text-xl font-bold text-gray-800">Pages Personnalisées (Code)</h2>
+         <p className="text-sm text-gray-500 mt-1">Gérez vos pages landing créées sur mesure</p>
+       </div>
+       <div className="flex items-center justify-between border p-4 rounded-lg bg-gray-50">
+         <div>
+           <div className="font-bold text-gray-800 flex items-center gap-2">
+             Philips OneBlade 360
+             <span className="px-2 py-1 text-xs bg-lime-100 text-lime-800 rounded-full font-medium">Actif</span>
+           </div>
+           <a href="/lp/oneblade" target="_blank" className="text-sm text-blue-600 hover:underline flex items-center gap-1 mt-1">
+             /lp/oneblade <Eye size={14} />
+           </a>
+         </div>
+         <div className="flex items-center gap-3">
+           <div className="text-sm text-gray-600 font-medium whitespace-nowrap">Relier au produit :</div>
+           <select 
+              value={oneBladeSlug}
+              onChange={(e) => setOneBladeSlug(e.target.value)}
+              className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-orange-500 w-64"
+            >
+              <option value="" disabled>Sélectionner un produit cible</option>
+              {products.map(p => (
+                <option key={p.id} value={p.slug}>{p.name}</option>
+              ))}
+            </select>
+            <button 
+              onClick={saveOneBladeSlug}
+              className="bg-gray-800 text-white px-4 py-2 rounded-md hover:bg-gray-900 transition flex items-center gap-2 text-sm font-medium"
+            >
+              <CheckCircle2 size={16} /> Enregistrer
+            </button>
+         </div>
+       </div>
+    </div>
+
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
       <div className="p-6 border-b border-gray-100 flex flex-col md:flex-row justify-between items-center gap-4">
         <div>
@@ -460,6 +536,7 @@ export default function LandingPagesAdmin() {
           </div>
         </div>
       )}
+    </div>
     </div>
   );
 }

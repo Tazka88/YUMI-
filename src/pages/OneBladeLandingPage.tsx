@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-const ProductLinkContext = React.createContext('/product/philips-oneblade-360-qp2824');
+const ProductLinkContext = React.createContext('/checkout?directBuy=philips-oneblade-360-qp2824');
 
 function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
@@ -484,7 +484,7 @@ function Footer() {
 }
 
 export default function OneBladeLandingPage() {
-  const [productUrl, setProductUrl] = useState('/product/philips-oneblade-360-qp2824');
+  const [productUrl, setProductUrl] = useState('/checkout?directBuy=philips-oneblade-360-qp2824');
 
   useEffect(() => {
     // Fetch product settings for the button
@@ -493,7 +493,7 @@ export default function OneBladeLandingPage() {
       .then(settings => {
         const slug = settings.oneblade_product_slug;
         if (slug) {
-          setProductUrl(`/product/${slug}`);
+          setProductUrl(`/checkout?directBuy=${slug}`);
         }
       })
       .catch(console.error);

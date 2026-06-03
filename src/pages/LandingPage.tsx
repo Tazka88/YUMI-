@@ -99,14 +99,15 @@ export default function LandingPage() {
   }
 
   const handleBuy = () => {
-    addToCart({
-      id: product.id,
-      name: product.name,
-      price: product.promo_price || product.price,
-      image: product.image,
-      quantity: 1
+    navigate('/checkout', { 
+      state: { 
+        directBuyItem: { 
+          ...product, 
+          quantity: 1, 
+          cartItemId: product.id.toString() 
+        } 
+      } 
     });
-    navigate('/checkout');
   };
 
   const discount = product.promo_price ? Math.round(((product.price - product.promo_price) / product.price) * 100) : 0;

@@ -35,7 +35,7 @@ export default function LandingPagesAdmin() {
         },
         body: JSON.stringify({
           settings: {
-            oneblade_product_slug: oneBladeSlug || 'philips-oneblade-360-qp2824'
+            oneblade_product_slug: oneBladeSlug || 'philips-oneblade-qp2824-10-tondeuse-rechargeable-original-algerie'
           }
         })
       });

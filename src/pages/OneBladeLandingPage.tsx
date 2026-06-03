@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-const ProductLinkContext = React.createContext('/product/philips-oneblade-360-qp2824');
+const ProductLinkContext = React.createContext('/product/philips-oneblade-qp2824-10-tondeuse-rechargeable-original-algerie');
 
 function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
@@ -484,7 +484,7 @@ function Footer() {
 }
 
 export default function OneBladeLandingPage() {
-  const [productUrl, setProductUrl] = useState('/product/philips-oneblade-360-qp2824');
+  const [productUrl, setProductUrl] = useState('/product/philips-oneblade-qp2824-10-tondeuse-rechargeable-original-algerie');
 
   useEffect(() => {
     // Fetch product settings for the button

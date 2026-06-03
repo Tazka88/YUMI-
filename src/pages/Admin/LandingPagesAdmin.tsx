@@ -264,24 +264,31 @@ export default function LandingPagesAdmin() {
              /lp/oneblade <Eye size={14} />
            </a>
          </div>
-         <div className="flex items-center gap-3">
-           <div className="text-sm text-gray-600 font-medium whitespace-nowrap">Relier au produit :</div>
-           <select 
-              value={oneBladeSlug}
-              onChange={(e) => setOneBladeSlug(e.target.value)}
-              className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-orange-500 w-64"
-            >
-              <option value="" disabled>Sélectionner un produit cible</option>
-              {products.map(p => (
-                <option key={p.id} value={p.slug}>{p.name}</option>
-              ))}
-            </select>
-            <button 
-              onClick={saveOneBladeSlug}
-              className="bg-gray-800 text-white px-4 py-2 rounded-md hover:bg-gray-900 transition flex items-center gap-2 text-sm font-medium"
-            >
-              <CheckCircle2 size={16} /> Enregistrer
-            </button>
+         <div className="flex flex-col gap-2">
+           <label className="text-sm text-gray-700 font-medium">Produit lié au bouton de commande :</label>
+           <div className="flex items-center gap-3">
+             <div className="relative">
+               <input 
+                  type="text"
+                  list="oneblade-products"
+                  value={oneBladeSlug}
+                  onChange={(e) => setOneBladeSlug(e.target.value)}
+                  placeholder="Rechercher ou coller le lien..."
+                  className="border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500 w-80 outline-none transition-all shadow-sm"
+                />
+                <datalist id="oneblade-products">
+                  {products.map(p => (
+                    <option key={p.id} value={p.slug}>{p.name}</option>
+                  ))}
+                </datalist>
+             </div>
+              <button 
+                onClick={saveOneBladeSlug}
+                className="bg-gray-900 text-white px-5 py-2.5 rounded-lg hover:bg-gray-800 transition-all flex items-center gap-2 text-sm font-medium shadow-sm"
+              >
+                <CheckCircle2 size={16} /> Appliquer
+              </button>
+           </div>
          </div>
        </div>
     </div>

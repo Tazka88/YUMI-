@@ -36,7 +36,7 @@ export default function Checkout() {
     if (directBuySlug && !directBuyItemState) {
       setIsFetchingDirectBuy(true);
       fetchWithCache(`/api/products/${directBuySlug}`)
-        .then(res => {
+        .then((res: any) => {
           if (res) {
             setDirectBuyItemState({ 
               ...res, 

@@ -2,9 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { Eye, Copy, Trash2, CheckCircle2, AlertCircle, Plus, Edit, X, Upload, Search, ChevronDown } from 'lucide-react';
 import toast from 'react-hot-toast';
 
-export function SmartProductSearch({ products, value, onChange, placeholder, valueKey = "slug", className = "w-80" }: any) {
+export function SmartProductSearch({ products: initialProducts = [], value, onChange, placeholder, valueKey = "slug", className = "w-80" }: any) {
   const [searchTerm, setSearchTerm] = useState('');
   const [isOpen, setIsOpen] = useState(false);
+  const [results, setResults] = useState<any[]>(initialProducts);
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const wrapperRef = React.useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -17,18 +19,37 @@ export function SmartProductSearch({ products, value, onChange, placeholder, val
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const selectedProduct = products.find((p: any) => String(p[valueKey]) === String(value));
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchTerm);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
 
-  const filteredProducts = products.filter((p: any) => 
-    p.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    p.slug.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  useEffect(() => {
+    if (debouncedSearch) {
+      fetch(`/api/products?search=${encodeURIComponent(debouncedSearch)}&limit=50`)
+        .then(res => res.json())
+        .then(data => setResults(data))
+        .catch(console.error);
+    } else {
+      setResults(initialProducts.slice(0, 50));
+    }
+  }, [debouncedSearch, initialProducts]);
+
+  const selectedProduct = value ? 
+    (results.find((p: any) => String(p[valueKey]) === String(value)) || 
+     initialProducts.find((p: any) => String(p[valueKey]) === String(value))) 
+    : null;
 
   return (
     <div className={`relative ${className}`} ref={wrapperRef}>
       <div 
         className="border border-gray-300 rounded-lg px-4 py-2.5 text-sm bg-white cursor-text flex items-center justify-between shadow-sm transition-all focus-within:ring-2 focus-within:ring-orange-500 focus-within:border-orange-500"
-        onClick={() => setIsOpen(true)}
+        onClick={() => {
+          setIsOpen(true);
+          if (!searchTerm && results.length === 0) setResults(initialProducts.slice(0, 50));
+        }}
       >
         <div className="flex items-center gap-2 flex-1 overflow-hidden">
           <Search size={16} className="text-gray-400 shrink-0" />
@@ -36,7 +57,7 @@ export function SmartProductSearch({ products, value, onChange, placeholder, val
             <input
               type="text"
               className="w-full outline-none text-gray-900 bg-transparent"
-              placeholder="Rechercher..."
+              placeholder="Recherche intelligente..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               autoFocus
@@ -51,14 +72,14 @@ export function SmartProductSearch({ products, value, onChange, placeholder, val
       </div>
 
       {isOpen && (
-        <div className="absolute z-50 w-full mt-2 bg-white border border-gray-200 rounded-xl shadow-xl max-h-60 overflow-y-auto overflow-x-hidden">
-          {filteredProducts.length === 0 ? (
+        <div className="absolute z-50 w-full mt-2 bg-white border border-gray-200 rounded-xl shadow-xl max-h-80 overflow-y-auto overflow-x-hidden">
+          {results.length === 0 ? (
             <div className="px-4 py-8 text-center text-sm text-gray-500 flex flex-col items-center justify-center">
               <Search size={24} className="text-gray-300 mb-2" />
-              Aucun produit ne correspond
+              Aucun résultat pour "{searchTerm}"
             </div>
           ) : (
-            filteredProducts.map((p: any) => (
+            results.map((p: any) => (
               <div
                 key={p.id}
                 className="px-4 py-3 text-sm text-gray-800 hover:bg-orange-50 cursor-pointer flex items-center gap-3 border-b border-gray-50 last:border-0 transition-colors"
@@ -68,7 +89,7 @@ export function SmartProductSearch({ products, value, onChange, placeholder, val
                   setIsOpen(false);
                 }}
               >
-                <img src={p.images?.[0] || 'https://via.placeholder.com/40'} alt="" className="w-10 h-10 rounded-md object-cover border border-gray-100 flex-shrink-0" />
+                <img src={p.image || 'https://via.placeholder.com/40'} alt="" className="w-10 h-10 rounded-md object-cover border border-gray-100 flex-shrink-0 bg-white" />
                 <div className="flex flex-col min-w-0">
                   <span className="font-medium truncate text-gray-900">{p.name}</span>
                   <span className="text-xs text-gray-500 truncate">/{p.slug}</span>

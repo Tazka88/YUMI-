@@ -34,9 +34,7 @@ export default function LandingPagesAdmin() {
           'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
         },
         body: JSON.stringify({
-          settings: {
-            oneblade_product_slug: oneBladeSlug || 'philips-oneblade-qp2824-10-tondeuse-rechargeable-original-algerie'
-          }
+          oneblade_product_slug: oneBladeSlug || 'philips-oneblade-qp2824-10-tondeuse-rechargeable-original-algerie'
         })
       });
       if (res.ok) {

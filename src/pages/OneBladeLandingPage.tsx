@@ -14,14 +14,14 @@ import {
   Truck,
   Banknote
 } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 
-const ProductLinkContext = React.createContext<() => void>(() => {});
+const ProductLinkContext = React.createContext('/product/philips-oneblade-360-qp2824');
 
 function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const handleBuy = React.useContext(ProductLinkContext);
+  const productUrl = React.useContext(ProductLinkContext);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -52,9 +52,9 @@ function Navbar() {
                   <span className="text-white font-bold tracking-tight whitespace-nowrap leading-tight">9 400 DA</span>
                   <span className="text-[#C5D600] text-[10px] uppercase font-bold tracking-wider whitespace-nowrap">Paiement à la livraison</span>
                 </div>
-                <button onClick={handleBuy} className="px-6 py-2.5 bg-[#C5D600] text-slate-900 font-bold rounded-full hover:bg-lime-400 transition-all shadow-[0_0_20px_rgba(197,214,0,0.3)] hover:shadow-[0_0_30px_rgba(197,214,0,0.5)] whitespace-nowrap">
+                <Link to={productUrl} className="px-6 py-2.5 bg-[#C5D600] text-slate-900 font-bold rounded-full hover:bg-lime-400 transition-all shadow-[0_0_20px_rgba(197,214,0,0.3)] hover:shadow-[0_0_30px_rgba(197,214,0,0.5)] whitespace-nowrap">
                   Commander
-                </button>
+                </Link>
               </div>
             </div>
 
@@ -88,9 +88,9 @@ function Navbar() {
             <span className="text-white font-bold text-lg leading-none">9 400 DA</span>
             <span className="text-[#C5D600] text-[10px] uppercase font-bold tracking-wider mt-1">Livraison 58 Wilayas</span>
           </div>
-          <button onClick={handleBuy} className="px-5 py-2.5 bg-[#C5D600] text-slate-900 font-bold rounded-xl hover:bg-lime-400 transition-all shadow-[0_0_20px_rgba(197,214,0,0.3)] shadow-[#C5D600]/20 text-sm">
+          <Link to={productUrl} className="px-5 py-2.5 bg-[#C5D600] text-slate-900 font-bold rounded-xl hover:bg-lime-400 transition-all shadow-[0_0_20px_rgba(197,214,0,0.3)] shadow-[#C5D600]/20 text-sm">
             Commander
-          </button>
+          </Link>
         </div>
       </div>
     </>
@@ -98,7 +98,7 @@ function Navbar() {
 }
 
 function Hero() {
-  const handleBuy = React.useContext(ProductLinkContext);
+  const productUrl = React.useContext(ProductLinkContext);
   return (
     <section className="relative overflow-hidden bg-slate-900 min-h-screen flex items-center pt-20">
       {/* Background ambient light */}
@@ -124,9 +124,9 @@ function Hero() {
           </p>
           
           <div className="flex flex-col sm:flex-row gap-5 justify-center lg:justify-start">
-            <button onClick={handleBuy} className="px-8 py-4 bg-[#C5D600] text-slate-900 font-bold rounded-full hover:bg-lime-400 transition-all flex items-center justify-center gap-3 text-lg shadow-[0_0_30px_rgba(197,214,0,0.25)] hover:shadow-[0_0_40px_rgba(197,214,0,0.4)] hover:scale-105 duration-300">
+            <Link to={productUrl} className="px-8 py-4 bg-[#C5D600] text-slate-900 font-bold rounded-full hover:bg-lime-400 transition-all flex items-center justify-center gap-3 text-lg shadow-[0_0_30px_rgba(197,214,0,0.25)] hover:shadow-[0_0_40px_rgba(197,214,0,0.4)] hover:scale-105 duration-300">
               Commander maintenant <ArrowRight className="w-5 h-5" />
-            </button>
+            </Link>
             <button className="px-8 py-4 bg-slate-800 text-white font-semibold rounded-full hover:bg-slate-700 transition-all flex items-center justify-center gap-3 text-lg border border-slate-700 hover:border-slate-600">
               <PlayCircle className="w-5 h-5 text-[#C5D600]" /> Voir la vidéo
             </button>
@@ -387,7 +387,7 @@ function BodyGroomingSection() {
 }
 
 function CallToAction() {
-  const handleBuy = React.useContext(ProductLinkContext);
+  const productUrl = React.useContext(ProductLinkContext);
   return (
     <section id="buy" className="py-32 bg-[#C5D600] relative overflow-hidden">
       {/* Decorative patterns */}
@@ -418,10 +418,10 @@ function CallToAction() {
                 9 400 DA
               </div>
               
-              <button onClick={handleBuy} className="group px-10 py-5 bg-slate-900 text-white rounded-full hover:bg-slate-800 transition-all flex items-center justify-center gap-4 text-xl font-bold shadow-2xl shadow-slate-900/30 hover:scale-[1.02] active:scale-95 w-full sm:w-auto">
+              <Link to={productUrl} className="group px-10 py-5 bg-slate-900 text-white rounded-full hover:bg-slate-800 transition-all flex items-center justify-center gap-4 text-xl font-bold shadow-2xl shadow-slate-900/30 hover:scale-[1.02] active:scale-95 w-full sm:w-auto">
                 Commander maintenant 
                 <ArrowRight className="w-6 h-6 group-hover:translate-x-2 transition-transform" />
-              </button>
+              </Link>
             </div>
             
             <div className="flex flex-wrap items-center justify-center lg:justify-start gap-4 sm:gap-8 mt-10">
@@ -484,9 +484,7 @@ function Footer() {
 }
 
 export default function OneBladeLandingPage() {
-  const [productSlug, setProductSlug] = useState('philips-oneblade-360-qp2824');
-  const [productData, setProductData] = useState<any>(null);
-  const navigate = useNavigate();
+  const [productUrl, setProductUrl] = useState('/product/philips-oneblade-360-qp2824');
 
   useEffect(() => {
     // Fetch product settings for the button
@@ -495,41 +493,17 @@ export default function OneBladeLandingPage() {
       .then(settings => {
         const slug = settings.oneblade_product_slug;
         if (slug) {
-          setProductSlug(slug);
+          setProductUrl(`/product/${slug}`);
         }
       })
       .catch(console.error);
   }, []);
 
-  useEffect(() => {
-    if (productSlug) {
-      fetch(`/api/products/${productSlug}`)
-        .then(res => res.ok ? res.json() : null)
-        .then(data => {
-          if (data) setProductData(data);
-        })
-        .catch(console.error);
-    }
-  }, [productSlug]);
-
-  const handleBuy = () => {
-    if (productData) {
-      navigate('/checkout', {
-        state: {
-          directBuyItem: { 
-            ...productData, 
-            quantity: 1, 
-            cartItemId: productData.id.toString() 
-          }
-        }
-      });
-    } else {
-      navigate(`/checkout?directBuy=${productSlug}`);
-    }
-  };
+  // Pass productUrl somehow? Wait, it's better to pass it through a React Context, or just wrap the whole thing to provide the URL.
+  // Actually, I can just create a Context.
 
   return (
-    <ProductLinkContext.Provider value={handleBuy}>
+    <ProductLinkContext.Provider value={productUrl}>
       <div className="min-h-screen bg-slate-50 text-slate-900 font-sans selection:bg-[#C5D600] selection:text-slate-900 w-full overflow-hidden max-w-[100vw]">
          <Navbar />
          <main>

@@ -26,31 +26,7 @@ export default function Checkout() {
   const supabase = getSupabase();
   const { communes: ALGERIA_COMMUNES, fetchCommunes } = useCommunesStore();
 
-  const [directBuyItemState, setDirectBuyItemState] = useState(location.state?.directBuyItem);
-  const [isFetchingDirectBuy, setIsFetchingDirectBuy] = useState(false);
-  
-  const searchParams = new URLSearchParams(location.search);
-  const directBuySlug = searchParams.get('directBuy');
-
-  useEffect(() => {
-    if (directBuySlug && !directBuyItemState) {
-      setIsFetchingDirectBuy(true);
-      fetchWithCache(`/api/products/${directBuySlug}`)
-        .then((res: any) => {
-          if (res) {
-            setDirectBuyItemState({ 
-              ...res, 
-              quantity: 1, 
-              cartItemId: `${res.id}` 
-            });
-          }
-          setIsFetchingDirectBuy(false);
-        })
-        .catch(console.error);
-    }
-  }, [directBuySlug]);
-
-  const directBuyItem = directBuyItemState;
+  const directBuyItem = location.state?.directBuyItem;
   const checkoutItems = directBuyItem ? [directBuyItem] : items;
   const checkoutTotal = directBuyItem ? (directBuyItem.selectedVariation?.price || directBuyItem.promo_price || directBuyItem.price) * directBuyItem.quantity : total();
   
@@ -278,10 +254,10 @@ export default function Checkout() {
   }, [trackingIds.fb, checkoutItems, checkoutTotal]);
 
   useEffect(() => {
-    if (!directBuyItem && !directBuySlug && items.length === 0 && !orderSuccess) {
+    if (!directBuyItem && items.length === 0 && !orderSuccess) {
       navigate('/cart');
     }
-  }, [items, navigate, orderSuccess, directBuyItem, directBuySlug]);
+  }, [items, navigate, orderSuccess, directBuyItem]);
 
   const handleCommuneChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     setFormData({ ...formData, commune: e.target.value });
@@ -465,15 +441,6 @@ export default function Checkout() {
         >
           Retourner à l'accueil
         </button>
-      </div>
-    );
-  }
-
-  if (isFetchingDirectBuy) {
-    return (
-      <div className="container mx-auto px-4 py-16 flex flex-col items-center justify-center min-h-[60vh]">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-orange-500 mb-4"></div>
-        <p className="text-gray-600">Chargement de votre produit...</p>
       </div>
     );
   }

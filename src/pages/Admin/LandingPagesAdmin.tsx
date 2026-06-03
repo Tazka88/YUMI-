@@ -1,107 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Eye, Copy, Trash2, CheckCircle2, AlertCircle, Plus, Edit, X, Upload, Search, ChevronDown } from 'lucide-react';
+import { Eye, Copy, Trash2, CheckCircle2, AlertCircle, Plus, Edit, X, Upload } from 'lucide-react';
 import toast from 'react-hot-toast';
-
-export function SmartProductSearch({ products: initialProducts = [], value, onChange, placeholder, valueKey = "slug", className = "w-80" }: any) {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [isOpen, setIsOpen] = useState(false);
-  const [results, setResults] = useState<any[]>(initialProducts);
-  const [debouncedSearch, setDebouncedSearch] = useState('');
-  const wrapperRef = React.useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearch(searchTerm);
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [searchTerm]);
-
-  useEffect(() => {
-    if (debouncedSearch) {
-      fetch(`/api/products?search=${encodeURIComponent(debouncedSearch)}&limit=50`)
-        .then(res => res.json())
-        .then(data => setResults(data))
-        .catch(console.error);
-    } else {
-      setResults(initialProducts.slice(0, 50));
-    }
-  }, [debouncedSearch, initialProducts]);
-
-  const selectedProduct = value ? 
-    (results.find((p: any) => String(p[valueKey]) === String(value)) || 
-     initialProducts.find((p: any) => String(p[valueKey]) === String(value))) 
-    : null;
-
-  return (
-    <div className={`relative ${className}`} ref={wrapperRef}>
-      <div 
-        className="border border-gray-300 rounded-lg px-4 py-2.5 text-sm bg-white cursor-text flex items-center justify-between shadow-sm transition-all focus-within:ring-2 focus-within:ring-orange-500 focus-within:border-orange-500"
-        onClick={() => {
-          setIsOpen(true);
-          if (!searchTerm && results.length === 0) setResults(initialProducts.slice(0, 50));
-        }}
-      >
-        <div className="flex items-center gap-2 flex-1 overflow-hidden">
-          <Search size={16} className="text-gray-400 shrink-0" />
-          {isOpen ? (
-            <input
-              type="text"
-              className="w-full outline-none text-gray-900 bg-transparent"
-              placeholder="Recherche intelligente..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              autoFocus
-            />
-          ) : (
-            <span className={`truncate ${selectedProduct ? 'text-gray-900 font-medium' : 'text-gray-500'}`}>
-              {selectedProduct ? selectedProduct.name : placeholder}
-            </span>
-          )}
-        </div>
-        <ChevronDown size={16} className={`text-gray-400 shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
-      </div>
-
-      {isOpen && (
-        <div className="absolute z-50 w-full mt-2 bg-white border border-gray-200 rounded-xl shadow-xl max-h-80 overflow-y-auto overflow-x-hidden">
-          {results.length === 0 ? (
-            <div className="px-4 py-8 text-center text-sm text-gray-500 flex flex-col items-center justify-center">
-              <Search size={24} className="text-gray-300 mb-2" />
-              Aucun résultat pour "{searchTerm}"
-            </div>
-          ) : (
-            results.map((p: any) => (
-              <div
-                key={p.id}
-                className="px-4 py-3 text-sm text-gray-800 hover:bg-orange-50 cursor-pointer flex items-center gap-3 border-b border-gray-50 last:border-0 transition-colors"
-                onClick={() => {
-                  onChange(p[valueKey]);
-                  setSearchTerm('');
-                  setIsOpen(false);
-                }}
-              >
-                <img src={p.image || 'https://via.placeholder.com/40'} alt="" className="w-10 h-10 rounded-md object-cover border border-gray-100 flex-shrink-0 bg-white" />
-                <div className="flex flex-col min-w-0">
-                  <span className="font-medium truncate text-gray-900">{p.name}</span>
-                  <span className="text-xs text-gray-500 truncate">/{p.slug}</span>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
 
 export default function LandingPagesAdmin() {
   const [landingPages, setLandingPages] = useState<any[]>([]);
@@ -111,7 +10,6 @@ export default function LandingPagesAdmin() {
   const [editForm, setEditForm] = useState<any>({});
   const [isSaving, setIsSaving] = useState(false);
   const [oneBladeSlug, setOneBladeSlug] = useState('');
-  const [newLpProductId, setNewLpProductId] = useState<string>('');
 
   const fetchSettings = async () => {
     try {
@@ -351,7 +249,7 @@ export default function LandingPagesAdmin() {
 
   return (
     <div className="space-y-8">
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-visible p-6">
+    <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden p-6">
        <div className="mb-6">
          <h2 className="text-xl font-bold text-gray-800">Pages Personnalisées (Code)</h2>
          <p className="text-sm text-gray-500 mt-1">Gérez vos pages landing créées sur mesure</p>
@@ -369,14 +267,21 @@ export default function LandingPagesAdmin() {
          <div className="flex flex-col gap-2">
            <label className="text-sm text-gray-700 font-medium">Produit lié au bouton de commande :</label>
            <div className="flex items-center gap-3">
-             <SmartProductSearch 
-                products={products}
-                value={oneBladeSlug}
-                onChange={setOneBladeSlug}
-                placeholder="Rechercher un produit..."
-                valueKey="slug"
-                className="w-80"
-             />
+             <div className="relative">
+               <input 
+                  type="text"
+                  list="oneblade-products"
+                  value={oneBladeSlug}
+                  onChange={(e) => setOneBladeSlug(e.target.value)}
+                  placeholder="Rechercher ou coller le lien..."
+                  className="border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500 w-80 outline-none transition-all shadow-sm"
+                />
+                <datalist id="oneblade-products">
+                  {products.map(p => (
+                    <option key={p.id} value={p.slug}>{p.name}</option>
+                  ))}
+                </datalist>
+             </div>
               <button 
                 onClick={saveOneBladeSlug}
                 className="bg-gray-900 text-white px-5 py-2.5 rounded-lg hover:bg-gray-800 transition-all flex items-center gap-2 text-sm font-medium shadow-sm"
@@ -388,7 +293,7 @@ export default function LandingPagesAdmin() {
        </div>
     </div>
 
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-visible">
+    <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
       <div className="p-6 border-b border-gray-100 flex flex-col md:flex-row justify-between items-center gap-4">
         <div>
           <h2 className="text-xl font-bold text-gray-800">Landing Pages Universelles</h2>
@@ -397,19 +302,22 @@ export default function LandingPagesAdmin() {
         
         {/* Generer LP form */}
         <div className="flex items-center gap-2">
-          <SmartProductSearch 
-            products={products}
-            value={newLpProductId}
-            onChange={setNewLpProductId}
-            placeholder="Sélectionner un produit"
-            valueKey="id"
-            className="w-64"
-          />
+          <select 
+            id="product-select"
+            className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-orange-500"
+            defaultValue=""
+          >
+            <option value="" disabled>Sélectionner un produit</option>
+            {products.map(p => (
+              <option key={p.id} value={p.id}>{p.name}</option>
+            ))}
+          </select>
           <button 
             onClick={() => {
-              if (newLpProductId) createLandingPage(parseInt(newLpProductId));
+              const select = document.getElementById('product-select') as HTMLSelectElement;
+              if (select.value) createLandingPage(parseInt(select.value));
             }}
-            className="bg-orange-500 text-white px-4 py-2.5 rounded-lg hover:bg-orange-600 focus:ring-2 focus:ring-orange-500 flex items-center gap-2 text-sm font-medium transition-all shadow-sm"
+            className="bg-orange-500 text-white px-4 py-2 rounded-md hover:bg-orange-600 flex items-center gap-2 text-sm"
           >
             <Plus size={16} /> Générer une LP
           </button>

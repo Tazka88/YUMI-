@@ -330,7 +330,7 @@ export default function LandingPagesAdmin() {
 
   return (
     <div className="space-y-8">
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden p-6">
+    <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-visible p-6">
        <div className="mb-6">
          <h2 className="text-xl font-bold text-gray-800">Pages Personnalisées (Code)</h2>
          <p className="text-sm text-gray-500 mt-1">Gérez vos pages landing créées sur mesure</p>
@@ -367,7 +367,7 @@ export default function LandingPagesAdmin() {
        </div>
     </div>
 
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+    <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-visible">
       <div className="p-6 border-b border-gray-100 flex flex-col md:flex-row justify-between items-center gap-4">
         <div>
           <h2 className="text-xl font-bold text-gray-800">Landing Pages Universelles</h2>

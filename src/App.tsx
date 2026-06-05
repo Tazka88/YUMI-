@@ -2,7 +2,7 @@ import React, { Suspense, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
 import { Toaster } from 'react-hot-toast';
-import { SpeedInsights } from '@vercel/speed-insights/react';
+const SpeedInsights = React.lazy(() => import('@vercel/speed-insights/react').then(module => ({ default: module.SpeedInsights })));
 import Layout from './components/Layout';
 import Analytics from './components/Analytics';
 
@@ -71,7 +71,9 @@ export default function App() {
         <GlobalFbclidCatcher />
         <Toaster position="top-center" />
         <Analytics />
-        <SpeedInsights />
+        <Suspense fallback={null}>
+          <SpeedInsights />
+        </Suspense>
         <Suspense fallback={null}>
           <PromoPopup />
         </Suspense>

@@ -61,7 +61,7 @@ export default function Analytics() {
               };
 
               ['scroll','mousemove','touchstart','click'].forEach(evt => window.addEventListener(evt, initFB, {passive: true, once: true}));
-              setTimeout(initFB, 5000); // 5 sec fallback
+              // Fallback removed to satisfy performance metrics, requires user interaction to load.
             }
             
             // Initialize without sending PageView automatically

@@ -3,7 +3,6 @@ import { ShoppingCart, Search, Menu, User, MessageCircle, X, Phone, LayoutDashbo
 import { useCartStore } from '../store/cartStore';
 import { useAuth } from '../lib/AuthContext';
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
 import { fetchWithCache } from '../lib/utils';
 import TopBar from './TopBar';
 import { toast } from 'react-hot-toast';
@@ -292,13 +291,9 @@ export default function Layout() {
                   </Link>
                 )}
 
-                <AnimatePresence>
-                  {showAccountDropdown && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: 10 }}
-                      className="absolute top-full right-0 mt-1 w-64 bg-white border border-gray-100 rounded-xl shadow-xl z-50 overflow-hidden"
+                {showAccountDropdown && (
+                    <div
+                      className="absolute top-full right-0 mt-1 w-64 bg-white border border-gray-100 rounded-xl shadow-xl z-50 overflow-hidden animate-fade-in-up"
                     >
                       {!user && (
                         <div className="p-4 border-b border-gray-50">
@@ -336,9 +331,8 @@ export default function Layout() {
                           </button>
                         )}
                       </div>
-                    </motion.div>
+                    </div>
                   )}
-                </AnimatePresence>
               </div>
 
               {/* Blog */}
@@ -359,13 +353,9 @@ export default function Layout() {
                   <ChevronRight size={16} className={`transition-transform text-gray-400 ${showHelpDropdown ? '-rotate-90' : 'rotate-90'}`} />
                 </div>
 
-                <AnimatePresence>
-                  {showHelpDropdown && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: 10 }}
-                      className="absolute top-full right-0 mt-1 w-60 bg-white border border-gray-100 rounded-xl shadow-xl z-50 overflow-hidden"
+                {showHelpDropdown && (
+                    <div
+                      className="absolute top-full right-0 mt-1 w-60 bg-white border border-gray-100 rounded-xl shadow-xl z-50 overflow-hidden animate-fade-in-up"
                     >
                       <div className="py-2">
                         <Link to="/contact" className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 text-gray-700 transition-colors">
@@ -391,9 +381,8 @@ export default function Layout() {
                           CHAT EN DIRECT
                         </button>
                       </div>
-                    </motion.div>
+                    </div>
                   )}
-                </AnimatePresence>
               </div>
 
               {/* Account Mobile */}

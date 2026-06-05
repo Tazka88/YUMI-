@@ -5,7 +5,8 @@ import { Toaster } from 'react-hot-toast';
 import { SpeedInsights } from '@vercel/speed-insights/react';
 import Layout from './components/Layout';
 import Analytics from './components/Analytics';
-import PromoPopup from './components/PromoPopup';
+
+const PromoPopup = React.lazy(() => import('./components/PromoPopup'));
 
 import Home from './pages/Home';
 const Category = React.lazy(() => import('./pages/Category'));
@@ -71,7 +72,9 @@ export default function App() {
         <Toaster position="top-center" />
         <Analytics />
         <SpeedInsights />
-        <PromoPopup />
+        <Suspense fallback={null}>
+          <PromoPopup />
+        </Suspense>
         <Suspense fallback={
           <div className="min-h-screen bg-white flex flex-col items-center justify-center">
             <div className="w-16 h-16 border-4 border-orange-500 border-t-transparent rounded-full animate-spin"></div>

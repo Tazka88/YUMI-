@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { ShoppingCart, Star, ChevronRight, ChevronLeft, Truck, ShieldCheck, RefreshCcw, Headset, Users, Moon, Map, Mountain, TreePine, Sun, BookOpen, Pencil, Ruler, Backpack, Apple, Tag, Percent, ArrowDown, ShoppingBag, Umbrella, Waves, Flame, Shirt, Sparkles, Smartphone, Refrigerator, Sofa, Laptop, Dumbbell, Gamepad2, Car } from 'lucide-react';
-import { motion, useInView } from 'motion/react';
 import { useCartStore, Product } from '../store/cartStore';
 import { formatPrice } from '../utils/formatPrice';
 import { ProductCard } from '../components/ProductCard';
@@ -188,27 +187,47 @@ const ThemeBackground = ({ activeTheme, themeImages }: { activeTheme: string, th
 
 function AnimatedCounter({ target }: { target: number }) {
   const [count, setCount] = useState(0);
-  const ref = useRef(null);
-  const isInView = useInView(ref, { once: true });
+  const ref = useRef<HTMLSpanElement>(null);
+  const [isInView, setIsInView] = useState(false);
 
   useEffect(() => {
-    if (isInView) {
-      let start = 0;
-      const duration = 2000;
-      const increment = target / (duration / 16);
-      
-      const timer = setInterval(() => {
-        start += increment;
-        if (start >= target) {
-          setCount(target);
-          clearInterval(timer);
-        } else {
-          setCount(Math.floor(start));
-        }
-      }, 16);
-      
-      return () => clearInterval(timer);
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) {
+        setIsInView(true);
+        observer.disconnect();
+      }
+    }, { threshold: 0.1 });
+
+    if (ref.current) {
+      observer.observe(ref.current);
     }
+
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (!isInView) return;
+
+    let startTimestamp: number | null = null;
+    const duration = 2000;
+    let animationFrameId: number;
+
+    const step = (timestamp: number) => {
+      if (!startTimestamp) startTimestamp = timestamp;
+      const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+      
+      setCount(Math.floor(progress * target));
+      
+      if (progress < 1) {
+        animationFrameId = window.requestAnimationFrame(step);
+      } else {
+        setCount(target);
+      }
+    };
+
+    animationFrameId = window.requestAnimationFrame(step);
+
+    return () => window.cancelAnimationFrame(animationFrameId);
   }, [isInView, target]);
 
   return <span ref={ref}>+{count.toLocaleString('fr-FR')}</span>;
@@ -353,6 +372,15 @@ const CATEGORY_ICONS: Record<string, React.ElementType> = {
 };
 
 const CategorySidebar = ({ categories }: { categories: any[] }) => {
+  const [isDesktop, setIsDesktop] = useState(false);
+
+  useEffect(() => {
+    const checkWidth = () => setIsDesktop(window.innerWidth >= 1024);
+    checkWidth();
+    window.addEventListener('resize', checkWidth);
+    return () => window.removeEventListener('resize', checkWidth);
+  }, []);
+
   // Sort categories to match Jumia's order
   const orderedNames = [
     "Mode & Vêtements",
@@ -374,6 +402,8 @@ const CategorySidebar = ({ categories }: { categories: any[] }) => {
     if (indexB === -1) return -1;
     return indexA - indexB;
   });
+
+  if (!isDesktop) return null;
 
   return (
     <div className="hidden lg:flex flex-col w-[240px] shrink-0 bg-white rounded shadow-[0_2px_5px_rgba(0,0,0,0.1)] py-2 h-[384px] relative z-30">
@@ -647,12 +677,8 @@ export default function Home() {
         </div>
 
       {/* Trust Badges Section */}
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
-        transition={{ duration: 0.6 }}
-        className="flex overflow-x-auto pb-4 lg:grid lg:grid-cols-5 gap-2 sm:gap-4 mb-6 sm:mb-8 snap-x hide-scrollbar"
+      <div 
+        className="flex overflow-x-auto pb-4 lg:grid lg:grid-cols-5 gap-2 sm:gap-4 mb-6 sm:mb-8 snap-x hide-scrollbar animate-fade-in-up"
       >
         {[
           { icon: Truck, title: 'Livraison sur 58 Wilayas', desc: 'Partout en Algérie' },
@@ -683,7 +709,7 @@ export default function Home() {
             </div>
           </div>
         ))}
-      </motion.div>
+      </div>
 
       {/* Categories Section - Premium Design */}
       <div className="mb-10 sm:mb-16 mt-4">

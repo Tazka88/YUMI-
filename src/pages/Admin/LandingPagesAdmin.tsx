@@ -221,15 +221,21 @@ export default function LandingPagesAdmin() {
     }
   };
 
-  const renderImageInput = ({ label, field, placeholder, hint, accept = "image/*" }: { label: string, field: string, placeholder?: string, hint: React.ReactNode, accept?: string }) => (
+  const renderImageInput = ({ label, field, placeholder, hint, accept = "image/*" }: { label: string, field: string, placeholder?: string, hint: React.ReactNode, accept?: string }) => {
+    const isBase64 = editForm[field]?.startsWith('data:image');
+    return (
     <div key={field}>
       <label className="block text-sm font-medium mb-1">{label}</label>
       <div className="flex gap-2 items-center">
         <input
           type="text"
           placeholder={placeholder || 'https://...'}
-          value={editForm[field] || ''}
-          onChange={(e) => setEditForm(prev => ({...prev, [field]: e.target.value}))}
+          value={isBase64 ? '[Image Locale] (Modifier l\'image pour uploader une nouvelle)' : (editForm[field] || '')}
+          onChange={(e) => {
+            if (!e.target.value.startsWith('[Image Locale]')) {
+              setEditForm(prev => ({...prev, [field]: e.target.value}));
+            }
+          }}
           className="flex-1 px-3 py-2 border rounded focus:ring-2 focus:ring-orange-500"
         />
         <label className="cursor-pointer bg-gray-100 p-2 px-3 border rounded-md hover:bg-gray-200 transition-colors flex items-center gap-2" title="Uploader un fichier">
@@ -244,6 +250,7 @@ export default function LandingPagesAdmin() {
       {hint}
     </div>
   );
+  };
 
   return (
     <div className="space-y-8">

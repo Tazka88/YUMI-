@@ -250,7 +250,7 @@ export default function LandingPage() {
                {ugc1 ? (
                 <video src={ugc1} autoPlay loop muted playsInline className="w-full h-full object-cover max-w-full block" />
               ) : (
-                <img src={ls1} alt="Solution" className="w-full h-full object-cover max-w-full block" />
+                <img src={ls1} alt="Solution" className="w-full h-full object-contain object-center max-w-full block" />
               )}
             </FadeIn>
           </div>

@@ -297,34 +297,16 @@ const getResizedImageUrl = (url: string | null, width: number) => {
 };
 
 const MasonryCategoryCard: React.FC<{ cat: any, index: number }> = ({ cat, index }) => {
-  const [orientation, setOrientation] = useState<'portrait' | 'landscape' | 'square'>('square');
-  const [isLoaded, setIsLoaded] = useState(false);
-
-  useEffect(() => {
-    if (!cat.image) {
-      setIsLoaded(true);
-      return;
-    }
-    const img = new Image();
-    img.onload = () => {
-      const ratio = img.width / img.height;
-      if (ratio > 1.1) setOrientation('landscape');
-      else if (ratio < 0.9) setOrientation('portrait');
-      else setOrientation('square');
-      setIsLoaded(true);
-    };
-    img.src = getResizedImageUrl(cat.image, 400) || cat.image;
-  }, [cat.image]);
-
   let spanClasses = '';
   let aspectClass = '';
   
-  if (orientation === 'portrait') {
-    spanClasses = 'col-span-1 row-span-2';
-    aspectClass = 'aspect-[9/16]';
-  } else if (orientation === 'landscape') {
+  // Predictable pattern instead of dynamic loading which causes stuttering
+  if (index % 5 === 0) {
     spanClasses = 'col-span-2 row-span-1';
     aspectClass = 'aspect-[16/9]';
+  } else if (index % 4 === 0) {
+    spanClasses = 'col-span-1 row-span-2';
+    aspectClass = 'aspect-[9/16]';
   } else {
     spanClasses = 'col-span-1 row-span-1';
     aspectClass = 'aspect-square';
@@ -333,11 +315,11 @@ const MasonryCategoryCard: React.FC<{ cat: any, index: number }> = ({ cat, index
   return (
     <Link 
       to={`/category/${cat.slug}`} 
-      className={`group relative overflow-hidden rounded-2xl bg-gray-50 block ${spanClasses} ${!isLoaded ? 'opacity-0' : 'opacity-100 transition-opacity duration-500'}`}
+      className={`group relative overflow-hidden rounded-2xl bg-gray-50 block ${spanClasses} opacity-100 transition-opacity duration-500`}
     >
       <div className={`w-full h-full relative overflow-hidden bg-white ${aspectClass}`}>
         <img 
-          src={getResizedImageUrl(cat.image, orientation === 'landscape' ? 800 : 400) || `https://ui-avatars.com/api/?name=${encodeURIComponent(cat.name)}&background=random&color=fff&size=400`} 
+          src={getResizedImageUrl(cat.image, index % 5 === 0 ? 800 : 400) || `https://ui-avatars.com/api/?name=${encodeURIComponent(cat.name)}&background=random&color=fff&size=400`} 
           alt={cat.name}
           loading={index < 4 ? "eager" : "lazy"}
           className="w-full h-full object-cover object-center transition-transform duration-700 group-hover:scale-105"
@@ -346,7 +328,7 @@ const MasonryCategoryCard: React.FC<{ cat: any, index: number }> = ({ cat, index
         <div className="absolute inset-0 bg-black/40 group-hover:bg-black/50 transition-colors duration-300"></div>
         
         <div className="absolute inset-0 p-4 sm:p-6 lg:p-8 flex flex-col items-center justify-center text-center">
-          <h3 className={`font-bold text-white tracking-tight leading-tight ${orientation === 'landscape' ? 'text-xl md:text-2xl lg:text-3xl' : 'text-base md:text-lg lg:text-xl'}`}>
+          <h3 className={`font-bold text-white tracking-tight leading-tight ${index % 5 === 0 ? 'text-xl md:text-2xl lg:text-3xl' : 'text-base md:text-lg lg:text-xl'}`}>
             {cat.name.replace(/^[\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF]\s*/g, '').trim()}
           </h3>
           <div className="mt-2 sm:mt-3 flex items-center text-white/90 text-xs sm:text-sm font-semibold opacity-0 translate-y-4 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300">

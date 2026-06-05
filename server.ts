@@ -35,8 +35,8 @@ async function startServer() {
   }));
   // Removed helmet CSP to prevent iframe blocking in AI Studio preview
   // app.use(compression()); // Let Google Cloud Run/Load Balancer handle compression automatically to avoid double-compression
-  app.use(express.json({ limit: '50mb' })); // Increased to 50mb for larger base64 images and videos
-  app.use(express.urlencoded({ limit: '50mb', extended: true }));
+  app.use(express.json({ limit: '200mb' })); // Increased to 200mb for larger base64 images and videos
+  app.use(express.urlencoded({ limit: '200mb', extended: true }));
   
   // 1. API Routes (Mounted early to take precedence)
   app.use('/api', apiRoutes);

@@ -44,15 +44,24 @@ export default function Analytics() {
               window.fbq.loaded = !0;
               window.fbq.version = '2.0';
               window.fbq.queue = [];
-              const t = document.createElement('script');
-              t.async = !0;
-              t.src = 'https://connect.facebook.net/en_US/fbevents.js';
-              const s = document.getElementsByTagName('script')[0];
-              if (s && s.parentNode) {
-                s.parentNode.insertBefore(t, s);
-              } else {
-                document.head.appendChild(t);
-              }
+              
+              const initFB = () => {
+                if ((window as any).fbLoaded) return;
+                (window as any).fbLoaded = true;
+                const t = document.createElement('script');
+                t.async = !0;
+                t.src = 'https://connect.facebook.net/en_US/fbevents.js';
+                const s = document.getElementsByTagName('script')[0];
+                if (s && s.parentNode) {
+                  s.parentNode.insertBefore(t, s);
+                } else {
+                  document.head.appendChild(t);
+                }
+                ['scroll','mousemove','touchstart','click'].forEach(evt => window.removeEventListener(evt, initFB));
+              };
+
+              ['scroll','mousemove','touchstart','click'].forEach(evt => window.addEventListener(evt, initFB, {passive: true, once: true}));
+              setTimeout(initFB, 5000); // 5 sec fallback
             }
             
             // Initialize without sending PageView automatically

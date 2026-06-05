@@ -61,21 +61,33 @@
       }
     </style>
 
-    <!-- Google tag (gtag.js) - Lazy loaded -->
+    <!-- Google tag (gtag.js) - Lazy loaded on interaction -->
     <script>
       window.dataLayer = window.dataLayer || [];
       function gtag(){dataLayer.push(arguments);}
       gtag('js', new Date());
       gtag('config', 'G-7JLYM1QX3C');
 
-      // Equivalent to Next.js strategy="lazyOnload" but delayed to avoid PageSpeed penalty
+      function initGTM() {
+        if (window.gtmLoaded) return;
+        window.gtmLoaded = true;
+        var script = document.createElement('script');
+        script.src = 'https://www.googletagmanager.com/gtag/js?id=G-7JLYM1QX3C';
+        script.async = true;
+        document.head.appendChild(script);
+        
+        ['scroll','mousemove','touchstart','click'].forEach(function(evt) {
+          window.removeEventListener(evt, initGTM);
+        });
+      }
+      
+      ['scroll','mousemove','touchstart','click'].forEach(function(evt) {
+        window.addEventListener(evt, initGTM, {passive: true, once: true});
+      });
+      
+      // Fallback timeout inside load event to not block load
       window.addEventListener('load', function() {
-        setTimeout(function() {
-          var script = document.createElement('script');
-          script.src = 'https://www.googletagmanager.com/gtag/js?id=G-7JLYM1QX3C';
-          script.async = true;
-          document.head.appendChild(script);
-        }, 3500); // Delayed by 3.5s to let the main thread breathe
+        setTimeout(initGTM, 5000);
       });
     </script>
     <!--head-injection-->

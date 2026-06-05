@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
 
@@ -35,23 +34,15 @@ const PromoPopup: React.FC = () => {
     navigate('/account/register');
   };
 
+  if (!isOpen) return null;
+
   return (
-    <AnimatePresence>
-      {isOpen && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.3 }}
-          className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+        <div
+          className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in"
           onClick={handleClose}
         >
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            transition={{ type: "spring", damping: 25, stiffness: 300 }}
-            className="bg-white rounded-2xl shadow-2xl overflow-hidden max-w-md w-full relative"
+          <div
+            className="bg-white rounded-2xl shadow-2xl overflow-hidden max-w-md w-full relative animate-fade-in-up"
             onClick={(e) => e.stopPropagation()} // Empêche la fermeture lors du clic à l'intérieur
           >
             {/* Bouton de fermeture */}
@@ -86,10 +77,8 @@ const PromoPopup: React.FC = () => {
                 <span>Je m'inscris et j'économise</span>
               </button>
             </div>
-          </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>
+          </div>
+        </div>
   );
 };
 

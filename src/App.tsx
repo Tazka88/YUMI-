@@ -38,25 +38,6 @@ const Profile = React.lazy(() => import('./pages/Account/Profile'));
 const Notifications = React.lazy(() => import('./pages/Account/Notifications'));
 const AuthCallback = React.lazy(() => import('./pages/AuthCallback'));
 
-// Global fbclid catcher
-const GlobalFbclidCatcher = () => {
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const urlParams = new URLSearchParams(window.location.search);
-    const fbclid = urlParams.get('fbclid');
-    if (fbclid) {
-      const creationTime = Date.now();
-      const newFbc = `fb.1.${creationTime}.${fbclid}`;
-      const domain = window.location.hostname.replace('www.', '');
-      document.cookie = `_fbc=${newFbc}; path=/; domain=${domain}; max-age=7776000; SameSite=Lax`;
-      try {
-        sessionStorage.setItem('_fbc', newFbc);
-      } catch (e) {}
-    }
-  }, []);
-  return null;
-};
-
 export default function App() {
   useEffect(() => {
     // Smooth entry after hydration
@@ -68,7 +49,6 @@ export default function App() {
       <AuthProvider>
         <HelmetProvider>
         <BrowserRouter>
-        <GlobalFbclidCatcher />
         <Toaster position="top-center" />
         <Suspense fallback={null}>
           <Analytics />

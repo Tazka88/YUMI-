@@ -13,7 +13,7 @@ function getCookie(name: string): string | undefined {
 function getFbc(): string | undefined {
   if (typeof window === 'undefined') return undefined;
   
-  // 1. Try to get from cookie first
+  // 1. Try to get from cookie first. Don't overwrite if it exists.
   const fbcCookie = getCookie('_fbc');
   if (fbcCookie) return fbcCookie;
 
@@ -23,11 +23,12 @@ function getFbc(): string | undefined {
     if (sessionFbc) return sessionFbc;
   } catch (e) {}
 
-  // 3. Try to get from URL (fbclid)
-  const urlParams = new URLSearchParams(window.location.search);
-  const fbclid = urlParams.get('fbclid');
+  // 3. Try to get from URL (fbclid), carefully avoiding URLSearchParams decoding
+  // if it happens to contain something that URLSearchParams modifies, though it's rare.
+  const match = window.location.search.match(/[?&]fbclid=([^&]+)/);
   
-  if (fbclid) {
+  if (match && match[1]) {
+    const fbclid = match[1];
     // Format: version.subdomainIndex.creationTime.fbclid
     const creationTime = Date.now();
     const newFbc = `fb.1.${creationTime}.${fbclid}`;

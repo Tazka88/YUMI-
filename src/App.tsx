@@ -20,7 +20,6 @@ const BlogList = React.lazy(() => import('./pages/Blog/BlogList'));
 const OneBladeLandingPage = React.lazy(() => import('./pages/OneBladeLandingPage'));
 const BlogPost = React.lazy(() => import('./pages/Blog/BlogPost'));
 const Page = React.lazy(() => import('./pages/Page'));
-const LandingPage = React.lazy(() => import('./pages/LandingPage'));
 
 import { AuthProvider } from './lib/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -106,7 +105,6 @@ export default function App() {
         <Route path="/admin-7xK9pL2q/login" element={<AdminLogin />} />
         <Route path="/admin-7xK9pL2q/*" element={<AdminDashboard />} />
         <Route path="/admin/*" element={<Navigate to="/" replace />} />
-        <Route path="/landing/:slug" element={<LandingPage />} />
         <Route path="/lp/oneblade" element={<OneBladeLandingPage />} />
       </Routes>
       </Suspense>

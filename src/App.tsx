@@ -4,11 +4,11 @@ import { HelmetProvider } from 'react-helmet-async';
 import { Toaster } from 'react-hot-toast';
 const SpeedInsights = React.lazy(() => import('@vercel/speed-insights/react').then(module => ({ default: module.SpeedInsights })));
 import Layout from './components/Layout';
-import Analytics from './components/Analytics';
+const Analytics = React.lazy(() => import('./components/Analytics'));
 
 const PromoPopup = React.lazy(() => import('./components/PromoPopup'));
 
-import Home from './pages/Home';
+const Home = React.lazy(() => import('./pages/Home'));
 const Category = React.lazy(() => import('./pages/Category'));
 const Product = React.lazy(() => import('./pages/Product'));
 const Cart = React.lazy(() => import('./pages/Cart'));
@@ -70,7 +70,9 @@ export default function App() {
         <BrowserRouter>
         <GlobalFbclidCatcher />
         <Toaster position="top-center" />
-        <Analytics />
+        <Suspense fallback={null}>
+          <Analytics />
+        </Suspense>
         <Suspense fallback={null}>
           <SpeedInsights />
         </Suspense>

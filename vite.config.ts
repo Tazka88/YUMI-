@@ -43,7 +43,14 @@ export default defineConfig(({mode}) => {
           manualChunks: {
             'react-vendor': ['react', 'react-dom', 'react-router-dom'],
             'lucide': ['lucide-react'],
-            'zustand': ['zustand']
+            'zustand': ['zustand'],
+            'supabase': ['@supabase/supabase-js'],
+            'motion': ['framer-motion', 'motion/react', 'motion'],
+            'editor': ['react-simple-wysiwyg', 'dompurify'],
+            'ui-utils': ['clsx', 'tailwind-merge', 'react-hot-toast'],
+            'date-utils': ['date-fns'],
+            'image-utils': ['react-easy-crop', 'image-size'],
+            'misc': ['react-helmet-async', 'axios']
           }
         }
       }

@@ -231,7 +231,7 @@ export default function Checkout() {
         (window as any).fbq('track', 'InitiateCheckout', {
           value: safeValue,
           currency: 'DZD',
-          content_ids: checkoutItems.map(item => item.id.toString()),
+          content_ids: checkoutItems.map(item => String(item.id)),
           content_type: 'product',
           num_items: checkoutItems.reduce((acc, item) => acc + item.quantity, 0)
         }, { eventID: eventId });
@@ -243,7 +243,7 @@ export default function Checkout() {
         customData: {
           value: safeValue,
           currency: 'DZD',
-          content_ids: checkoutItems.map(item => item.id.toString()),
+          content_ids: checkoutItems.map(item => String(item.id)),
           content_type: 'product',
           num_items: checkoutItems.reduce((acc, item) => acc + item.quantity, 0)
         }
@@ -365,12 +365,12 @@ export default function Checkout() {
         
         if (trackingIds.fb) {
           try {
-            const eventId = responseData.order_id || responseData.id.toString();
+            const eventId = String(responseData.order_id || responseData.id || `CMD-${Date.now()}`);
             if (typeof window !== 'undefined' && (window as any).fbq) {
               (window as any).fbq('track', 'Purchase', {
                 value: safeValue,
                 currency: 'DZD',
-                content_ids: checkoutItems.map(item => item.id.toString()),
+                content_ids: checkoutItems.map(item => String(item.id)),
                 content_type: 'product'
               }, { eventID: eventId });
             }
@@ -392,7 +392,7 @@ export default function Checkout() {
               customData: {
                 value: safeValue,
                 currency: 'DZD',
-                content_ids: checkoutItems.map(item => item.id.toString()),
+                content_ids: checkoutItems.map(item => String(item.id)),
                 content_type: 'product'
               }
             });

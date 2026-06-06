@@ -15,6 +15,12 @@ router.post('/', async (req, res) => {
   try {
     const { eventName, eventId, eventSourceUrl, userData, customData } = req.body;
 
+    let finalEventId = eventId ? String(eventId) : undefined;
+    if (eventName === 'Purchase' && !finalEventId) {
+      console.warn('⚠️ CAPI: Purchase event received WITHOUT eventId. Generating fallback ID to satisfy Meta format.');
+      finalEventId = 'fallback_pur_' + Date.now();
+    }
+
     // Get IP and User Agent from request headers
     const clientIp = req.headers['x-real-ip'] || req.headers['x-forwarded-for'] || req.socket.remoteAddress;
     const userAgent = req.headers['user-agent'];
@@ -49,7 +55,7 @@ router.post('/', async (req, res) => {
       event_name: eventName,
       event_time: Math.floor(Date.now() / 1000),
       action_source: 'website',
-      event_id: eventId,
+      event_id: finalEventId,
       event_source_url: eventSourceUrl,
       user_data: hashedUserData,
       custom_data: {

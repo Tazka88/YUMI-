@@ -225,11 +225,9 @@ export default function Checkout() {
     if (trackingIds.fb && checkoutItems.length > 0 && !initiateCheckoutTrackedRef.current) {
       initiateCheckoutTrackedRef.current = true;
       const eventId = generateEventId();
-      const isProduction = typeof window !== 'undefined' && window.location.hostname.includes('zorando.com');
-      
       const safeValue = isNaN(checkoutTotal) || checkoutTotal <= 0 ? 1 : Number(Number(checkoutTotal).toFixed(2));
       
-      if (isProduction && typeof window !== 'undefined' && (window as any).fbq) {
+      if (typeof window !== 'undefined' && (window as any).fbq) {
         (window as any).fbq('track', 'InitiateCheckout', {
           value: safeValue,
           currency: 'DZD',
@@ -368,9 +366,7 @@ export default function Checkout() {
         if (trackingIds.fb) {
           try {
             const eventId = responseData.order_id || responseData.id.toString();
-            const isProduction = typeof window !== 'undefined' && window.location.hostname.includes('zorando.com');
-            
-            if (isProduction && typeof window !== 'undefined' && (window as any).fbq) {
+            if (typeof window !== 'undefined' && (window as any).fbq) {
               (window as any).fbq('track', 'Purchase', {
                 value: safeValue,
                 currency: 'DZD',

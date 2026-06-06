@@ -69,11 +69,11 @@ router.post('/', async (req, res) => {
       data: [event],
     };
 
-    // Test mode
-    const TEST_EVENT_CODE = process.env.FB_TEST_EVENT_CODE;
-    if (TEST_EVENT_CODE) {
-      payload.test_event_code = TEST_EVENT_CODE;
-    }
+    // Test mode disabled for production
+    // const TEST_EVENT_CODE = process.env.FB_TEST_EVENT_CODE;
+    // if (TEST_EVENT_CODE) {
+    //   payload.test_event_code = TEST_EVENT_CODE;
+    // }
 
     const response = await fetch(`https://graph.facebook.com/v18.0/${PIXEL_ID}/events?access_token=${ACCESS_TOKEN}`, {
       method: 'POST',

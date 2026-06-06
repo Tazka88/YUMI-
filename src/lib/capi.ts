@@ -25,7 +25,7 @@ function getFbc(): string | undefined {
 
   // 3. Try to get from URL (fbclid), carefully avoiding URLSearchParams decoding
   // if it happens to contain something that URLSearchParams modifies, though it's rare.
-  const match = window.location.search.match(/[?&]fbclid=([^&]+)/);
+  const match = window.location.search.match(/[?&]fbclid=([^&#]+)/);
   
   if (match && match[1]) {
     const fbclid = match[1];

@@ -15,23 +15,25 @@ function getFbc(): string | undefined {
   
   // 1. Try to get from cookie first. Don't overwrite if it exists.
   const fbcCookie = getCookie('_fbc');
-  if (fbcCookie) return fbcCookie;
+  if (fbcCookie && fbcCookie.startsWith('fb.')) return fbcCookie;
 
   // 2. Try to get from sessionStorage (in case cookie is blocked but session is not)
   try {
     const sessionFbc = sessionStorage.getItem('_fbc');
-    if (sessionFbc) return sessionFbc;
+    if (sessionFbc && sessionFbc.startsWith('fb.')) return sessionFbc;
   } catch (e) {}
 
   // 3. Try to get from URL (fbclid), carefully avoiding URLSearchParams decoding
   // if it happens to contain something that URLSearchParams modifies, though it's rare.
   const match = window.location.search.match(/[?&]fbclid=([^&#]+)/);
   
-  if (match && match[1]) {
-    const fbclid = match[1];
+  // If we found a raw fbclid in cookie/session that didn't start with fb.
+  const rawFbclid = (match && match[1]) ? match[1] : (fbcCookie || sessionStorage.getItem('_fbc') || '');
+  
+  if (rawFbclid && !rawFbclid.startsWith('fb.')) {
     // Format: version.subdomainIndex.creationTime.fbclid
     const creationTime = Date.now();
-    const newFbc = `fb.1.${creationTime}.${fbclid}`;
+    const newFbc = `fb.1.${creationTime}.${rawFbclid}`;
     
     // Save it to cookie for future events
     const domain = window.location.hostname.replace('www.', '');

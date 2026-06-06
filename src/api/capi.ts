@@ -19,11 +19,24 @@ router.post('/', async (req, res) => {
     const clientIp = req.headers['x-real-ip'] || req.headers['x-forwarded-for'] || req.socket.remoteAddress;
     const userAgent = req.headers['user-agent'];
 
+    let validFbc = userData?.fbc;
+    let validFbp = userData?.fbp;
+
+    // Validate fbc format: fb.subdomainIndex.creationTime.fbclid
+    if (validFbc && (typeof validFbc !== 'string' || !validFbc.match(/^fb\.[0-9]\.[0-9]+\.[a-zA-Z0-9_\-]+$/))) {
+      validFbc = undefined;
+    }
+    
+    // Validate fbp format: fb.subdomainIndex.creationTime.random
+    if (validFbp && (typeof validFbp !== 'string' || !validFbp.match(/^fb\.[0-9]\.[0-9]+\.[0-9]+$/))) {
+      validFbp = undefined;
+    }
+
     const hashedUserData: any = {
       client_ip_address: typeof clientIp === 'string' ? clientIp.split(',')[0].trim() : clientIp,
       client_user_agent: userAgent,
-      fbc: userData?.fbc,
-      fbp: userData?.fbp,
+      fbc: validFbc,
+      fbp: validFbp,
     };
 
     if (userData?.email) hashedUserData.em = hashData(userData.email);

@@ -1536,6 +1536,71 @@ router.get('/admin/export-meta-catalog', authenticate, async (req, res) => {
   }
 });
 
+// Public endpoint for Meta catalog scheduled fetch
+router.get('/feed/meta-catalog.csv', async (req, res) => {
+  try {
+    const products = await sql`
+      SELECT ${sql.unsafe(PRODUCT_COLS)}, COALESCE(p.brand_name, b.name) as brand_name 
+      FROM products p 
+      LEFT JOIN brands b ON p.brand_id = b.id
+    `;
+
+    const exportedProducts = products.filter((p: any) => p.image && typeof p.image === 'string' && p.image.trim() !== '');
+
+    // CSV Header
+    const columns = ['id', 'title', 'description', 'availability', 'condition', 'price', 'link', 'image_link', 'brand'];
+    
+    // Helper to format CSV fields strictly
+    const formatField = (field: any, forceQuote = false) => {
+      if (field === null || field === undefined) return forceQuote ? '""' : '';
+      let str = String(field).trim();
+      str = str.replace(/\r?\n|\r/g, ' ').replace(/\s+/g, ' ');
+      
+      if (forceQuote || str.includes(',') || str.includes('"')) {
+        return `"${str.replace(/"/g, '""')}"`;
+      }
+      return str;
+    };
+
+    const baseUrl = req.protocol + '://' + req.get('host');
+    
+    const rows = exportedProducts.map((p: any) => {
+      const id = formatField(p.id);
+      const title = formatField(String(p.name).substring(0, 200), true);
+      
+      let rawDesc = p.description || p.name || '';
+      let descriptionText = rawDesc.toLowerCase().replace(/(^\w|\.\s+\w)/g, (letter: string) => letter.toUpperCase());
+      const description = formatField(descriptionText, true);
+      
+      const availability = p.is_active !== false ? 'in stock' : 'out of stock';
+      const condition = 'new';
+      
+      const priceVal = p.promo_price > 0 ? p.promo_price : p.price;
+      const price = `${Number(priceVal).toFixed(2)} DZD`;
+      
+      const link = `${baseUrl}/product/${p.slug}`;
+      
+      const vMatch = p.image.match(/(\?v=[^&]+)/);
+      const vParam = vMatch ? vMatch[1] : '';
+      const seoSlug = p.slug ? `/${p.slug}.webp` : '';
+      const image_link = `${baseUrl}/api/images/products/${p.id}/image${seoSlug}${vParam}`;
+      
+      const brand = formatField(p.brand_name || 'Generic');
+
+      return [id, title, description, availability, condition, price, link, image_link, brand].join(',');
+    });
+
+    const csvContent = [columns.join(','), ...rows].join('\n');
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', 'inline; filename="meta-catalog.csv"');
+    res.send(csvContent);
+  } catch (err) {
+    console.error('Failed to export meta catalog:', err);
+    res.status(500).json({ error: 'Failed to export meta catalog' });
+  }
+});
+
 function generateSlug(str: string): string {
   if (!str) return '';
   return str

@@ -6,8 +6,6 @@ const SpeedInsights = React.lazy(() => import('@vercel/speed-insights/react').th
 import Layout from './components/Layout';
 const Analytics = React.lazy(() => import('./components/Analytics'));
 
-const PromoPopup = React.lazy(() => import('./components/PromoPopup'));
-
 const Home = React.lazy(() => import('./pages/Home'));
 const Category = React.lazy(() => import('./pages/Category'));
 const Product = React.lazy(() => import('./pages/Product'));
@@ -55,9 +53,6 @@ export default function App() {
         </Suspense>
         <Suspense fallback={null}>
           <SpeedInsights />
-        </Suspense>
-        <Suspense fallback={null}>
-          <PromoPopup />
         </Suspense>
         <Suspense fallback={
           <div className="min-h-screen bg-white flex flex-col items-center justify-center">

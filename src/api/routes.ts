@@ -1562,14 +1562,14 @@ router.get('/feed/meta-catalog.csv', async (req, res) => {
       return str;
     };
 
-    const baseUrl = req.protocol + '://' + req.get('host');
+    const baseUrl = 'https://zorando.com';
     
     const rows = exportedProducts.map((p: any) => {
-      const id = formatField(p.id);
-      const title = formatField(String(p.name).substring(0, 200), true);
+      const id = formatField(String(p.id));
+      const title = formatField(String(p.name).substring(0, 150), true);
       
       let rawDesc = p.description || p.name || '';
-      let descriptionText = rawDesc.toLowerCase().replace(/(^\w|\.\s+\w)/g, (letter: string) => letter.toUpperCase());
+      let descriptionText = rawDesc.replace(/\s+/g, ' ').trim().substring(0, 5000);
       const description = formatField(descriptionText, true);
       
       const availability = p.is_active !== false ? 'in stock' : 'out of stock';
@@ -1585,16 +1585,16 @@ router.get('/feed/meta-catalog.csv', async (req, res) => {
       const seoSlug = p.slug ? `/${p.slug}.webp` : '';
       const image_link = `${baseUrl}/api/images/products/${p.id}/image${seoSlug}${vParam}`;
       
-      const brand = formatField(p.brand_name || 'Generic');
+      const brand = formatField(p.brand_name || 'Zorando');
 
       return [id, title, description, availability, condition, price, link, image_link, brand].join(',');
     });
 
     const csvContent = [columns.join(','), ...rows].join('\n');
 
-    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-    res.setHeader('Content-Disposition', 'inline; filename="meta-catalog.csv"');
-    res.send(csvContent);
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', 'attachment; filename="meta-catalog.csv"');
+    res.status(200).send(Buffer.from(csvContent));
   } catch (err) {
     console.error('Failed to export meta catalog:', err);
     res.status(500).json({ error: 'Failed to export meta catalog' });

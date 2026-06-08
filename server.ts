@@ -38,6 +38,12 @@ async function startServer() {
   app.use(express.json({ limit: '200mb' })); // Increased to 200mb for larger base64 images and videos
   app.use(express.urlencoded({ limit: '200mb', extended: true }));
   
+  // Proxy Facebook Feed directly to avoid redirect issues
+  app.get('/feed/meta-catalog.csv', (req, res, next) => {
+    req.url = '/feed/meta-catalog.csv';
+    apiRoutes(req, res, next);
+  });
+
   // 1. API Routes (Mounted early to take precedence)
   app.use('/api', apiRoutes);
 

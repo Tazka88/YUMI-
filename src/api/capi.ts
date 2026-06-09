@@ -28,13 +28,13 @@ router.post('/', async (req, res) => {
     let validFbc = userData?.fbc;
     let validFbp = userData?.fbp;
 
-    // Validate fbc format: fb.subdomainIndex.creationTime.fbclid
-    if (validFbc && (typeof validFbc !== 'string' || !validFbc.match(/^fb\.[0-9]\.[0-9]+\.[a-zA-Z0-9_\-]+$/))) {
+    // Validate fbc format: fb.subdomainIndex.creationTime.fbclid(.appendix)
+    if (validFbc && (typeof validFbc !== 'string' || !validFbc.startsWith('fb.'))) {
       validFbc = undefined;
     }
     
-    // Validate fbp format: fb.subdomainIndex.creationTime.random
-    if (validFbp && (typeof validFbp !== 'string' || !validFbp.match(/^fb\.[0-9]\.[0-9]+\.[0-9]+$/))) {
+    // Validate fbp format: fb.subdomainIndex.creationTime.random(.appendix)
+    if (validFbp && (typeof validFbp !== 'string' || !validFbp.startsWith('fb.'))) {
       validFbp = undefined;
     }
 

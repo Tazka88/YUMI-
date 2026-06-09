@@ -157,8 +157,8 @@ router.get('/hero-banners/first-image/:type', async (req, res) => {
     }
     
     const width = type === 'mobile' ? 640 : 1600;
-    // Use a long cache time (1 year) for better performance and to fix PageSpeed Insights warning
-    await serveImageData(res, imageData, width, 'public, max-age=31536000, immutable');
+    // Serve with short cache, or no cache if it's updated frequently. Let's use 5 minutes for performance but freshness
+    await serveImageData(res, imageData, width, 'public, max-age=300');
     
   } catch (err) {
     console.error('Error serving first hero banner:', err);

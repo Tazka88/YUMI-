@@ -21,23 +21,21 @@ interface SliderProps {
 }
 
 export default function Slider({ categoryId = null }: SliderProps) {
-  const [slides, setSlides] = useState<SliderImage[]>([]);
+  const [slides, setSlides] = useState<SliderImage[]>(() => {
+    if (!categoryId) {
+      return [{
+        id: -1,
+        image_url: '/api/hero-banners/first-image/desktop',
+        mobile_image_url: '/api/hero-banners/first-image/mobile',
+        category_id: null,
+        position: 0,
+        is_active: true,
+      }];
+    }
+    return [];
+  });
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
-  const [isMobile, setIsMobile] = useState(false);
-
-  // Optimistic first slide for LCP on Home page
-  const showOptimisticFirstSlide = !categoryId && isLoading;
-
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-    
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
 
   useEffect(() => {
     const fetchSlides = async () => {
@@ -61,12 +59,7 @@ export default function Slider({ categoryId = null }: SliderProps) {
     fetchSlides();
   }, [categoryId]);
 
-  const visibleSlides = slides.filter(slide => {
-    if (isMobile) {
-      return !!slide.mobile_image_url;
-    }
-    return !!slide.image_url;
-  });
+  const visibleSlides = slides.filter(slide => slide.image_url || slide.mobile_image_url);
 
   useEffect(() => {
     if (visibleSlides.length <= 1) return;
@@ -93,30 +86,13 @@ export default function Slider({ categoryId = null }: SliderProps) {
     );
   }
 
-  if (!showOptimisticFirstSlide && visibleSlides.length === 0) {
+  if (visibleSlides.length === 0) {
     return null;
   }
 
   return (
     <div className="mb-8 lg:mb-0 rounded-xl overflow-hidden shadow-md relative w-full aspect-[4/5] sm:aspect-[1/1] lg:aspect-auto lg:h-full min-h-[200px] group bg-gray-100">
-      {showOptimisticFirstSlide ? (
-        <div className="absolute inset-0 z-10 opacity-100">
-          <picture>
-            <source media="(max-width: 767px)" srcSet="/api/hero-banners/first-image/mobile" />
-            <img 
-              src="/api/hero-banners/first-image/desktop" 
-              alt="Découvrez nos produits" 
-              className="w-full h-full object-cover object-center"
-              referrerPolicy="no-referrer"
-              fetchPriority="high"
-              decoding="sync"
-            />
-          </picture>
-          <div className="absolute inset-0 bg-black/5 flex items-center justify-center">
-            <div className="w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
-          </div>
-        </div>
-      ) : visibleSlides.map((slide, index) => (
+      {visibleSlides.map((slide, index) => (
         <div
           key={slide.id}
           className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
@@ -125,10 +101,10 @@ export default function Slider({ categoryId = null }: SliderProps) {
         >
           <picture>
             {slide.mobile_image_url && (
-              <source media="(max-width: 767px)" srcSet={index === 0 && !categoryId ? '/api/hero-banners/first-image/mobile' : getResizedImageUrl(slide.mobile_image_url, 640)} />
+              <source media="(max-width: 767px)" srcSet={getResizedImageUrl(slide.mobile_image_url, 640)} />
             )}
             <img 
-              src={index === 0 && !categoryId ? '/api/hero-banners/first-image/desktop' : getResizedImageUrl(slide.image_url, 1600)} 
+              src={slide.image_url ? getResizedImageUrl(slide.image_url, 1600) : getResizedImageUrl(slide.mobile_image_url!, 640)} 
               alt={slide.title || "Slide"} 
               className="w-full h-full object-cover object-center"
               referrerPolicy="no-referrer"

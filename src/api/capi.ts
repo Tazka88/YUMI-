@@ -75,6 +75,14 @@ router.post('/', async (req, res) => {
     //   payload.test_event_code = TEST_EVENT_CODE;
     // }
 
+    if (eventName === 'Purchase') {
+      console.log(`\n======================================`);
+      console.log(`🚀 [CAPI] Ougoing Purchase Event to Meta`);
+      console.log(`- Event ID: ${finalEventId}`);
+      console.log(`- Value: ${customData?.value} DZD`);
+      console.log(`======================================\n`);
+    }
+
     const response = await fetch(`https://graph.facebook.com/v18.0/${PIXEL_ID}/events?access_token=${ACCESS_TOKEN}`, {
       method: 'POST',
       headers: {
@@ -91,6 +99,11 @@ router.post('/', async (req, res) => {
     if (!response.ok) {
       console.error('Facebook CAPI Error:', result);
       return res.status(400).json({ error: result });
+    }
+
+    if (eventName === 'Purchase') {
+      console.log(`✅ [CAPI] Purchase Event Successfully Received by Meta!`);
+      console.log(`Meta Response:`, result);
     }
 
     res.status(200).json({ success: true, result });

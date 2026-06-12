@@ -16,6 +16,24 @@ sql`ALTER TABLE profiles ADD COLUMN IF NOT EXISTS commune VARCHAR(255)`.catch(er
 
 const router = Router();
 
+// Cache Control Middleware for Public Data (Vercel CDN)
+router.use((req, res, next) => {
+  if (req.method === 'GET') {
+    const isPrivate = req.path.startsWith('/admin') || 
+                      req.path.startsWith('/orders') || 
+                      req.path.startsWith('/user') || 
+                      req.path.startsWith('/cart');
+                      
+    const hasAuthCookie = req.headers.cookie && req.headers.cookie.match(/session|token|auth|user/i);
+
+    if (!isPrivate && !hasAuthCookie) {
+      // 5min cache, 10min stale-while-revalidate to avoid CPU spikes
+      res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=600');
+    }
+  }
+  next();
+});
+
 // Mount CAPI routes (renamed to metrics to bypass adblockers)
 router.use('/metrics/v1', capiRoutes);
 

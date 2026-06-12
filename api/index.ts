@@ -300,7 +300,14 @@ app.get('*', async (req, res, next) => {
     
     res.header('X-Robots-Tag', 'all');
     res.header('Content-Type', 'text/html; charset=utf-8');
-    res.header('Cache-Control', 'no-cache');
+    
+    // Add Vercel Edge Cache Control for Public HTML
+    if (req.method === 'GET' && (!req.headers.cookie || !req.headers.cookie.match(/session|token|auth|user/i))) {
+      res.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate=300');
+    } else {
+      res.setHeader('Cache-Control', 'no-cache');
+    }
+    
     res.status(200).send(finalHtml);
   } catch (err) {
     console.error('SEO Injection Error:', err);

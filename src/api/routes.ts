@@ -676,29 +676,10 @@ router.get('/products', async (req, res) => {
   }
 });
 
-const viewBuffer = new Map<number, number>();
-
-setInterval(async () => {
-  if (viewBuffer.size === 0) return;
-  const viewsToUpdate = new Map(viewBuffer);
-  viewBuffer.clear();
-  
-  for (const [id, count] of viewsToUpdate.entries()) {
-    try {
-      await sql`UPDATE products SET views_count = COALESCE(views_count, 0) + ${count} WHERE id = ${id}`;
-    } catch (e) {
-      console.error('Failed to flush views', e);
-    }
-  }
-}, 1000 * 60 * 5); // Flush every 5 minutes
-
 router.post('/products/:id/view', async (req, res) => {
   try {
-    const id = Number(req.params.id);
-    if (!isNaN(id)) {
-      viewBuffer.set(id, (viewBuffer.get(id) || 0) + 1);
-    }
-    res.json({ success: true, batched: true });
+    await sql`UPDATE products SET views_count = COALESCE(views_count, 0) + 1 WHERE id = ${req.params.id}`;
+    res.json({ success: true });
   } catch (error) {
     console.error('Error incrementing view count:', error);
     res.status(500).json({ error: 'Internal server error' });

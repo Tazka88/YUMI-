@@ -614,6 +614,7 @@ router.get('/products', async (req, res) => {
       orderClause = sql`ORDER BY RANDOM()`;
     }
 
+    // Optimized for performance to reduce Egress
     const products = await sql`
       SELECT ${sql.unsafe(PRODUCT_LIST_COLS)}, COALESCE(p.brand_name, b.name) as brand_name, b.slug as brand_slug, CASE WHEN b.image LIKE 'data:image/%' THEN '/api/images/brands/' || b.id || '/image?v=' || LENGTH(b.image) ELSE b.image END as brand_image,
       (SELECT COUNT(*) FROM reviews r WHERE r.product_id = p.id) as reviews_count,

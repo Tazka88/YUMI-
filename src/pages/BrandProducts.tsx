@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { ProductCard } from '../components/ProductCard';
 import SEO from '../components/SEO';
 import { Product } from '../store/cartStore';
+import { fetchWithCache } from '../lib/utils';
 
 export default function BrandProducts() {
   const { slug } = useParams();

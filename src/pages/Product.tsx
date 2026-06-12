@@ -73,109 +73,86 @@ export default function Product() {
   const supabase = getSupabase();
 
   useEffect(() => {
-    const controller = new AbortController();
-    fetchWithCache('/api/settings', { signal: controller.signal })
-      .then(data => {
-        setSettings(data);
-        setTrackingIds({
-          ga: (data as any).ga_measurement_id || import.meta.env.VITE_GA_MEASUREMENT_ID || '',
-          fb: (data as any).fb_pixel_id || import.meta.env.VITE_FB_PIXEL_ID || ''
-        });
-      })
-      .catch(err => {
-        if (err.name !== 'AbortError') console.error(err);
-      });
-      
-    // Check if in wishlist
-    if (user && slug && supabase) {
-       const checkWishlist = async () => {
-         try {
-           const { data, error } = await supabase
-             .from('wishlists')
-             .select('id')
-             .eq('profile_id', user.id)
-             .eq('product_id', product?.id);
-             
-           if (error) throw error;
-           if (data && data.length > 0) {
-             setIsInWishlist(true);
-             setWishlistDocId(data[0].id);
-           } else {
-             setIsInWishlist(false);
-             setWishlistDocId(null);
-           }
-         } catch (e) {
-           console.error("Wishlist check error:", e);
-         }
-       };
-       if (product?.id) checkWishlist();
-    }
-    
-    return () => controller.abort();
-  }, [user, slug, product?.id]);
-
-  useEffect(() => {
-    const controller = new AbortController();
-    const signal = controller.signal;
-
-    setError(null);
-    fetch(`/api/products/${slug}`, { signal, priority: 'high' } as any)
-      .then(res => {
-        if (!res.ok) throw new Error('Produit introuvable');
-        return res.json();
-      })
-      .then(data => {
-        if (typeof data.variations === 'string') {
-          try {
-            data.variations = JSON.parse(data.variations);
-          } catch (e) {
-            data.variations = [];
-          }
-        }
-        if (!Array.isArray(data.variations)) {
-           data.variations = [];
-        }
-        setProduct(data);
-        const mainImage = data.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(data.name)}&background=random&size=800`;
-        setSelectedImage(mainImage);
-        setSelectedMedia({type: 'image', url: mainImage, alt_text: data.main_image_alt || data.name});
+    let isMounted = true;
+    const fetchPageData = async () => {
+      try {
+        if (!slug || !supabase) return;
         
-        // Increment view count
-        fetch(`/api/products/${data.id}/view`, { method: 'POST', signal }).catch(() => {});
+        const { data, error } = await supabase.rpc('get_product_page', { p_slug: slug });
+        
+        if (error) throw error;
+        if (!data || !data.product) throw new Error('Produit introuvable');
+        
+        if (!isMounted) return;
 
-        // Fetch related
-        fetch(`/api/products?category=${data.category_id}`, { signal })
-          .then(res => res.json())
-          .then(related => {
-            if (Array.isArray(related)) {
-              setRelatedProducts(related.filter((p: ProductType) => p.id !== data.id).slice(0, 10));
-            }
-          })
-          .catch(err => {
-            if (err.name !== 'AbortError' && !err.message?.includes('aborted')) console.error(err);
-          });
-          
-        // Fetch reviews
-        fetch(`/api/products/${slug}/reviews`, { signal })
-          .then(res => res.json())
-          .then(reviewsData => {
-            if (Array.isArray(reviewsData)) {
-              setReviews(reviewsData);
-            }
-          })
-          .catch(err => {
-            if (err.name !== 'AbortError' && !err.message?.includes('aborted')) console.error(err);
-          });
-      })
-      .catch(err => {
-        if (err.name !== 'AbortError' && !err.message?.includes('aborted')) {
-          console.error(err);
-          setError(err.message);
+        const { product: prodData, reviews: revData, settings: setData, related: relData } = data as any;
+        
+        if (typeof prodData.variations === 'string') {
+          try { prodData.variations = JSON.parse(prodData.variations); } catch (e) { prodData.variations = []; }
         }
-      });
-      
-    return () => controller.abort();
-  }, [slug]);
+        if (!Array.isArray(prodData.variations)) {
+           prodData.variations = [];
+        }
+        
+        setProduct(prodData);
+        setSettings(setData || {});
+        setTrackingIds({
+          ga: setData?.ga_measurement_id || import.meta.env.VITE_GA_MEASUREMENT_ID || '',
+          fb: setData?.fb_pixel_id || import.meta.env.VITE_FB_PIXEL_ID || ''
+        });
+
+        const mainImage = prodData.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(prodData.name)}&background=random&size=800`;
+        setSelectedImage(mainImage);
+        setSelectedMedia({type: 'image', url: mainImage, alt_text: prodData.main_image_alt || prodData.name});
+        
+        if (Array.isArray(relData)) {
+          setRelatedProducts(relData);
+        }
+        
+        if (Array.isArray(revData)) {
+          setReviews(revData);
+        }
+
+        // Check if in wishlist
+        if (user && supabase && prodData) {
+           const checkWishlist = async () => {
+             try {
+               const { data: wData, error: wError } = await supabase
+                 .from('wishlists')
+                 .select('id')
+                 .eq('profile_id', user.id)
+                 .eq('product_id', prodData.id);
+                 
+               if (wError) throw wError;
+               if (wData && wData.length > 0) {
+                 if (isMounted) {
+                   setIsInWishlist(true);
+                   setWishlistDocId(wData[0].id);
+                 }
+               } else {
+                 if (isMounted) {
+                   setIsInWishlist(false);
+                   setWishlistDocId(null);
+                 }
+               }
+             } catch (e) {
+               console.error("Wishlist check error:", e);
+             }
+           };
+           checkWishlist();
+        }
+
+      } catch (err: any) {
+        if (isMounted) setError(err.message || 'Erreur');
+      }
+    };
+    
+    fetchPageData();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [slug, supabase, user]);
 
   const viewContentTrackedRef = React.useRef<string | null>(null);
 
@@ -423,10 +400,16 @@ export default function Product() {
       if (res.ok) {
         setReviewForm({ name: '', rating: 5, comment: '' });
         setReviewImage(null);
-        fetch(`/api/products/${slug}/reviews`)
-          .then(res => res.json())
-          .then(setReviews)
-          .catch(console.error);
+        if (supabase) {
+          try {
+            const { data } = await supabase.rpc('get_product_page', { p_slug: slug });
+            if (data && data.reviews) {
+              setReviews(data.reviews);
+            }
+          } catch (e) {
+            console.error(e);
+          }
+        }
       }
     } catch (err) {
       console.error(err);

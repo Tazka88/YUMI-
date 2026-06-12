@@ -676,6 +676,16 @@ router.get('/products', async (req, res) => {
   }
 });
 
+router.post('/products/:id/view', async (req, res) => {
+  try {
+    await sql`UPDATE products SET views_count = COALESCE(views_count, 0) + 1 WHERE id = ${req.params.id}`;
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error incrementing view count:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 router.get('/products/:slug', async (req, res) => {
   try {
     res.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate=86400');

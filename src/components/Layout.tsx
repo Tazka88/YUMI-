@@ -59,6 +59,8 @@ export const CategoryNameDisplay = ({ name, className = "" }: { name: string, cl
   return <span className={className}>{name}</span>;
 };
 
+import { useSettingsStore } from '../store/useSettingsStore';
+
 export default function Layout() {
   const { user, profile, signOut: handleSignOut } = useAuth();
   const cartItems = useCartStore((state) => state.items);
@@ -77,8 +79,7 @@ export default function Layout() {
   const [expandedSubcategories, setExpandedSubcategories] = useState<number[]>([]);
   const [showAnnouncement, setShowAnnouncement] = useState(true);
   const [currentMessageIndex, setCurrentMessageIndex] = useState(0);
-  const [settings, setSettings] = useState<any>({});
-  const [isSettingsLoaded, setIsSettingsLoaded] = useState(false);
+  const { settings, fetched: isSettingsLoaded, fetchSettings } = useSettingsStore();
   const [footerLinks, setFooterLinks] = useState<any[]>([]);
 
   const toggleSubcategory = (id: number, e: React.MouseEvent) => {
@@ -123,15 +124,7 @@ export default function Layout() {
       })
       .catch(handleFetchError);
       
-      fetchWithCache('/api/settings', { signal, priority: 'high' } as any)
-        .then(data => {
-          if (data && typeof data === 'object' && !(data as any).error) setSettings(data);
-          setIsSettingsLoaded(true);
-        })
-      .catch((err) => {
-        handleFetchError(err);
-        setIsSettingsLoaded(true);
-      });
+    fetchSettings();
 
     fetchWithCache('/api/footer-links', { signal })
       .then(data => {

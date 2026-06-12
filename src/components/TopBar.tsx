@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Phone, X } from 'lucide-react';
+import { useSettingsStore } from '../store/useSettingsStore';
 
 export const ZORANDO_TOPBAR_CONFIG = {
   active: true,
@@ -24,20 +25,12 @@ export const ZORANDO_TOPBAR_CONFIG = {
 export default function TopBar() {
   const [isVisible, setIsVisible] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [settings, setSettings] = useState<any>(null);
+  const { settings, fetchSettings } = useSettingsStore();
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    fetch('/api/settings')
-      .then(res => res.json())
-      .then(data => {
-        if (data && !data.error) {
-          setSettings(data);
-        }
-      })
-      .catch(console.error)
-      .finally(() => setIsLoading(false));
-  }, []);
+    fetchSettings().then(() => setIsLoading(false));
+  }, [fetchSettings]);
 
   useEffect(() => {
     if (isLoading) return;

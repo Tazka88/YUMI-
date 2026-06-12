@@ -498,16 +498,12 @@ export default function Home() {
       if (err.name !== 'AbortError') console.error(err);
     };
 
-    // Use standard fetch with a cache-busting query parameter to ensure real-time updates
+    // Use standard fetch without cache busting to allow caching
     const fetchDynamic = async (url: string) => {
-      const separator = url.includes('?') ? '&' : '?';
       try {
-        const res = await fetch(`${url}${separator}_t=${Date.now()}`, { signal, cache: 'no-store' });
-        if (!res.ok) {
-          const errorText = await res.text().catch(() => 'No error body');
-          throw new Error(`HTTP ${res.status}: ${errorText || res.statusText}`);
-        }
-        return await res.json();
+        // Use fetchWithCache for proper caching
+        const res = await fetchWithCache(url, { signal, maxAge: 60000 });
+        return res;
       } catch (err: any) {
         if (err.name === 'AbortError') return []; // Silently return empty for aborted requests
         console.error(`Fetch dynamic error for ${url}:`, err);

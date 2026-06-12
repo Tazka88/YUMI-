@@ -8,10 +8,11 @@ export const getResizedImageUrl = (url: string | null | undefined, width: number
 
 const fetchCache = new Map<string, { promise: Promise<any>, timestamp: number }>();
 
-export const fetchWithCache = async (url: string, options?: RequestInit & { retries?: number }) => {
+export const fetchWithCache = async (url: string, options?: RequestInit & { retries?: number, maxAge?: number }) => {
   const cacheKey = url;
   const now = Date.now();
-  const CACHE_TTL = 30000; // 30 seconds TTL
+  // Default TTL to 60 seconds (60000ms) for high performance caching
+  const CACHE_TTL = options?.maxAge !== undefined ? options.maxAge : 60000; 
   const maxRetries = options?.retries ?? 2;
   
   const cached = fetchCache.get(cacheKey);
@@ -21,6 +22,12 @@ export const fetchWithCache = async (url: string, options?: RequestInit & { retr
     delete fetchOptions.skipCache; 
     delete fetchOptions.signal;
     delete fetchOptions.retries;
+    delete fetchOptions.maxAge;
+    
+    // Ensure we don't bust cache
+    if (fetchOptions.cache === 'no-store') {
+      delete fetchOptions.cache;
+    }
     
     const executeFetch = async (attempt: number = 0): Promise<any> => {
       try {
@@ -43,6 +50,7 @@ export const fetchWithCache = async (url: string, options?: RequestInit & { retr
 
     fetchCache.set(cacheKey, { promise: executeFetch(), timestamp: now });
   }
+
   
   return new Promise((resolve, reject) => {
     if (options?.signal?.aborted) {

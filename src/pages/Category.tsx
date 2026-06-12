@@ -149,18 +149,8 @@ export default function Category() {
           newCategoryName = searchParams.get('title') || newCategoryName;
         }
 
-        if (url.includes('?')) {
-          url += `&_t=${Date.now()}`;
-        } else {
-          url += `?_t=${Date.now()}`;
-        }
-
-        const productsRes = await fetch(url, { signal, priority: 'high', cache: 'no-store' } as any);
-        let productsData = [];
-        if (productsRes.ok) {
-          const data = await productsRes.json();
-          if (Array.isArray(data)) productsData = data;
-        }
+        const productsDataArray: any = await fetchWithCache(url, { signal, priority: 'high', maxAge: 60000 } as any).catch(() => []);
+        let productsData = Array.isArray(productsDataArray) ? productsDataArray : [];
 
         if (!signal.aborted) {
           setCategoryName(newCategoryName);

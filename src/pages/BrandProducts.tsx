@@ -23,9 +23,8 @@ export default function BrandProducts() {
       .then(data => {
         setBrand(data);
         // Fetch products for this brand
-        return fetch(`/api/products?brand=${data.id}&_t=${Date.now()}`, { signal, cache: 'no-store' });
+        return fetchWithCache(`/api/products?brand=${data.id}`, { signal, maxAge: 60000 });
       })
-      .then(res => res.json())
       .then(data => {
         if (Array.isArray(data)) {
           setProducts(data);

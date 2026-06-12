@@ -47,49 +47,29 @@ const getSharp = async () => {
   }
 };
 
-// Helper to serve image data directly
-const serveImageData = async (res: any, imageData: string, targetWidth?: number, cacheControl = 'public, max-age=31536000') => {
+// Helper to serve image data directly without CPU intensive sharp usage at runtime
+const serveImageData = async (res: any, imageData: string, targetWidth?: number, cacheControl = 'public, max-age=31536000, immutable') => {
   if (imageData.startsWith('data:image/')) {
     const matches = imageData.match(/^data:image\/([a-zA-Z0-9+]+);base64,(.+)$/);
     if (matches && matches.length === 3) {
       const ext = matches[1];
       const base64Data = matches[2];
-      let buffer = Buffer.from(base64Data, 'base64');
+      const buffer = Buffer.from(base64Data, 'base64');
       
-      try {
-        // Auto compress and convert to WebP on the fly for non-SVG images
-        if (ext !== 'svg+xml' && ext !== 'svg') {
-          const sharpLib = await getSharp();
-          if (sharpLib) {
-            let sharpInstance = sharpLib(buffer);
-            
-            if (targetWidth && targetWidth > 0 && targetWidth <= 2000) {
-              sharpInstance = sharpInstance.resize({ width: targetWidth, withoutEnlargement: true });
-            }
-            
-            buffer = await sharpInstance
-              .webp({ quality: 80, effort: 4 })
-              .toBuffer();
-            res.setHeader('Content-Type', 'image/webp');
-          } else {
-            res.setHeader('Content-Type', `image/${ext}`);
-          }
-        } else {
-          res.setHeader('Content-Type', `image/${ext}`);
-        }
-      } catch (e) {
-        console.error('Sharp compression error on display:', e);
-        res.setHeader('Content-Type', `image/${ext}`);
-      }
-      
+      res.setHeader('Content-Type', `image/${ext === 'svg+xml' ? 'svg+xml' : ext}`);
+      // Aggressive CDN caching to NEVER hit Vercel CPU again for same image
       res.setHeader('Cache-Control', cacheControl);
+      res.setHeader('Vercel-CDN-Cache-Control', 'max-age=31536000');
+      res.setHeader('CDN-Cache-Control', 'max-age=31536000');
+      
       return res.send(buffer);
     }
   }
   
   // If it's a regular URL or a local path, redirect
   if (imageData.startsWith('http') || imageData.startsWith('/')) {
-    return res.redirect(imageData);
+    res.setHeader('Cache-Control', cacheControl);
+    return res.redirect(301, imageData);
   }
   
   res.status(404).json({ error: 'Invalid image format' });
@@ -368,6 +348,8 @@ router.get('/pages/:slug', async (req, res) => {
 
 router.get('/settings', async (req, res) => {
   try {
+    // Aggressive CDN caching for settings
+    res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=86400');
     const settings = await sql`SELECT "key", CASE WHEN value LIKE 'data:image/%' THEN '/api/images/settings/' || "key" || '/value?v=' || LENGTH(value) ELSE value END as value FROM settings WHERE "key" != 'admin_email'`;
     const settingsObj = settings.reduce((acc: any, setting: any) => {
       let val = setting.value;
@@ -385,6 +367,7 @@ router.get('/settings', async (req, res) => {
 
 router.get('/footer-links', async (req, res) => {
   try {
+    res.setHeader('Cache-Control', 's-maxage=3600, stale-while-revalidate=86400');
     const links = await sql`SELECT * FROM footer_links ORDER BY column_id ASC, order_index ASC`;
     res.json(links);
   } catch (err) {
@@ -394,6 +377,7 @@ router.get('/footer-links', async (req, res) => {
 
 router.get('/hero-banners', async (req, res) => {
   try {
+    res.setHeader('Cache-Control', 's-maxage=3600, stale-while-revalidate=86400');
     const sliderImages = await sql`SELECT ${sql.unsafe(SLIDER_IMAGES_COLS)} FROM slider_images ORDER BY position ASC`;
     
     sliderImages.forEach((s: any) => {
@@ -493,6 +477,7 @@ router.put('/hero-banners/reorder', authenticate, async (req, res) => {
 
 router.get('/brands', async (req, res) => {
   try {
+    res.setHeader('Cache-Control', 's-maxage=3600, stale-while-revalidate=86400');
     const brands = await sql`SELECT ${sql.unsafe(BRANDS_COLS)} FROM brands ORDER BY name ASC`;
     
     brands.forEach((b: any) => {
@@ -521,6 +506,7 @@ router.get('/brands/:slug', async (req, res) => {
 
 router.get('/categories', async (req, res) => {
   try {
+    res.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate=86400');
     const categories = await sql`SELECT ${sql.unsafe(CATEGORIES_COLS)} FROM categories`;
     const subcategories = await sql`SELECT ${sql.unsafe(SUBCAT_COLS)} FROM subcategories`;
     const sub_subcategories = await sql`SELECT ${sql.unsafe(SUB_SUBCAT_COLS)} FROM sub_subcategories`;
@@ -576,6 +562,7 @@ router.get('/subcategories', async (req, res) => {
 });
 
 router.get('/products', async (req, res) => {
+  res.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate=3600');
   const category = req.query.category as string | undefined;
   const subcategory = req.query.subcategory as string | undefined;
   const sub_subcategory = req.query.sub_subcategory as string | undefined;
@@ -677,6 +664,7 @@ router.post('/products/:id/view', async (req, res) => {
 
 router.get('/products/:slug', async (req, res) => {
   try {
+    res.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate=86400');
     const [product] = await sql`
       SELECT ${sql.unsafe(PRODUCT_COLS)}, c.name as category_name, s.name as subcategory_name, ss.name as sub_subcategory_name, COALESCE(p.brand_name, b.name) as brand_name, b.slug as brand_slug, CASE WHEN b.image LIKE 'data:image/%' THEN '/api/images/brands/' || b.id || '/image?v=' || LENGTH(b.image) ELSE b.image END as brand_image,
       (SELECT COUNT(*) FROM reviews r WHERE r.product_id = p.id) as reviews_count,

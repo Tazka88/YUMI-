@@ -47,20 +47,24 @@ const getSharp = async () => {
   }
 };
 
-// Helper to serve image data directly without CPU intensive sharp usage at runtime
-const serveImageData = async (res: any, imageData: string, targetWidth?: number, cacheControl = 'public, max-age=31536000, immutable') => {
+// Helper to serve image data directly without CPU intensive sharp usage or Regex at runtime
+const serveImageData = async (res: any, imageData: string, targetWidth?: number, cacheControl = 'public, s-maxage=3600, stale-while-revalidate=86400') => {
   if (imageData.startsWith('data:image/')) {
-    const matches = imageData.match(/^data:image\/([a-zA-Z0-9+]+);base64,(.+)$/);
-    if (matches && matches.length === 3) {
-      const ext = matches[1];
-      const base64Data = matches[2];
+    // Avoid RegExp on potentially megabytes of base64 data to save Active CPU
+    const commaIndex = imageData.indexOf(',');
+    const extStart = 11; // 'data:image/'.length
+    const extEnd = imageData.indexOf(';', extStart);
+    
+    if (commaIndex !== -1 && extEnd !== -1) {
+      const ext = imageData.substring(extStart, extEnd);
+      const base64Data = imageData.substring(commaIndex + 1);
       const buffer = Buffer.from(base64Data, 'base64');
       
       res.setHeader('Content-Type', `image/${ext === 'svg+xml' ? 'svg+xml' : ext}`);
-      // Aggressive CDN caching to NEVER hit Vercel CPU again for same image
+      // Agressive CDN caching for Vercel Edge layer (s-maxage) 
       res.setHeader('Cache-Control', cacheControl);
-      res.setHeader('Vercel-CDN-Cache-Control', 'max-age=31536000');
-      res.setHeader('CDN-Cache-Control', 'max-age=31536000');
+      res.setHeader('Vercel-CDN-Cache-Control', 'max-age=3600, stale-while-revalidate=86400');
+      res.setHeader('CDN-Cache-Control', 'max-age=3600, stale-while-revalidate=86400');
       
       return res.send(buffer);
     }

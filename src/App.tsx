@@ -2,7 +2,6 @@ import React, { Suspense, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
 import { Toaster } from 'react-hot-toast';
-const SpeedInsights = React.lazy(() => import('@vercel/speed-insights/react').then(module => ({ default: module.SpeedInsights })));
 import Layout from './components/Layout';
 const Analytics = React.lazy(() => import('./components/Analytics'));
 
@@ -50,9 +49,6 @@ export default function App() {
         <Toaster position="top-center" />
         <Suspense fallback={null}>
           <Analytics />
-        </Suspense>
-        <Suspense fallback={null}>
-          <SpeedInsights />
         </Suspense>
         <Suspense fallback={
           <div className="min-h-screen bg-white flex flex-col items-center justify-center">

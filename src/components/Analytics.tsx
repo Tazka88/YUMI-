@@ -2,7 +2,6 @@ import { useEffect, useState, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { fetchWithCache } from '../lib/utils';
 import { sendCapiEvent, generateEventId } from '../lib/capi';
-import { useAuth } from '../lib/AuthContext';
 
 declare global {
   interface Window {
@@ -14,15 +13,12 @@ declare global {
 
 export default function Analytics() {
   const location = useLocation();
-  const { user, profile, loading } = useAuth();
   const [isInitialized, setIsInitialized] = useState(false);
   const [gaId, setGaId] = useState<string | null>(null);
   const [fbId, setFbId] = useState<string | null>(null);
   const lastPathRef = useRef<string | null>(null);
 
   useEffect(() => {
-    if (loading) return;
-
     const controller = new AbortController();
     fetchWithCache('/api/settings', { signal: controller.signal })
       .then(data => {
@@ -76,17 +72,7 @@ export default function Analytics() {
             
             // Initialize the pixel but DO NOT send a PageView here.
             // We handle PageView manually in the second useEffect.
-            const advancedMatching: any = {};
-            if (user?.email) advancedMatching.em = user.email;
-            if (profile?.phone) advancedMatching.ph = profile.phone;
-            if (profile?.first_name) advancedMatching.fn = profile.first_name;
-            if (profile?.last_name) advancedMatching.ln = profile.last_name;
-
-            if (Object.keys(advancedMatching).length > 0) {
-              window.fbq('init', fbPixelId, advancedMatching);
-            } else {
-              window.fbq('init', fbPixelId);
-            }
+            window.fbq('init', fbPixelId);
             setFbId(fbPixelId);
           } catch (e) {
             console.error('Failed to initialize FB Pixel', e);
@@ -103,7 +89,7 @@ export default function Analytics() {
       });
       
     return () => controller.abort();
-  }, [loading, user?.email, profile?.phone, profile?.first_name, profile?.last_name]);
+  }, []);
 
   useEffect(() => {
     if (!isInitialized) return;

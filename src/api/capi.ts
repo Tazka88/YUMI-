@@ -15,6 +15,11 @@ router.post('/', async (req, res) => {
   try {
     const { eventName, eventId, eventSourceUrl, userData, customData } = req.body;
 
+    const ALLOWED_EVENTS = ['Purchase', 'InitiateCheckout', 'AddToCart'];
+    if (!ALLOWED_EVENTS.includes(eventName)) {
+      return res.status(200).json({ success: true, skipped: true });
+    }
+
     let finalEventId = eventId ? String(eventId) : undefined;
     if (eventName === 'Purchase' && !finalEventId) {
       console.warn('⚠️ CAPI: Purchase event received WITHOUT eventId. Generating fallback ID to satisfy Meta format.');

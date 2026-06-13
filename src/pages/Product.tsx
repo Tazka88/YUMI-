@@ -57,6 +57,8 @@ export default function Product() {
   const [reviews, setReviews] = useState<any[]>([]);
   const [quantity, setQuantity] = useState(1);
   const optionsRef = useRef<HTMLDivElement>(null);
+  const relatedSectionRef = useRef<HTMLDivElement>(null);
+  const [hasRelatedIntersected, setHasRelatedIntersected] = useState(false);
   const [showOptionsHighlight, setShowOptionsHighlight] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [reviewForm, setReviewForm] = useState({ name: '', rating: 5, comment: '' });
@@ -143,18 +145,6 @@ export default function Product() {
         // Increment view count
         fetch(`/api/products/${data.id}/view`, { method: 'POST', signal }).catch(() => {});
 
-        // Fetch related
-        fetch(`/api/products?category=${data.category_id}`, { signal })
-          .then(res => res.json())
-          .then(related => {
-            if (Array.isArray(related)) {
-              setRelatedProducts(related.filter((p: ProductType) => p.id !== data.id).slice(0, 10));
-            }
-          })
-          .catch(err => {
-            if (err.name !== 'AbortError' && !err.message?.includes('aborted')) console.error(err);
-          });
-          
         // Fetch reviews
         fetch(`/api/products/${slug}/reviews`, { signal })
           .then(res => res.json())
@@ -174,8 +164,42 @@ export default function Product() {
         }
       });
       
-    return () => controller.abort();
+      return () => controller.abort();
   }, [slug]);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          setHasRelatedIntersected(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: '400px' } // trigger when within 400px of viewport
+    );
+    if (relatedSectionRef.current) {
+      observer.observe(relatedSectionRef.current);
+    }
+    return () => observer.disconnect();
+  }, [product?.id]);
+
+  useEffect(() => {
+    if (!hasRelatedIntersected || !product?.category_id) return;
+    
+    const controller = new AbortController();
+    fetch(`/api/products?category=${product.category_id}`, { signal: controller.signal })
+      .then(res => res.json())
+      .then(related => {
+        if (Array.isArray(related)) {
+          setRelatedProducts(related.filter((p: ProductType) => p.id !== product.id).slice(0, 10));
+        }
+      })
+      .catch(err => {
+        if (err.name !== 'AbortError' && !err.message?.includes('aborted')) console.error(err);
+      });
+      
+    return () => controller.abort();
+  }, [hasRelatedIntersected, product?.category_id, product?.id]);
 
   const viewContentTrackedRef = React.useRef<string | null>(null);
 
@@ -1140,6 +1164,7 @@ export default function Product() {
       </div>
 
       {/* Related Products (Cross-sell) */}
+      <div ref={relatedSectionRef}></div>
       {relatedProducts.length > 0 && (
         <div>
           <h2 className="text-xl font-bold text-gray-800 mb-6 border-b-2 border-orange-500 inline-block pb-2">Produits Similaires</h2>

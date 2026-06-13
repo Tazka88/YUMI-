@@ -73,28 +73,15 @@ export default function Product() {
   const supabase = getSupabase();
 
   useEffect(() => {
-    const controller = new AbortController();
-    fetchWithCache('/api/settings', { signal: controller.signal })
-      .then(data => {
-        setSettings(data);
-        setTrackingIds({
-          ga: (data as any).ga_measurement_id || import.meta.env.VITE_GA_MEASUREMENT_ID || '',
-          fb: (data as any).fb_pixel_id || import.meta.env.VITE_FB_PIXEL_ID || ''
-        });
-      })
-      .catch(err => {
-        if (err.name !== 'AbortError') console.error(err);
-      });
-      
     // Check if in wishlist
-    if (user && slug && supabase) {
+    if (user && slug && supabase && product?.id) {
        const checkWishlist = async () => {
          try {
            const { data, error } = await supabase
              .from('wishlists')
              .select('id')
              .eq('profile_id', user.id)
-             .eq('product_id', product?.id);
+             .eq('product_id', product.id);
              
            if (error) throw error;
            if (data && data.length > 0) {
@@ -108,73 +95,73 @@ export default function Product() {
            console.error("Wishlist check error:", e);
          }
        };
-       if (product?.id) checkWishlist();
+       checkWishlist();
     }
-    
-    return () => controller.abort();
   }, [user, slug, product?.id]);
 
   useEffect(() => {
-    const controller = new AbortController();
-    const signal = controller.signal;
-
-    setError(null);
-    fetch(`/api/products/${slug}`, { signal, priority: 'high' } as any)
-      .then(res => {
-        if (!res.ok) throw new Error('Produit introuvable');
-        return res.json();
-      })
-      .then(data => {
-        if (typeof data.variations === 'string') {
+    if (!supabase || !slug) return;
+    
+    let isMounted = true;
+    
+    const fetchProductData = async () => {
+      setError(null);
+      try {
+        const { data, error: rpcError } = await supabase.rpc('get_product_page', { p_slug: slug });
+        
+        if (rpcError) throw rpcError;
+        if (!data || !data.product) throw new Error('Produit introuvable');
+        
+        if (!isMounted) return;
+        
+        const payload = data as any;
+        
+        // Parse variations
+        let productData = payload.product;
+        if (typeof productData.variations === 'string') {
           try {
-            data.variations = JSON.parse(data.variations);
+             productData.variations = JSON.parse(productData.variations);
           } catch (e) {
-            data.variations = [];
+             productData.variations = [];
           }
         }
-        if (!Array.isArray(data.variations)) {
-           data.variations = [];
+        if (!Array.isArray(productData.variations)) {
+          productData.variations = [];
         }
-        setProduct(data);
-        const mainImage = data.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(data.name)}&background=random&size=800`;
-        setSelectedImage(mainImage);
-        setSelectedMedia({type: 'image', url: mainImage, alt_text: data.main_image_alt || data.name});
         
-        // Increment view count
-        fetch(`/api/products/${data.id}/view`, { method: 'POST', signal }).catch(() => {});
-
-        // Fetch related
-        fetch(`/api/products?category=${data.category_id}`, { signal })
-          .then(res => res.json())
-          .then(related => {
-            if (Array.isArray(related)) {
-              setRelatedProducts(related.filter((p: ProductType) => p.id !== data.id).slice(0, 10));
-            }
-          })
-          .catch(err => {
-            if (err.name !== 'AbortError' && !err.message?.includes('aborted')) console.error(err);
-          });
-          
-        // Fetch reviews
-        fetch(`/api/products/${slug}/reviews`, { signal })
-          .then(res => res.json())
-          .then(reviewsData => {
-            if (Array.isArray(reviewsData)) {
-              setReviews(reviewsData);
-            }
-          })
-          .catch(err => {
-            if (err.name !== 'AbortError' && !err.message?.includes('aborted')) console.error(err);
-          });
-      })
-      .catch(err => {
-        if (err.name !== 'AbortError' && !err.message?.includes('aborted')) {
-          console.error(err);
-          setError(err.message);
+        setProduct(productData);
+        
+        const mainImage = productData.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(productData.name)}&background=random&size=800`;
+        setSelectedImage(mainImage);
+        setSelectedMedia({type: 'image', url: mainImage, alt_text: productData.main_image_alt || productData.name});
+        
+        if (Array.isArray(payload.reviews)) {
+          setReviews(payload.reviews);
         }
-      });
-      
-    return () => controller.abort();
+        
+        if (Array.isArray(payload.related_products)) {
+          setRelatedProducts(payload.related_products);
+        }
+        
+        if (payload.settings) {
+          setSettings(payload.settings);
+          setTrackingIds({
+            ga: payload.settings.ga_measurement_id || import.meta.env.VITE_GA_MEASUREMENT_ID || '',
+            fb: payload.settings.fb_pixel_id || import.meta.env.VITE_FB_PIXEL_ID || ''
+          });
+        }
+        
+      } catch (err: any) {
+         if (isMounted) {
+           console.error('Error fetching product page data:', err);
+           setError(err.message || 'Produit introuvable');
+         }
+      }
+    };
+    
+    fetchProductData();
+    
+    return () => { isMounted = false; };
   }, [slug]);
 
   const viewContentTrackedRef = React.useRef<string | null>(null);

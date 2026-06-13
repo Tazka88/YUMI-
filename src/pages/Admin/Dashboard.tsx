@@ -975,6 +975,28 @@ export default function AdminDashboard() {
         parsedVariations = product.variations;
       }
       
+      let finalKeyPoints = '';
+      if (typeof product.key_points === 'string') {
+        try {
+          const parsed = JSON.parse(product.key_points);
+          if (Array.isArray(parsed)) finalKeyPoints = parsed.join('\n');
+          else finalKeyPoints = product.key_points;
+        } catch(e) { finalKeyPoints = product.key_points; }
+      } else if (Array.isArray(product.key_points)) {
+        finalKeyPoints = product.key_points.join('\n');
+      }
+
+      let finalFeatures = '';
+      if (typeof product.features === 'string') {
+        try {
+          const parsed = JSON.parse(product.features);
+          if (Array.isArray(parsed)) finalFeatures = parsed.map((f: any) => `${f.key}: ${f.value}`).join('\n');
+          else finalFeatures = product.features;
+        } catch(e) { finalFeatures = product.features; }
+      } else if (Array.isArray(product.features)) {
+        finalFeatures = product.features.map((f: any) => `${f.key}: ${f.value}`).join('\n');
+      }
+
       setProductForm({
         name: product.name, slug: product.slug, sku: product.sku || '', category_id: product.category_id, subcategory_id: product.subcategory_id || '', sub_subcategory_id: product.sub_subcategory_id || '', brand_id: product.brand_id || '', brand_name: product.brand_name || '',
         price: product.price, 
@@ -988,8 +1010,8 @@ export default function AdminDashboard() {
         is_active: product.is_active !== false,
         images: product.images || [],
         variations: parsedVariations,
-        features: typeof product.features === 'string' ? product.features : (Array.isArray(product.features) ? product.features.map((f: any) => `${f.key}: ${f.value}`).join('\n') : ''),
-        key_points: typeof product.key_points === 'string' ? product.key_points : (Array.isArray(product.key_points) ? product.key_points.join('\n') : ''),
+        features: finalFeatures,
+        key_points: finalKeyPoints,
         faq_q1: product.faq_q1 || '', faq_a1: product.faq_a1 || '', faq_q2: product.faq_q2 || '', faq_a2: product.faq_a2 || '',
         seo_title: product.seo_title || '', seo_description: product.seo_description || '', seo_keywords: product.seo_keywords || '', main_image_alt: product.main_image_alt || ''
       });

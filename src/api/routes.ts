@@ -28,7 +28,7 @@ router.use((req, res, next) => {
 
     if (!isPrivate && !hasAuthCookie) {
       // 5min cache, 10min stale-while-revalidate to avoid CPU spikes
-      res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=600');
+      res.setHeader('Cache-Control', 's-maxage=3600, stale-while-revalidate=600');
     }
   }
   next();
@@ -372,7 +372,7 @@ router.get('/pages/:slug', async (req, res) => {
 router.get('/settings', async (req, res) => {
   try {
     // Aggressive CDN caching for settings
-    res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=86400');
+    res.setHeader('Cache-Control', 's-maxage=3600, stale-while-revalidate=86400');
     const settings = await sql`SELECT "key", CASE WHEN value LIKE 'data:image/%' THEN '/api/images/settings/' || "key" || '/value?v=' || LENGTH(value) ELSE value END as value FROM settings WHERE "key" != 'admin_email'`;
     const settingsObj = settings.reduce((acc: any, setting: any) => {
       let val = setting.value;
@@ -529,7 +529,7 @@ router.get('/brands/:slug', async (req, res) => {
 
 router.get('/categories', async (req, res) => {
   try {
-    res.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate=86400');
+    res.setHeader('Cache-Control', 's-maxage=3600, stale-while-revalidate=86400');
     const categories = await sql`SELECT ${sql.unsafe(CATEGORIES_COLS)} FROM categories`;
     const subcategories = await sql`SELECT ${sql.unsafe(SUBCAT_COLS)} FROM subcategories`;
     const sub_subcategories = await sql`SELECT ${sql.unsafe(SUB_SUBCAT_COLS)} FROM sub_subcategories`;
@@ -585,7 +585,7 @@ router.get('/subcategories', async (req, res) => {
 });
 
 router.get('/products', async (req, res) => {
-  res.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate=3600');
+  res.setHeader('Cache-Control', 's-maxage=3600, stale-while-revalidate=3600');
   const category = req.query.category as string | undefined;
   const subcategory = req.query.subcategory as string | undefined;
   const sub_subcategory = req.query.sub_subcategory as string | undefined;
@@ -777,7 +777,7 @@ router.get('/rpc/get_product_page/:slug', async (req, res) => {
       return acc;
     }, {});
 
-    res.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate=86400');
+    res.setHeader('Cache-Control', 's-maxage=3600, stale-while-revalidate=86400');
     res.json({
       product,
       reviews,
@@ -793,7 +793,7 @@ router.get('/rpc/get_product_page/:slug', async (req, res) => {
 
 router.get('/products/:slug', async (req, res) => {
   try {
-    res.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate=86400');
+    res.setHeader('Cache-Control', 's-maxage=3600, stale-while-revalidate=86400');
     const [product] = await sql`
       SELECT ${sql.unsafe(PRODUCT_COLS)}, c.name as category_name, s.name as subcategory_name, ss.name as sub_subcategory_name, COALESCE(p.brand_name, b.name) as brand_name, b.slug as brand_slug, CASE WHEN b.image LIKE 'data:image/%' THEN '/api/images/brands/' || b.id || '/image?v=' || LENGTH(b.image) ELSE b.image END as brand_image,
       (SELECT COUNT(*) FROM reviews r WHERE r.product_id = p.id) as reviews_count,

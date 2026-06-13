@@ -28,7 +28,7 @@ router.use((req, res, next) => {
 
     if (!isPrivate && !hasAuthCookie) {
       // 5min cache, 10min stale-while-revalidate to avoid CPU spikes
-      res.setHeader('Cache-Control', 's-maxage=3600, stale-while-revalidate=600');
+      res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=600');
     }
   }
   next();
@@ -372,7 +372,7 @@ router.get('/pages/:slug', async (req, res) => {
 router.get('/settings', async (req, res) => {
   try {
     // Aggressive CDN caching for settings
-    res.setHeader('Cache-Control', 's-maxage=3600, stale-while-revalidate=86400');
+    res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=86400');
     const settings = await sql`SELECT "key", CASE WHEN value LIKE 'data:image/%' THEN '/api/images/settings/' || "key" || '/value?v=' || LENGTH(value) ELSE value END as value FROM settings WHERE "key" != 'admin_email'`;
     const settingsObj = settings.reduce((acc: any, setting: any) => {
       let val = setting.value;
@@ -529,7 +529,7 @@ router.get('/brands/:slug', async (req, res) => {
 
 router.get('/categories', async (req, res) => {
   try {
-    res.setHeader('Cache-Control', 's-maxage=3600, stale-while-revalidate=86400');
+    res.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate=86400');
     const categories = await sql`SELECT ${sql.unsafe(CATEGORIES_COLS)} FROM categories`;
     const subcategories = await sql`SELECT ${sql.unsafe(SUBCAT_COLS)} FROM subcategories`;
     const sub_subcategories = await sql`SELECT ${sql.unsafe(SUB_SUBCAT_COLS)} FROM sub_subcategories`;
@@ -585,7 +585,7 @@ router.get('/subcategories', async (req, res) => {
 });
 
 router.get('/products', async (req, res) => {
-  res.setHeader('Cache-Control', 's-maxage=3600, stale-while-revalidate=3600');
+  res.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate=3600');
   const category = req.query.category as string | undefined;
   const subcategory = req.query.subcategory as string | undefined;
   const sub_subcategory = req.query.sub_subcategory as string | undefined;
@@ -686,114 +686,9 @@ router.post('/products/:id/view', async (req, res) => {
   }
 });
 
-router.get('/rpc/get_product_page/:slug', async (req, res) => {
-  try {
-    const slug = req.params.slug;
-    
-    // Increment views
-    await sql`UPDATE products SET views_count = COALESCE(views_count, 0) + 1 WHERE slug = ${slug}`.catch(console.error);
-
-    // Get product
-    const [product] = await sql`
-      SELECT ${sql.unsafe(PRODUCT_COLS)}, c.name as category_name, s.name as subcategory_name, ss.name as sub_subcategory_name, 
-             COALESCE(p.brand_name, b.name) as brand_name, b.slug as brand_slug, 
-             CASE WHEN b.image LIKE 'data:image/%' THEN '/api/images/brands/' || b.id || '/image?v=' || LENGTH(b.image) ELSE b.image END as brand_image,
-             (SELECT COUNT(*) FROM reviews r WHERE r.product_id = p.id) as reviews_count,
-             (SELECT COALESCE(AVG(rating), 0) FROM reviews r WHERE r.product_id = p.id) as avg_rating
-      FROM products p 
-      LEFT JOIN categories c ON p.category_id = c.id 
-      LEFT JOIN subcategories s ON p.subcategory_id = s.id
-      LEFT JOIN sub_subcategories ss ON p.sub_subcategory_id = ss.id
-      LEFT JOIN brands b ON p.brand_id = b.id 
-      WHERE p.slug = ${slug} AND p.is_active = true
-    `;
-
-    if (!product) {
-       return res.status(404).json({ error: 'Product not found' });
-    }
-
-    // Product Images
-    const images = await sql`SELECT ${sql.unsafe(PRODUCT_IMAGES_COLS)} FROM product_images WHERE product_id = ${product.id}`;
-    product.images = images.filter((img: any) => !img.is_main);
-    const mainImgRow = images.find((img: any) => img.is_main);
-    product.main_image_alt = product.main_image_alt || (mainImgRow ? (mainImgRow.alt_text || '') : '');
-    
-    product.image = processImage('products', product.id, 'image', product.image);
-    if (product.brand_image) product.brand_image = processImage('brands', product.brand_id, 'image', product.brand_image);
-    if (product.images && Array.isArray(product.images)) {
-      product.images.forEach((img: any) => {
-        img.image = processImage('product_images', img.id, 'image', img.image);
-      });
-    }
-
-    // Parse JSON arrays for safety
-    try { product.features = typeof product.features === 'string' ? JSON.parse(product.features) : (product.features || []); } catch (e) { product.features = []; }
-    try { product.key_points = typeof product.key_points === 'string' ? JSON.parse(product.key_points) : (product.key_points || []); } catch (e) { product.key_points = []; }
-    try { product.variations = typeof product.variations === 'string' ? JSON.parse(product.variations) : (product.variations || []); } catch (e) { product.variations = []; }
-
-    // Get reviews
-    const reviews = await sql`SELECT * FROM reviews WHERE product_id = ${product.id} ORDER BY created_at DESC`;
-
-    // Get related products
-    const related_products = await sql`
-      SELECT ${sql.unsafe(PRODUCT_LIST_COLS)}, COALESCE(p.brand_name, b.name) as brand_name 
-      FROM products p 
-      LEFT JOIN brands b ON p.brand_id = b.id
-      WHERE p.category_id = ${product.category_id} AND p.id != ${product.id} AND p.is_active = true
-      ORDER BY RANDOM() LIMIT 10
-    `;
-    
-    // Process related product images
-    const relatedProductIds = related_products.map((p: any) => p.id);
-    if (relatedProductIds.length > 0) {
-      const relImages = await sql`SELECT ${sql.unsafe(PRODUCT_IMAGES_COLS)} FROM product_images WHERE product_id IN ${sql(relatedProductIds)}`;
-      related_products.forEach((p: any) => {
-        p.images = relImages.filter((img: any) => img.product_id === p.id && !img.is_main);
-        const relMain = relImages.find((img: any) => img.product_id === p.id && img.is_main);
-        p.main_image_alt = p.main_image_alt || (relMain ? (relMain.alt_text || '') : '');
-        p.image = processImage('products', p.id, 'image', p.image);
-        if (p.images && Array.isArray(p.images)) {
-          p.images.forEach((img: any) => {
-            img.image = processImage('product_images', img.id, 'image', img.image);
-          });
-        }
-      });
-    }
-
-    // Get categories
-    const categories = await sql`SELECT ${sql.unsafe(CATEGORIES_COLS)} FROM categories ORDER BY name ASC`;
-    categories.forEach((c: any) => {
-      c.image = processImage('categories', c.id, 'image', c.image);
-    });
-
-    // Get settings
-    const settingsRows = await sql`SELECT "key", CASE WHEN value LIKE 'data:image/%' THEN '/api/images/settings/' || "key" || '/value?v=' || LENGTH(value) ELSE value END as value FROM settings`;
-    const settings = settingsRows.reduce((acc: any, setting: any) => {
-      let val = setting.value;
-      if (setting.key === 'site_logo' || setting.key.startsWith('theme_image_')) {
-        val = processImage('settings', setting.key, 'value', val);
-      }
-      acc[setting.key] = val;
-      return acc;
-    }, {});
-
-    res.setHeader('Cache-Control', 's-maxage=3600, stale-while-revalidate=86400');
-    res.json({
-      product,
-      reviews,
-      categories,
-      settings,
-      related_products
-    });
-  } catch (err: any) {
-    console.error(err);
-    res.status(500).json({ error: 'Failed to fetch product page data', details: err.message, stack: err.stack });
-  }
-});
-
 router.get('/products/:slug', async (req, res) => {
   try {
-    res.setHeader('Cache-Control', 's-maxage=3600, stale-while-revalidate=86400');
+    res.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate=86400');
     const [product] = await sql`
       SELECT ${sql.unsafe(PRODUCT_COLS)}, c.name as category_name, s.name as subcategory_name, ss.name as sub_subcategory_name, COALESCE(p.brand_name, b.name) as brand_name, b.slug as brand_slug, CASE WHEN b.image LIKE 'data:image/%' THEN '/api/images/brands/' || b.id || '/image?v=' || LENGTH(b.image) ELSE b.image END as brand_image,
       (SELECT COUNT(*) FROM reviews r WHERE r.product_id = p.id) as reviews_count,

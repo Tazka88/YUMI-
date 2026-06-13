@@ -32,22 +32,12 @@ export async function setupDb() {
       console.log('Connected to PostgreSQL successfully.');
     }
     
-    // Initialize schema if not exists
-    const [{ exists }] = await sql`SELECT EXISTS (
-      SELECT FROM information_schema.tables 
-      WHERE table_schema = 'public' 
-      AND table_name = 'users'
-    );`;
-
-    if (!exists) {
-      const schemaPath = path.join(process.cwd(), 'src', 'db', 'schema.sql');
-      if (fs.existsSync(schemaPath)) {
-        const schema = fs.readFileSync(schemaPath, 'utf8');
-        await sql.unsafe(schema);
-        console.log('Database schema initialized successfully.');
-      }
-    } else {
-      console.log('Database schema already initialized. Skipping.');
+    // Initialize schema
+    const schemaPath = path.join(process.cwd(), 'src', 'db', 'schema.sql');
+    if (fs.existsSync(schemaPath)) {
+      const schema = fs.readFileSync(schemaPath, 'utf8');
+      await sql.unsafe(schema);
+      console.log('Database schema initialized successfully.');
     }
   } catch (error) {
     console.error('Failed to connect to Supabase or initialize schema:', error);

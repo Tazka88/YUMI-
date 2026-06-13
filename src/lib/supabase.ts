@@ -12,9 +12,7 @@ export const getSupabase = () => {
     supabaseUrl = 'http://' + supabaseUrl.split('http://')[1].trim();
   }
 
-  const isBrowser = typeof window !== 'undefined';
-  const supabaseKey = (typeof process !== 'undefined' && process.env?.SUPABASE_SERVICE_ROLE_KEY)
-    || (typeof process !== 'undefined' && process.env?.SUPABASE_ANON_KEY)
+  const supabaseKey = (typeof process !== 'undefined' && (process.env?.SUPABASE_SERVICE_ROLE_KEY || process.env?.SUPABASE_ANON_KEY)) 
     || (import.meta.env && import.meta.env.VITE_SUPABASE_ANON_KEY) || '';
 
   if (!supabaseUrl || !supabaseKey) {

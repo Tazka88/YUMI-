@@ -100,34 +100,44 @@ export default function Product() {
   }, [user, slug, product?.id]);
 
   useEffect(() => {
-    if (!supabase || !slug) return;
+    if (!slug) return;
     
     let isMounted = true;
     
     const fetchProductData = async () => {
       setError(null);
       try {
-        const { data, error: rpcError } = await supabase.rpc('get_product_page', { p_slug: slug });
+        const res = await fetch(`/api/rpc/get_product_page/${slug}`);
+        if (!res.ok) {
+           const errText = await res.text();
+           try {
+             const json = JSON.parse(errText);
+             throw new Error(json.error || 'Produit introuvable');
+           } catch {
+             throw new Error('Produit introuvable');
+           }
+        }
         
-        if (rpcError) throw rpcError;
+        const data = await res.json();
         if (!data || !data.product) throw new Error('Produit introuvable');
         
         if (!isMounted) return;
         
         const payload = data as any;
         
-        // Parse variations
+        // Parse JSON fields
         let productData = payload.product;
-        if (typeof productData.variations === 'string') {
-          try {
-             productData.variations = JSON.parse(productData.variations);
-          } catch (e) {
-             productData.variations = [];
+        
+        const parseJsonField = (field: any) => {
+          if (typeof field === 'string') {
+            try { return JSON.parse(field); } catch (e) { return []; }
           }
-        }
-        if (!Array.isArray(productData.variations)) {
-          productData.variations = [];
-        }
+          return Array.isArray(field) ? field : [];
+        };
+        
+        productData.variations = parseJsonField(productData.variations);
+        productData.key_points = parseJsonField(productData.key_points);
+        productData.features = parseJsonField(productData.features);
         
         setProduct(productData);
         

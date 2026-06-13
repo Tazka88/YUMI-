@@ -686,6 +686,44 @@ router.post('/products/:id/view', async (req, res) => {
   }
 });
 
+router.get('/rpc/get_product_page/:slug', async (req, res) => {
+  try {
+    const supabase = getSupabase();
+    if (!supabase) return res.status(500).json({ error: 'Supabase client not initialized' });
+    const { data, error } = await supabase.rpc('get_product_page', { p_slug: req.params.slug });
+    if (error) {
+       console.error('RPC Error:', error);
+       return res.status(500).json({ error: error.message });
+    }
+    if (!data || !data.product) {
+       return res.status(404).json({ error: 'Product not found' });
+    }
+    
+    const product = data.product;
+    const PRODUCT_IMAGES_COLS = "id, product_id, image, is_main, alt_text";
+    const images = await sql`SELECT ${sql.unsafe(PRODUCT_IMAGES_COLS)} FROM product_images WHERE product_id = ${product.id}`;
+    
+    product.images = images.filter((img: any) => !img.is_main);
+    const mainImgRow = images.find((img: any) => img.is_main);
+    product.main_image_alt = product.main_image_alt || (mainImgRow ? (mainImgRow.alt_text || '') : '');
+    
+    product.image = processImage('products', product.id, 'image', product.image);
+    if (product.brand_image) product.brand_image = processImage('brands', product.brand_id, 'image', product.brand_image);
+    
+    if (product.images && Array.isArray(product.images)) {
+      product.images.forEach((img: any) => {
+        img.image = processImage('product_images', img.id, 'image', img.image);
+      });
+    }
+    
+    res.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate=86400');
+    res.json(data);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to fetch product page data' });
+  }
+});
+
 router.get('/products/:slug', async (req, res) => {
   try {
     res.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate=86400');

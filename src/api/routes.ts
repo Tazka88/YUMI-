@@ -691,7 +691,7 @@ router.get('/products/:slug', async (req, res) => {
   try {
     res.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate=86400');
     const [product] = await sql`
-      SELECT ${sql.unsafe(PRODUCT_COLS)}, c.name as category_name, s.name as subcategory_name, ss.name as sub_subcategory_name, COALESCE(p.brand_name, b.name) as brand_name, b.slug as brand_slug, CASE WHEN b.image LIKE 'data:image/%' THEN '/api/images/brands/' || b.id || '/image?v=' || LENGTH(b.image) ELSE b.image END as brand_image,
+      SELECT ${sql.unsafe(PRODUCT_COLS)}, c.name as category_name, c.slug as category_slug, s.name as subcategory_name, s.slug as subcategory_slug, ss.name as sub_subcategory_name, ss.slug as sub_subcategory_slug, COALESCE(p.brand_name, b.name) as brand_name, b.slug as brand_slug, CASE WHEN b.image LIKE 'data:image/%' THEN '/api/images/brands/' || b.id || '/image?v=' || LENGTH(b.image) ELSE b.image END as brand_image,
       (SELECT COUNT(*) FROM reviews r WHERE r.product_id = p.id) as reviews_count,
       (SELECT COALESCE(AVG(rating), 0) FROM reviews r WHERE r.product_id = p.id) as avg_rating
       FROM products p 

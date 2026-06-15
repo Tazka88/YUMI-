@@ -546,17 +546,17 @@ export default function Product() {
       <div className="text-sm text-gray-500 mb-6 flex items-center gap-2 flex-wrap">
         <Link to="/" className="hover:text-orange-500">Accueil</Link>
         <span>/</span>
-        <Link to={`/category/${product.category_id}`} className="hover:text-orange-500">{product.category_name || 'Catégorie'}</Link>
+        <Link to={`/category/${product.category_slug || product.category_id}`} className="hover:text-orange-500">{product.category_name || 'Catégorie'}</Link>
         {product.subcategory_name && (
           <>
             <span>/</span>
-            <Link to={`/category/${product.subcategory_id}?sub=true`} className="hover:text-orange-500">{product.subcategory_name}</Link>
+            <Link to={`/category/${product.subcategory_slug || product.subcategory_id}?sub=true`} className="hover:text-orange-500">{product.subcategory_name}</Link>
           </>
         )}
         {product.sub_subcategory_name && (
           <>
             <span>/</span>
-            <Link to={`/category/${product.sub_subcategory_id}?subsub=true`} className="hover:text-orange-500">{product.sub_subcategory_name}</Link>
+            <Link to={`/category/${product.sub_subcategory_slug || product.sub_subcategory_id}?subsub=true`} className="hover:text-orange-500">{product.sub_subcategory_name}</Link>
           </>
         )}
         <span>/</span>

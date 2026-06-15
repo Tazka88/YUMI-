@@ -4,7 +4,14 @@ import { persist } from 'zustand/middleware';
 export interface Product {
   id: number;
   category_id: number;
+  category_name?: string;
+  category_slug?: string;
   subcategory_id: number | null;
+  subcategory_name?: string;
+  subcategory_slug?: string;
+  sub_subcategory_id?: number | null;
+  sub_subcategory_name?: string;
+  sub_subcategory_slug?: string;
   name: string;
   slug: string;
   description: string;

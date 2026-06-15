@@ -649,6 +649,9 @@ router.get('/products', async (req, res) => {
       }
       try {
         p.variations = typeof p.variations === 'string' ? JSON.parse(p.variations) : (p.variations || []);
+        if (Array.isArray(p.variations)) {
+          p.variations.forEach((v) => { if (v && v.stock !== undefined) { v.stock = Number(v.stock) || 0; } });
+        }
       } catch (e) {
         p.variations = [];
       }
@@ -713,6 +716,12 @@ router.get('/products/:slug', async (req, res) => {
     }
     try {
       product.variations = typeof product.variations === 'string' ? JSON.parse(product.variations) : (product.variations || []);
+      if (Array.isArray(product.variations)) {
+        product.variations.forEach((v) => { if (v && v.stock !== undefined) { v.stock = Number(v.stock) || 0; } });
+      }
+      if (Array.isArray(product.variations)) {
+        product.variations.forEach((v: any) => { if (v && v.stock !== undefined) v.stock = Number(v.stock) || 0; });
+      }
     } catch (e) {
       product.variations = [];
     }
@@ -801,37 +810,48 @@ router.post('/orders', orderLimiter, async (req, res) => {
     
     const validatedItems = [];
     for (const item of items) {
-      const [product] = await sql`SELECT price, promo_price, variations FROM products WHERE id = ${item.product_id}`;
+      const quantity = parseInt(item.quantity, 10);
+      if (isNaN(quantity) || quantity <= 0) throw new Error('Quantité invalide');
+      
+      const [product] = await sql`SELECT price, promo_price, stock, variations FROM products WHERE id = ${item.product_id}`;
       if (!product) throw new Error(`Produit invalide: ${item.product_id}`);
+      
+      let parsedVariations: any[] = [];
+      if (typeof product.variations === 'string') {
+        try { parsedVariations = JSON.parse(product.variations); } catch(e) {}
+      } else if (Array.isArray(product.variations)) {
+        parsedVariations = product.variations;
+      }
       
       let actualPrice = product.promo_price || product.price;
       
       // Calculate active variation price if selected
-      if (item.variation && product.variations && Array.isArray(product.variations)) {
-         const matchingVariation = product.variations.find((v: any) => `${v.attribute} : ${v.value}` === item.variation);
+      if (item.variation && parsedVariations.length > 0) {
+         const matchingVariation = parsedVariations.find((v: any) => `${v.attribute} : ${v.value}` === item.variation);
          if (matchingVariation) {
             if (matchingVariation.price) {
                actualPrice = Number(matchingVariation.price);
             }
-            if (typeof matchingVariation.stock === 'number' && matchingVariation.stock < quantity) {
-                if (matchingVariation.stock === 0) {
+            const vStock = Number(matchingVariation.stock);
+            if (!isNaN(vStock) && vStock < quantity) {
+                if (vStock === 0) {
                    throw new Error(`La variation ${item.variation} est en rupture de stock`);
                 } else {
-                   throw new Error(`Stock insuffisant pour la variation ${item.variation} (reste ${matchingVariation.stock})`);
+                   throw new Error(`Stock insuffisant pour la variation ${item.variation} (reste ${vStock})`);
                 }
             }
          }
-      } else if (typeof product.stock === 'number' && product.stock < quantity) {
-          if (product.stock === 0) {
-              throw new Error('Ce produit est en rupture de stock');
-          } else {
-              throw new Error(`Stock insuffisant pour le produit ID: ${item.product_id}`);
+      } else {
+          const pStock = Number(product.stock);
+          if (!isNaN(pStock) && pStock < quantity) {
+              if (pStock === 0) {
+                  throw new Error('Ce produit est en rupture de stock');
+              } else {
+                  throw new Error(`Stock insuffisant pour le produit ID: ${item.product_id}`);
+              }
           }
       }
       
-      const quantity = parseInt(item.quantity, 10);
-      if (isNaN(quantity) || quantity <= 0) throw new Error('Quantité invalide');
-
       itemCount += quantity;
       calculatedTotal += actualPrice * quantity;
       validatedItems.push({ ...item, price: actualPrice, quantity, variation: item.variation || null });
@@ -1488,6 +1508,9 @@ router.get('/admin/products', authenticate, async (req, res) => {
       }
       try {
         p.variations = typeof p.variations === 'string' ? JSON.parse(p.variations) : (p.variations || []);
+        if (Array.isArray(p.variations)) {
+          p.variations.forEach((v) => { if (v && v.stock !== undefined) { v.stock = Number(v.stock) || 0; } });
+        }
       } catch (e) {
         p.variations = [];
       }

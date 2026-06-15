@@ -878,22 +878,30 @@ export default function Product() {
               {/* Quantity Selector */}
               <div className="flex flex-wrap items-center gap-3">
                 <span className="text-sm font-medium text-gray-700">Quantité :</span>
-                <div className="flex items-center border border-gray-300 rounded-md bg-white h-[42px] w-32 shrink-0">
-                  <button 
-                    className="px-4 h-full text-gray-600 hover:bg-gray-100 disabled:opacity-50 flex items-center justify-center"
-                    onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                    disabled={quantity <= 1}
-                  >-</button>
-                  <span className="flex-1 text-center font-medium">{quantity}</span>
-                  <button 
-                    className="px-4 h-full text-gray-600 hover:bg-gray-100 disabled:opacity-50 flex items-center justify-center"
-                    onClick={() => setQuantity(Math.min(product.stock, quantity + 1))}
-                    disabled={quantity >= product.stock}
-                  >+</button>
-                </div>
+                {(() => {
+                  const maxAvailable = selectedVariation && typeof selectedVariation.stock === 'number' ? selectedVariation.stock : product.stock;
+                  return (
+                  <div className="flex items-center border border-gray-300 rounded-md bg-white h-[42px] w-32 shrink-0">
+                    <button 
+                      className="px-4 h-full text-gray-600 hover:bg-gray-100 disabled:opacity-50 flex items-center justify-center"
+                      onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                      disabled={quantity <= 1}
+                    >-</button>
+                    <span className="flex-1 text-center font-medium">{quantity}</span>
+                    <button 
+                      className="px-4 h-full text-gray-600 hover:bg-gray-100 disabled:opacity-50 flex items-center justify-center"
+                      onClick={() => setQuantity(Math.min(maxAvailable, quantity + 1))}
+                      disabled={quantity >= maxAvailable || maxAvailable === 0}
+                    >+</button>
+                  </div>
+                  );
+                })()}
               </div>
               
               {/* Action Buttons */}
+              {(() => {
+                const maxAvailable = selectedVariation && typeof selectedVariation.stock === 'number' ? selectedVariation.stock : product.stock;
+                return (
               <div className="flex items-center gap-2">
                 <a 
                   href={`tel:${settings?.contact_phone?.replace(/\s/g, '') || ''}`}
@@ -903,7 +911,7 @@ export default function Product() {
                 </a>
                 <button
                   onClick={handleAddToCart}
-                  disabled={product.stock === 0}
+                  disabled={maxAvailable === 0}
                   className="flex items-center justify-center w-[54px] h-[54px] rounded-md bg-orange-500 text-white shrink-0 hover:bg-orange-600 disabled:opacity-50 transition-colors shadow-sm"
                 >
                   <ShoppingCart size={24} />
@@ -920,12 +928,14 @@ export default function Product() {
                 </button>
                 <button
                   onClick={handleBuyNow}
-                  disabled={product.stock === 0}
+                  disabled={maxAvailable === 0}
                   className="flex-1 bg-orange-500 text-white h-[54px] rounded-md font-bold text-lg flex items-center justify-center hover:bg-orange-600 disabled:opacity-50 transition-all hover:scale-[1.02] active:scale-[0.98] shadow-sm"
                 >
                   J'achète
                 </button>
               </div>
+                );
+              })()}
             </div>
           </div>
         </div>

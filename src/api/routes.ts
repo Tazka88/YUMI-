@@ -808,10 +808,25 @@ router.post('/orders', orderLimiter, async (req, res) => {
       
       // Calculate active variation price if selected
       if (item.variation && product.variations && Array.isArray(product.variations)) {
-         const matchingVariation = product.variations.find(v => `${v.attribute} : ${v.value}` === item.variation);
-         if (matchingVariation && matchingVariation.price) {
-            actualPrice = Number(matchingVariation.price);
+         const matchingVariation = product.variations.find((v: any) => `${v.attribute} : ${v.value}` === item.variation);
+         if (matchingVariation) {
+            if (matchingVariation.price) {
+               actualPrice = Number(matchingVariation.price);
+            }
+            if (typeof matchingVariation.stock === 'number' && matchingVariation.stock < quantity) {
+                if (matchingVariation.stock === 0) {
+                   throw new Error(`La variation ${item.variation} est en rupture de stock`);
+                } else {
+                   throw new Error(`Stock insuffisant pour la variation ${item.variation} (reste ${matchingVariation.stock})`);
+                }
+            }
          }
+      } else if (typeof product.stock === 'number' && product.stock < quantity) {
+          if (product.stock === 0) {
+              throw new Error('Ce produit est en rupture de stock');
+          } else {
+              throw new Error(`Stock insuffisant pour le produit ID: ${item.product_id}`);
+          }
       }
       
       const quantity = parseInt(item.quantity, 10);
@@ -853,11 +868,38 @@ router.post('/orders', orderLimiter, async (req, res) => {
       }
       
       for (const item of validatedItems) {
-        const result = await sql`
-          UPDATE products SET stock = stock - ${item.quantity}, sales_count = COALESCE(sales_count, 0) + ${item.quantity} WHERE id = ${item.product_id} AND stock >= ${item.quantity}
-        `;
-        if (result.count === 0) {
-          throw new Error(`Stock insuffisant pour le produit ID: ${item.product_id}`);
+        if (item.variation) {
+          const result = await sql`
+            UPDATE products 
+            SET 
+              stock = stock - ${item.quantity}, 
+              sales_count = COALESCE(sales_count, 0) + ${item.quantity},
+              variations = (
+                SELECT jsonb_agg(
+                  CASE
+                    WHEN (v->>'attribute') || ' : ' || (v->>'value') = ${item.variation} THEN
+                      jsonb_set(
+                        v, 
+                        '{stock}', 
+                        to_jsonb(GREATEST(COALESCE((v->>'stock')::numeric, 0) - ${item.quantity}, 0))
+                      )
+                    ELSE v
+                  END
+                )
+                FROM jsonb_array_elements(variations) as v
+              )
+            WHERE id = ${item.product_id} AND stock >= ${item.quantity}
+          `;
+          if (result.count === 0) {
+            throw new Error(`Stock insuffisant pour le produit ID: ${item.product_id}`);
+          }
+        } else {
+          const result = await sql`
+            UPDATE products SET stock = stock - ${item.quantity}, sales_count = COALESCE(sales_count, 0) + ${item.quantity} WHERE id = ${item.product_id} AND stock >= ${item.quantity}
+          `;
+          if (result.count === 0) {
+            throw new Error(`Stock insuffisant pour le produit ID: ${item.product_id}`);
+          }
         }
         await sql`
           INSERT INTO order_items (order_id, product_id, quantity, price, variation)

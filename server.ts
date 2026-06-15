@@ -81,7 +81,7 @@ Sitemap: https://zorando.com/sitemap.xml`);
       const brands = await sql`SELECT slug FROM brands`;
       const posts = await sql`SELECT slug FROM blog_posts WHERE status = 'published'`;
       
-      const baseUrl = `https://${req.get('host')}`;
+      const baseUrl = 'https://zorando.com';
       
       let xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n`;
       
@@ -214,9 +214,13 @@ Sitemap: https://zorando.com/sitemap.xml`);
         let template = fs.readFileSync(path.join(distPath, 'template.html'), 'utf-8');
         let title = 'ZORANDO - Boutique en ligne';
         let description = 'Découvrez ZORANDO, votre boutique en ligne de confiance en Algérie. Achetez des produits de qualité au meilleur prix.';
-        const host = req.get('host') || 'zorando.com';
-        const baseUrl = `https://${host}`;
-        let headHtml = `<link rel="canonical" href="${baseUrl}${req.path}" />`;
+        const baseUrl = 'https://zorando.com';
+        
+        let reqCanonicalPath = req.path;
+        if (reqCanonicalPath.length > 1 && reqCanonicalPath.endsWith('/')) {
+            reqCanonicalPath = reqCanonicalPath.slice(0, -1);
+        }
+        let headHtml = `<link rel="canonical" href="${baseUrl}${reqCanonicalPath}" />`;
         let seoHtml = `
           <div id="seo-content" style="display:none;">
             <h1>${title}</h1>
@@ -234,7 +238,7 @@ Sitemap: https://zorando.com/sitemap.xml`);
         if (req.path === '/' || req.path === '/index.html') {
           const categories = await sql`SELECT name, slug FROM categories`;
           const brands = await sql`SELECT name, slug FROM brands`;
-          headHtml = `
+          headHtml += `
             <link rel="preload" as="image" href="/api/hero-banners/first-image/mobile" media="(max-width: 767px)" fetchpriority="high">
             <link rel="preload" as="image" href="/api/hero-banners/first-image/desktop" media="(min-width: 768px)" fetchpriority="high">
           `;

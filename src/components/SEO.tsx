@@ -18,7 +18,12 @@ export default function SEO({ title, description, image, url, type = 'website', 
   const defaultImage = 'https://zorando.com/og-image-fb.jpg';
   const finalImage = image || defaultImage;
   const rawUrl = url || (typeof window !== 'undefined' ? window.location.href : '');
-  const currentUrl = rawUrl.split('?')[0];
+  let currentUrl = rawUrl.split('?')[0];
+  // Toujours forcer zorando.com comme domaine canonique principal pour éviter le duplicate content
+  currentUrl = currentUrl.replace(/^https?:\/\/(www\.)?[^\/]+/, 'https://zorando.com');
+  if (currentUrl.length > 'https://zorando.com/'.length && currentUrl.endsWith('/')) {
+    currentUrl = currentUrl.slice(0, -1);
+  }
   
   return (
     <Helmet>

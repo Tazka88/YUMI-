@@ -17,7 +17,8 @@ export default function SEO({ title, description, image, url, type = 'website', 
   const fullTitle = exactTitle ? title : `${title} | ${siteName}`;
   const defaultImage = 'https://zorando.com/og-image-fb.jpg';
   const finalImage = image || defaultImage;
-  const currentUrl = url || (typeof window !== 'undefined' ? window.location.href.split('?')[0] : '');
+  const rawUrl = url || (typeof window !== 'undefined' ? window.location.href : '');
+  const currentUrl = rawUrl.split('?')[0];
   
   return (
     <Helmet>

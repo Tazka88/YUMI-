@@ -1153,7 +1153,7 @@ router.post('/reviews/upload', upload.single('image'), async (req, res) => {
           .from('images')
           .upload(fileName, buffer, {
             contentType,
-            cacheControl: '3600',
+            cacheControl: 'public, max-age=31536000, immutable',
             upsert: false
           });
 
@@ -1221,7 +1221,7 @@ router.post('/admin/upload', authenticate, upload.single('image'), async (req, r
           .from('images') // The user must create this bucket in Supabase
           .upload(fileName, buffer, {
             contentType,
-            cacheControl: '3600',
+            cacheControl: 'public, max-age=31536000, immutable',
             upsert: false
           });
 

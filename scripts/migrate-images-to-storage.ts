@@ -34,7 +34,7 @@ async function uploadBase64ToDb(base64String: string, folder: string, prefix: st
       .from('images')
       .upload(fileName, buffer, {
         contentType,
-        cacheControl: '31536000',
+        cacheControl: 'public, max-age=31536000, immutable',
         upsert: false
       });
 

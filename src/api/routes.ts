@@ -1324,7 +1324,7 @@ router.get('/admin/email-logs', authenticate, async (req, res) => {
 router.get('/admin/orders', authenticate, async (req, res) => {
   try {
     const orders = await sql`
-      SELECT o.id, o.created_at, o.status, o.total_amount, o.delivery_cost, o.stop_desk_cost, o.delivery_type, o.shipping_address, o.shipping_wilaya, o.shipping_commune, o.shipping_office, o.payment_method, o.customer_name, o.customer_email, o.customer_phone, o.customer_phone2, o.source, o.is_pixel_tracked, o.note, o.ip_address, o.user_agent, o.device_type, o.last_status_update_at, o.payment_status, o.cancellation_reason, o.customer_user_id,
+      SELECT o.id, o.order_id, o.created_at, o.status, o.total_amount, o.delivery_cost, o.address, o.wilaya, o.commune, o.office_id, o.stop_desk, o.customer_name, o.customer_email, o.customer_phone, o.note, o.customer_user_id,
       (SELECT JSON_AGG(JSON_BUILD_OBJECT('id', oi.id, 'product_id', oi.product_id, 'quantity', oi.quantity, 'price', oi.price, 'variation', oi.variation, 'status', oi.status, 'product_name', p.name, 'product_image', CASE WHEN p.image LIKE 'data:image/%' THEN '/api/images/products/' || p.id || '/image/product.webp' ELSE p.image END))
        FROM order_items oi 
        LEFT JOIN products p ON oi.product_id = p.id 

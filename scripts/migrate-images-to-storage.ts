@@ -28,136 +28,106 @@ async function uploadBase64ToDb(base64String: string, folder: string, prefix: st
     }
   } catch (e) {}
 
-  const { data, error } = await supabase.storage
-    .from('images')
-    .upload(fileName, buffer, {
-      contentType,
-      cacheControl: '31536000',
-      upsert: false
-    });
+  let retries = 3;
+  while (retries > 0) {
+    const { data, error } = await supabase.storage
+      .from('images')
+      .upload(fileName, buffer, {
+        contentType,
+        cacheControl: '31536000',
+        upsert: false
+      });
 
-  if (error) {
-    throw error;
+    if (error) {
+      retries--;
+      if (retries === 0) throw error;
+      await new Promise(r => setTimeout(r, 1000)); // wait 1s before retry
+    } else {
+      break;
+    }
   }
 
   const { data: publicUrlData } = supabase.storage.from('images').getPublicUrl(fileName);
   return publicUrlData.publicUrl;
 }
 
-async function migrateTableImages() {
-  console.log('Starting Base64 to Supabase Storage migration...');
+// Reusable batch process function 
+async function processTableBatch(
+  tableName: string, 
+  idCol: string, 
+  imageCols: string[], 
+  folder: string,
+  prefix: string
+) {
+  console.log(`\nMigrating ${tableName}...`);
+  let totalProcessed = 0;
   
-  // Products
-  console.log('Migrating products...');
-  const products = await sql`SELECT id, image FROM products WHERE image LIKE 'data:image/%'`;
-  for (const product of products) {
-    try {
-      const url = await uploadBase64ToDb(product.image, 'products', `prod-${product.id}`);
-      await sql`UPDATE products SET image = ${url} WHERE id = ${product.id}`;
-      console.log(`✅ Product ${product.id} migrated`);
-    } catch(e) {
-      console.error(`❌ Failed product ${product.id}:`, e);
-    }
-  }
+  while (true) {
+    // Construct where clause for all image columns
+    const whereConditions = imageCols.map(col => `"${col}" LIKE 'data:image/%'`).join(' OR ');
+    
+    // Select the required columns. We need to be careful with SQL injections, but this script is internal so we use unsafe
+    const colsToSelect = [idCol, ...imageCols].map(c => `"${c}"`).join(', ');
+    
+    const records = await sql.unsafe(`
+      SELECT ${colsToSelect} 
+      FROM ${tableName} 
+      WHERE ${whereConditions} 
+      LIMIT 20
+    `);
 
-  // Categories
-  console.log('Migrating categories...');
-  const categories = await sql`SELECT id, image FROM categories WHERE image LIKE 'data:image/%'`;
-  for (const cat of categories) {
-    try {
-      const url = await uploadBase64ToDb(cat.image, 'categories', `cat-${cat.id}`);
-      await sql`UPDATE categories SET image = ${url} WHERE id = ${cat.id}`;
-      console.log(`✅ Category ${cat.id} migrated`);
-    } catch(e) {
-      console.error(`❌ Failed category ${cat.id}:`, e);
+    if (!records || records.length === 0) {
+      break;
     }
-  }
 
-  // Subcategories
-  console.log('Migrating subcategories...');
-  const subcategories = await sql`SELECT id, image FROM subcategories WHERE image LIKE 'data:image/%'`;
-  for (const cat of subcategories) {
-    try {
-      const url = await uploadBase64ToDb(cat.image, 'subcategories', `subcat-${cat.id}`);
-      await sql`UPDATE subcategories SET image = ${url} WHERE id = ${cat.id}`;
-      console.log(`✅ Subcategory ${cat.id} migrated`);
-    } catch(e) {
-      console.error(`❌ Failed subcategory ${cat.id}:`, e);
-    }
-  }
-
-  // Sub-subcategories
-  console.log('Migrating sub_subcategories...');
-  const sub_subcategories = await sql`SELECT id, image FROM sub_subcategories WHERE image LIKE 'data:image/%'`;
-  for (const cat of sub_subcategories) {
-    try {
-      const url = await uploadBase64ToDb(cat.image, 'sub_subcategories', `subsubcat-${cat.id}`);
-      await sql`UPDATE sub_subcategories SET image = ${url} WHERE id = ${cat.id}`;
-      console.log(`✅ Sub-subcategory ${cat.id} migrated`);
-    } catch(e) {
-      console.error(`❌ Failed sub-subcategory ${cat.id}:`, e);
-    }
-  }
-
-  // Product Images
-  console.log('Migrating product_images...');
-  const product_images = await sql`SELECT id, image FROM product_images WHERE image LIKE 'data:image/%'`;
-  for (const img of product_images) {
-    try {
-      const url = await uploadBase64ToDb(img.image, 'product_images', `prodimg-${img.id}`);
-      await sql`UPDATE product_images SET image = ${url} WHERE id = ${img.id}`;
-      console.log(`✅ Product Image ${img.id} migrated`);
-    } catch(e) {
-      console.error(`❌ Failed product image ${img.id}:`, e);
-    }
-  }
-
-  // Brands
-  console.log('Migrating brands...');
-  const brands = await sql`SELECT id, image FROM brands WHERE image LIKE 'data:image/%'`;
-  for (const brand of brands) {
-    try {
-      const url = await uploadBase64ToDb(brand.image, 'brands', `brand-${brand.id}`);
-      await sql`UPDATE brands SET image = ${url} WHERE id = ${brand.id}`;
-      console.log(`✅ Brand ${brand.id} migrated`);
-    } catch(e) {
-      console.error(`❌ Failed brand ${brand.id}:`, e);
-    }
-  }
-
-  // Slider Images
-  console.log('Migrating slider_images...');
-  const slider_images = await sql`SELECT id, image_url, mobile_image_url FROM slider_images WHERE image_url LIKE 'data:image/%' OR mobile_image_url LIKE 'data:image/%'`;
-  for (const slide of slider_images) {
-    try {
-      if (slide.image_url && slide.image_url.startsWith('data:image/')) {
-        const url = await uploadBase64ToDb(slide.image_url, 'slider_images', `slider-${slide.id}`);
-        await sql`UPDATE slider_images SET image_url = ${url} WHERE id = ${slide.id}`;
+    for (const record of records) {
+      try {
+        let updatedCount = 0;
+        
+        for (const col of imageCols) {
+          const val = record[col];
+          if (val && val.startsWith('data:image/')) {
+            const url = await uploadBase64ToDb(val, folder, `${prefix}-${record[idCol]}`);
+            
+            // Execute update for this specifically
+            await sql.unsafe(`UPDATE ${tableName} SET "${col}" = $1 WHERE "${idCol}" = $2`, [url, record[idCol]]);
+            updatedCount++;
+          }
+        }
+        
+        if (updatedCount > 0) {
+          console.log(`✅ ${tableName} ID ${record[idCol]} migrated (${updatedCount} image(s))`);
+          totalProcessed++;
+        }
+      } catch (e: any) {
+        console.error(`❌ Failed ${tableName} ID ${record[idCol]}:`, e.message);
       }
-      if (slide.mobile_image_url && slide.mobile_image_url.startsWith('data:image/')) {
-        const url = await uploadBase64ToDb(slide.mobile_image_url, 'slider_images', `slider-m-${slide.id}`);
-        await sql`UPDATE slider_images SET mobile_image_url = ${url} WHERE id = ${slide.id}`;
-      }
-      console.log(`✅ Slider Image ${slide.id} migrated`);
-    } catch(e) {
-      console.error(`❌ Failed slider image ${slide.id}:`, e);
     }
   }
+  
+  console.log(`Completed ${tableName}: ${totalProcessed} rows migrated.`);
+}
 
-  // Settings
-  console.log('Migrating settings...');
-  const settings = await sql`SELECT "key", value FROM settings WHERE value LIKE 'data:image/%'`;
-  for (const setting of settings) {
-    try {
-      const url = await uploadBase64ToDb(setting.value, 'settings', `setting-${setting.key}`);
-      await sql`UPDATE settings SET value = ${url} WHERE "key" = ${setting.key}`;
-      console.log(`✅ Setting ${setting.key} migrated`);
-    } catch(e) {
-      console.error(`❌ Failed setting ${setting.key}:`, e);
-    }
+async function migrateTableImages() {
+  console.log('Starting Base64 to Supabase Storage migration by batches (safe for large DBs)...');
+  
+  try {
+    await processTableBatch('products', 'id', ['image'], 'products', 'prod');
+    await processTableBatch('categories', 'id', ['image'], 'categories', 'cat');
+    await processTableBatch('subcategories', 'id', ['image'], 'subcategories', 'subcat');
+    await processTableBatch('sub_subcategories', 'id', ['image'], 'sub_subcategories', 'subsubcat');
+    await processTableBatch('product_images', 'id', ['image'], 'product_images', 'prodimg');
+    await processTableBatch('brands', 'id', ['image'], 'brands', 'brand');
+    await processTableBatch('slider_images', 'id', ['image_url', 'mobile_image_url'], 'slider_images', 'slider');
+    await processTableBatch('settings', 'key', ['value'], 'settings', 'setting');
+    await processTableBatch('blog_posts', 'id', ['image_url'], 'blog_posts', 'blog');
+    await processTableBatch('reviews', 'id', ['image_url'], 'reviews', 'review');
+
+    console.log('\n🎉 Full Migration completed successfully!');
+  } catch (err: any) {
+    console.error('\n💥 Critical Error during migration:', err.message);
   }
-
-  console.log('Migration completed!');
+  
   process.exit(0);
 }
 

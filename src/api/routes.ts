@@ -146,6 +146,7 @@ router.get(['/images/:table/:id/:field', '/images/:table/:id/:field/:seoSlug'], 
 
 // Route to get the first hero banner image directly (for LCP optimization)
 router.get('/hero-banners/first-image/:type', async (req, res) => {
+  res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');
   const { type } = req.params;
   try {
     const sliderImages = await sql`SELECT image_url, mobile_image_url FROM slider_images WHERE is_active = true AND category_id IS NULL ORDER BY position ASC LIMIT 1`;
@@ -267,6 +268,7 @@ router.post('/admin/login', loginLimiter, async (req, res) => {
 
 // --- PUBLIC ROUTES ---
 router.get('/robots.txt', (req, res) => {
+  res.setHeader('Cache-Control', 'public, s-maxage=86400, stale-while-revalidate=86400');
   const host = req.get('host') || 'zorando.com';
   const baseUrl = `https://${host}`;
   res.type('text/plain');
@@ -285,6 +287,7 @@ Sitemap: ${baseUrl}/sitemap.xml`);
 });
 
 router.get('/sitemap.xml', async (req, res) => {
+  res.setHeader('Cache-Control', 'public, s-maxage=86400, stale-while-revalidate=86400');
   try {
     const baseUrl = process.env.APP_URL || `https://${req.get('host')}`;
     
@@ -353,6 +356,7 @@ router.get('/sitemap.xml', async (req, res) => {
 });
 
 router.get('/pages', async (req, res) => {
+  res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');
   try {
     const pages = await sql`SELECT id, title, slug, content, created_at, updated_at FROM pages`;
     res.json(pages);
@@ -362,6 +366,7 @@ router.get('/pages', async (req, res) => {
 });
 
 router.get('/pages/:slug', async (req, res) => {
+  res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');
   try {
     const [page] = await sql`SELECT * FROM pages WHERE slug = ${req.params.slug}`;
     if (!page) return res.status(404).json({ error: 'Page not found' });
@@ -517,6 +522,7 @@ router.get('/brands', async (req, res) => {
 });
 
 router.get('/brands/:slug', async (req, res) => {
+  res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');
   try {
     const [brand] = await sql`SELECT ${sql.unsafe(BRANDS_COLS)} FROM brands WHERE slug = ${req.params.slug}`;
     if (!brand) return res.status(404).json({ error: 'Brand not found' });
@@ -573,6 +579,7 @@ router.get('/categories', async (req, res) => {
 });
 
 router.get('/subcategories', async (req, res) => {
+  res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');
   try {
     const subcategories = await sql`SELECT ${sql.unsafe(SUBCAT_COLS)} FROM subcategories`;
     
@@ -751,6 +758,7 @@ router.get('/products/:slug', async (req, res) => {
 });
 
 router.get('/products/:slug/reviews', async (req, res) => {
+  res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=3600');
   try {
     const [product] = await sql`SELECT id FROM products WHERE slug = ${req.params.slug}`;
     if (!product) return res.status(404).json({ error: 'Product not found' });
@@ -1616,11 +1624,14 @@ router.get('/admin/export-meta-catalog', authenticate, async (req, res) => {
   }
 });
 
+const META_PRODUCT_COLS = `p.id, p.name, p.slug, SUBSTRING(p.description FROM 1 FOR 5000) as description, p.price, p.promo_price, p.is_active, CASE WHEN p.image LIKE 'data:image/%' THEN '/api/images/products/' || p.id || '/image/' || COALESCE(NULLIF(p.slug, ''), 'product') || '.webp?v=' || LENGTH(p.image) ELSE p.image END as image`;
+
 // Public endpoint for Meta catalog scheduled fetch
 router.get('/feed/meta-catalog.csv', async (req, res) => {
+  res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');
   try {
     const products = await sql`
-      SELECT ${sql.unsafe(PRODUCT_COLS)}, COALESCE(p.brand_name, b.name) as brand_name 
+      SELECT ${sql.unsafe(META_PRODUCT_COLS)}, COALESCE(p.brand_name, b.name) as brand_name 
       FROM products p 
       LEFT JOIN brands b ON p.brand_id = b.id
     `;

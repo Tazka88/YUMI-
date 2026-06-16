@@ -113,7 +113,7 @@ async function migrateTableImages() {
   
   try {
     await processTableBatch('products', 'id', ['image'], 'products', 'prod');
-    await processTableBatch('categories', 'id', ['image'], 'categories', 'cat');
+    await processTableBatch('categories', 'id', ['image', 'slide_image', 'mobile_slide_image'], 'categories', 'cat');
     await processTableBatch('subcategories', 'id', ['image'], 'subcategories', 'subcat');
     await processTableBatch('sub_subcategories', 'id', ['image'], 'sub_subcategories', 'subsubcat');
     await processTableBatch('product_images', 'id', ['image'], 'product_images', 'prodimg');

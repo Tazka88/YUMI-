@@ -98,6 +98,7 @@ const serveImageData = async (res: any, imageData: string, targetWidth?: number,
 };
 
 const PRODUCT_COLS = `p.id, p.category_id, p.subcategory_id, p.sub_subcategory_id, p.brand_id, p.name, p.slug, p.description, p.price, p.promo_price, p.stock, CASE WHEN p.image LIKE 'data:image/%' THEN '/api/images/products/' || p.id || '/image/' || COALESCE(NULLIF(p.slug, ''), 'product') || '.webp?v=' || LENGTH(p.image) ELSE p.image END as image, p.main_image_alt, p.video_url, p.is_popular, p.is_best_seller, p.is_new, p.is_recommended, p.is_fast_delivery, p.weight, p.is_active, p.features, p.key_points, p.faq_q1, p.faq_a1, p.faq_q2, p.faq_a2, p.variations, p.created_at, p.seo_title, p.seo_description, p.seo_keywords`;
+const PRODUCT_LIST_COLS = `p.id, p.category_id, p.subcategory_id, p.sub_subcategory_id, p.brand_id, p.name, p.slug, p.price, p.promo_price, p.stock, p.is_fast_delivery, p.is_popular, p.is_best_seller, p.is_new, p.is_recommended, p.is_active, p.variations, p.created_at, CASE WHEN p.image LIKE 'data:image/%' THEN '/api/images/products/' || p.id || '/image/' || COALESCE(NULLIF(p.slug, ''), 'product') || '.webp?v=' || LENGTH(p.image) ELSE p.image END as image`;
 const BLOG_POSTS_COLS = `id, category_id, title, slug, excerpt, content, CASE WHEN image_url LIKE 'data:image/%' THEN '/api/images/blog_posts/' || id || '/image_url?v=' || LENGTH(image_url) ELSE image_url END as image_url, status, published_at, created_at, seo_title, seo_description`;
 const BLOG_POSTS_LIST_COLS = `p.id, p.category_id, p.title, p.slug, p.excerpt, CASE WHEN p.image_url LIKE 'data:image/%' THEN '/api/images/blog_posts/' || p.id || '/image_url?v=' || LENGTH(p.image_url) ELSE p.image_url END as image_url, p.status, p.published_at, p.created_at`;
 const PRODUCT_IMAGES_COLS = `id, product_id, is_main, alt_text, CASE WHEN image LIKE 'data:image/%' THEN '/api/images/product_images/' || id || '/image?v=' || LENGTH(image) ELSE image END as image`;
@@ -372,7 +373,7 @@ router.get('/pages/:slug', async (req, res) => {
 
 router.get('/settings', async (req, res) => {
   try {
-    // Aggressive CDN caching for settings
+    // Settings specific CDN caching policy
     res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=86400');
     const settings = await sql`SELECT "key", CASE WHEN value LIKE 'data:image/%' THEN '/api/images/settings/' || "key" || '/value?v=' || LENGTH(value) ELSE value END as value FROM settings WHERE "key" != 'admin_email'`;
     const settingsObj = settings.reduce((acc: any, setting: any) => {
@@ -411,7 +412,7 @@ router.get('/hero-banners', async (req, res) => {
       }
     });
     
-    res.setHeader('Cache-Control', 'public, max-age=10, stale-while-revalidate=60');
+    // Using s-maxage set at start of request
     res.json(sliderImages);
 
   } catch (err) {
@@ -562,7 +563,7 @@ router.get('/categories', async (req, res) => {
       }
     });
     
-    res.setHeader('Cache-Control', 'public, max-age=10, stale-while-revalidate=60');
+    // Using s-maxage set at start of request
     res.json(categoriesWithSubcats);
 
   } catch (err: any) {
@@ -599,7 +600,9 @@ router.get('/products', async (req, res) => {
   const special_offers = req.query.special_offers || req.query.promo_active === 'true' ? 'true' : undefined;
   const ids = req.query.ids as string | undefined;
   const sort = req.query.sort as string | undefined;
-  const limit = req.query.limit ? Number(req.query.limit) : 100;
+  const limit = req.query.limit ? Number(req.query.limit) : 20;
+  const page = req.query.page ? Number(req.query.page) : 1;
+  const offset = Math.max(0, (page - 1) * limit);
   
   try {
     const idArray = ids ? ids.split(',').map(id => Number(id)).filter(id => !isNaN(id)) : [];
@@ -616,7 +619,7 @@ router.get('/products', async (req, res) => {
     }
 
     const products = await sql`
-      SELECT ${sql.unsafe(PRODUCT_COLS)}, COALESCE(p.brand_name, b.name) as brand_name, b.slug as brand_slug, CASE WHEN b.image LIKE 'data:image/%' THEN '/api/images/brands/' || b.id || '/image?v=' || LENGTH(b.image) ELSE b.image END as brand_image,
+      SELECT ${sql.unsafe(PRODUCT_LIST_COLS)}, COALESCE(p.brand_name, b.name) as brand_name, b.slug as brand_slug, CASE WHEN b.image LIKE 'data:image/%' THEN '/api/images/brands/' || b.id || '/image?v=' || LENGTH(b.image) ELSE b.image END as brand_image,
       (SELECT COUNT(*) FROM reviews r WHERE r.product_id = p.id) as reviews_count,
       (SELECT COALESCE(AVG(rating), 0) FROM reviews r WHERE r.product_id = p.id) as avg_rating
       FROM products p 
@@ -635,7 +638,7 @@ router.get('/products', async (req, res) => {
         AND (${special_offers === 'true' ? true : null}::boolean IS NULL OR p.promo_price IS NOT NULL)
         AND (${idArray.length > 0 ? sql`p.id = ANY(${idArray})` : sql`true`})
       ${orderClause}
-      LIMIT ${limit}
+      LIMIT ${limit} OFFSET ${offset}
     `;
     
     products.forEach(p => {
@@ -670,7 +673,7 @@ router.get('/products', async (req, res) => {
       }
     });
     
-    res.setHeader('Cache-Control', 'public, max-age=10, stale-while-revalidate=60');
+    // Use the s-maxage headers set at route begin
     res.json(products);
 
   } catch (err) {
@@ -1971,6 +1974,7 @@ router.delete('/admin/sub_subcategories/:id', authenticate, async (req, res) => 
 });
 
 router.get('/wilayas', async (req, res) => {
+  res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');
   try {
     const wilayas = await sql`SELECT * FROM wilayas ORDER BY number ASC`;
     res.json(wilayas);
@@ -2025,6 +2029,7 @@ router.delete('/admin/wilayas/:id', authenticate, async (req, res) => {
 });
 
 router.get('/offices', async (req, res) => {
+  res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');
   try {
     const offices = await sql`SELECT * FROM offices ORDER BY wilaya ASC, name ASC`;
     res.json(offices);
@@ -2080,6 +2085,7 @@ router.delete('/admin/offices/:id', authenticate, async (req, res) => {
 
 // --- Communes ---
 router.get('/communes/public', async (req, res) => {
+  res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');
   try {
     const communesList = await sql`SELECT wilaya, name FROM communes ORDER BY wilaya ASC, name ASC`;
     const communesDict: Record<string, string[]> = {};
@@ -2141,6 +2147,7 @@ router.delete('/admin/communes/:id', authenticate, async (req, res) => {
 // ==========================================
 
 router.get('/blog/categories', async (req, res) => {
+  res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');
   try {
     const categories = await sql`SELECT * FROM blog_categories ORDER BY name ASC`;
     res.json(categories);
@@ -2150,6 +2157,7 @@ router.get('/blog/categories', async (req, res) => {
 });
 
 router.get('/blog/posts', async (req, res) => {
+  res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=3600');
   try {
     const { category, search, page = '1', limit = '9' } = req.query;
     const pageNum = parseInt(page as string) || 1;
@@ -2187,6 +2195,7 @@ router.get('/blog/posts', async (req, res) => {
 });
 
 router.get('/blog/posts/:slug', async (req, res) => {
+  res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=3600');
   try {
     const [post] = await sql`
       SELECT p.id, p.category_id, p.title, p.slug, p.excerpt, p.content, CASE WHEN p.image_url LIKE 'data:image/%' THEN '/api/images/blog_posts/' || p.id || '/image_url?v=' || LENGTH(p.image_url) ELSE p.image_url END as image_url, p.status, p.published_at, p.created_at, p.seo_title, p.seo_description, c.name as category_name, c.slug as category_slug 

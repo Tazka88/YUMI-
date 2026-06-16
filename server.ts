@@ -349,7 +349,7 @@ Sitemap: https://zorando.com/sitemap.xml`);
           }
         } else if (req.path.startsWith('/product/')) {
           const slug = req.path.split('/')[2];
-          const [product] = await sql`SELECT id, name, description, price, promo_price, image FROM products WHERE slug = ${slug}`;
+          const [product] = await sql`SELECT id, name, description, price, promo_price, CASE WHEN image LIKE 'data:image/%' THEN '/api/images/products/' || id || '/image/' || slug || '.webp' ELSE image END as image FROM products WHERE slug = ${slug}`;
           
           if (product) {
             title = `${product.name} - ZORANDO`;
@@ -380,7 +380,7 @@ Sitemap: https://zorando.com/sitemap.xml`);
         } else if (req.path.startsWith('/landing/')) {
           const slug = req.path.split('/')[2];
           const [landingPage] = await sql`
-            SELECT lp.*, p.name as product_name, p.description as product_description, p.image as product_image
+            SELECT lp.id, lp.title, lp.slug, lp.subtitle, lp.sections, lp.theme, p.name as product_name, p.description as product_description, CASE WHEN p.image LIKE 'data:image/%' THEN '/api/images/products/' || p.id || '/image/' || p.slug || '.webp' ELSE p.image END as product_image
             FROM landing_pages lp
             JOIN products p ON lp.product_id = p.id
             WHERE lp.slug = ${slug}

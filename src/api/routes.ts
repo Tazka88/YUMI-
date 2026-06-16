@@ -98,6 +98,8 @@ const serveImageData = async (res: any, imageData: string, targetWidth?: number,
 };
 
 const PRODUCT_COLS = `p.id, p.category_id, p.subcategory_id, p.sub_subcategory_id, p.brand_id, p.name, p.slug, p.description, p.price, p.promo_price, p.stock, CASE WHEN p.image LIKE 'data:image/%' THEN '/api/images/products/' || p.id || '/image/' || COALESCE(NULLIF(p.slug, ''), 'product') || '.webp?v=' || LENGTH(p.image) ELSE p.image END as image, p.main_image_alt, p.video_url, p.is_popular, p.is_best_seller, p.is_new, p.is_recommended, p.is_fast_delivery, p.weight, p.is_active, p.features, p.key_points, p.faq_q1, p.faq_a1, p.faq_q2, p.faq_a2, p.variations, p.created_at, p.seo_title, p.seo_description, p.seo_keywords`;
+const BLOG_POSTS_COLS = `id, category_id, title, slug, excerpt, content, CASE WHEN image_url LIKE 'data:image/%' THEN '/api/images/blog_posts/' || id || '/image_url?v=' || LENGTH(image_url) ELSE image_url END as image_url, status, published_at, created_at, seo_title, seo_description`;
+const BLOG_POSTS_LIST_COLS = `p.id, p.category_id, p.title, p.slug, p.excerpt, CASE WHEN p.image_url LIKE 'data:image/%' THEN '/api/images/blog_posts/' || p.id || '/image_url?v=' || LENGTH(p.image_url) ELSE p.image_url END as image_url, p.status, p.published_at, p.created_at`;
 const PRODUCT_IMAGES_COLS = `id, product_id, is_main, alt_text, CASE WHEN image LIKE 'data:image/%' THEN '/api/images/product_images/' || id || '/image?v=' || LENGTH(image) ELSE image END as image`;
 const CATEGORIES_COLS = `id, name, slug, CASE WHEN image LIKE 'data:image/%' THEN '/api/images/categories/' || id || '/image/' || COALESCE(NULLIF(slug, ''), 'category') || '.webp?v=' || LENGTH(image) ELSE image END as image, CASE WHEN slide_image LIKE 'data:image/%' THEN '/api/images/categories/' || id || '/slide_image/' || COALESCE(NULLIF(slug, ''), 'category') || '-slide.webp?v=' || LENGTH(slide_image) ELSE slide_image END as slide_image, CASE WHEN mobile_slide_image LIKE 'data:image/%' THEN '/api/images/categories/' || id || '/mobile_slide_image/' || COALESCE(NULLIF(slug, ''), 'category') || '-mobile-slide.webp?v=' || LENGTH(mobile_slide_image) ELSE mobile_slide_image END as mobile_slide_image`;
 const SLIDER_IMAGES_COLS = `id, category_id, position, is_active, title, description, button_text, button_link, created_at, CASE WHEN image_url LIKE 'data:image/%' THEN '/api/images/slider_images/' || id || '/image_url?v=' || LENGTH(image_url) ELSE image_url END as image_url, CASE WHEN mobile_image_url LIKE 'data:image/%' THEN '/api/images/slider_images/' || id || '/mobile_image_url?v=' || LENGTH(mobile_image_url) ELSE mobile_image_url END as mobile_image_url`;
@@ -110,7 +112,7 @@ router.get(['/images/:table/:id/:field', '/images/:table/:id/:field/:seoSlug'], 
   const { table, id, field } = req.params;
   
   // Validate table and field to prevent SQL injection
-  const allowedTables = ['products', 'categories', 'subcategories', 'sub_subcategories', 'brands', 'product_images', 'settings', 'slider_images'];
+  const allowedTables = ['products', 'categories', 'subcategories', 'sub_subcategories', 'brands', 'product_images', 'settings', 'slider_images', 'blog_posts', 'blog_categories', 'reviews'];
   const allowedFields = ['image', 'value', 'image_url', 'slide_image', 'mobile_slide_image', 'mobile_image_url'];
   
   if (!allowedTables.includes(table) || !allowedFields.includes(field)) {
@@ -145,7 +147,7 @@ router.get(['/images/:table/:id/:field', '/images/:table/:id/:field/:seoSlug'], 
 router.get('/hero-banners/first-image/:type', async (req, res) => {
   const { type } = req.params;
   try {
-    const sliderImages = await sql`SELECT * FROM slider_images WHERE is_active = true AND category_id IS NULL ORDER BY position ASC LIMIT 1`;
+    const sliderImages = await sql`SELECT image_url, mobile_image_url FROM slider_images WHERE is_active = true AND category_id IS NULL ORDER BY position ASC LIMIT 1`;
     if (!sliderImages || sliderImages.length === 0) {
       return res.status(404).send('Not found');
     }
@@ -750,7 +752,7 @@ router.get('/products/:slug/reviews', async (req, res) => {
     const [product] = await sql`SELECT id FROM products WHERE slug = ${req.params.slug}`;
     if (!product) return res.status(404).json({ error: 'Product not found' });
     
-    const reviews = await sql`SELECT * FROM reviews WHERE product_id = ${product.id} ORDER BY created_at DESC`;
+    const reviews = await sql`SELECT id, product_id, customer_name, rating, comment, CASE WHEN image_url LIKE 'data:image/%' THEN '/api/images/reviews/' || id || '/image_url?v=' || LENGTH(image_url) ELSE image_url END as image_url, created_at, status FROM reviews WHERE product_id = ${product.id} ORDER BY created_at DESC`;
     res.json(reviews);
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch reviews' });
@@ -781,8 +783,8 @@ router.get('/orders/user/:userId', async (req, res) => {
   const { userId } = req.params;
   try {
     const orders = await sql`
-      SELECT o.*, 
-      (SELECT JSON_AGG(JSON_BUILD_OBJECT('id', oi.id, 'name', p.name, 'quantity', oi.quantity, 'price', oi.price, 'image', p.image))
+      SELECT o.id, o.created_at, o.status, o.total_amount, o.delivery_cost, o.stop_desk_cost, o.delivery_type, o.shipping_address, o.shipping_wilaya, o.shipping_commune, o.shipping_office, o.payment_method, o.customer_name, o.customer_email, o.customer_phone, o.customer_phone2, o.source, o.is_pixel_tracked, 
+      (SELECT JSON_AGG(JSON_BUILD_OBJECT('id', oi.id, 'name', p.name, 'quantity', oi.quantity, 'price', oi.price, 'image', CASE WHEN p.image LIKE 'data:image/%' THEN '/api/images/products/' || p.id || '/image/product.webp' ELSE p.image END))
        FROM order_items oi 
        JOIN products p ON oi.product_id = p.id 
        WHERE oi.order_id = o.id) as items
@@ -1322,8 +1324,8 @@ router.get('/admin/email-logs', authenticate, async (req, res) => {
 router.get('/admin/orders', authenticate, async (req, res) => {
   try {
     const orders = await sql`
-      SELECT o.*, 
-      (SELECT JSON_AGG(JSON_BUILD_OBJECT('id', oi.id, 'product_id', oi.product_id, 'quantity', oi.quantity, 'price', oi.price, 'variation', oi.variation, 'status', oi.status, 'product_name', p.name, 'product_image', p.image))
+      SELECT o.id, o.created_at, o.status, o.total_amount, o.delivery_cost, o.stop_desk_cost, o.delivery_type, o.shipping_address, o.shipping_wilaya, o.shipping_commune, o.shipping_office, o.payment_method, o.customer_name, o.customer_email, o.customer_phone, o.customer_phone2, o.source, o.is_pixel_tracked, o.note, o.ip_address, o.user_agent, o.device_type, o.last_status_update_at, o.payment_status, o.cancellation_reason, o.customer_user_id,
+      (SELECT JSON_AGG(JSON_BUILD_OBJECT('id', oi.id, 'product_id', oi.product_id, 'quantity', oi.quantity, 'price', oi.price, 'variation', oi.variation, 'status', oi.status, 'product_name', p.name, 'product_image', CASE WHEN p.image LIKE 'data:image/%' THEN '/api/images/products/' || p.id || '/image/product.webp' ELSE p.image END))
        FROM order_items oi 
        LEFT JOIN products p ON oi.product_id = p.id 
        WHERE oi.order_id = o.id) as items
@@ -1342,7 +1344,7 @@ router.get('/admin/orders/:id', authenticate, async (req, res) => {
     if (!order) return res.status(404).json({ error: 'Order not found' });
     
     const items = await sql`
-      SELECT oi.*, p.name as product_name, p.image as product_image 
+      SELECT oi.id, oi.order_id, oi.product_id, oi.quantity, oi.price, oi.variation, oi.status, p.name as product_name, CASE WHEN p.image LIKE 'data:image/%' THEN '/api/images/products/' || p.id || '/image/product.webp' ELSE p.image END as product_image 
       FROM order_items oi 
       LEFT JOIN products p ON oi.product_id = p.id 
       WHERE oi.order_id = ${req.params.id}
@@ -2169,7 +2171,7 @@ router.get('/blog/posts', async (req, res) => {
 
     const [totalCount] = await sql`SELECT COUNT(*) as count FROM blog_posts ${whereClause}`;
     const posts = await sql`
-      SELECT p.*, c.name as category_name, c.slug as category_slug 
+      SELECT ${sql.unsafe(BLOG_POSTS_LIST_COLS)}, c.name as category_name, c.slug as category_slug 
       FROM blog_posts p 
       LEFT JOIN blog_categories c ON p.category_id = c.id 
       ${whereClause} 
@@ -2187,7 +2189,7 @@ router.get('/blog/posts', async (req, res) => {
 router.get('/blog/posts/:slug', async (req, res) => {
   try {
     const [post] = await sql`
-      SELECT p.*, c.name as category_name, c.slug as category_slug 
+      SELECT p.id, p.category_id, p.title, p.slug, p.excerpt, p.content, CASE WHEN p.image_url LIKE 'data:image/%' THEN '/api/images/blog_posts/' || p.id || '/image_url?v=' || LENGTH(p.image_url) ELSE p.image_url END as image_url, p.status, p.published_at, p.created_at, p.seo_title, p.seo_description, c.name as category_name, c.slug as category_slug 
       FROM blog_posts p 
       LEFT JOIN blog_categories c ON p.category_id = c.id 
       WHERE p.slug = ${req.params.slug} AND p.status = 'published'
@@ -2196,9 +2198,9 @@ router.get('/blog/posts/:slug', async (req, res) => {
     
     // get related posts
     const related = await sql`
-      SELECT * FROM blog_posts
-      WHERE category_id = ${post.category_id} AND id != ${post.id} AND status = 'published'
-      ORDER BY published_at DESC NULLS LAST, created_at DESC
+      SELECT ${sql.unsafe(BLOG_POSTS_LIST_COLS)} FROM blog_posts p
+      WHERE p.category_id = ${post.category_id} AND p.id != ${post.id} AND p.status = 'published'
+      ORDER BY p.published_at DESC NULLS LAST, p.created_at DESC
       LIMIT 3
     `;
     post.related = related;
@@ -2244,10 +2246,10 @@ router.delete('/admin/blog/categories/:id', authenticate, async (req, res) => {
 router.get('/admin/blog/posts', authenticate, async (req, res) => {
   try {
     const posts = await sql`
-      SELECT p.*, c.name as category_name 
+      SELECT ${sql.unsafe(BLOG_POSTS_LIST_COLS)}, c.name as category_name 
       FROM blog_posts p 
       LEFT JOIN blog_categories c ON p.category_id = c.id 
-      ORDER BY created_at DESC
+      ORDER BY p.created_at DESC
     `;
     res.json(posts);
   } catch (err) {
@@ -2273,7 +2275,7 @@ router.post('/admin/blog/posts', authenticate, async (req, res) => {
 router.put('/admin/blog/posts/:id', authenticate, async (req, res) => {
   try {
     const { category_id, title, slug, excerpt, content, image_url, status, seo_title, seo_description } = req.body;
-    const p = await sql`SELECT * FROM blog_posts WHERE id = ${req.params.id}`;
+    const p = await sql`SELECT id, published_at FROM blog_posts WHERE id = ${req.params.id}`;
     if (!p.length) return res.status(404).json({ error: 'Not found' });
     
     let published_at = p[0].published_at;

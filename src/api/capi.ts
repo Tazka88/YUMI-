@@ -15,7 +15,7 @@ router.post('/', async (req, res) => {
   try {
     const { eventName, eventId, eventSourceUrl, userData, customData } = req.body;
 
-    const ALLOWED_EVENTS = ['Purchase', 'InitiateCheckout', 'AddToCart'];
+    const ALLOWED_EVENTS = ['Purchase', 'InitiateCheckout', 'AddToCart', 'ViewContent', 'PageView'];
     if (!ALLOWED_EVENTS.includes(eventName)) {
       return res.status(200).json({ success: true, skipped: true });
     }

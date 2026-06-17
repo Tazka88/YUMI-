@@ -49,8 +49,6 @@ export function generateSlug(text: string) {
 }
 
 // Global cache to prevent re-fetching and save Egress
-const requestCache = new Map<string, any>();
-
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState('overview');
   const [productSubTab, setProductSubTab] = useState('products');
@@ -67,6 +65,17 @@ export default function AdminDashboard() {
   const [products, setProducts] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
   const [brands, setBrands] = useState<any[]>([]);
+
+  // SWR Fetcher
+  const swrFetcher = async (url: string) => {
+    const token = localStorage.getItem('adminToken');
+    if (!token) throw new Error('No token');
+    const res = await fetch(url, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error('API Error');
+    return res.json();
+  };
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [expandedOrderId, setExpandedOrderId] = useState<number | null>(null);
   const [isSubcategoryModalOpen, setIsSubcategoryModalOpen] = useState(false);
@@ -265,126 +274,73 @@ export default function AdminDashboard() {
     saveHomeSections(newSections);
   };
 
+  const spProducts = new URLSearchParams();
+  if (debouncedAdminProductSearch) spProducts.append('search', debouncedAdminProductSearch);
+  spProducts.append('page', currentPage.toString());
+  spProducts.append('limit', itemsPerPage.toString());
+
+  const spOthers = new URLSearchParams();
+  spOthers.append('page', currentPage.toString());
+  spOthers.append('limit', itemsPerPage.toString());
+
+  const { data: swrStats, error: statsError } = useSWR(activeTab === 'overview' ? `/api/admin/stats?_rt=${refreshToggle}` : null, swrFetcher);
+  const { data: swrOrders } = useSWR(activeTab === 'orders' ? `/api/admin/orders?${spOthers.toString()}&_rt=${refreshToggle}` : null, swrFetcher);
+  const { data: swrProducts } = useSWR(activeTab === 'products' ? `/api/admin/products?${spProducts.toString()}&_rt=${refreshToggle}` : null, swrFetcher);
+  const { data: swrEmails } = useSWR(activeTab === 'emails' ? `/api/admin/emails?${spOthers.toString()}&_rt=${refreshToggle}` : null, swrFetcher);
+  const { data: swrEmailLogs } = useSWR(activeTab === 'email-logs' ? `/api/admin/email-logs?${spOthers.toString()}&_rt=${refreshToggle}` : null, swrFetcher);
+  const { data: swrCategories } = useSWR(['products', 'categories', 'sections'].includes(activeTab) ? `/api/categories?_rt=${refreshToggle}` : null, swrFetcher);
+  const { data: swrBrands } = useSWR(['products', 'brands', 'sections'].includes(activeTab) ? `/api/brands?_rt=${refreshToggle}` : null, swrFetcher);
+  const { data: swrSettings } = useSWR(['settings', 'account'].includes(activeTab) ? `/api/admin/settings?_rt=${refreshToggle}` : null, swrFetcher);
+
   useEffect(() => {
-    const token = localStorage.getItem('adminToken');
-    if (!token) {
-      navigate('/admin-7xK9pL2q/login');
-      return;
+    if (statsError) navigate('/admin-7xK9pL2q/login');
+  }, [statsError, navigate]);
+
+  useEffect(() => {
+    if (swrStats && typeof swrStats === 'object') setStats(swrStats);
+  }, [swrStats]);
+
+  useEffect(() => {
+    if (swrOrders) {
+      if (swrOrders.orders) { setOrders(swrOrders.orders); setTotalPages(Math.ceil((swrOrders.totalCount || 1) / itemsPerPage)); }
+      else if (Array.isArray(swrOrders)) { setOrders(swrOrders); setTotalPages(Math.ceil(swrOrders.length / itemsPerPage)); }
     }
+  }, [swrOrders, itemsPerPage]);
 
-    const controller = new AbortController();
-    const signal = controller.signal;
-    const headers = { 'Authorization': `Bearer ${token}` };
-
-    const handleFetchError = (err: any) => {
-      if (err.name !== 'AbortError') console.error(err);
-    };
-
-    if ((window as any)._lastRefresh !== refreshToggle) {
-      requestCache.clear();
-      (window as any)._lastRefresh = refreshToggle;
+  useEffect(() => {
+    if (swrProducts) {
+      if (swrProducts.products) { setProducts(swrProducts.products); setTotalPages(Math.ceil((swrProducts.totalCount || 1) / itemsPerPage)); }
+      else if (Array.isArray(swrProducts)) { setProducts(swrProducts); setTotalPages(Math.ceil(swrProducts.length / itemsPerPage)); }
     }
+  }, [swrProducts, itemsPerPage]);
 
-    const fetchCached = (url: string, onData: (d: any) => void) => {
-       const key = url;
-       if (requestCache.has(key)) {
-         onData(requestCache.get(key));
-         return;
-       }
-       fetch(url, { headers, signal })
-         .then(res => {
-            if (!res.ok && url === '/api/admin/stats') throw new Error('Unauthorized');
-            return res.json();
-         })
-         .then(data => {
-            requestCache.set(key, data);
-            onData(data);
-         })
-         .catch(err => {
-            if (url === '/api/admin/stats' && err.name !== 'AbortError') navigate('/admin-7xK9pL2q/login');
-            handleFetchError(err);
-         });
-    };
-
-    if (activeTab === 'overview') {
-       fetchCached('/api/admin/stats', setStats);
+  useEffect(() => {
+    if (swrEmails) {
+      if (swrEmails.emails) { setEmails(swrEmails.emails); setTotalPages(Math.ceil((swrEmails.totalCount || 1) / itemsPerPage)); }
+      else if (Array.isArray(swrEmails)) { setEmails(swrEmails); setTotalPages(Math.ceil(swrEmails.length / itemsPerPage)); }
     }
+  }, [swrEmails, itemsPerPage]);
 
-    if (activeTab === 'orders') {
-      const sp = new URLSearchParams();
-      sp.append('page', currentPage.toString());
-      sp.append('limit', itemsPerPage.toString());
-      fetchCached(`/api/admin/orders?${sp.toString()}`, (data) => {
-        if (data && data.orders) {
-          setOrders(data.orders);
-          setTotalPages(Math.ceil((data.totalCount || 1) / itemsPerPage));
-        } else if (Array.isArray(data)) {
-          setOrders(data);
-        }
-      });
+  useEffect(() => {
+    if (swrEmailLogs) {
+      if (swrEmailLogs.logs) { setEmailLogs(swrEmailLogs.logs); setTotalPages(Math.ceil((swrEmailLogs.totalCount || 1) / itemsPerPage)); }
+      else if (Array.isArray(swrEmailLogs)) { setEmailLogs(swrEmailLogs); setTotalPages(Math.ceil(swrEmailLogs.length / itemsPerPage)); }
     }
+  }, [swrEmailLogs, itemsPerPage]);
 
-    if (activeTab === 'products') {
-      const searchParams = new URLSearchParams();
-      if (debouncedAdminProductSearch) searchParams.append('search', debouncedAdminProductSearch);
-      searchParams.append('page', currentPage.toString());
-      searchParams.append('limit', itemsPerPage.toString());
+  useEffect(() => {
+    if (swrCategories && Array.isArray(swrCategories)) setCategories(swrCategories);
+  }, [swrCategories]);
 
-      fetchCached(`/api/admin/products?${searchParams.toString()}`, data => { 
-        if (data && Array.isArray(data.products)) {
-          setProducts(data.products);
-          setTotalPages(data.totalPages);
-        } else if (Array.isArray(data)) {
-          setProducts(data);
-        }
-      });
-      fetchCached('/api/categories', data => { if (Array.isArray(data)) setCategories(data); });
-      fetchCached('/api/brands', data => { if (Array.isArray(data)) setBrands(data); });
+  useEffect(() => {
+    if (swrBrands && Array.isArray(swrBrands)) setBrands(swrBrands);
+  }, [swrBrands]);
+
+  useEffect(() => {
+    if (swrSettings && typeof swrSettings === 'object' && !swrSettings.error) {
+      setSettingsForm(prev => ({ ...prev, ...swrSettings }));
     }
-
-    if (activeTab === 'emails') {
-      const sp = new URLSearchParams();
-      sp.append('page', currentPage.toString());
-      sp.append('limit', itemsPerPage.toString());
-      fetchCached(`/api/admin/emails?${sp.toString()}`, data => {
-        if (data && data.emails) {
-          setEmails(data.emails);
-          setTotalPages(Math.ceil((data.totalCount || 1) / itemsPerPage));
-        } else if (Array.isArray(data)) setEmails(data);
-      });
-    }
-
-    if (activeTab === 'email-logs') {
-      const sp = new URLSearchParams();
-      sp.append('page', currentPage.toString());
-      sp.append('limit', itemsPerPage.toString());
-      fetchCached(`/api/admin/email-logs?${sp.toString()}`, data => {
-        if (data && data.logs) {
-          setEmailLogs(data.logs);
-          setTotalPages(Math.ceil((data.totalCount || 1) / itemsPerPage));
-        } else if (Array.isArray(data)) setEmailLogs(data);
-      });
-    }
-
-    if (activeTab === 'categories') {
-      fetchCached('/api/categories', data => { if (Array.isArray(data)) setCategories(data); });
-    }
-
-    if (activeTab === 'brands') {
-      fetchCached('/api/brands', data => { if (Array.isArray(data)) setBrands(data); });
-    }
-
-    if (activeTab === 'sections') {
-      fetchCached('/api/categories', data => { if (Array.isArray(data)) setCategories(data); });
-      fetchCached('/api/brands', data => { if (Array.isArray(data)) setBrands(data); });
-    }
-
-    if (activeTab === 'settings' || activeTab === 'account') {
-      fetchCached('/api/admin/settings', data => { if (data && typeof data === 'object' && !data.error) setSettingsForm(prev => ({ ...prev, ...data })); });
-    }
-    
-    return () => controller.abort();
-  }, [navigate, activeTab, debouncedAdminProductSearch, currentPage, refreshToggle]);
+  }, [swrSettings]);
 
   const toSlug = (text: string) => {
     if (!text) return '';

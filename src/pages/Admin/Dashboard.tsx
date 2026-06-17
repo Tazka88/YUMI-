@@ -1,5 +1,6 @@
 import toast from 'react-hot-toast';
 import React, { useState, useEffect } from 'react';
+import useSWR from 'swr';
 import { useNavigate } from 'react-router-dom';
 import { LayoutDashboard, ShoppingBag, Users, Settings, LogOut, TrendingUp, AlertCircle, Package, Plus, Edit, Trash2, X, Image as ImageIcon, Upload, User } from 'lucide-react';
 import { formatPrice } from '../../utils/formatPrice';
@@ -46,6 +47,9 @@ export function generateSlug(text: string) {
     .replace(/[\s-]+/g, '-')
     .replace(/^-+|-+$/g, '');
 }
+
+// Global cache to prevent re-fetching and save Egress
+const requestCache = new Map<string, any>();
 
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState('overview');
@@ -276,23 +280,48 @@ export default function AdminDashboard() {
       if (err.name !== 'AbortError') console.error(err);
     };
 
+    if ((window as any)._lastRefresh !== refreshToggle) {
+      requestCache.clear();
+      (window as any)._lastRefresh = refreshToggle;
+    }
+
+    const fetchCached = (url: string, onData: (d: any) => void) => {
+       const key = url;
+       if (requestCache.has(key)) {
+         onData(requestCache.get(key));
+         return;
+       }
+       fetch(url, { headers, signal })
+         .then(res => {
+            if (!res.ok && url === '/api/admin/stats') throw new Error('Unauthorized');
+            return res.json();
+         })
+         .then(data => {
+            requestCache.set(key, data);
+            onData(data);
+         })
+         .catch(err => {
+            if (url === '/api/admin/stats' && err.name !== 'AbortError') navigate('/admin-7xK9pL2q/login');
+            handleFetchError(err);
+         });
+    };
+
     if (activeTab === 'overview') {
-      fetch('/api/admin/stats', { headers, signal })
-        .then(res => {
-          if (!res.ok) throw new Error('Unauthorized');
-          return res.json();
-        })
-        .then(setStats)
-        .catch(err => {
-          if (err.name !== 'AbortError') navigate('/admin-7xK9pL2q/login');
-        });
+       fetchCached('/api/admin/stats', setStats);
     }
 
     if (activeTab === 'orders') {
-      fetch('/api/admin/orders', { headers, signal })
-        .then(res => res.json())
-        .then(data => { if (Array.isArray(data)) setOrders(data); })
-        .catch(handleFetchError);
+      const sp = new URLSearchParams();
+      sp.append('page', currentPage.toString());
+      sp.append('limit', itemsPerPage.toString());
+      fetchCached(`/api/admin/orders?${sp.toString()}`, (data) => {
+        if (data && data.orders) {
+          setOrders(data.orders);
+          setTotalPages(Math.ceil((data.totalCount || 1) / itemsPerPage));
+        } else if (Array.isArray(data)) {
+          setOrders(data);
+        }
+      });
     }
 
     if (activeTab === 'products') {
@@ -301,75 +330,57 @@ export default function AdminDashboard() {
       searchParams.append('page', currentPage.toString());
       searchParams.append('limit', itemsPerPage.toString());
 
-      fetch(`/api/admin/products?${searchParams.toString()}`, { headers, signal })
-        .then(res => res.json())
-        .then(data => { 
-          if (data && Array.isArray(data.products)) {
-            setProducts(data.products);
-            setTotalPages(data.totalPages);
-          } else if (Array.isArray(data)) {
-            setProducts(data);
-          }
-        })
-        .catch(handleFetchError);
-      
-      fetch('/api/categories', { signal })
-        .then(res => res.json())
-        .then(data => { if (Array.isArray(data)) setCategories(data); })
-        .catch(handleFetchError);
-
-      fetch('/api/brands', { signal })
-        .then(res => res.json())
-        .then(data => { if (Array.isArray(data)) setBrands(data); })
-        .catch(handleFetchError);
+      fetchCached(`/api/admin/products?${searchParams.toString()}`, data => { 
+        if (data && Array.isArray(data.products)) {
+          setProducts(data.products);
+          setTotalPages(data.totalPages);
+        } else if (Array.isArray(data)) {
+          setProducts(data);
+        }
+      });
+      fetchCached('/api/categories', data => { if (Array.isArray(data)) setCategories(data); });
+      fetchCached('/api/brands', data => { if (Array.isArray(data)) setBrands(data); });
     }
 
     if (activeTab === 'emails') {
-      fetch('/api/admin/emails', { headers, signal })
-        .then(res => res.json())
-        .then(data => { if (Array.isArray(data)) setEmails(data); })
-        .catch(handleFetchError);
+      const sp = new URLSearchParams();
+      sp.append('page', currentPage.toString());
+      sp.append('limit', itemsPerPage.toString());
+      fetchCached(`/api/admin/emails?${sp.toString()}`, data => {
+        if (data && data.emails) {
+          setEmails(data.emails);
+          setTotalPages(Math.ceil((data.totalCount || 1) / itemsPerPage));
+        } else if (Array.isArray(data)) setEmails(data);
+      });
     }
 
     if (activeTab === 'email-logs') {
-      fetch('/api/admin/email-logs', { headers, signal })
-        .then(res => res.json())
-        .then(data => { if (Array.isArray(data)) setEmailLogs(data); })
-        .catch(handleFetchError);
+      const sp = new URLSearchParams();
+      sp.append('page', currentPage.toString());
+      sp.append('limit', itemsPerPage.toString());
+      fetchCached(`/api/admin/email-logs?${sp.toString()}`, data => {
+        if (data && data.logs) {
+          setEmailLogs(data.logs);
+          setTotalPages(Math.ceil((data.totalCount || 1) / itemsPerPage));
+        } else if (Array.isArray(data)) setEmailLogs(data);
+      });
     }
 
     if (activeTab === 'categories') {
-      fetch('/api/categories', { signal })
-        .then(res => res.json())
-        .then(data => { if (Array.isArray(data)) setCategories(data); })
-        .catch(handleFetchError);
+      fetchCached('/api/categories', data => { if (Array.isArray(data)) setCategories(data); });
     }
 
     if (activeTab === 'brands') {
-      fetch('/api/brands', { signal })
-        .then(res => res.json())
-        .then(data => { if (Array.isArray(data)) setBrands(data); })
-        .catch(handleFetchError);
+      fetchCached('/api/brands', data => { if (Array.isArray(data)) setBrands(data); });
     }
 
     if (activeTab === 'sections') {
-      fetch('/api/categories', { signal })
-        .then(res => res.json())
-        .then(data => { if (Array.isArray(data)) setCategories(data); })
-        .catch(handleFetchError);
-
-      fetch('/api/brands', { signal })
-        .then(res => res.json())
-        .then(data => { if (Array.isArray(data)) setBrands(data); })
-        .catch(handleFetchError);
+      fetchCached('/api/categories', data => { if (Array.isArray(data)) setCategories(data); });
+      fetchCached('/api/brands', data => { if (Array.isArray(data)) setBrands(data); });
     }
 
-
     if (activeTab === 'settings' || activeTab === 'account') {
-      fetch('/api/admin/settings', { headers, signal })
-        .then(res => res.json())
-        .then(data => { if (data && typeof data === 'object' && !data.error) setSettingsForm(prev => ({ ...prev, ...data })); })
-        .catch(handleFetchError);
+      fetchCached('/api/admin/settings', data => { if (data && typeof data === 'object' && !data.error) setSettingsForm(prev => ({ ...prev, ...data })); });
     }
     
     return () => controller.abort();
@@ -964,35 +975,50 @@ export default function AdminDashboard() {
     return status;
   };
 
-  const openModal = (product: any = null) => {
+  const openModal = async (product: any = null) => {
     if (product) {
-      setEditingProduct(product);
-      
-      let parsedVariations = [];
-      if (typeof product.variations === 'string') {
-        try { parsedVariations = JSON.parse(product.variations); } catch(e) {}
-      } else if (Array.isArray(product.variations)) {
-        parsedVariations = product.variations;
+      const toastId = toast.loading('Chargement des détails...');
+      try {
+        const token = localStorage.getItem('adminToken');
+        const res = await fetch(`/api/admin/products/${product.id}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!res.ok) throw new Error('Erreur');
+        const fullProduct = await res.json();
+        
+        toast.dismiss(toastId);
+        setEditingProduct(fullProduct);
+        
+        let parsedVariations = [];
+        if (typeof fullProduct.variations === 'string') {
+          try { parsedVariations = JSON.parse(fullProduct.variations); } catch(e) {}
+        } else if (Array.isArray(fullProduct.variations)) {
+          parsedVariations = fullProduct.variations;
+        }
+        
+        setProductForm({
+          name: fullProduct.name, slug: fullProduct.slug, sku: fullProduct.sku || '', category_id: fullProduct.category_id, subcategory_id: fullProduct.subcategory_id || '', sub_subcategory_id: fullProduct.sub_subcategory_id || '', brand_id: fullProduct.brand_id || '', brand_name: fullProduct.brand_name || '',
+          price: fullProduct.price, 
+          promo_price: (fullProduct.promo_price !== null && fullProduct.promo_price !== undefined) ? fullProduct.promo_price : '', 
+          stock: fullProduct.stock, 
+          weight: (fullProduct.weight !== null && fullProduct.weight !== undefined) ? fullProduct.weight : '',
+          description: fullProduct.description || '', image: fullProduct.image || '', video_url: fullProduct.video_url || '',
+          is_popular: !!fullProduct.is_popular, is_best_seller: !!fullProduct.is_best_seller, 
+          is_new: !!fullProduct.is_new, is_recommended: !!fullProduct.is_recommended,
+          is_fast_delivery: !!fullProduct.is_fast_delivery,
+          is_active: fullProduct.is_active !== false,
+          images: fullProduct.images || [],
+          variations: parsedVariations,
+          features: typeof fullProduct.features === 'string' ? fullProduct.features : (Array.isArray(fullProduct.features) ? fullProduct.features.map((f: any) => `${f.key}: ${f.value}`).join('\n') : ''),
+          key_points: typeof fullProduct.key_points === 'string' ? fullProduct.key_points : (Array.isArray(fullProduct.key_points) ? fullProduct.key_points.join('\n') : ''),
+          faq_q1: fullProduct.faq_q1 || '', faq_a1: fullProduct.faq_a1 || '', faq_q2: fullProduct.faq_q2 || '', faq_a2: fullProduct.faq_a2 || '',
+          seo_title: fullProduct.seo_title || '', seo_description: fullProduct.seo_description || '', seo_keywords: fullProduct.seo_keywords || '', main_image_alt: fullProduct.main_image_alt || ''
+        });
+      } catch (e) {
+        toast.dismiss(toastId);
+        toast.error('Erreur lors du chargement');
+        return;
       }
-      
-      setProductForm({
-        name: product.name, slug: product.slug, sku: product.sku || '', category_id: product.category_id, subcategory_id: product.subcategory_id || '', sub_subcategory_id: product.sub_subcategory_id || '', brand_id: product.brand_id || '', brand_name: product.brand_name || '',
-        price: product.price, 
-        promo_price: (product.promo_price !== null && product.promo_price !== undefined) ? product.promo_price : '', 
-        stock: product.stock, 
-        weight: (product.weight !== null && product.weight !== undefined) ? product.weight : '',
-        description: product.description || '', image: product.image || '', video_url: product.video_url || '',
-        is_popular: !!product.is_popular, is_best_seller: !!product.is_best_seller, 
-        is_new: !!product.is_new, is_recommended: !!product.is_recommended,
-        is_fast_delivery: !!product.is_fast_delivery,
-        is_active: product.is_active !== false,
-        images: product.images || [],
-        variations: parsedVariations,
-        features: typeof product.features === 'string' ? product.features : (Array.isArray(product.features) ? product.features.map((f: any) => `${f.key}: ${f.value}`).join('\n') : ''),
-        key_points: typeof product.key_points === 'string' ? product.key_points : (Array.isArray(product.key_points) ? product.key_points.join('\n') : ''),
-        faq_q1: product.faq_q1 || '', faq_a1: product.faq_a1 || '', faq_q2: product.faq_q2 || '', faq_a2: product.faq_a2 || '',
-        seo_title: product.seo_title || '', seo_description: product.seo_description || '', seo_keywords: product.seo_keywords || '', main_image_alt: product.main_image_alt || ''
-      });
     } else {
       setEditingProduct(null);
       setProductForm({

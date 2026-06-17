@@ -1294,28 +1294,41 @@ router.post('/subscribers', async (req, res) => {
 
 router.get('/admin/emails', authenticate, async (req, res) => {
   try {
-    const emails = await sql`
-      SELECT DISTINCT ON (LOWER(email)) 
-        email, 
-        name, 
-        phone, 
-        source, 
-        created_at 
+    const { page = '1', limit = '50' } = req.query;
+    const pageNum = parseInt(page as string) || 1;
+    const limitNum = parseInt(limit as string) || 50;
+    const offset = (pageNum - 1) * limitNum;
+
+    // We can compute the full list in a subquery and select from it with offset
+    const query = sql`
       FROM (
-        SELECT customer_email as email, customer_name as name, customer_phone as phone, 'Commande' as source, created_at 
-        FROM orders 
-        WHERE customer_email IS NOT NULL AND customer_email != ''
-        UNION ALL
-        SELECT email, name, phone, source, created_at 
-        FROM subscribers
-        UNION ALL
-        SELECT email, CONCAT(first_name, ' ', last_name) as name, phone, 'Compte Client' as source, created_at 
-        FROM profiles
-        WHERE email IS NOT NULL AND email != ''
-      ) combined
-      ORDER BY LOWER(email), created_at DESC
+        SELECT DISTINCT ON (LOWER(email)) 
+          email, name, phone, source, created_at 
+        FROM (
+          SELECT customer_email as email, customer_name as name, customer_phone as phone, 'Commande' as source, created_at 
+          FROM orders 
+          WHERE customer_email IS NOT NULL AND customer_email != ''
+          UNION ALL
+          SELECT email, name, phone, source, created_at 
+          FROM subscribers
+          UNION ALL
+          SELECT email, CONCAT(first_name, ' ', last_name) as name, phone, 'Compte Client' as source, created_at 
+          FROM profiles
+          WHERE email IS NOT NULL AND email != ''
+        ) combined
+        ORDER BY LOWER(email), created_at DESC
+      ) distinct_emails
     `;
-    res.json(emails);
+    
+    const [{count}] = await sql`SELECT COUNT(*) as count ${query}`;
+
+    const emails = await sql`
+      SELECT * ${query}
+      ORDER BY created_at DESC
+      LIMIT ${limitNum} OFFSET ${offset}
+    `;
+
+    res.json({ emails, totalCount: Number(count) });
   } catch (err) {
     console.error('Failed to fetch emails:', err);
     res.status(500).json({ error: 'Failed to fetch emails' });
@@ -1324,8 +1337,16 @@ router.get('/admin/emails', authenticate, async (req, res) => {
 
 router.get('/admin/email-logs', authenticate, async (req, res) => {
   try {
-    const logs = await sql`SELECT * FROM email_logs ORDER BY created_at DESC LIMIT 200`;
-    res.json(logs);
+    const { page = '1', limit = '50' } = req.query;
+    const pageNum = parseInt(page as string) || 1;
+    const limitNum = parseInt(limit as string) || 50;
+    const offset = (pageNum - 1) * limitNum;
+
+    const [{count}] = await sql`SELECT COUNT(*) as count FROM email_logs`;
+    
+    const logs = await sql`SELECT id, email, subject, status, created_at, error, opened_at, clicked_at FROM email_logs ORDER BY created_at DESC LIMIT ${limitNum} OFFSET ${offset}`;
+    
+    res.json({ logs, totalCount: Number(count) });
   } catch (err) {
     console.error('Failed to fetch email logs:', err);
     res.status(500).json({ error: 'Failed to fetch email logs' });
@@ -1334,6 +1355,13 @@ router.get('/admin/email-logs', authenticate, async (req, res) => {
 
 router.get('/admin/orders', authenticate, async (req, res) => {
   try {
+    const { page = '1', limit = '20' } = req.query;
+    const pageNum = parseInt(page as string) || 1;
+    const limitNum = parseInt(limit as string) || 20;
+    const offset = (pageNum - 1) * limitNum;
+
+    const [totalCount] = await sql`SELECT COUNT(*) as count FROM orders`;
+
     const orders = await sql`
       SELECT o.id, o.order_id, o.created_at, o.status, o.total_amount, o.delivery_cost, o.address, o.wilaya, o.commune, o.office_id, o.stop_desk, o.customer_name, o.customer_email, o.customer_phone, o.note, o.customer_user_id,
       (SELECT JSON_AGG(JSON_BUILD_OBJECT('id', oi.id, 'product_id', oi.product_id, 'quantity', oi.quantity, 'price', oi.price, 'variation', oi.variation, 'status', oi.status, 'product_name', p.name, 'product_image', CASE WHEN p.image LIKE 'data:image/%' THEN '/api/images/products/' || p.id || '/image/product.webp' ELSE p.image END))
@@ -1341,9 +1369,10 @@ router.get('/admin/orders', authenticate, async (req, res) => {
        LEFT JOIN products p ON oi.product_id = p.id 
        WHERE oi.order_id = o.id) as items
       FROM orders o 
-      ORDER BY o.created_at DESC LIMIT 500
+      ORDER BY o.created_at DESC 
+      LIMIT ${limitNum} OFFSET ${offset}
     `;
-    res.json(orders);
+    res.json({ orders, totalCount: totalCount.count });
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch orders' });
   }
@@ -1487,7 +1516,7 @@ router.get('/admin/products', authenticate, async (req, res) => {
     `;
 
     const products = await sql`
-      SELECT ${sql.unsafe(PRODUCT_COLS)}, c.name as category_name, s.name as subcategory_name, ss.name as sub_subcategory_name, COALESCE(p.brand_name, b.name) as brand_name 
+      SELECT ${sql.unsafe(PRODUCT_LIST_COLS)}, c.name as category_name, s.name as subcategory_name, ss.name as sub_subcategory_name, COALESCE(p.brand_name, b.name) as brand_name 
       FROM products p 
       LEFT JOIN categories c ON p.category_id = c.id 
       LEFT JOIN subcategories s ON p.subcategory_id = s.id
@@ -1498,27 +1527,8 @@ router.get('/admin/products', authenticate, async (req, res) => {
       LIMIT ${limitNum} OFFSET ${offset}
     `;
     
-    const productIds = products.map((p: any) => p.id);
-    if (productIds.length > 0) {
-      const images = await sql`SELECT ${sql.unsafe(PRODUCT_IMAGES_COLS)} FROM product_images WHERE product_id IN ${sql(productIds)}`;
-      products.forEach((p: any) => {
-        p.images = images.filter((img: any) => img.product_id === p.id && !img.is_main);
-        const mainImgRow = images.find((img: any) => img.product_id === p.id && img.is_main);
-        p.main_image_alt = p.main_image_alt || (mainImgRow ? (mainImgRow.alt_text || '') : '');
-      });
-    }
-    
+
     products.forEach((p: any) => {
-      try {
-        p.features = typeof p.features === 'string' ? JSON.parse(p.features) : (p.features || []);
-      } catch (e) {
-        // Keep as string if it can't be parsed
-      }
-      try {
-        p.key_points = typeof p.key_points === 'string' ? JSON.parse(p.key_points) : (p.key_points || []);
-      } catch (e) {
-        // Keep as string if it can't be parsed
-      }
       try {
         p.variations = typeof p.variations === 'string' ? JSON.parse(p.variations) : (p.variations || []);
         if (Array.isArray(p.variations)) {
@@ -1527,17 +1537,8 @@ router.get('/admin/products', authenticate, async (req, res) => {
       } catch (e) {
         p.variations = [];
       }
-    });
-
-    
-    products.forEach((p: any) => {
       p.image = processImage('products', p.id, 'image', p.image);
       if (p.brand_image) p.brand_image = processImage('brands', p.brand_id, 'image', p.brand_image);
-      if (p.images && Array.isArray(p.images)) {
-        p.images.forEach((img: any) => {
-          img.image = processImage('product_images', img.id, 'image', img.image);
-        });
-      }
     });
 
     res.json({
@@ -1550,6 +1551,42 @@ router.get('/admin/products', authenticate, async (req, res) => {
   } catch (err) {
     console.error('Failed to fetch admin products:', err);
     res.status(500).json({ error: 'Failed to fetch products' });
+  }
+});
+
+router.get('/admin/products/:id', authenticate, async (req, res) => {
+  try {
+    const [product] = await sql`
+      SELECT ${sql.unsafe(PRODUCT_COLS)}, c.name as category_name, s.name as subcategory_name, ss.name as sub_subcategory_name, COALESCE(p.brand_name, b.name) as brand_name 
+      FROM products p 
+      LEFT JOIN categories c ON p.category_id = c.id 
+      LEFT JOIN subcategories s ON p.subcategory_id = s.id
+      LEFT JOIN sub_subcategories ss ON p.sub_subcategory_id = ss.id
+      LEFT JOIN brands b ON p.brand_id = b.id
+      WHERE p.id = ${req.params.id}
+    `;
+    if (!product) return res.status(404).json({ error: 'Product not found' });
+    
+    const images = await sql`SELECT ${sql.unsafe(PRODUCT_IMAGES_COLS)} FROM product_images WHERE product_id = ${product.id}`;
+    
+    product.images = images.filter((img: any) => !img.is_main);
+    const mainImgRow = images.find((img: any) => img.is_main);
+    product.main_image_alt = product.main_image_alt || (mainImgRow ? (mainImgRow.alt_text || '') : '');
+    
+    product.image = processImage('products', product.id, 'image', product.image);
+    product.images.forEach((img: any) => { img.image = processImage('product_images', img.id, 'image', img.image); });
+
+    try { product.features = typeof product.features === 'string' ? JSON.parse(product.features) : (product.features || []); } catch(e){}
+    try { product.key_points = typeof product.key_points === 'string' ? JSON.parse(product.key_points) : (product.key_points || []); } catch(e){}
+    try { 
+      product.variations = typeof product.variations === 'string' ? JSON.parse(product.variations) : (product.variations || []);
+      if (Array.isArray(product.variations)) product.variations.forEach((v: any) => { if (v && v.stock !== undefined) v.stock = Number(v.stock) || 0; });
+    } catch(e) { product.variations = []; }
+    
+    res.json(product);
+  } catch (err) {
+    console.error('Failed to fetch admin product detail:', err);
+    res.status(500).json({ error: 'Failed to fetch admin product detail' });
   }
 });
 
@@ -1624,7 +1661,7 @@ router.get('/admin/export-meta-catalog', authenticate, async (req, res) => {
   }
 });
 
-const META_PRODUCT_COLS = `p.id, p.name, p.slug, SUBSTRING(p.description FROM 1 FOR 5000) as description, p.price, p.promo_price, p.is_active, CASE WHEN p.image LIKE 'data:image/%' THEN '/api/images/products/' || p.id || '/image/' || COALESCE(NULLIF(p.slug, ''), 'product') || '.webp?v=' || LENGTH(p.image) ELSE p.image END as image`;
+const META_PRODUCT_COLS = `p.id, p.name, p.slug, SUBSTRING(p.description FROM 1 FOR 300) as description, p.price, p.promo_price, p.is_active, CASE WHEN p.image LIKE 'data:image/%' THEN '/api/images/products/' || p.id || '/image/' || COALESCE(NULLIF(p.slug, ''), 'product') || '.webp?v=' || LENGTH(p.image) ELSE p.image END as image`;
 
 // Public endpoint for Meta catalog scheduled fetch
 router.get('/feed/meta-catalog.csv', async (req, res) => {

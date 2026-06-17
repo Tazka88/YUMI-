@@ -21,9 +21,13 @@ export default function WilayasSettings() {
 
   const fetchWilayas = async () => {
     try {
-      const res = await fetch('/api/wilayas');
+      const token = localStorage.getItem('adminToken');
+      const res = await fetch('/api/admin/wilayas', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!res.ok) throw new Error('API Error');
       const data = await res.json();
-      setWilayas(data);
+      setWilayas(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error('Failed to fetch wilayas', err);
     }

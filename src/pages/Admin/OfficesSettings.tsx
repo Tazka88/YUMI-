@@ -21,7 +21,11 @@ export default function OfficesSettings() {
 
   const fetchOffices = async () => {
     try {
-      const res = await fetch('/api/offices');
+      const token = localStorage.getItem('adminToken');
+      const res = await fetch('/api/admin/offices', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!res.ok) throw new Error('API error');
       const data = await res.json();
       if(Array.isArray(data)) setOffices(data);
     } catch (err) {
@@ -31,7 +35,11 @@ export default function OfficesSettings() {
 
   const fetchWilayas = async () => {
     try {
-      const res = await fetch('/api/wilayas');
+      const token = localStorage.getItem('adminToken');
+      const res = await fetch('/api/admin/wilayas', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!res.ok) throw new Error('API error');
       const data = await res.json();
       if (Array.isArray(data)) {
         setWilayas(data.filter((w: any) => w.is_active === true || w.is_active === 1));

@@ -2031,6 +2031,15 @@ router.get('/wilayas', async (req, res) => {
   }
 });
 
+router.get('/admin/wilayas', authenticate, async (req, res) => {
+  try {
+    const wilayas = await sql`SELECT * FROM wilayas ORDER BY number ASC`;
+    res.json(wilayas);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch admin wilayas' });
+  }
+});
+
 router.post('/admin/wilayas', authenticate, async (req, res) => {
   const { number, name, delivery_cost, stop_desk_cost, is_active } = req.body;
   
@@ -2083,6 +2092,15 @@ router.get('/offices', async (req, res) => {
     res.json(offices);
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch offices' });
+  }
+});
+
+router.get('/admin/offices', authenticate, async (req, res) => {
+  try {
+    const offices = await sql`SELECT * FROM offices ORDER BY wilaya ASC, name ASC`;
+    res.json(offices);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch admin offices' });
   }
 });
 

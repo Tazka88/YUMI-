@@ -743,18 +743,7 @@ router.get('/products', async (req, res) => {
       try {
         p.variations = typeof p.variations === 'string' ? JSON.parse(p.variations) : (p.variations || []);
         if (Array.isArray(p.variations)) {
-          p.variations.forEach((v: any) => { 
-            if (v) {
-              if (v.stock !== undefined && v.stock !== null && v.stock !== '') {
-                v.stock = Number(v.stock);
-              } else {
-                delete v.stock;
-              }
-              if (v.price !== undefined && v.price !== null && v.price !== '') {
-                v.price = Number(v.price);
-              }
-            }
-          });
+          p.variations.forEach((v) => { if (v && v.stock !== undefined) { v.stock = Number(v.stock) || 0; } });
         }
       } catch (e) {
         p.variations = [];
@@ -826,18 +815,10 @@ router.get('/products/:slug', async (req, res) => {
     try {
       product.variations = typeof product.variations === 'string' ? JSON.parse(product.variations) : (product.variations || []);
       if (Array.isArray(product.variations)) {
-        product.variations.forEach((v: any) => { 
-          if (v) {
-            if (v.stock !== undefined && v.stock !== null && v.stock !== '') {
-              v.stock = Number(v.stock);
-            } else {
-              delete v.stock; // If empty or undefined, remove the key so it behaves as infinite stock
-            }
-            if (v.price !== undefined && v.price !== null && v.price !== '') {
-              v.price = Number(v.price);
-            }
-          }
-        });
+        product.variations.forEach((v) => { if (v && v.stock !== undefined) { v.stock = Number(v.stock) || 0; } });
+      }
+      if (Array.isArray(product.variations)) {
+        product.variations.forEach((v: any) => { if (v && v.stock !== undefined) v.stock = Number(v.stock) || 0; });
       }
     } catch (e) {
       product.variations = [];
@@ -1639,18 +1620,7 @@ router.get('/admin/products', authenticate, async (req, res) => {
       try {
         p.variations = typeof p.variations === 'string' ? JSON.parse(p.variations) : (p.variations || []);
         if (Array.isArray(p.variations)) {
-          p.variations.forEach((v: any) => { 
-            if (v) {
-              if (v.stock !== undefined && v.stock !== null && v.stock !== '') {
-                v.stock = Number(v.stock);
-              } else {
-                delete v.stock;
-              }
-              if (v.price !== undefined && v.price !== null && v.price !== '') {
-                v.price = Number(v.price);
-              }
-            }
-          });
+          p.variations.forEach((v) => { if (v && v.stock !== undefined) { v.stock = Number(v.stock) || 0; } });
         }
       } catch (e) {
         p.variations = [];
@@ -1698,20 +1668,7 @@ router.get('/admin/products/:id', authenticate, async (req, res) => {
     try { product.key_points = typeof product.key_points === 'string' ? JSON.parse(product.key_points) : (product.key_points || []); } catch(e){}
     try { 
       product.variations = typeof product.variations === 'string' ? JSON.parse(product.variations) : (product.variations || []);
-      if (Array.isArray(product.variations)) {
-        product.variations.forEach((v: any) => { 
-          if (v) {
-            if (v.stock !== undefined && v.stock !== null && v.stock !== '') {
-              v.stock = Number(v.stock);
-            } else {
-              delete v.stock;
-            }
-            if (v.price !== undefined && v.price !== null && v.price !== '') {
-              v.price = Number(v.price);
-            }
-          }
-        });
-      }
+      if (Array.isArray(product.variations)) product.variations.forEach((v: any) => { if (v && v.stock !== undefined) v.stock = Number(v.stock) || 0; });
     } catch(e) { product.variations = []; }
     
     res.json(product);

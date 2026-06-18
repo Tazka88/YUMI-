@@ -122,6 +122,16 @@ CREATE TABLE IF NOT EXISTS product_images (
 
 ALTER TABLE product_images ADD COLUMN IF NOT EXISTS alt_text VARCHAR(255);
 
+-- Performance Indexes (Critical for Supabase efficiency)
+CREATE INDEX IF NOT EXISTS idx_products_category_id ON products(category_id);
+CREATE INDEX IF NOT EXISTS idx_products_subcategory_id ON products(subcategory_id);
+CREATE INDEX IF NOT EXISTS idx_products_brand_id ON products(brand_id);
+CREATE INDEX IF NOT EXISTS idx_products_is_active ON products(is_active);
+CREATE INDEX IF NOT EXISTS idx_products_is_popular ON products(is_popular);
+CREATE INDEX IF NOT EXISTS idx_products_created_at ON products(created_at);
+CREATE INDEX IF NOT EXISTS idx_products_sales_count ON products(sales_count);
+CREATE INDEX IF NOT EXISTS idx_products_views_count ON products(views_count);
+
 CREATE TABLE IF NOT EXISTS profiles (
   id UUID PRIMARY KEY, -- Link to auth.users.id
   first_name VARCHAR(255),
@@ -190,6 +200,13 @@ CREATE TABLE IF NOT EXISTS order_items (
   status VARCHAR(50) DEFAULT 'active',
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Performance Indexes for Orders
+CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status);
+CREATE INDEX IF NOT EXISTS idx_orders_created_at ON orders(created_at);
+CREATE INDEX IF NOT EXISTS idx_orders_customer_user_id ON orders(customer_user_id);
+CREATE INDEX IF NOT EXISTS idx_order_items_order_id ON order_items(order_id);
+CREATE INDEX IF NOT EXISTS idx_order_items_product_id ON order_items(product_id);
 
 CREATE TABLE IF NOT EXISTS offices (
   id SERIAL PRIMARY KEY,

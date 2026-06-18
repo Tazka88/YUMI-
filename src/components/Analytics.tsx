@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { fetchWithCache } from '../lib/utils';
 import { sendCapiEvent, generateEventId } from '../lib/capi';
+import { useAuth } from '../lib/AuthContext';
 
 declare global {
   interface Window {
@@ -13,6 +14,7 @@ declare global {
 
 export default function Analytics() {
   const location = useLocation();
+  const { user } = useAuth();
   const [isInitialized, setIsInitialized] = useState(false);
   const [gaId, setGaId] = useState<string | null>(null);
   const [fbId, setFbId] = useState<string | null>(null);
@@ -70,9 +72,19 @@ export default function Analytics() {
             // and on History API changes (React Router)
             window.fbq.disablePushState = true;
             
-            // Initialize the pixel but DO NOT send a PageView here.
+            // Prepare Advanced Matching data if user is authenticated
+            const advancedMatching: any = {};
+            if (user?.email) advancedMatching.em = user.email.trim().toLowerCase();
+            if (user?.phone) advancedMatching.ph = user.phone.replace(/[^0-9]/g, '');
+
+            // Initialize the pixel with Advanced Matching, but DO NOT send a PageView here.
             // We handle PageView manually in the second useEffect.
-            window.fbq('init', fbPixelId);
+            if (Object.keys(advancedMatching).length > 0) {
+              window.fbq('init', fbPixelId, advancedMatching);
+            } else {
+              window.fbq('init', fbPixelId);
+            }
+            
             setFbId(fbPixelId);
           } catch (e) {
             console.error('Failed to initialize FB Pixel', e);
@@ -88,8 +100,8 @@ export default function Analytics() {
         setIsInitialized(true);
       });
       
-    return () => controller.abort();
-  }, []);
+    // Re-run initialization to pass advanced matching if user object changes (logs in)
+  }, [user]);
 
   useEffect(() => {
     if (!isInitialized) return;

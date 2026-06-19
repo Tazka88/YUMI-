@@ -77,13 +77,24 @@ router.use('/delivery', dhdRoutes);
 // Helper to process images to avoid Vercel 4.5MB payload limit
 const processImage = (table: string, id: number | string, field: string, image: string | null, slug?: string) => {
   if (!image) return null;
+  if (image.startsWith('/api/images/')) return image;
+  
+  let hash = '';
   if (image.startsWith('data:image/')) {
     // Create a simple hash from the base64 string to bust cache when image changes
-    const hash = image.substring(image.length - 20).replace(/[^a-zA-Z0-9]/g, '');
-    const seoPart = slug ? `/${slug}.webp` : '';
-    return `/api/images/${table}/${id}/${field}${seoPart}?v=${hash}`;
+    hash = image.substring(image.length - 20).replace(/[^a-zA-Z0-9]/g, '');
+  } else {
+    const vMatch = image.match(/v=([^&]+)/);
+    if (vMatch && vMatch[1]) {
+      hash = vMatch[1];
+    } else {
+      let code = 0;
+      for (let i = 0; i < image.length; i++) code = Math.imul(31, code) + image.charCodeAt(i) | 0;
+      hash = Math.abs(code).toString(36);
+    }
   }
-  return image;
+  const seoPart = slug ? `/${slug}.webp` : '';
+  return `/api/images/${table}/${id}/${field}${seoPart}?v=${hash}`;
 };
 
 let sharp: any = null;
@@ -114,15 +125,36 @@ const serveImageData = async (res: any, imageData: string, targetWidth?: number,
       res.setHeader('Content-Type', `image/${ext === 'svg+xml' ? 'svg+xml' : ext}`);
       // Agressive CDN caching for Vercel Edge layer (s-maxage) 
       res.setHeader('Cache-Control', cacheControl);
-      res.setHeader('Vercel-CDN-Cache-Control', 'max-age=3600, stale-while-revalidate=86400');
-      res.setHeader('CDN-Cache-Control', 'max-age=3600, stale-while-revalidate=86400');
+      res.setHeader('Vercel-CDN-Cache-Control', 's-maxage=2592000, stale-while-revalidate=86400');
+      res.setHeader('CDN-Cache-Control', 's-maxage=2592000, stale-while-revalidate=86400');
       
       return res.send(buffer);
     }
   }
   
-  // If it's a regular URL or a local path, redirect
-  if (imageData.startsWith('http') || imageData.startsWith('/')) {
+  // Proxy external URLs so Vercel Edge can cache them and save Supabase Egress
+  if (imageData.startsWith('http') || imageData.startsWith('https')) {
+    try {
+      const resp = await fetch(imageData);
+      if (resp.ok) {
+        const arrayBuffer = await resp.arrayBuffer();
+        res.setHeader('Content-Type', resp.headers.get('content-type') || 'image/webp');
+        res.setHeader('Cache-Control', cacheControl);
+        // Instruct Vercel Edge to cache this for 30 days
+        res.setHeader('Vercel-CDN-Cache-Control', 's-maxage=2592000, stale-while-revalidate=86400');
+        res.setHeader('CDN-Cache-Control', 's-maxage=2592000, stale-while-revalidate=86400');
+        return res.send(Buffer.from(arrayBuffer));
+      }
+    } catch (err) {
+      console.warn('Proxy fetch failed, falling back to redirect:', err);
+    }
+    // Fallback directly
+    res.setHeader('Cache-Control', cacheControl);
+    return res.redirect(301, imageData);
+  }
+
+  // Local paths fallback
+  if (imageData.startsWith('/')) {
     res.setHeader('Cache-Control', cacheControl);
     return res.redirect(301, imageData);
   }

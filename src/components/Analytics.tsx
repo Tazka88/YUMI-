@@ -25,13 +25,12 @@ export default function Analytics() {
     fetchWithCache('/api/settings', { signal: controller.signal })
       .then(data => {
         const gaMeasurementId = (data as any).ga_measurement_id || import.meta.env.VITE_GA_MEASUREMENT_ID;
-        // Always use the provided Pixel ID
-        const fbPixelId = '2110613746362191';
+        // Prefer DB setting, fallback to env, or fallback to the provided example ID
+        const fbPixelId = (data as any).fb_pixel_id || import.meta.env.VITE_FB_PIXEL_ID || '2110613746362191';
 
         // GA is now initialized in index.html directly
         setGaId('G-7JLYM1QX3C');
 
-        
         if (fbPixelId && typeof window !== 'undefined') {
           try {
             // Manually inject FB Pixel to have full control over initialization and prevent auto-PageView

@@ -366,7 +366,22 @@ export default function Checkout() {
         if (trackingIds.fb) {
           try {
             const eventId = String(responseData.order_id || responseData.id || `CMD-${Date.now()}`);
+            
+            // Extract first and last name from full name
+            const nameParts = formData.name.trim().split(' ');
+            const firstName = nameParts[0] || '';
+            const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
+            
+            const advancedMatching: any = {};
+            if (formData.email) advancedMatching.em = formData.email.trim().toLowerCase();
+            if (formData.phone) advancedMatching.ph = formData.phone.replace(/[^0-9]/g, '');
+            if (firstName) advancedMatching.fn = firstName.toLowerCase();
+            if (lastName) advancedMatching.ln = lastName.toLowerCase();
+            
             if (typeof window !== 'undefined' && (window as any).fbq) {
+              if (Object.keys(advancedMatching).length > 0) {
+                (window as any).fbq('init', trackingIds.fb, advancedMatching);
+              }
               (window as any).fbq('track', 'Purchase', {
                 value: safeValue,
                 currency: 'DZD',
@@ -375,11 +390,6 @@ export default function Checkout() {
               }, { eventID: eventId });
             }
             
-            // Extract first and last name from full name
-            const nameParts = formData.name.trim().split(' ');
-            const firstName = nameParts[0] || '';
-            const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
-
             sendCapiEvent({
               eventName: 'Purchase',
               eventId: eventId,

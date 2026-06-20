@@ -144,6 +144,13 @@ const serveImageData = async (res: any, imageData: string, targetWidth?: number,
         res.setHeader('Vercel-CDN-Cache-Control', 's-maxage=2592000, stale-while-revalidate=86400');
         res.setHeader('CDN-Cache-Control', 's-maxage=2592000, stale-while-revalidate=86400');
         return res.send(Buffer.from(arrayBuffer));
+      } else if (resp.status === 402) {
+        // Supabase specific Error for Egress Quota Exceeded
+        console.warn('Supabase Quota Exceeded for URL:', imageData);
+        // Serve a simple placeholder so layout doesn't break
+        res.setHeader('Content-Type', 'image/svg+xml');
+        res.setHeader('Cache-Control', 'public, max-age=60'); // Don't cache the error for long
+        return res.send(`<svg width="400" height="400" xmlns="http://www.w3.org/2000/svg"><rect width="400" height="400" fill="#f3f4f6"/><path d="M150 150 L250 250 M250 150 L150 250" stroke="#d1d5db" stroke-width="4" stroke-linecap="round"/><rect width="180" height="140" x="110" y="130" fill="none" stroke="#d1d5db" stroke-width="4" rx="10"/></svg>`);
       }
     } catch (err) {
       console.warn('Proxy fetch failed, falling back to redirect:', err);

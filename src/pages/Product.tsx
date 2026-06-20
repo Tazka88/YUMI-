@@ -121,7 +121,7 @@ export default function Product() {
     const signal = controller.signal;
 
     setError(null);
-    fetch(`/api/products/${slug}`, { signal, priority: 'high' } as any)
+    fetch(`/api/products/${slug}`, { signal, priority: 'high', cache: 'no-store' } as any)
       .then(res => {
         if (!res.ok) throw new Error('Produit introuvable');
         return res.json();

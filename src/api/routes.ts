@@ -54,9 +54,9 @@ router.use((req, res, next) => {
 
     if (!isPrivate && !hasAuthCookie) {
       // Very aggressive CDN cache for unauthenticated public requests
-      res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=360, stale-while-revalidate=86400');
-      res.setHeader('Vercel-CDN-Cache-Control', 'max-age=3600');
-      res.setHeader('CDN-Cache-Control', 'max-age=3600');
+      res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=60, stale-while-revalidate=300');
+      res.setHeader('Vercel-CDN-Cache-Control', 'max-age=60');
+      res.setHeader('CDN-Cache-Control', 'max-age=60');
     }
   } else if (req.path.startsWith('/admin/')) {
     // Bust global memory cache on any admin mutation
@@ -110,7 +110,7 @@ const getSharp = async () => {
 };
 
 // Helper to serve image data directly without CPU intensive sharp usage or Regex at runtime
-const serveImageData = async (res: any, imageData: string, targetWidth?: number, cacheControl = 'public, max-age=0, s-maxage=360, stale-while-revalidate=86400') => {
+const serveImageData = async (res: any, imageData: string, targetWidth?: number, cacheControl = 'public, max-age=0, s-maxage=60, stale-while-revalidate=300') => {
   if (imageData.startsWith('data:image/')) {
     // Avoid RegExp on potentially megabytes of base64 data to save Active CPU
     const commaIndex = imageData.indexOf(',');
@@ -125,8 +125,8 @@ const serveImageData = async (res: any, imageData: string, targetWidth?: number,
       res.setHeader('Content-Type', `image/${ext === 'svg+xml' ? 'svg+xml' : ext}`);
       // Agressive CDN caching for Vercel Edge layer (s-maxage) 
       res.setHeader('Cache-Control', cacheControl);
-      res.setHeader('Vercel-CDN-Cache-Control', 's-maxage=2592000, stale-while-revalidate=86400');
-      res.setHeader('CDN-Cache-Control', 's-maxage=2592000, stale-while-revalidate=86400');
+      res.setHeader('Vercel-CDN-Cache-Control', 'max-age=0, s-maxage=60, stale-while-revalidate=300');
+      res.setHeader('CDN-Cache-Control', 'max-age=0, s-maxage=60, stale-while-revalidate=300');
       
       return res.send(buffer);
     }
@@ -141,8 +141,8 @@ const serveImageData = async (res: any, imageData: string, targetWidth?: number,
         res.setHeader('Content-Type', resp.headers.get('content-type') || 'image/webp');
         res.setHeader('Cache-Control', cacheControl);
         // Instruct Vercel Edge to cache this for 30 days
-        res.setHeader('Vercel-CDN-Cache-Control', 's-maxage=2592000, stale-while-revalidate=86400');
-        res.setHeader('CDN-Cache-Control', 's-maxage=2592000, stale-while-revalidate=86400');
+        res.setHeader('Vercel-CDN-Cache-Control', 'max-age=0, s-maxage=60, stale-while-revalidate=300');
+        res.setHeader('CDN-Cache-Control', 'max-age=0, s-maxage=60, stale-while-revalidate=300');
         return res.send(Buffer.from(arrayBuffer));
       } else if (resp.status === 402) {
         // Supabase specific Error for Egress Quota Exceeded
@@ -218,7 +218,7 @@ router.get(['/images/:table/:id/:field', '/images/:table/:id/:field/:seoSlug'], 
 
 // Route to get the first hero banner image directly (for LCP optimization)
 router.get('/hero-banners/first-image/:type', async (req, res) => {
-  res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=360, stale-while-revalidate=86400');
+  res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=60, stale-while-revalidate=300');
   const { type } = req.params;
   try {
     const sliderImages = await sql`SELECT image_url, mobile_image_url FROM slider_images WHERE is_active = true AND category_id IS NULL ORDER BY position ASC LIMIT 1`;
@@ -340,7 +340,7 @@ router.post('/admin/login', loginLimiter, async (req, res) => {
 
 // --- PUBLIC ROUTES ---
 router.get('/robots.txt', (req, res) => {
-  res.setHeader('Cache-Control', 'public, s-maxage=86400, stale-while-revalidate=86400');
+  res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=60, stale-while-revalidate=300');
   const host = req.get('host') || 'zorando.com';
   const baseUrl = `https://${host}`;
   res.type('text/plain');
@@ -366,7 +366,7 @@ router.get('/sitemap.xml', async (req, res) => {
     return res.send(cached);
   }
 
-  res.setHeader('Cache-Control', 'public, s-maxage=86400, stale-while-revalidate=86400');
+  res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=60, stale-while-revalidate=300');
   try {
     const baseUrl = process.env.APP_URL || `https://${req.get('host')}`;
     
@@ -436,7 +436,7 @@ router.get('/sitemap.xml', async (req, res) => {
 });
 
 router.get('/pages', async (req, res) => {
-  res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=360, stale-while-revalidate=86400');
+  res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=60, stale-while-revalidate=300');
   try {
     const pages = await sql`SELECT id, title, slug, content, created_at, updated_at FROM pages`;
     res.json(pages);
@@ -446,7 +446,7 @@ router.get('/pages', async (req, res) => {
 });
 
 router.get('/pages/:slug', async (req, res) => {
-  res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=360, stale-while-revalidate=86400');
+  res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=60, stale-while-revalidate=300');
   try {
     const [page] = await sql`SELECT * FROM pages WHERE slug = ${req.params.slug}`;
     if (!page) return res.status(404).json({ error: 'Page not found' });
@@ -463,7 +463,7 @@ router.get('/settings', async (req, res) => {
     if (cached) return res.json(cached);
 
     // Settings specific CDN caching policy
-    res.setHeader('Cache-Control', 's-maxage=3600, stale-while-revalidate=86400');
+    res.setHeader('Cache-Control', 'max-age=0, s-maxage=60, stale-while-revalidate=300');
     const settings = await sql`SELECT "key", CASE WHEN value LIKE 'data:image/%' THEN '/api/images/settings/' || "key" || '/value?v=' || LENGTH(value) ELSE value END as value FROM settings WHERE "key" != 'admin_email'`;
     const settingsObj = settings.reduce((acc: any, setting: any) => {
       let val = setting.value;
@@ -487,7 +487,7 @@ router.get('/footer-links', async (req, res) => {
     const cached = getCache(cacheKey);
     if (cached) return res.json(cached);
 
-    res.setHeader('Cache-Control', 's-maxage=3600, stale-while-revalidate=86400');
+    res.setHeader('Cache-Control', 'max-age=0, s-maxage=60, stale-while-revalidate=300');
     const links = await sql`SELECT * FROM footer_links ORDER BY column_id ASC, order_index ASC`;
     setCache(cacheKey, links, 60);
     res.json(links);
@@ -502,7 +502,7 @@ router.get('/hero-banners', async (req, res) => {
   if (cached) return res.json(cached);
 
   try {
-    res.setHeader('Cache-Control', 's-maxage=3600, stale-while-revalidate=86400');
+    res.setHeader('Cache-Control', 'max-age=0, s-maxage=60, stale-while-revalidate=300');
     const sliderImages = await sql`SELECT ${sql.unsafe(SLIDER_IMAGES_COLS)} FROM slider_images ORDER BY position ASC`;
     
     sliderImages.forEach((s: any) => {
@@ -607,7 +607,7 @@ router.get('/brands', async (req, res) => {
     const cached = getCache(cacheKey);
     if (cached) return res.json(cached);
 
-    res.setHeader('Cache-Control', 's-maxage=3600, stale-while-revalidate=86400');
+    res.setHeader('Cache-Control', 'max-age=0, s-maxage=60, stale-while-revalidate=300');
     const brands = await sql`SELECT ${sql.unsafe(BRANDS_COLS)} FROM brands ORDER BY name ASC`;
     
     brands.forEach((b: any) => {
@@ -627,7 +627,7 @@ router.get('/brands/:slug', async (req, res) => {
   const cached = getCache(cacheKey);
   if (cached) return res.json(cached);
 
-  res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=360, stale-while-revalidate=86400');
+  res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=60, stale-while-revalidate=300');
   try {
     const [brand] = await sql`SELECT ${sql.unsafe(BRANDS_COLS)} FROM brands WHERE slug = ${req.params.slug}`;
     if (!brand) return res.status(404).json({ error: 'Brand not found' });
@@ -647,7 +647,7 @@ router.get('/categories', async (req, res) => {
     const cached = getCache(cacheKey);
     if (cached) return res.json(cached);
 
-    res.setHeader('Cache-Control', 's-maxage=3600, stale-while-revalidate=86400');
+    res.setHeader('Cache-Control', 'max-age=0, s-maxage=60, stale-while-revalidate=300');
     const categories = await sql`SELECT ${sql.unsafe(CATEGORIES_COLS)} FROM categories`;
     const subcategories = await sql`SELECT ${sql.unsafe(SUBCAT_COLS)} FROM subcategories`;
     const sub_subcategories = await sql`SELECT ${sql.unsafe(SUB_SUBCAT_COLS)} FROM sub_subcategories`;
@@ -694,7 +694,7 @@ router.get('/subcategories', async (req, res) => {
   const cached = getCache(cacheKey);
   if (cached) return res.json(cached);
 
-  res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=360, stale-while-revalidate=86400');
+  res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=60, stale-while-revalidate=300');
   try {
     const subcategories = await sql`SELECT ${sql.unsafe(SUBCAT_COLS)} FROM subcategories`;
     
@@ -714,7 +714,7 @@ router.get('/products', async (req, res) => {
   const cached = getCache(cacheKey);
   if (cached) return res.json(cached);
 
-  res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=360, stale-while-revalidate=86400');
+  res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=60, stale-while-revalidate=300');
   const category = req.query.category as string | undefined;
   const subcategory = req.query.subcategory as string | undefined;
   const sub_subcategory = req.query.sub_subcategory as string | undefined;
@@ -826,7 +826,7 @@ router.get('/products/:slug', async (req, res) => {
   if (cached) return res.json(cached);
 
   try {
-    res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=360, stale-while-revalidate=86400');
+    res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=60, stale-while-revalidate=300');
     const [product] = await sql`
       SELECT ${sql.unsafe(PRODUCT_COLS)}, c.name as category_name, c.slug as category_slug, s.name as subcategory_name, s.slug as subcategory_slug, ss.name as sub_subcategory_name, ss.slug as sub_subcategory_slug, COALESCE(p.brand_name, b.name) as brand_name, b.slug as brand_slug, CASE WHEN b.image LIKE 'data:image/%' THEN '/api/images/brands/' || b.id || '/image?v=' || LENGTH(b.image) ELSE b.image END as brand_image,
       (SELECT COUNT(*) FROM reviews r WHERE r.product_id = p.id) as reviews_count,
@@ -885,7 +885,7 @@ router.get('/products/:slug', async (req, res) => {
 });
 
 router.get('/products/:slug/reviews', async (req, res) => {
-  res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=60, stale-while-revalidate=3600');
+  res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=60, stale-while-revalidate=300');
   try {
     const [product] = await sql`SELECT id FROM products WHERE slug = ${req.params.slug}`;
     if (!product) return res.status(404).json({ error: 'Product not found' });
@@ -1792,7 +1792,7 @@ const META_PRODUCT_COLS = `p.id, p.name, p.slug, SUBSTRING(p.description FROM 1 
 
 // Public endpoint for Meta catalog scheduled fetch
 router.get('/feed/meta-catalog.csv', async (req, res) => {
-  res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=360, stale-while-revalidate=86400');
+  res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=60, stale-while-revalidate=300');
   
   const cacheKey = 'meta_catalog_csv';
   const cached = getCache(cacheKey);
@@ -2164,7 +2164,7 @@ router.get('/wilayas', async (req, res) => {
   const cached = getCache(cacheKey);
   if (cached) return res.json(cached);
 
-  res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=360, stale-while-revalidate=86400');
+  res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=60, stale-while-revalidate=300');
   try {
     const wilayas = await sql`SELECT * FROM wilayas ORDER BY number ASC`;
     setCache(cacheKey, wilayas, 60);
@@ -2233,7 +2233,7 @@ router.get('/offices', async (req, res) => {
   const cached = getCache(cacheKey);
   if (cached) return res.json(cached);
 
-  res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=360, stale-while-revalidate=86400');
+  res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=60, stale-while-revalidate=300');
   try {
     const offices = await sql`SELECT * FROM offices ORDER BY wilaya ASC, name ASC`;
     setCache(cacheKey, offices, 60);
@@ -2303,7 +2303,7 @@ router.get('/communes/public', async (req, res) => {
   const cached = getCache(cacheKey);
   if (cached) return res.json(cached);
 
-  res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=360, stale-while-revalidate=86400');
+  res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=60, stale-while-revalidate=300');
   try {
     const communesList = await sql`SELECT wilaya, name FROM communes ORDER BY wilaya ASC, name ASC`;
     const communesDict: Record<string, string[]> = {};
@@ -2366,7 +2366,7 @@ router.delete('/admin/communes/:id', authenticate, async (req, res) => {
 // ==========================================
 
 router.get('/blog/categories', async (req, res) => {
-  res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=360, stale-while-revalidate=86400');
+  res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=60, stale-while-revalidate=300');
   try {
     const categories = await sql`SELECT * FROM blog_categories ORDER BY name ASC`;
     res.json(categories);
@@ -2376,7 +2376,7 @@ router.get('/blog/categories', async (req, res) => {
 });
 
 router.get('/blog/posts', async (req, res) => {
-  res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=60, stale-while-revalidate=3600');
+  res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=60, stale-while-revalidate=300');
   try {
     const { category, search, page = '1', limit = '9' } = req.query;
     const pageNum = parseInt(page as string) || 1;
@@ -2414,7 +2414,7 @@ router.get('/blog/posts', async (req, res) => {
 });
 
 router.get('/blog/posts/:slug', async (req, res) => {
-  res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=60, stale-while-revalidate=3600');
+  res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=60, stale-while-revalidate=300');
   try {
     const [post] = await sql`
       SELECT p.id, p.category_id, p.title, p.slug, p.excerpt, p.content, CASE WHEN p.image_url LIKE 'data:image/%' THEN '/api/images/blog_posts/' || p.id || '/image_url?v=' || LENGTH(p.image_url) ELSE p.image_url END as image_url, p.status, p.published_at, p.created_at, p.seo_title, p.seo_description, c.name as category_name, c.slug as category_slug 

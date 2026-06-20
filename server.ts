@@ -4,6 +4,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import { sql, setupDb } from './src/db/setup.js';
 import apiRoutes from './src/api/routes.js';
+import landingPagesRoutes from './src/api/landing-pages.js';
 import path from 'path';
 import fs from 'fs';
 
@@ -45,6 +46,7 @@ async function startServer() {
   });
 
   // 1. API Routes (Mounted early to take precedence)
+  app.use('/api', landingPagesRoutes);
   app.use('/api', apiRoutes);
 
   // 2. Robots.txt - Ensuring it is correctly served to fix Facebook crawler 403
@@ -380,15 +382,16 @@ Sitemap: https://zorando.com/sitemap.xml`);
         } else if (req.path.startsWith('/landing/')) {
           const slug = req.path.split('/')[2];
           const [landingPage] = await sql`
-            SELECT lp.id, lp.title, lp.slug, lp.subtitle, lp.sections, lp.theme, p.name as product_name, p.description as product_description, CASE WHEN p.image LIKE 'data:image/%' THEN '/api/images/products/' || p.id || '/image/' || p.slug || '.webp' ELSE p.image END as product_image
+            SELECT lp.id, lp.slug, lp.config, p.name as product_name, p.description as product_description, p.seo_title, p.seo_description, CASE WHEN p.image LIKE 'data:image/%' THEN '/api/images/products/' || p.id || '/image/' || p.slug || '.webp' ELSE p.image END as product_image
             FROM landing_pages lp
             JOIN products p ON lp.product_id = p.id
             WHERE lp.slug = ${slug}
           `;
           
           if (landingPage) {
-            title = landingPage.seo_title || `${landingPage.product_name} | ZORANDO`;
-            description = landingPage.seo_description || landingPage.product_description?.substring(0, 160) || `Découvrez ${landingPage.product_name} sur Zorando.`;
+            const config = landingPage.config || {};
+            title = config.seo_title || landingPage.seo_title || `${landingPage.product_name} | ZORANDO`;
+            description = config.seo_description || landingPage.seo_description || landingPage.product_description?.substring(0, 160).replace(/<[^>]+>/g, '') || `Découvrez ${landingPage.product_name} sur Zorando.`;
             
             if (landingPage.product_image) {
               if (landingPage.product_image.startsWith('http')) {

@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import apiRoutes from '../src/api/routes.js';
+import landingPagesRoutes from '../src/api/landing-pages.js';
 import path from 'path';
 import fs from 'fs';
 import { sql } from '../src/db/setup.js';
@@ -53,6 +54,7 @@ app.get('/api/robots.txt', (req, res, next) => {
   apiRoutes(req, res, next);
 });
 
+app.use('/api', landingPagesRoutes);
 app.use('/api', apiRoutes);
 
 // SEO Routes (passed to apiRoutes)

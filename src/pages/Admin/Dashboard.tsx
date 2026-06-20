@@ -951,6 +951,15 @@ export default function AdminDashboard() {
         } else if (Array.isArray(fullProduct.variations)) {
           parsedVariations = fullProduct.variations;
         }
+
+        let parsedFeatures = fullProduct.features;
+        if (typeof parsedFeatures === 'string') {
+          try { parsedFeatures = JSON.parse(parsedFeatures); } catch(e) {}
+        }
+        let parsedKeyPoints = fullProduct.key_points;
+        if (typeof parsedKeyPoints === 'string') {
+          try { parsedKeyPoints = JSON.parse(parsedKeyPoints); } catch(e) {}
+        }
         
         setProductForm({
           name: fullProduct.name, slug: fullProduct.slug, sku: fullProduct.sku || '', category_id: fullProduct.category_id, subcategory_id: fullProduct.subcategory_id || '', sub_subcategory_id: fullProduct.sub_subcategory_id || '', brand_id: fullProduct.brand_id || '', brand_name: fullProduct.brand_name || '',
@@ -965,8 +974,8 @@ export default function AdminDashboard() {
           is_active: fullProduct.is_active !== false,
           images: fullProduct.images || [],
           variations: parsedVariations,
-          features: typeof fullProduct.features === 'string' ? fullProduct.features : (Array.isArray(fullProduct.features) ? fullProduct.features.map((f: any) => `${f.key}: ${f.value}`).join('\n') : ''),
-          key_points: typeof fullProduct.key_points === 'string' ? fullProduct.key_points : (Array.isArray(fullProduct.key_points) ? fullProduct.key_points.join('\n') : ''),
+          features: typeof parsedFeatures === 'string' ? parsedFeatures : (Array.isArray(parsedFeatures) ? parsedFeatures.map((f: any) => `${f.key}: ${f.value}`).join('\n') : ''),
+          key_points: typeof parsedKeyPoints === 'string' ? parsedKeyPoints : (Array.isArray(parsedKeyPoints) ? parsedKeyPoints.join('\n') : ''),
           faq_q1: fullProduct.faq_q1 || '', faq_a1: fullProduct.faq_a1 || '', faq_q2: fullProduct.faq_q2 || '', faq_a2: fullProduct.faq_a2 || '',
           seo_title: fullProduct.seo_title || '', seo_description: fullProduct.seo_description || '', seo_keywords: fullProduct.seo_keywords || '', main_image_alt: fullProduct.main_image_alt || ''
         });
@@ -3595,21 +3604,21 @@ export default function AdminDashboard() {
                 <div className="md:col-span-2 border-t pt-4 mt-2">
                   <div className="flex justify-between items-center mb-4">
                     <h4 className="font-bold text-gray-800">Variations de produit (Couleurs, Tailles...)</h4>
-                    <button type="button" onClick={() => setProductForm({...productForm, variations: [...(productForm.variations || []), { id: 'v_'+Date.now(), attribute: 'Couleur', value: '', price: '', stock: '', image: '' }]})} className="text-sm bg-gray-100 px-3 py-1 rounded-md hover:bg-gray-200 font-medium">+ Ajouter une variation</button>
+                    <button type="button" onClick={() => setProductForm(prev => ({...prev, variations: [...(prev.variations || []), { id: 'v_' + Math.random().toString(36).substr(2, 9), attribute: 'Couleur', value: '', price: '', stock: '', image: '' }]}))} className="text-sm bg-gray-100 px-3 py-1 rounded-md hover:bg-gray-200 font-medium">+ Ajouter une variation</button>
                   </div>
                   {(!productForm.variations || productForm.variations.length === 0) && (
                     <p className="text-sm text-gray-500 mb-4">Aucune variation pour ce produit.</p>
                   )}
                   <div className="flex flex-col gap-3 mb-4">
                     {(productForm.variations || []).map((v: any, i: number) => (
-                      <div key={v.id || i} className="grid grid-cols-1 md:grid-cols-6 gap-2 items-center bg-gray-50 p-3 rounded-md border border-gray-200">
-                        <input className="px-2 py-1 border rounded focus:ring-orange-500 focus:border-orange-500" placeholder="Type (ex: Couleur)" value={v.attribute} onChange={e => { const nv = [...productForm.variations]; nv[i].attribute = e.target.value; setProductForm({...productForm, variations: nv}) }} />
-                        <input className="px-2 py-1 border rounded focus:ring-orange-500 focus:border-orange-500" placeholder="Valeur (ex: Noir)" value={v.value} onChange={e => { const nv = [...productForm.variations]; nv[i].value = e.target.value; setProductForm({...productForm, variations: nv}) }} />
-                        <input type="number" className="px-2 py-1 border rounded focus:ring-orange-500 focus:border-orange-500" placeholder="Prix (+)" value={v.price || ''} onChange={e => { const nv = [...productForm.variations]; nv[i].price = e.target.value; setProductForm({...productForm, variations: nv}) }} />
-                        <input type="number" className="px-2 py-1 border rounded focus:ring-orange-500 focus:border-orange-500" placeholder="Stock" value={v.stock || ''} onChange={e => { const nv = [...productForm.variations]; nv[i].stock = e.target.value; setProductForm({...productForm, variations: nv}) }} />
+                      <div key={v.id || `v_${i}`} className="grid grid-cols-1 md:grid-cols-6 gap-2 items-center bg-gray-50 p-3 rounded-md border border-gray-200">
+                        <input className="px-2 py-1 border rounded focus:ring-orange-500 focus:border-orange-500" placeholder="Type (ex: Couleur)" value={v.attribute || ''} onChange={e => { setProductForm(prev => { const nv = [...(prev.variations || [])]; nv[i] = { ...nv[i], attribute: e.target.value }; return { ...prev, variations: nv }; }) }} />
+                        <input className="px-2 py-1 border rounded focus:ring-orange-500 focus:border-orange-500" placeholder="Valeur (ex: Noir)" value={v.value || ''} onChange={e => { setProductForm(prev => { const nv = [...(prev.variations || [])]; nv[i] = { ...nv[i], value: e.target.value }; return { ...prev, variations: nv }; }) }} />
+                        <input type="number" className="px-2 py-1 border rounded focus:ring-orange-500 focus:border-orange-500" placeholder="Prix (+)" value={v.price || ''} onChange={e => { setProductForm(prev => { const nv = [...(prev.variations || [])]; nv[i] = { ...nv[i], price: e.target.value }; return { ...prev, variations: nv }; }) }} />
+                        <input type="number" className="px-2 py-1 border rounded focus:ring-orange-500 focus:border-orange-500" placeholder="Stock" value={v.stock || ''} onChange={e => { setProductForm(prev => { const nv = [...(prev.variations || [])]; nv[i] = { ...nv[i], stock: e.target.value }; return { ...prev, variations: nv }; }) }} />
                         <div className="flex gap-2 md:col-span-2 items-center">
-                           <input className="px-2 py-1 border rounded flex-1 focus:ring-orange-500 focus:border-orange-500" placeholder="URL Image" value={v.image || ''} onChange={e => { const nv = [...productForm.variations]; nv[i].image = e.target.value; setProductForm({...productForm, variations: nv}) }} />
-                           <button type="button" onClick={() => { const nv = [...productForm.variations]; nv.splice(i,1); setProductForm({...productForm, variations: nv}) }} className="text-red-500 hover:text-red-700 bg-red-50 p-1 rounded"><Trash2 size={18} /></button>
+                           <input className="px-2 py-1 border rounded flex-1 focus:ring-orange-500 focus:border-orange-500" placeholder="URL Image" value={v.image || ''} onChange={e => { setProductForm(prev => { const nv = [...(prev.variations || [])]; nv[i] = { ...nv[i], image: e.target.value }; return { ...prev, variations: nv }; }) }} />
+                           <button type="button" onClick={() => { setProductForm(prev => { const nv = [...(prev.variations || [])]; nv.splice(i,1); return { ...prev, variations: nv }; }) }} className="text-red-500 hover:text-red-700 bg-red-50 p-1 rounded"><Trash2 size={18} /></button>
                         </div>
                       </div>
                     ))}

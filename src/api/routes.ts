@@ -54,7 +54,7 @@ router.use((req, res, next) => {
 
     if (!isPrivate && !hasAuthCookie) {
       // Very aggressive CDN cache for unauthenticated public requests
-      res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');
+      res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=360, stale-while-revalidate=86400');
       res.setHeader('Vercel-CDN-Cache-Control', 'max-age=3600');
       res.setHeader('CDN-Cache-Control', 'max-age=3600');
     }
@@ -110,7 +110,7 @@ const getSharp = async () => {
 };
 
 // Helper to serve image data directly without CPU intensive sharp usage or Regex at runtime
-const serveImageData = async (res: any, imageData: string, targetWidth?: number, cacheControl = 'public, s-maxage=3600, stale-while-revalidate=86400') => {
+const serveImageData = async (res: any, imageData: string, targetWidth?: number, cacheControl = 'public, max-age=0, s-maxage=360, stale-while-revalidate=86400') => {
   if (imageData.startsWith('data:image/')) {
     // Avoid RegExp on potentially megabytes of base64 data to save Active CPU
     const commaIndex = imageData.indexOf(',');
@@ -218,7 +218,7 @@ router.get(['/images/:table/:id/:field', '/images/:table/:id/:field/:seoSlug'], 
 
 // Route to get the first hero banner image directly (for LCP optimization)
 router.get('/hero-banners/first-image/:type', async (req, res) => {
-  res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');
+  res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=360, stale-while-revalidate=86400');
   const { type } = req.params;
   try {
     const sliderImages = await sql`SELECT image_url, mobile_image_url FROM slider_images WHERE is_active = true AND category_id IS NULL ORDER BY position ASC LIMIT 1`;
@@ -436,7 +436,7 @@ router.get('/sitemap.xml', async (req, res) => {
 });
 
 router.get('/pages', async (req, res) => {
-  res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');
+  res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=360, stale-while-revalidate=86400');
   try {
     const pages = await sql`SELECT id, title, slug, content, created_at, updated_at FROM pages`;
     res.json(pages);
@@ -446,7 +446,7 @@ router.get('/pages', async (req, res) => {
 });
 
 router.get('/pages/:slug', async (req, res) => {
-  res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');
+  res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=360, stale-while-revalidate=86400');
   try {
     const [page] = await sql`SELECT * FROM pages WHERE slug = ${req.params.slug}`;
     if (!page) return res.status(404).json({ error: 'Page not found' });
@@ -627,7 +627,7 @@ router.get('/brands/:slug', async (req, res) => {
   const cached = getCache(cacheKey);
   if (cached) return res.json(cached);
 
-  res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');
+  res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=360, stale-while-revalidate=86400');
   try {
     const [brand] = await sql`SELECT ${sql.unsafe(BRANDS_COLS)} FROM brands WHERE slug = ${req.params.slug}`;
     if (!brand) return res.status(404).json({ error: 'Brand not found' });
@@ -694,7 +694,7 @@ router.get('/subcategories', async (req, res) => {
   const cached = getCache(cacheKey);
   if (cached) return res.json(cached);
 
-  res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');
+  res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=360, stale-while-revalidate=86400');
   try {
     const subcategories = await sql`SELECT ${sql.unsafe(SUBCAT_COLS)} FROM subcategories`;
     
@@ -714,7 +714,7 @@ router.get('/products', async (req, res) => {
   const cached = getCache(cacheKey);
   if (cached) return res.json(cached);
 
-  res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');
+  res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=360, stale-while-revalidate=86400');
   const category = req.query.category as string | undefined;
   const subcategory = req.query.subcategory as string | undefined;
   const sub_subcategory = req.query.sub_subcategory as string | undefined;
@@ -826,7 +826,7 @@ router.get('/products/:slug', async (req, res) => {
   if (cached) return res.json(cached);
 
   try {
-    res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');
+    res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=360, stale-while-revalidate=86400');
     const [product] = await sql`
       SELECT ${sql.unsafe(PRODUCT_COLS)}, c.name as category_name, c.slug as category_slug, s.name as subcategory_name, s.slug as subcategory_slug, ss.name as sub_subcategory_name, ss.slug as sub_subcategory_slug, COALESCE(p.brand_name, b.name) as brand_name, b.slug as brand_slug, CASE WHEN b.image LIKE 'data:image/%' THEN '/api/images/brands/' || b.id || '/image?v=' || LENGTH(b.image) ELSE b.image END as brand_image,
       (SELECT COUNT(*) FROM reviews r WHERE r.product_id = p.id) as reviews_count,
@@ -885,7 +885,7 @@ router.get('/products/:slug', async (req, res) => {
 });
 
 router.get('/products/:slug/reviews', async (req, res) => {
-  res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=3600');
+  res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=60, stale-while-revalidate=3600');
   try {
     const [product] = await sql`SELECT id FROM products WHERE slug = ${req.params.slug}`;
     if (!product) return res.status(404).json({ error: 'Product not found' });
@@ -1792,7 +1792,7 @@ const META_PRODUCT_COLS = `p.id, p.name, p.slug, SUBSTRING(p.description FROM 1 
 
 // Public endpoint for Meta catalog scheduled fetch
 router.get('/feed/meta-catalog.csv', async (req, res) => {
-  res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');
+  res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=360, stale-while-revalidate=86400');
   
   const cacheKey = 'meta_catalog_csv';
   const cached = getCache(cacheKey);
@@ -1888,7 +1888,7 @@ router.post('/admin/products', authenticate, async (req, res) => {
     const productId = await sql.begin(async (sql: any) => {
       const [info] = await sql`
         INSERT INTO products (category_id, subcategory_id, sub_subcategory_id, brand_id, brand_name, name, slug, description, price, promo_price, stock, image, main_image_alt, video_url, is_popular, is_best_seller, is_new, is_recommended, is_fast_delivery, weight, is_active, features, key_points, faq_q1, faq_a1, faq_q2, faq_a2, variations, seo_title, seo_description, seo_keywords)
-        VALUES (${category_id || null}, ${subcategory_id || null}, ${sub_subcategory_id || null}, ${brand_id || null}, ${brand_name || null}, ${name || ''}, ${generatedSlug || ''}, ${description || null}, ${price || 0}, ${promo_price || null}, ${stock || 0}, ${image || null}, ${main_image_alt || null}, ${video_url || null}, ${is_popular ? true : false}, ${is_best_seller ? true : false}, ${is_new ? true : false}, ${is_recommended ? true : false}, ${is_fast_delivery ? true : false}, ${weight || null}, ${is_active !== undefined ? is_active : true}, ${features ? JSON.stringify(features) : null}::jsonb, ${key_points ? JSON.stringify(key_points) : null}::jsonb, ${faq_q1 || null}, ${faq_a1 || null}, ${faq_q2 || null}, ${faq_a2 || null}, ${variations ? JSON.stringify(variations) : null}::jsonb, ${seo_title || null}, ${seo_description || null}, ${seo_keywords || null})
+        VALUES (${category_id || null}, ${subcategory_id || null}, ${sub_subcategory_id || null}, ${brand_id || null}, ${brand_name || null}, ${name || ''}, ${generatedSlug || ''}, ${description || null}, ${price || 0}, ${promo_price || null}, ${stock || 0}, ${image || null}, ${main_image_alt || null}, ${video_url || null}, ${is_popular ? true : false}, ${is_best_seller ? true : false}, ${is_new ? true : false}, ${is_recommended ? true : false}, ${is_fast_delivery ? true : false}, ${weight || null}, ${is_active !== undefined ? is_active : true}, ${features ? sql.json(features) : null}, ${key_points ? sql.json(key_points) : null}, ${faq_q1 || null}, ${faq_a1 || null}, ${faq_q2 || null}, ${faq_a2 || null}, ${variations ? sql.json(variations) : null}, ${seo_title || null}, ${seo_description || null}, ${seo_keywords || null})
         RETURNING id
       `;
       
@@ -1921,13 +1921,13 @@ router.put('/admin/products/:id', authenticate, async (req, res) => {
       if (image && image.startsWith('/api/images/')) {
         await sql`
           UPDATE products 
-          SET category_id = ${category_id || null}, subcategory_id = ${subcategory_id || null}, sub_subcategory_id = ${sub_subcategory_id || null}, brand_id = ${brand_id || null}, brand_name = ${brand_name || null}, name = ${name || ''}, slug = ${slug || ''}, description = ${description || null}, price = ${price || 0}, promo_price = ${promo_price || null}, stock = ${stock || 0}, video_url = ${video_url || null}, is_popular = ${is_popular ? true : false}, is_best_seller = ${is_best_seller ? true : false}, is_new = ${is_new ? true : false}, is_recommended = ${is_recommended ? true : false}, is_fast_delivery = ${is_fast_delivery ? true : false}, weight = ${weight || null}, is_active = ${is_active !== undefined ? is_active : true}, features = ${features ? JSON.stringify(features) : null}::jsonb, key_points = ${key_points ? JSON.stringify(key_points) : null}::jsonb, faq_q1 = ${faq_q1 || null}, faq_a1 = ${faq_a1 || null}, faq_q2 = ${faq_q2 || null}, faq_a2 = ${faq_a2 || null}, variations = ${variations ? JSON.stringify(variations) : null}::jsonb, seo_title = ${seo_title || null}, seo_description = ${seo_description || null}, seo_keywords = ${seo_keywords || null}, main_image_alt = ${main_image_alt || null}
+          SET category_id = ${category_id || null}, subcategory_id = ${subcategory_id || null}, sub_subcategory_id = ${sub_subcategory_id || null}, brand_id = ${brand_id || null}, brand_name = ${brand_name || null}, name = ${name || ''}, slug = ${slug || ''}, description = ${description || null}, price = ${price || 0}, promo_price = ${promo_price || null}, stock = ${stock || 0}, video_url = ${video_url || null}, is_popular = ${is_popular ? true : false}, is_best_seller = ${is_best_seller ? true : false}, is_new = ${is_new ? true : false}, is_recommended = ${is_recommended ? true : false}, is_fast_delivery = ${is_fast_delivery ? true : false}, weight = ${weight || null}, is_active = ${is_active !== undefined ? is_active : true}, features = ${features ? sql.json(features) : null}, key_points = ${key_points ? sql.json(key_points) : null}, faq_q1 = ${faq_q1 || null}, faq_a1 = ${faq_a1 || null}, faq_q2 = ${faq_q2 || null}, faq_a2 = ${faq_a2 || null}, variations = ${variations ? sql.json(variations) : null}, seo_title = ${seo_title || null}, seo_description = ${seo_description || null}, seo_keywords = ${seo_keywords || null}, main_image_alt = ${main_image_alt || null}
           WHERE id = ${req.params.id}
         `;
       } else {
         await sql`
           UPDATE products 
-          SET category_id = ${category_id || null}, subcategory_id = ${subcategory_id || null}, sub_subcategory_id = ${sub_subcategory_id || null}, brand_id = ${brand_id || null}, brand_name = ${brand_name || null}, name = ${name || ''}, slug = ${slug || ''}, description = ${description || null}, price = ${price || 0}, promo_price = ${promo_price || null}, stock = ${stock || 0}, image = ${image || null}, video_url = ${video_url || null}, is_popular = ${is_popular ? true : false}, is_best_seller = ${is_best_seller ? true : false}, is_new = ${is_new ? true : false}, is_recommended = ${is_recommended ? true : false}, is_fast_delivery = ${is_fast_delivery ? true : false}, weight = ${weight || null}, is_active = ${is_active !== undefined ? is_active : true}, features = ${features ? JSON.stringify(features) : null}::jsonb, key_points = ${key_points ? JSON.stringify(key_points) : null}::jsonb, faq_q1 = ${faq_q1 || null}, faq_a1 = ${faq_a1 || null}, faq_q2 = ${faq_q2 || null}, faq_a2 = ${faq_a2 || null}, variations = ${variations ? JSON.stringify(variations) : null}::jsonb, seo_title = ${seo_title || null}, seo_description = ${seo_description || null}, seo_keywords = ${seo_keywords || null}, main_image_alt = ${main_image_alt || null}
+          SET category_id = ${category_id || null}, subcategory_id = ${subcategory_id || null}, sub_subcategory_id = ${sub_subcategory_id || null}, brand_id = ${brand_id || null}, brand_name = ${brand_name || null}, name = ${name || ''}, slug = ${slug || ''}, description = ${description || null}, price = ${price || 0}, promo_price = ${promo_price || null}, stock = ${stock || 0}, image = ${image || null}, video_url = ${video_url || null}, is_popular = ${is_popular ? true : false}, is_best_seller = ${is_best_seller ? true : false}, is_new = ${is_new ? true : false}, is_recommended = ${is_recommended ? true : false}, is_fast_delivery = ${is_fast_delivery ? true : false}, weight = ${weight || null}, is_active = ${is_active !== undefined ? is_active : true}, features = ${features ? sql.json(features) : null}, key_points = ${key_points ? sql.json(key_points) : null}, faq_q1 = ${faq_q1 || null}, faq_a1 = ${faq_a1 || null}, faq_q2 = ${faq_q2 || null}, faq_a2 = ${faq_a2 || null}, variations = ${variations ? sql.json(variations) : null}, seo_title = ${seo_title || null}, seo_description = ${seo_description || null}, seo_keywords = ${seo_keywords || null}, main_image_alt = ${main_image_alt || null}
           WHERE id = ${req.params.id}
         `;
       }
@@ -2164,7 +2164,7 @@ router.get('/wilayas', async (req, res) => {
   const cached = getCache(cacheKey);
   if (cached) return res.json(cached);
 
-  res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');
+  res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=360, stale-while-revalidate=86400');
   try {
     const wilayas = await sql`SELECT * FROM wilayas ORDER BY number ASC`;
     setCache(cacheKey, wilayas, 60);
@@ -2233,7 +2233,7 @@ router.get('/offices', async (req, res) => {
   const cached = getCache(cacheKey);
   if (cached) return res.json(cached);
 
-  res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');
+  res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=360, stale-while-revalidate=86400');
   try {
     const offices = await sql`SELECT * FROM offices ORDER BY wilaya ASC, name ASC`;
     setCache(cacheKey, offices, 60);
@@ -2303,7 +2303,7 @@ router.get('/communes/public', async (req, res) => {
   const cached = getCache(cacheKey);
   if (cached) return res.json(cached);
 
-  res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');
+  res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=360, stale-while-revalidate=86400');
   try {
     const communesList = await sql`SELECT wilaya, name FROM communes ORDER BY wilaya ASC, name ASC`;
     const communesDict: Record<string, string[]> = {};
@@ -2366,7 +2366,7 @@ router.delete('/admin/communes/:id', authenticate, async (req, res) => {
 // ==========================================
 
 router.get('/blog/categories', async (req, res) => {
-  res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');
+  res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=360, stale-while-revalidate=86400');
   try {
     const categories = await sql`SELECT * FROM blog_categories ORDER BY name ASC`;
     res.json(categories);
@@ -2376,7 +2376,7 @@ router.get('/blog/categories', async (req, res) => {
 });
 
 router.get('/blog/posts', async (req, res) => {
-  res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=3600');
+  res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=60, stale-while-revalidate=3600');
   try {
     const { category, search, page = '1', limit = '9' } = req.query;
     const pageNum = parseInt(page as string) || 1;
@@ -2414,7 +2414,7 @@ router.get('/blog/posts', async (req, res) => {
 });
 
 router.get('/blog/posts/:slug', async (req, res) => {
-  res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=3600');
+  res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=60, stale-while-revalidate=3600');
   try {
     const [post] = await sql`
       SELECT p.id, p.category_id, p.title, p.slug, p.excerpt, p.content, CASE WHEN p.image_url LIKE 'data:image/%' THEN '/api/images/blog_posts/' || p.id || '/image_url?v=' || LENGTH(p.image_url) ELSE p.image_url END as image_url, p.status, p.published_at, p.created_at, p.seo_title, p.seo_description, c.name as category_name, c.slug as category_slug 

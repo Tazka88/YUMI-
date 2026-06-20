@@ -733,7 +733,7 @@ export default function Product() {
             </div>
 
             {/* Key Points Section */}
-            {product.key_points && product.key_points.length > 0 && (
+            {product.key_points && Array.isArray(product.key_points) && product.key_points.length > 0 && (
               <div className="mb-6">
                 <h3 className="font-bold text-gray-800 mb-3">À propos de cet article</h3>
                 <ul className="list-disc pl-5 space-y-2 text-sm text-gray-700">

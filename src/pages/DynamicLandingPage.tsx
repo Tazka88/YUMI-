@@ -142,9 +142,10 @@ export default function DynamicLandingPage() {
   const primaryImages = [page.product_image, ...(product_images?.map((img:any) => img.image_url) || [])].filter(Boolean).slice(0, 4);
 
   const getYoutubeId = (url: string) => {
-    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
-    const match = url?.match(regExp);
-    return (match && match[2].length === 11) ? match[2] : null;
+    if (!url) return null;
+    const regExp = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?|shorts)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i;
+    const match = url.match(regExp);
+    return match ? match[1] : null;
   };
 
   const hasCustomBlocks = config?.blocks && config.blocks.length > 0;
@@ -181,6 +182,34 @@ export default function DynamicLandingPage() {
 
       {hasCustomBlocks ? (
         <div className="custom-blocks w-full bg-gray-50 flex flex-col gap-4 py-8">
+          {/* Always show product gallery at the top for landing page */}
+          <section className="bg-white py-8 lg:py-12 mx-4 lg:mx-8 rounded-3xl shadow-sm border border-gray-100 mb-4">
+            <div className="container mx-auto px-4 max-w-5xl">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+                <div className="aspect-square bg-gray-100 rounded-3xl overflow-hidden shadow-sm relative">
+                  <img src={primaryImages[0] || 'https://via.placeholder.com/800'} alt={product_name} className="w-full h-full object-cover" />
+                  {isDiscounted && (
+                    <div className="absolute top-4 left-4 bg-red-500 text-white font-bold px-3 py-1.5 rounded-full text-sm shadow-md">
+                      Promo
+                    </div>
+                  )}
+                </div>
+                <div>
+                    <h1 className="text-3xl md:text-5xl font-black text-gray-900 mb-4 leading-tight">{product_name}</h1>
+                    <div className="flex items-center gap-4 mb-6">
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-4xl font-black text-orange-600">{displayPrice} DA</span>
+                        {isDiscounted && <span className="text-xl text-gray-400 line-through font-medium">{price} DA</span>}
+                      </div>
+                    </div>
+                    <button onClick={scrollToOrder} className="bg-orange-600 hover:bg-orange-700 text-white font-black py-4 px-8 w-full rounded-2xl shadow-xl transition-transform hover:-translate-y-1 active:scale-95 text-xl flex items-center justify-center gap-3">
+                      C'EST CE QU'IL ME FAUT <ArrowRight size={24} />
+                    </button>
+                </div>
+              </div>
+            </div>
+          </section>
+          
           {config.blocks.map((block: any, idx: number) => {
             if (block.type === 'hero') {
               return (

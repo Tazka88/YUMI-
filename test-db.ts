@@ -1,18 +1,12 @@
-import { sql, setupDb } from './src/db/setup.ts';
-
+import { sql } from './src/db/setup';
 async function test() {
-  await setupDb();
   try {
-    const categories = await sql`SELECT * FROM categories`;
-    console.log('Categories:', categories.length);
-    const subcategories = await sql`SELECT * FROM subcategories`;
-    console.log('Subcategories:', subcategories.length);
-    const sub_subcategories = await sql`SELECT * FROM sub_subcategories`;
-    console.log('Sub-subcategories:', sub_subcategories.length);
-  } catch (err) {
-    console.error('Error:', err);
+    const res = await sql`SELECT 1`;
+    console.log('DB ok', res);
+    process.exit(0);
+  } catch (e) {
+    console.error('DB error', e);
+    process.exit(1);
   }
-  process.exit(0);
 }
-
 test();

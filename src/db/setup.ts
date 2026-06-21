@@ -2,22 +2,25 @@ import postgres from 'postgres';
 import fs from 'fs';
 import path from 'path';
 
-let connectionString = process.env.DATABASE_URL || 'postgresql://postgres:Lifebook88855@db.evvbhalgyffagsesmvhu.supabase.co:5432/postgres';
+const globalForPostgres = globalThis as unknown as {
+  sql: postgres.Sql | undefined;
+};
 
-// Only apply Supavisor port swap if it's a Supabase-like URL on port 5432
-if (connectionString.includes('supabase.co:5432')) {
-  connectionString = connectionString.replace(':5432', ':6543');
-}
+let connectionString = process.env.DATABASE_URL || 'postgresql://postgres:Lifebook88855@db.evvbhalgyffagsesmvhu.supabase.co:5432/postgres';
 
 console.log('Initializing PostgreSQL connection...');
 
-export const sql = postgres(connectionString, {
+export const sql = globalForPostgres.sql ?? postgres(connectionString, {
   ssl: connectionString.includes('localhost') || connectionString.includes('127.0.0.1') ? false : 'require',
   max: 15,
-  idle_timeout: 5,
-  connect_timeout: 15, // Increased timeout
+  idle_timeout: 3,
+  connect_timeout: 10,
   prepare: false,
 });
+
+if (process.env.NODE_ENV !== 'production') {
+  globalForPostgres.sql = sql;
+}
 
 export async function setupDb() {
   try {

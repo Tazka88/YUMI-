@@ -38,8 +38,7 @@ export default function LandingPagesAdmin() {
   const createLandingPage = async () => {
     if (!selectedProductId) return toast.error("Veuillez sélectionner un produit");
     
-    let productsArray = Array.isArray(products) ? products : products.products || [];
-    const product = productsArray.find((p: any) => p.id.toString() === selectedProductId);
+    const product = products.find((p: any) => p.id.toString() === selectedProductId);
     if (!product) return;
 
     const slug = customSlug.trim() || `promo-${product.slug}`;
@@ -122,8 +121,6 @@ export default function LandingPagesAdmin() {
     }
   };
 
-  let productsArray = Array.isArray(products) ? products : (products as any).products || [];
-
   return (
     <div className="space-y-8">
       {/* Create Section */}
@@ -142,7 +139,7 @@ export default function LandingPagesAdmin() {
               onChange={(e) => setSelectedProductId(e.target.value)}
             >
               <option value="">-- Choisir un produit --</option>
-              {productsArray.map((p: any) => (
+              {products.map((p: any) => (
                 <option key={p.id} value={p.id}>{p.name}</option>
               ))}
             </select>
@@ -151,7 +148,7 @@ export default function LandingPagesAdmin() {
           <div className="flex-1 w-full">
             <label className="block text-sm font-medium text-gray-700 mb-2">URL personnalisée (Optionnel)</label>
             <div className="flex items-center">
-              <span className="bg-gray-100 border border-r-0 border-gray-300 rounded-l-lg px-3 py-2 text-sm text-gray-500">/landing/</span>
+              <span className="bg-gray-100 border border-r-0 border-gray-300 rounded-l-lg px-3 py-2 text-sm text-gray-500">/lp/</span>
               <input 
                 type="text" 
                 placeholder="ex: promo-exclusive"
@@ -211,8 +208,8 @@ export default function LandingPagesAdmin() {
                       </div>
                     </td>
                     <td className="p-4">
-                      <a href={`/landing/${page.slug}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-1 text-sm bg-blue-50 px-3 py-1.5 rounded-full w-max border border-blue-100">
-                        /landing/{page.slug} <Eye size={14} />
+                      <a href={`/lp/${page.slug}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-1 text-sm bg-blue-50 px-3 py-1.5 rounded-full w-max border border-blue-100">
+                        /lp/{page.slug} <Eye size={14} />
                       </a>
                     </td>
                     <td className="p-4 text-sm text-gray-500 font-mono">
@@ -241,50 +238,171 @@ export default function LandingPagesAdmin() {
 
       {/* Edit Modal */}
       {editingPage && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-lg">
-            <h3 className="text-xl font-bold mb-4">Modifier la Landing Page</h3>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-1">Slug (URL)</label>
-                <input 
-                  type="text" 
-                  value={editingPage.slug} 
-                  onChange={e => setEditingPage({...editingPage, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-')})}
-                  className="w-full border border-gray-300 rounded-lg px-4 py-2"
-                />
+        <div className="fixed inset-0 bg-black/50 flex flex-col p-4 z-50 overflow-hidden">
+          <div className="bg-white rounded-xl shadow-xl flex flex-col w-full max-w-5xl mx-auto h-full max-h-full">
+            <div className="flex justify-between items-center p-6 border-b">
+              <h3 className="text-xl font-bold">Modifier la Landing Page</h3>
+              <button onClick={() => setEditingPage(null)} className="text-gray-500 hover:text-gray-800">Fermer</button>
+            </div>
+            
+            <div className="p-6 flex-1 overflow-y-auto bg-gray-50 flex gap-6">
+              {/* Colonne Principale */}
+              <div className="flex-1 space-y-6">
+                <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-100 space-y-4">
+                  <h4 className="font-bold text-gray-800 border-b pb-2">Informations Générales</h4>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Slug (URL)</label>
+                    <input 
+                      type="text" 
+                      value={editingPage.slug} 
+                      onChange={e => setEditingPage({...editingPage, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-')})}
+                      className="w-full border border-gray-300 rounded-lg px-4 py-2"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Titre SEO</label>
+                    <input 
+                      type="text" 
+                      value={editingPage.config?.seo_title || ''} 
+                      onChange={e => setEditingPage({...editingPage, config: {...editingPage.config, seo_title: e.target.value}})}
+                      className="w-full border border-gray-300 rounded-lg px-4 py-2"
+                    />
+                  </div>
+                </div>
+
+                <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-100 items-start">
+                    <h4 className="font-bold text-gray-800 border-b pb-2 mb-4">Structure Libre (Blocs)</h4>
+                    
+                    <div className="space-y-4">
+                      {(editingPage.config?.blocks || []).map((block: any, idx: number) => (
+                        <div key={block.id} className="border border-gray-200 rounded-lg p-4 bg-gray-50 relative">
+                          <div className="absolute top-2 right-2 flex gap-2">
+                            <button 
+                              onClick={() => {
+                                const newBlocks = [...(editingPage.config.blocks || [])];
+                                newBlocks.splice(idx, 1);
+                                setEditingPage({...editingPage, config: {...editingPage.config, blocks: newBlocks}});
+                              }}
+                              className="text-red-500 hover:bg-red-50 p-1 rounded"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
+                          
+                          <div className="font-bold text-sm text-gray-700 mb-3 uppercase tracking-wide">{block.type}</div>
+                          
+                          {block.type === 'hero' && (
+                            <div className="space-y-3">
+                              <input type="text" placeholder="Titre principal" value={block.content?.title || ''} onChange={(e) => {
+                                const newBlocks = [...editingPage.config.blocks];
+                                newBlocks[idx].content = { ...newBlocks[idx].content, title: e.target.value };
+                                setEditingPage({...editingPage, config: {...editingPage.config, blocks: newBlocks}});
+                              }} className="w-full border p-2 rounded" />
+                              <textarea placeholder="Sous-titre" value={block.content?.subtitle || ''} onChange={(e) => {
+                                const newBlocks = [...editingPage.config.blocks];
+                                newBlocks[idx].content = { ...newBlocks[idx].content, subtitle: e.target.value };
+                                setEditingPage({...editingPage, config: {...editingPage.config, blocks: newBlocks}});
+                              }} className="w-full border p-2 rounded" rows={2}></textarea>
+                            </div>
+                          )}
+
+                          {block.type === 'youtube' && (
+                            <div className="space-y-3">
+                              <input type="text" placeholder="URL YouTube (ex: https://youtu.be/xxx)" value={block.content?.url || ''} onChange={(e) => {
+                                const newBlocks = [...editingPage.config.blocks];
+                                newBlocks[idx].content = { ...newBlocks[idx].content, url: e.target.value };
+                                setEditingPage({...editingPage, config: {...editingPage.config, blocks: newBlocks}});
+                              }} className="w-full border p-2 rounded" />
+                            </div>
+                          )}
+
+                          {block.type === 'text' && (
+                            <div className="space-y-3">
+                              <textarea placeholder="Contenu textuel" value={block.content?.text || ''} onChange={(e) => {
+                                const newBlocks = [...editingPage.config.blocks];
+                                newBlocks[idx].content = { ...newBlocks[idx].content, text: e.target.value };
+                                setEditingPage({...editingPage, config: {...editingPage.config, blocks: newBlocks}});
+                              }} className="w-full border p-2 rounded" rows={4}></textarea>
+                            </div>
+                          )}
+
+                          {block.type === 'image' && (
+                            <div className="space-y-3">
+                              <input type="text" placeholder="URL de l'image" value={block.content?.url || ''} onChange={(e) => {
+                                const newBlocks = [...editingPage.config.blocks];
+                                newBlocks[idx].content = { ...newBlocks[idx].content, url: e.target.value };
+                                setEditingPage({...editingPage, config: {...editingPage.config, blocks: newBlocks}});
+                              }} className="w-full border p-2 rounded" />
+                            </div>
+                          )}
+                        </div>
+                      ))}
+
+                      {(!editingPage.config?.blocks || editingPage.config.blocks.length === 0) && (
+                        <p className="text-gray-500 text-sm italic">Aucun bloc dans la structure libre. La landing page utilisera le template par défaut.</p>
+                      )}
+                    </div>
+
+                    <div className="mt-6 border-t pt-4">
+                      <label className="text-sm font-bold text-gray-700 block mb-2">Ajouter un bloc :</label>
+                      <div className="flex flex-wrap gap-2">
+                        <button onClick={() => {
+                          setEditingPage({...editingPage, config: {...editingPage.config, blocks: [...(editingPage.config?.blocks || []), { id: Date.now(), type: 'hero', content: {} }]}});
+                        }} className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 border rounded text-sm">+ Hero Header</button>
+                        <button onClick={() => {
+                          setEditingPage({...editingPage, config: {...editingPage.config, blocks: [...(editingPage.config?.blocks || []), { id: Date.now(), type: 'youtube', content: {} }]}});
+                        }} className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 border rounded text-sm">+ Vidéo YouTube</button>
+                        <button onClick={() => {
+                          setEditingPage({...editingPage, config: {...editingPage.config, blocks: [...(editingPage.config?.blocks || []), { id: Date.now(), type: 'text', content: {} }]}});
+                        }} className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 border rounded text-sm">+ Texte Libre</button>
+                        <button onClick={() => {
+                          setEditingPage({...editingPage, config: {...editingPage.config, blocks: [...(editingPage.config?.blocks || []), { id: Date.now(), type: 'image', content: {} }]}});
+                        }} className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 border rounded text-sm">+ Image</button>
+                        <button onClick={() => {
+                          setEditingPage({...editingPage, config: {...editingPage.config, blocks: [...(editingPage.config?.blocks || []), { id: Date.now(), type: 'reviews', content: {} }]}});
+                        }} className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 border rounded text-sm">+ Avis Clients</button>
+                        <button onClick={() => {
+                          setEditingPage({...editingPage, config: {...editingPage.config, blocks: [...(editingPage.config?.blocks || []), { id: Date.now(), type: 'faq', content: {} }]}});
+                        }} className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 border rounded text-sm">+ FAQ (Auto)</button>
+                        <button onClick={() => {
+                          setEditingPage({...editingPage, config: {...editingPage.config, blocks: [...(editingPage.config?.blocks || []), { id: Date.now(), type: 'cta', content: {} }]}});
+                        }} className="px-3 py-1.5 bg-orange-100 text-orange-700 hover:bg-orange-200 border border-orange-200 rounded text-sm font-bold">+ Bouton Commander</button>
+                      </div>
+                    </div>
+                </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Titre de couverture</label>
-                <input 
-                  type="text" 
-                  value={editingPage.config?.hero_title || ''} 
-                  onChange={e => setEditingPage({...editingPage, config: {...editingPage.config, hero_title: e.target.value}})}
-                  className="w-full border border-gray-300 rounded-lg px-4 py-2"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Sous-titre / Description</label>
-                <textarea 
-                  value={editingPage.config?.hero_subtitle || ''} 
-                  onChange={e => setEditingPage({...editingPage, config: {...editingPage.config, hero_subtitle: e.target.value}})}
-                  className="w-full border border-gray-300 rounded-lg px-4 py-2"
-                  rows={3}
-                ></textarea>
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Titre SEO (Optionnel)</label>
-                <input 
-                  type="text" 
-                  value={editingPage.config?.seo_title || ''} 
-                  onChange={e => setEditingPage({...editingPage, config: {...editingPage.config, seo_title: e.target.value}})}
-                  className="w-full border border-gray-300 rounded-lg px-4 py-2"
-                />
+
+              {/* Colonne Latérale */}
+              <div className="w-80 space-y-6">
+                <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
+                   <h4 className="font-bold text-gray-800 border-b pb-2 mb-4">Statut de la page</h4>
+                   <label className="flex items-center gap-3 cursor-pointer">
+                     <input 
+                      type="checkbox" 
+                      className="w-5 h-5 form-checkbox text-orange-500 rounded border-gray-300"
+                      checked={editingPage.config?.is_published !== false}
+                      onChange={(e) => setEditingPage({...editingPage, config: {...editingPage.config, is_published: e.target.checked}})}
+                     />
+                     <span className="font-medium text-gray-700">Publié (En ligne)</span>
+                   </label>
+                </div>
+                
+                <div className="bg-white p-5 rounded-xl text-sm shadow-sm border border-gray-100">
+                  <h4 className="font-bold text-gray-800 mb-2 border-b pb-2">Astuces</h4>
+                  <ul className="list-disc pl-4 space-y-2 text-gray-600">
+                    <li>Utilisez le bloc <strong>Bouton Commander</strong> pour ouvrir automatiquement le formulaire d'achat optimisé sans redirection.</li>
+                    <li>Les blocs <strong>Avis Clients</strong> et <strong>FAQ</strong> se remplissent automatiquement avec les données du produit rattaché !</li>
+                    <li>S'il n'y a <strong>aucun bloc</strong>, le design premium par défaut sera affiché.</li>
+                  </ul>
+                </div>
               </div>
             </div>
-            <div className="flex justify-end gap-3 mt-6">
-              <button onClick={() => setEditingPage(null)} className="px-4 py-2 text-gray-500 hover:bg-gray-100 rounded-lg">Annuler</button>
-              <button onClick={saveEdit} className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600">Enregistrer</button>
+
+            <div className="p-6 border-t flex justify-end gap-3 bg-white">
+              <button onClick={() => setEditingPage(null)} className="px-6 py-2.5 text-gray-600 font-medium hover:bg-gray-100 rounded-lg">Annuler</button>
+              <button onClick={saveEdit} className="px-6 py-2.5 bg-orange-500 font-bold text-white rounded-lg hover:bg-orange-600 shadow-sm flex items-center gap-2">
+                <CheckCircle2 size={18} /> Enregistrer la page
+              </button>
             </div>
           </div>
         </div>

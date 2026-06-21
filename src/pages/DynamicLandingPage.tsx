@@ -105,7 +105,7 @@ export default function DynamicLandingPage() {
     return <div className="min-h-screen flex items-center justify-center bg-gray-50"><div className="w-12 h-12 border-4 border-orange-500 border-t-transparent flex rounded-full animate-spin"></div></div>;
   }
 
-  if (!page) {
+  if (!page || page.config?.is_published === false) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 text-center px-4">
         <Package className="w-20 h-20 text-gray-300 mb-6" />
@@ -141,6 +141,14 @@ export default function DynamicLandingPage() {
 
   const primaryImages = [page.product_image, ...(product_images?.map((img:any) => img.image_url) || [])].filter(Boolean).slice(0, 4);
 
+  const getYoutubeId = (url: string) => {
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+    const match = url?.match(regExp);
+    return (match && match[2].length === 11) ? match[2] : null;
+  };
+
+  const hasCustomBlocks = config?.blocks && config.blocks.length > 0;
+
   return (
     <div className="font-sans antialiased text-gray-800 bg-white selection:bg-orange-200">
       <Helmet>
@@ -171,236 +179,351 @@ export default function DynamicLandingPage() {
         )}
       </AnimatePresence>
 
-      {/* Hero Section */}
-      <section className="bg-white pt-6 pb-12 lg:pt-16 lg:pb-24">
-        <div className="container mx-auto px-4 max-w-6xl">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-center">
-            
-            {/* Gallery Area */}
-            <motion.div 
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="relative order-1"
-            >
-              <div className="relative rounded-3xl overflow-hidden shadow-2xl bg-gray-50 border border-gray-100 aspect-square flex items-center justify-center">
-                <img 
-                  src={primaryImages[0]} 
-                  alt={product_name} 
-                  className="w-full h-full object-cover mix-blend-multiply"
-                />
-                {isDiscounted && (
-                  <div className="absolute top-4 left-4 bg-red-600 text-white font-black text-xl px-4 py-2 rounded-xl shadow-lg transform -rotate-2">
-                    -{discountPercent}%
-                  </div>
-                )}
-                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-white/90 backdrop-blur-sm px-4 py-2 rounded-full shadow-md text-sm font-bold text-gray-800 flex items-center gap-2">
-                  <span className="relative flex h-3 w-3">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
-                  </span>
-                  En Stock
-                </div>
-              </div>
-              
-              {/* Mini Thumbnails */}
-              {primaryImages.length > 1 && (
-                <div className="grid grid-cols-4 gap-3 mt-4">
-                  {primaryImages.slice(1, 4).map((img, idx) => (
-                    <div key={idx} className="aspect-square rounded-xl overflow-hidden border-2 border-gray-100 shadow-sm">
-                      <img src={img} className="w-full h-full object-cover" alt="Detail" />
+      {hasCustomBlocks ? (
+        <div className="custom-blocks w-full bg-gray-50 flex flex-col gap-4 py-8">
+          {config.blocks.map((block: any, idx: number) => {
+            if (block.type === 'hero') {
+              return (
+                <section key={idx} className="bg-white py-16 lg:py-24 relative overflow-hidden rounded-3xl mx-4 lg:mx-8 shadow-sm border border-gray-100">
+                  <div className="container mx-auto px-4 max-w-5xl text-center relative z-10 flex flex-col items-center">
+                    <div className="inline-flex items-center gap-1.5 text-orange-600 font-bold mb-6 bg-orange-50 px-4 py-2 rounded-full text-sm border border-orange-100">
+                      <Zap size={16} fill="currentColor" /> {isDiscounted ? "OFFRE LIMITÉE" : "NOUVEAUTÉ"}
                     </div>
-                  ))}
-                </div>
-              )}
-            </motion.div>
-
-            {/* Content Area */}
-            <motion.div 
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="order-2 text-center lg:text-left"
-            >
-              <div className="inline-flex items-center gap-1.5 text-orange-600 font-bold mb-4 bg-orange-50 px-3 py-1.5 rounded-lg text-sm border border-orange-100">
-                <Star size={16} fill="currentColor" /> {product_reviews?.length > 0 ? `${product_reviews.length} Avis clients` : 'Plus de 500+ clients satisfaits'}
-              </div>
-              
-              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black text-gray-900 mb-6 leading-[1.1] tracking-tight">
-                {config.hero_title || product_name}
-              </h1>
-              
-              <p className="text-lg text-gray-600 mb-8 whitespace-pre-line leading-relaxed max-w-xl mx-auto lg:mx-0">
-                {config.hero_subtitle || product_description?.substring(0, 250) + '...'}
-              </p>
-
-              <div className="bg-gray-50 rounded-2xl p-6 mb-8 border border-gray-100 relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-orange-500/10 rounded-full blur-3xl -mr-10 -mt-10"></div>
-                <div className="relative z-10 flex flex-col sm:flex-row items-center justify-center lg:justify-between gap-6">
-                  <div className="text-center sm:text-left">
-                    <div className="text-sm font-bold text-gray-500 uppercase tracking-widest mb-1">Prix Spécial</div>
-                    <div className="flex items-end justify-center sm:justify-start gap-3">
-                      {isDiscounted && (
-                        <span className="text-gray-400 line-through text-2xl font-medium mb-1">{price} DA</span>
-                      )}
-                      <span className="text-5xl font-black text-orange-600 tracking-tight">{displayPrice} DA</span>
+                    <h1 className="text-4xl md:text-5xl lg:text-7xl font-black text-gray-900 mb-6 leading-[1.1] tracking-tight">{block.content?.title || product_name}</h1>
+                    <p className="text-lg md:text-2xl text-gray-600 mb-10 leading-relaxed max-w-3xl mx-auto">{block.content?.subtitle}</p>
+                    <button onClick={scrollToOrder} className="bg-orange-600 hover:bg-orange-700 text-white font-black py-5 px-12 rounded-2xl shadow-[0_10px_40px_rgba(234,88,12,0.4)] transition-transform hover:-translate-y-1 active:scale-95 text-xl lg:text-2xl inline-flex items-center gap-3">
+                      COMMANDER MAINTENANT <ArrowRight size={28} />
+                    </button>
+                    {isDiscounted && (
+                      <p className="mt-4 text-sm font-bold text-red-500">
+                        Seulement {displayPrice} DA au lieu de <span className="line-through">{price} DA</span>
+                      </p>
+                    )}
+                  </div>
+                </section>
+              );
+            } else if (block.type === 'youtube') {
+              const videoId = getYoutubeId(block.content?.url);
+              if (!videoId) return null;
+              return (
+                <section key={idx} className="bg-transparent py-4 mx-4 lg:mx-8">
+                  <div className="container mx-auto px-0 max-w-5xl">
+                    <div className="aspect-video rounded-3xl overflow-hidden shadow-xl border-4 border-white bg-black">
+                      <iframe width="100%" height="100%" src={`https://www.youtube.com/embed/${videoId}?rel=0`} title="YouTube video player" frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen></iframe>
+                    </div>
+                  </div>
+                </section>
+              );
+            } else if (block.type === 'text') {
+              return (
+                <section key={idx} className="py-12 bg-white rounded-3xl mx-4 lg:mx-8 shadow-sm border border-gray-100">
+                  <div className="container mx-auto px-6 max-w-4xl text-gray-700 text-lg md:text-xl leading-relaxed whitespace-pre-line">
+                    {block.content?.text}
+                  </div>
+                </section>
+              );
+            } else if (block.type === 'image') {
+              return block.content?.url ? (
+                <section key={idx} className="py-4 bg-transparent mx-4 lg:mx-8 flex justify-center">
+                  <div className="container mx-auto px-0 max-w-4xl">
+                    <img src={block.content.url} alt="" className="w-full h-auto rounded-3xl shadow-md border-4 border-white" />
+                  </div>
+                </section>
+              ) : null;
+            } else if (block.type === 'reviews') {
+              if (!product_reviews || product_reviews.length === 0) return null;
+              return (
+                <section key={idx} className="py-16 bg-white rounded-3xl mx-4 lg:mx-8 shadow-sm border border-gray-100">
+                  <div className="container mx-auto px-6 max-w-5xl">
+                    <div className="text-center mb-12">
+                      <h2 className="text-3xl lg:text-4xl font-black text-gray-900 mb-4">L'avis de nos clients</h2>
+                      <div className="flex justify-center text-orange-400"><Star fill="currentColor"/><Star fill="currentColor"/><Star fill="currentColor"/><Star fill="currentColor"/><Star fill="currentColor"/></div>
+                    </div>
+                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {product_reviews.slice(0, 3).map((review: any) => (
+                        <div key={review.id} className="bg-gray-50 p-6 rounded-2xl border border-gray-100 relative">
+                           <div className="flex items-center gap-1 text-orange-500 mb-3">
+                             {[...Array(review.rating)].map((_, i) => <Star key={i} size={16} fill="currentColor" />)}
+                           </div>
+                           <p className="italic text-gray-700 mb-4 text-sm">"{review.comment}"</p>
+                           <div className="flex items-center gap-3 mt-auto">
+                             <div className="font-bold text-gray-900">{review.customer_name}</div>
+                             <CheckCircle size={14} className="text-green-500" />
+                           </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </section>
+              );
+            } else if (block.type === 'faq') {
+              return (
+                <section key={idx} className="py-16 bg-white rounded-3xl mx-4 lg:mx-8 shadow-sm border border-gray-100">
+                  <div className="container mx-auto px-6 max-w-3xl">
+                    <h2 className="text-3xl font-black text-gray-900 mb-8 text-center">Questions Fréquentes</h2>
+                    <div className="space-y-3">
+                      {parsedFaqs.map((faq, i) => (
+                         <div key={i} className="bg-gray-50 rounded-xl p-5 border border-gray-100">
+                           <h3 className="font-bold text-gray-900 mb-2">{faq.q}</h3>
+                           <p className="text-gray-600 text-sm">{faq.a}</p>
+                         </div>
+                      ))}
+                    </div>
+                  </div>
+                </section>
+              );
+            } else if (block.type === 'cta') {
+              return (
+                <section key={idx} className="py-12 bg-orange-50 text-center mx-4 lg:mx-8 rounded-3xl border border-orange-100 mb-8">
+                  <div className="container mx-auto px-4">
+                    <button onClick={scrollToOrder} className="bg-orange-600 hover:bg-orange-700 text-white font-black py-4 px-10 rounded-2xl shadow-xl transition-transform hover:-translate-y-1 active:scale-95 text-xl flex items-center justify-center gap-3 mx-auto w-full md:w-auto">
+                      JE COMMANDE MAINTENANT <ArrowRight size={24} />
+                    </button>
+                    <div className="flex items-center justify-center gap-6 mt-6 flex-wrap">
+                       <span className="flex items-center gap-1 text-sm font-bold text-orange-800"><Truck size={16}/> Livraison Rapide</span>
+                       <span className="flex items-center gap-1 text-sm font-bold text-gray-600"><CheckCircle size={16} className="text-green-500"/> Paiement à la réception</span>
+                    </div>
+                  </div>
+                </section>
+              );
+            }
+            return null;
+          })}
+        </div>
+      ) : (
+        <>
+          {/* Hero Section */}
+          <section className="bg-white pt-6 pb-12 lg:pt-16 lg:pb-24">
+            <div className="container mx-auto px-4 max-w-6xl">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-center">
+                
+                {/* Gallery Area */}
+                <motion.div 
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  className="relative order-1"
+                >
+                  <div className="relative rounded-3xl overflow-hidden shadow-2xl bg-gray-50 border border-gray-100 aspect-square flex items-center justify-center">
+                    <img 
+                      src={primaryImages[0]} 
+                      alt={product_name} 
+                      className="w-full h-full object-cover mix-blend-multiply"
+                    />
+                    {isDiscounted && (
+                      <div className="absolute top-4 left-4 bg-red-600 text-white font-black text-xl px-4 py-2 rounded-xl shadow-lg transform -rotate-2">
+                        -{discountPercent}%
+                      </div>
+                    )}
+                    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-white/90 backdrop-blur-sm px-4 py-2 rounded-full shadow-md text-sm font-bold text-gray-800 flex items-center gap-2">
+                      <span className="relative flex h-3 w-3">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+                      </span>
+                      En Stock
                     </div>
                   </div>
                   
-                  <button 
-                    onClick={scrollToOrder} 
-                    className="w-full sm:w-auto bg-orange-500 hover:bg-orange-600 text-white font-black py-4 px-8 rounded-xl shadow-[0_8px_20px_rgba(249,115,22,0.3)] transition-all hover:-translate-y-1 active:translate-y-0 text-xl flex items-center justify-center gap-3 whitespace-nowrap"
-                  >
-                    COMMANDER <ArrowRight size={24} />
+                  {/* Mini Thumbnails */}
+                  {primaryImages.length > 1 && (
+                    <div className="grid grid-cols-4 gap-3 mt-4">
+                      {primaryImages.slice(1, 4).map((img, idx) => (
+                        <div key={idx} className="aspect-square rounded-xl overflow-hidden border-2 border-gray-100 shadow-sm">
+                          <img src={img} className="w-full h-full object-cover" alt="Detail" />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </motion.div>
+
+                {/* Content Area */}
+                <motion.div 
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  className="order-2 text-center lg:text-left"
+                >
+                  <div className="inline-flex items-center gap-1.5 text-orange-600 font-bold mb-4 bg-orange-50 px-3 py-1.5 rounded-lg text-sm border border-orange-100">
+                    <Star size={16} fill="currentColor" /> {product_reviews?.length > 0 ? `${product_reviews.length} Avis clients` : 'Plus de 500+ clients satisfaits'}
+                  </div>
+                  
+                  <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black text-gray-900 mb-6 leading-[1.1] tracking-tight">
+                    {config.hero_title || product_name}
+                  </h1>
+                  
+                  <p className="text-lg text-gray-600 mb-8 whitespace-pre-line leading-relaxed max-w-xl mx-auto lg:mx-0">
+                    {config.hero_subtitle || product_description?.substring(0, 250) + '...'}
+                  </p>
+
+                  <div className="bg-gray-50 rounded-2xl p-6 mb-8 border border-gray-100 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-orange-500/10 rounded-full blur-3xl -mr-10 -mt-10"></div>
+                    <div className="relative z-10 flex flex-col sm:flex-row items-center justify-center lg:justify-between gap-6">
+                      <div className="text-center sm:text-left">
+                        <div className="text-sm font-bold text-gray-500 uppercase tracking-widest mb-1">Prix Spécial</div>
+                        <div className="flex items-end justify-center sm:justify-start gap-3">
+                          {isDiscounted && (
+                            <span className="text-gray-400 line-through text-2xl font-medium mb-1">{price} DA</span>
+                          )}
+                          <span className="text-5xl font-black text-orange-600 tracking-tight">{displayPrice} DA</span>
+                        </div>
+                      </div>
+                      
+                      <button 
+                        onClick={scrollToOrder} 
+                        className="w-full sm:w-auto bg-orange-500 hover:bg-orange-600 text-white font-black py-4 px-8 rounded-xl shadow-[0_8px_20px_rgba(249,115,22,0.3)] transition-all hover:-translate-y-1 active:translate-y-0 text-xl flex items-center justify-center gap-3 whitespace-nowrap"
+                      >
+                        COMMANDER <ArrowRight size={24} />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Trust badges row */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-2 border-t border-gray-100">
+                    <div className="flex flex-col items-center justify-center text-center gap-2">
+                      <div className="bg-blue-50 text-blue-600 p-3 rounded-full"><ShieldCheck size={24} /></div>
+                      <span className="text-xs font-bold text-gray-700">Garantie 1 An</span>
+                    </div>
+                    <div className="flex flex-col items-center justify-center text-center gap-2">
+                      <div className="bg-green-50 text-green-600 p-3 rounded-full"><CreditCard size={24} /></div>
+                      <span className="text-xs font-bold text-gray-700">Paiement à la livraison</span>
+                    </div>
+                    <div className="flex flex-col items-center justify-center text-center gap-2">
+                      <div className="bg-purple-50 text-purple-600 p-3 rounded-full"><Truck size={24} /></div>
+                      <span className="text-xs font-bold text-gray-700">Livraison 58 Wilayas</span>
+                    </div>
+                    <div className="flex flex-col items-center justify-center text-center gap-2">
+                      <div className="bg-orange-50 text-orange-600 p-3 rounded-full"><Clock size={24} /></div>
+                      <span className="text-xs font-bold text-gray-700">Support 7/7</span>
+                    </div>
+                  </div>
+                </motion.div>
+              </div>
+            </div>
+          </section>
+
+          {/* Trust Strip */}
+          <div className="bg-gray-900 border-y border-gray-800 py-6 overflow-hidden">
+            <div className="container mx-auto px-4">
+              <div className="flex flex-wrap justify-center gap-8 md:gap-16 items-center text-white/90">
+                <div className="flex items-center gap-3"><CheckCircle className="text-green-400" size={24} /><span className="font-bold tracking-wide">QUALITÉ PREMIUM</span></div>
+                <div className="flex items-center gap-3"><CheckCircle className="text-green-400" size={24} /><span className="font-bold tracking-wide">SATISFAIT OU REMBOURSÉ</span></div>
+                <div className="flex items-center gap-3"><CheckCircle className="text-green-400" size={24} /><span className="font-bold tracking-wide">PAIEMENT SÉCURISÉ</span></div>
+              </div>
+            </div>
+          </div>
+
+          {/* Key Benefits */}
+          {(key_points && Array.isArray(key_points) && key_points.length > 0) && (
+            <section className="py-20 bg-gray-50">
+              <div className="container mx-auto px-4 max-w-5xl">
+                <div className="text-center mb-16">
+                  <h2 className="text-3xl md:text-5xl font-black text-gray-900 mb-4 tracking-tight">Ce qui rend ce produit unique</h2>
+                  <div className="w-24 h-1.5 bg-orange-500 mx-auto rounded-full"></div>
+                </div>
+                
+                <div className="grid gap-6 md:grid-cols-2">
+                  {key_points.map((pt: string, idx: number) => (
+                    <motion.div 
+                      initial={{ opacity: 0, y: 20 }}
+                      whileInView={{ opacity: 1, y: 0 }}
+                      viewport={{ once: true }}
+                      transition={{ delay: idx * 0.1 }}
+                      key={idx} 
+                      className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-start gap-5 hover:shadow-md transition-shadow"
+                    >
+                      <div className="bg-orange-100 text-orange-600 p-3 rounded-xl shrink-0">
+                        <CheckCircle size={24} />
+                      </div>
+                      <div>
+                        <h3 className="font-bold text-lg text-gray-900 mb-1">Avantage #{idx + 1}</h3>
+                        <p className="text-gray-600 leading-relaxed">{pt}</p>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+                
+                <div className="text-center mt-12">
+                  <button onClick={scrollToOrder} className="bg-gray-900 hover:bg-black text-white px-8 py-4 rounded-xl font-bold shadow-lg transition-colors flex items-center gap-2 mx-auto">
+                    <Truck size={20} /> Obtenir ce produit maintenant
                   </button>
                 </div>
               </div>
+            </section>
+          )}
 
-              {/* Trust badges row */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-2 border-t border-gray-100">
-                <div className="flex flex-col items-center justify-center text-center gap-2">
-                  <div className="bg-blue-50 text-blue-600 p-3 rounded-full"><ShieldCheck size={24} /></div>
-                  <span className="text-xs font-bold text-gray-700">Garantie 1 An</span>
+          {/* Social Proof / Reviews */}
+          {product_reviews && product_reviews.length > 0 && (
+            <section className="py-20 bg-white">
+              <div className="container mx-auto px-4 max-w-6xl">
+                <div className="mb-16 text-center">
+                  <h2 className="text-3xl md:text-5xl font-black text-gray-900 mb-4 tracking-tight">Déjà approuvé par nos clients</h2>
+                  <div className="flex justify-center items-center gap-1 text-orange-400 mb-2">
+                    <Star fill="currentColor" /><Star fill="currentColor" /><Star fill="currentColor" /><Star fill="currentColor" /><Star fill="currentColor" />
+                  </div>
+                  <p className="text-gray-500 font-medium">Note moyenne de 4.9/5 basée sur +400 avis</p>
                 </div>
-                <div className="flex flex-col items-center justify-center text-center gap-2">
-                  <div className="bg-green-50 text-green-600 p-3 rounded-full"><CreditCard size={24} /></div>
-                  <span className="text-xs font-bold text-gray-700">Paiement à la livraison</span>
-                </div>
-                <div className="flex flex-col items-center justify-center text-center gap-2">
-                  <div className="bg-purple-50 text-purple-600 p-3 rounded-full"><Truck size={24} /></div>
-                  <span className="text-xs font-bold text-gray-700">Livraison 58 Wilayas</span>
-                </div>
-                <div className="flex flex-col items-center justify-center text-center gap-2">
-                  <div className="bg-orange-50 text-orange-600 p-3 rounded-full"><Clock size={24} /></div>
-                  <span className="text-xs font-bold text-gray-700">Support 7/7</span>
+
+                <div className="grid md:grid-cols-3 gap-8">
+                  {product_reviews.slice(0, 3).map((review: any) => (
+                    <div key={review.id} className="bg-gray-50 p-8 rounded-3xl border border-gray-100 relative">
+                      <div className="absolute top-6 right-6 text-orange-200">
+                        <ThumbsUp size={40} />
+                      </div>
+                      <div className="flex items-center gap-1 text-orange-500 mb-4">
+                        {[...Array(review.rating)].map((_, i) => <Star key={i} size={18} fill="currentColor" />)}
+                      </div>
+                      <p className="italic text-gray-700 mb-6 relative z-10 leading-relaxed">"{review.comment}"</p>
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center font-bold text-gray-500">
+                          {review.customer_name?.charAt(0) || 'A'}
+                        </div>
+                        <div>
+                          <h4 className="font-bold text-gray-900">{review.customer_name}</h4>
+                          <p className="text-xs text-green-600 font-bold flex items-center gap-1">
+                            <CheckCircle size={12} /> Achat vérifié
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
-            </motion.div>
-          </div>
-        </div>
-      </section>
+            </section>
+          )}
 
-      {/* Trust Strip */}
-      <div className="bg-gray-900 border-y border-gray-800 py-6 overflow-hidden">
-        <div className="container mx-auto px-4">
-          <div className="flex flex-wrap justify-center gap-8 md:gap-16 items-center text-white/90">
-            <div className="flex items-center gap-3"><CheckCircle className="text-green-400" size={24} /><span className="font-bold tracking-wide">QUALITÉ PREMIUM</span></div>
-            <div className="flex items-center gap-3"><CheckCircle className="text-green-400" size={24} /><span className="font-bold tracking-wide">SATISFAIT OU REMBOURSÉ</span></div>
-            <div className="flex items-center gap-3"><CheckCircle className="text-green-400" size={24} /><span className="font-bold tracking-wide">PAIEMENT SÉCURISÉ</span></div>
-          </div>
-        </div>
-      </div>
-
-      {/* Key Benefits */}
-      {(key_points && Array.isArray(key_points) && key_points.length > 0) && (
-        <section className="py-20 bg-gray-50">
-          <div className="container mx-auto px-4 max-w-5xl">
-            <div className="text-center mb-16">
-              <h2 className="text-3xl md:text-5xl font-black text-gray-900 mb-4 tracking-tight">Ce qui rend ce produit unique</h2>
-              <div className="w-24 h-1.5 bg-orange-500 mx-auto rounded-full"></div>
-            </div>
-            
-            <div className="grid gap-6 md:grid-cols-2">
-              {key_points.map((pt: string, idx: number) => (
-                <motion.div 
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: idx * 0.1 }}
-                  key={idx} 
-                  className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-start gap-5 hover:shadow-md transition-shadow"
-                >
-                  <div className="bg-orange-100 text-orange-600 p-3 rounded-xl shrink-0">
-                    <CheckCircle size={24} />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-lg text-gray-900 mb-1">Avantage #{idx + 1}</h3>
-                    <p className="text-gray-600 leading-relaxed">{pt}</p>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-            
-            <div className="text-center mt-12">
-              <button onClick={scrollToOrder} className="bg-gray-900 hover:bg-black text-white px-8 py-4 rounded-xl font-bold shadow-lg transition-colors flex items-center gap-2 mx-auto">
-                <Truck size={20} /> Obtenir ce produit maintenant
-              </button>
-            </div>
-          </div>
-        </section>
-      )}
-
-      {/* Social Proof / Reviews */}
-      {product_reviews && product_reviews.length > 0 && (
-        <section className="py-20 bg-white">
-          <div className="container mx-auto px-4 max-w-6xl">
-            <div className="mb-16 text-center">
-              <h2 className="text-3xl md:text-5xl font-black text-gray-900 mb-4 tracking-tight">Déjà approuvé par nos clients</h2>
-              <div className="flex justify-center items-center gap-1 text-orange-400 mb-2">
-                <Star fill="currentColor" /><Star fill="currentColor" /><Star fill="currentColor" /><Star fill="currentColor" /><Star fill="currentColor" />
+          {/* FAQ Section */}
+          <section className="py-20 bg-gray-50 border-t border-gray-100">
+            <div className="container mx-auto px-4 max-w-3xl">
+              <div className="text-center mb-12">
+                <h2 className="text-3xl font-black text-gray-900 mb-4">Questions Fréquentes</h2>
               </div>
-              <p className="text-gray-500 font-medium">Note moyenne de 4.9/5 basée sur +400 avis</p>
-            </div>
-
-            <div className="grid md:grid-cols-3 gap-8">
-              {product_reviews.slice(0, 3).map((review: any) => (
-                <div key={review.id} className="bg-gray-50 p-8 rounded-3xl border border-gray-100 relative">
-                  <div className="absolute top-6 right-6 text-orange-200">
-                    <ThumbsUp size={40} />
-                  </div>
-                  <div className="flex items-center gap-1 text-orange-500 mb-4">
-                    {[...Array(review.rating)].map((_, i) => <Star key={i} size={18} fill="currentColor" />)}
-                  </div>
-                  <p className="italic text-gray-700 mb-6 relative z-10 leading-relaxed">"{review.comment}"</p>
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center font-bold text-gray-500">
-                      {review.customer_name?.charAt(0) || 'A'}
-                    </div>
-                    <div>
-                      <h4 className="font-bold text-gray-900">{review.customer_name}</h4>
-                      <p className="text-xs text-green-600 font-bold flex items-center gap-1">
-                        <CheckCircle size={12} /> Achat vérifié
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
-
-      {/* FAQ Section */}
-      <section className="py-20 bg-gray-50 border-t border-gray-100">
-        <div className="container mx-auto px-4 max-w-3xl">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-black text-gray-900 mb-4">Questions Fréquentes</h2>
-          </div>
-          <div className="space-y-4">
-            {parsedFaqs.map((faq, idx) => (
-              <div key={idx} className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
-                <button 
-                  onClick={() => setActiveFaq(activeFaq === idx ? null : idx)}
-                  className="w-full px-6 py-5 flex items-center justify-between text-left font-bold text-gray-900 hover:bg-gray-50 transition-colors"
-                >
-                  {faq.q}
-                  <ChevronDown className={`transform transition-transform ${activeFaq === idx ? 'rotate-180' : ''}`} />
-                </button>
-                <AnimatePresence>
-                  {activeFaq === idx && (
-                    <motion.div 
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: 'auto', opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      className="px-6 pb-5 text-gray-600 leading-relaxed bg-white"
+              <div className="space-y-4">
+                {parsedFaqs.map((faq, idx) => (
+                  <div key={idx} className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
+                    <button 
+                      onClick={() => setActiveFaq(activeFaq === idx ? null : idx)}
+                      className="w-full px-6 py-5 flex items-center justify-between text-left font-bold text-gray-900 hover:bg-gray-50 transition-colors"
                     >
-                      {faq.a}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+                      {faq.q}
+                      <ChevronDown className={`transform transition-transform ${activeFaq === idx ? 'rotate-180' : ''}`} />
+                    </button>
+                    <AnimatePresence>
+                      {activeFaq === idx && (
+                        <motion.div 
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: 'auto', opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          className="px-6 pb-5 text-gray-600 leading-relaxed bg-white"
+                        >
+                          {faq.a}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-        </div>
-      </section>
+            </div>
+          </section>
+        </>
+      )}
 
       {/* Checkout / Order Form Section */}
       <section id="order-form" className="py-20 lg:py-24 bg-gray-900 relative overflow-hidden">

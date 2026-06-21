@@ -85,7 +85,7 @@ export default function App() {
         <Route path="/admin-7xK9pL2q/*" element={<AdminDashboard />} />
         <Route path="/admin/*" element={<Navigate to="/" replace />} />
         <Route path="/lp/oneblade" element={<OneBladeLandingPage />} />
-        <Route path="/landing/:slug" element={<DynamicLandingPage />} />
+        <Route path="/lp/:slug" element={<DynamicLandingPage />} />
       </Routes>
       </Suspense>
     </BrowserRouter>

@@ -110,7 +110,7 @@ const getSharp = async () => {
 };
 
 // Helper to serve image data directly without CPU intensive sharp usage or Regex at runtime
-const serveImageData = async (res: any, imageData: string, targetWidth?: number, cacheControl = 'public, max-age=0, s-maxage=60, stale-while-revalidate=300') => {
+const serveImageData = async (res: any, imageData: string, targetWidth?: number, cacheControl = 'public, max-age=31536000, immutable') => {
   if (imageData.startsWith('data:image/')) {
     // Avoid RegExp on potentially megabytes of base64 data to save Active CPU
     const commaIndex = imageData.indexOf(',');
@@ -123,10 +123,9 @@ const serveImageData = async (res: any, imageData: string, targetWidth?: number,
       const buffer = Buffer.from(base64Data, 'base64');
       
       res.setHeader('Content-Type', `image/${ext === 'svg+xml' ? 'svg+xml' : ext}`);
-      // Agressive CDN caching for Vercel Edge layer (s-maxage) 
       res.setHeader('Cache-Control', cacheControl);
-      res.setHeader('Vercel-CDN-Cache-Control', 'max-age=0, s-maxage=60, stale-while-revalidate=300');
-      res.setHeader('CDN-Cache-Control', 'max-age=0, s-maxage=60, stale-while-revalidate=300');
+      res.setHeader('Vercel-CDN-Cache-Control', 'max-age=31536000, immutable');
+      res.setHeader('CDN-Cache-Control', 'max-age=31536000, immutable');
       
       return res.send(buffer);
     }
@@ -141,8 +140,8 @@ const serveImageData = async (res: any, imageData: string, targetWidth?: number,
         res.setHeader('Content-Type', resp.headers.get('content-type') || 'image/webp');
         res.setHeader('Cache-Control', cacheControl);
         // Instruct Vercel Edge to cache this for 30 days
-        res.setHeader('Vercel-CDN-Cache-Control', 'max-age=0, s-maxage=60, stale-while-revalidate=300');
-        res.setHeader('CDN-Cache-Control', 'max-age=0, s-maxage=60, stale-while-revalidate=300');
+        res.setHeader('Vercel-CDN-Cache-Control', 'max-age=31536000, immutable');
+        res.setHeader('CDN-Cache-Control', 'max-age=31536000, immutable');
         return res.send(Buffer.from(arrayBuffer));
       } else if (resp.status === 402) {
         // Supabase specific Error for Egress Quota Exceeded

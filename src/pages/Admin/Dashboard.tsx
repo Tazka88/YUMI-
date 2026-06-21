@@ -2359,10 +2359,9 @@ export default function AdminDashboard() {
                 </div>
                 
                 {/* Pagination */}
-                {totalPages > 1 && (
                   <div className="px-6 py-4 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-4 bg-white">
                     <div className="text-sm text-gray-500">
-                      Affichage de la page <span className="font-medium">{currentPage}</span> sur <span className="font-medium">{totalPages}</span>
+                      Affichage de la page <span className="font-medium">{currentPage}</span> sur <span className="font-medium">{Math.max(1, totalPages)}</span>
                     </div>
                     <div className="flex flex-col sm:flex-row items-center gap-4">
                       <div className="flex items-center gap-2">
@@ -2384,25 +2383,26 @@ export default function AdminDashboard() {
                       <div className="flex gap-2">
                         <button
                           onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                          disabled={currentPage === 1}
-                          className={`px-4 py-2 text-sm font-medium rounded-md border ${currentPage === 1 ? 'border-gray-200 text-gray-400 bg-gray-50 cursor-not-allowed' : 'border-gray-300 text-gray-700 bg-white hover:bg-gray-50 transition-colors'}`}
+                          disabled={currentPage <= 1}
+                          className={`px-4 py-2 text-sm font-medium rounded-md border ${currentPage <= 1 ? 'border-gray-200 text-gray-400 bg-gray-50 cursor-not-allowed' : 'border-gray-300 text-gray-700 bg-white hover:bg-gray-50 transition-colors'}`}
                         >
                           Précédent
                         </button>
                         <div className="flex items-center gap-1">
-                          {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                          {Array.from({ length: Math.min(5, Math.max(1, totalPages)) }, (_, i) => {
                             // Show pages around current page
                             let pageNum = i + 1;
-                            if (totalPages > 5) {
+                            const tPages = Math.max(1, totalPages);
+                            if (tPages > 5) {
                               if (currentPage > 3) {
                                 pageNum = currentPage - 2 + i;
-                                if (pageNum + (4 - i) > totalPages) {
-                                  pageNum = totalPages - 4 + i;
+                                if (pageNum + (4 - i) > tPages) {
+                                  pageNum = tPages - 4 + i;
                                 }
                               }
                             }
                             
-                            if (pageNum > totalPages) return null;
+                            if (pageNum > tPages) return null;
 
                             return (
                               <button
@@ -2417,15 +2417,14 @@ export default function AdminDashboard() {
                         </div>
                         <button
                           onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                          disabled={currentPage === totalPages}
-                          className={`px-4 py-2 text-sm font-medium rounded-md border ${currentPage === totalPages ? 'border-gray-200 text-gray-400 bg-gray-50 cursor-not-allowed' : 'border-gray-300 text-gray-700 bg-white hover:bg-gray-50 transition-colors'}`}
+                          disabled={currentPage >= totalPages}
+                          className={`px-4 py-2 text-sm font-medium rounded-md border ${currentPage >= totalPages ? 'border-gray-200 text-gray-400 bg-gray-50 cursor-not-allowed' : 'border-gray-300 text-gray-700 bg-white hover:bg-gray-50 transition-colors'}`}
                         >
                           Suivant
                         </button>
                       </div>
                     </div>
                   </div>
-                )}
               </div>
             )}
 

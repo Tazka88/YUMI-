@@ -1482,12 +1482,27 @@ router.get('/admin/email-logs', authenticate, async (req, res) => {
 
 router.get('/admin/orders', authenticate, async (req, res) => {
   try {
-    const { page = '1', limit = '20' } = req.query;
+    const { page = '1', limit = '20', search, status } = req.query;
     const pageNum = parseInt(page as string) || 1;
     const limitNum = parseInt(limit as string) || 20;
     const offset = (pageNum - 1) * limitNum;
 
-    const [totalCount] = await sql`SELECT COUNT(*) as count FROM orders`;
+    let whereClause = sql`WHERE 1=1`;
+    if (status && status !== 'all') {
+      whereClause = sql`WHERE o.status = ${status as string}`;
+    }
+    
+    if (search) {
+      const searchStr = `%${search as string}%`;
+      const searchFilter = sql`(o.order_id ILIKE ${searchStr} OR o.customer_name ILIKE ${searchStr} OR o.customer_phone ILIKE ${searchStr} OR o.id::text ILIKE ${searchStr})`;
+      if (status && status !== 'all') {
+         whereClause = sql`${whereClause} AND ${searchFilter}`;
+      } else {
+         whereClause = sql`WHERE ${searchFilter}`;
+      }
+    }
+
+    const [totalCount] = await sql`SELECT COUNT(*) as count FROM orders o ${whereClause}`;
 
     const orders = await sql`
       SELECT o.id, o.order_id, o.created_at, o.status, o.total_amount, o.delivery_cost, o.address, o.wilaya, o.commune, o.office_id, o.stop_desk, o.customer_name, o.customer_email, o.customer_phone, o.note, o.customer_user_id,
@@ -1496,11 +1511,13 @@ router.get('/admin/orders', authenticate, async (req, res) => {
        LEFT JOIN products p ON oi.product_id = p.id 
        WHERE oi.order_id = o.id) as items
       FROM orders o 
+      ${whereClause}
       ORDER BY o.created_at DESC 
       LIMIT ${limitNum} OFFSET ${offset}
     `;
-    res.json({ orders, totalCount: totalCount.count });
+    res.json({ orders, totalCount: Number(totalCount?.count) || 0 });
   } catch (err) {
+    console.error(err);
     res.status(500).json({ error: 'Failed to fetch orders' });
   }
 });

@@ -133,6 +133,7 @@ export default function AdminDashboard() {
   const [adminProductSearch, setAdminProductSearch] = useState('');
   const [debouncedAdminProductSearch, setDebouncedAdminProductSearch] = useState('');
   const [debouncedProductSearch, setDebouncedProductSearch] = useState('');
+  const [debouncedOrderSearchTerm, setDebouncedOrderSearchTerm] = useState('');
   const [modalFilters, setModalFilters] = useState({ category_id: '', brand_id: '', max_price: '' });
   const [modalProducts, setModalProducts] = useState<any[]>([]);
   const [loadingModalProducts, setLoadingModalProducts] = useState(false);
@@ -184,6 +185,17 @@ export default function AdminDashboard() {
     }, 500);
     return () => clearTimeout(timer);
   }, [adminProductSearch]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedOrderSearchTerm(orderSearchTerm);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [orderSearchTerm]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [debouncedOrderSearchTerm, orderStatusFilter]);
 
   useEffect(() => {
     fetch('/api/settings')
@@ -283,8 +295,14 @@ export default function AdminDashboard() {
   spOthers.append('page', currentPage.toString());
   spOthers.append('limit', itemsPerPage.toString());
 
+  const spOrders = new URLSearchParams();
+  if (debouncedOrderSearchTerm) spOrders.append('search', debouncedOrderSearchTerm);
+  if (orderStatusFilter !== 'all') spOrders.append('status', orderStatusFilter);
+  spOrders.append('page', currentPage.toString());
+  spOrders.append('limit', itemsPerPage.toString());
+
   const { data: swrStats, error: statsError } = useSWR(activeTab === 'overview' ? `/api/admin/stats?_rt=${refreshToggle}` : null, swrFetcher);
-  const { data: swrOrders } = useSWR(activeTab === 'orders' ? `/api/admin/orders?${spOthers.toString()}&_rt=${refreshToggle}` : null, swrFetcher);
+  const { data: swrOrders } = useSWR(activeTab === 'orders' ? `/api/admin/orders?${spOrders.toString()}&_rt=${refreshToggle}` : null, swrFetcher);
   const { data: swrProducts } = useSWR(activeTab === 'products' ? `/api/admin/products?${spProducts.toString()}&_rt=${refreshToggle}` : null, swrFetcher);
   const { data: swrEmails } = useSWR(activeTab === 'emails' ? `/api/admin/emails?${spOthers.toString()}&_rt=${refreshToggle}` : null, swrFetcher);
   const { data: swrEmailLogs } = useSWR(activeTab === 'email-logs' ? `/api/admin/email-logs?${spOthers.toString()}&_rt=${refreshToggle}` : null, swrFetcher);
@@ -1921,7 +1939,6 @@ export default function AdminDashboard() {
                     { id: 'livrée', label: 'Livrée' },
                     { id: 'annulée', label: 'Annulée' }
                   ].map(tab => {
-                    const count = tab.id === 'all' ? orders.length : orders.filter(o => o.status === tab.id).length;
                     return (
                       <button
                         key={tab.id}
@@ -1933,11 +1950,6 @@ export default function AdminDashboard() {
                         }`}
                       >
                         {tab.label}
-                        <span className={`px-2 py-0.5 rounded-full text-xs ${
-                          orderStatusFilter === tab.id ? 'bg-orange-100 text-orange-700' : 'bg-gray-100 text-gray-600'
-                        }`}>
-                          {count}
-                        </span>
                       </button>
                     );
                   })}

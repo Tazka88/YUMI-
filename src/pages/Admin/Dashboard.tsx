@@ -2360,51 +2360,69 @@ export default function AdminDashboard() {
                 
                 {/* Pagination */}
                 {totalPages > 1 && (
-                  <div className="px-6 py-4 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-4">
+                  <div className="px-6 py-4 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-4 bg-white">
                     <div className="text-sm text-gray-500">
                       Affichage de la page <span className="font-medium">{currentPage}</span> sur <span className="font-medium">{totalPages}</span>
                     </div>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                        disabled={currentPage === 1}
-                        className={`px-4 py-2 text-sm font-medium rounded-md border ${currentPage === 1 ? 'border-gray-200 text-gray-400 bg-gray-50 cursor-not-allowed' : 'border-gray-300 text-gray-700 bg-white hover:bg-gray-50 transition-colors'}`}
-                      >
-                        Précédent
-                      </button>
-                      <div className="flex items-center gap-1">
-                        {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                          // Show pages around current page
-                          let pageNum = i + 1;
-                          if (totalPages > 5) {
-                            if (currentPage > 3) {
-                              pageNum = currentPage - 2 + i;
-                              if (pageNum + (4 - i) > totalPages) {
-                                pageNum = totalPages - 4 + i;
+                    <div className="flex flex-col sm:flex-row items-center gap-4">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-gray-500">Produits/page:</span>
+                        <select 
+                          value={itemsPerPage} 
+                          onChange={(e) => {
+                            setItemsPerPage(Number(e.target.value));
+                            setCurrentPage(1);
+                          }}
+                          className="border-gray-300 rounded-md text-sm py-1 pl-2 pr-8 focus:ring-orange-500 focus:border-orange-500"
+                        >
+                          <option value="20">20</option>
+                          <option value="50">50</option>
+                          <option value="100">100</option>
+                          <option value="500">500</option>
+                        </select>
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                          disabled={currentPage === 1}
+                          className={`px-4 py-2 text-sm font-medium rounded-md border ${currentPage === 1 ? 'border-gray-200 text-gray-400 bg-gray-50 cursor-not-allowed' : 'border-gray-300 text-gray-700 bg-white hover:bg-gray-50 transition-colors'}`}
+                        >
+                          Précédent
+                        </button>
+                        <div className="flex items-center gap-1">
+                          {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                            // Show pages around current page
+                            let pageNum = i + 1;
+                            if (totalPages > 5) {
+                              if (currentPage > 3) {
+                                pageNum = currentPage - 2 + i;
+                                if (pageNum + (4 - i) > totalPages) {
+                                  pageNum = totalPages - 4 + i;
+                                }
                               }
                             }
-                          }
-                          
-                          if (pageNum > totalPages) return null;
+                            
+                            if (pageNum > totalPages) return null;
 
-                          return (
-                            <button
-                              key={pageNum}
-                              onClick={() => setCurrentPage(pageNum)}
-                              className={`w-10 h-10 flex items-center justify-center rounded-md text-sm font-medium transition-colors ${currentPage === pageNum ? 'bg-orange-500 text-white' : 'hover:bg-gray-100 text-gray-700'}`}
-                            >
-                              {pageNum}
-                            </button>
-                          );
-                        })}
+                            return (
+                              <button
+                                key={pageNum}
+                                onClick={() => setCurrentPage(pageNum)}
+                                className={`w-10 h-10 flex items-center justify-center rounded-md text-sm font-medium transition-colors ${currentPage === pageNum ? 'bg-orange-500 text-white' : 'hover:bg-gray-100 text-gray-700'}`}
+                              >
+                                {pageNum}
+                              </button>
+                            );
+                          })}
+                        </div>
+                        <button
+                          onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                          disabled={currentPage === totalPages}
+                          className={`px-4 py-2 text-sm font-medium rounded-md border ${currentPage === totalPages ? 'border-gray-200 text-gray-400 bg-gray-50 cursor-not-allowed' : 'border-gray-300 text-gray-700 bg-white hover:bg-gray-50 transition-colors'}`}
+                        >
+                          Suivant
+                        </button>
                       </div>
-                      <button
-                        onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                        disabled={currentPage === totalPages}
-                        className={`px-4 py-2 text-sm font-medium rounded-md border ${currentPage === totalPages ? 'border-gray-200 text-gray-400 bg-gray-50 cursor-not-allowed' : 'border-gray-300 text-gray-700 bg-white hover:bg-gray-50 transition-colors'}`}
-                      >
-                        Suivant
-                      </button>
                     </div>
                   </div>
                 )}

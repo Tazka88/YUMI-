@@ -67,8 +67,8 @@ router.use((req, res, next) => {
   next();
 });
 
-// Mount CAPI routes (renamed to metrics to bypass adblockers)
-router.use('/metrics/v1', capiRoutes);
+// Mount CAPI routes (renamed to app-events to bypass adblockers)
+router.use('/app-events/v1', capiRoutes);
 
 // Mount DHD routes
 router.use('/delivery', dhdRoutes);

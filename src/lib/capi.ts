@@ -122,13 +122,12 @@ export async function sendCapiEvent({ eventName, eventId, customData, userData }
       }
 
       // Use keepalive to ensure the request completes even if the page unloads
-      const response = await fetch('/api/metrics/v1', {
+      const response = await fetch('/api/app-events/v1', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(payload),
-        keepalive: true
+        body: JSON.stringify(payload)
       });
 
       if (!response.ok) {

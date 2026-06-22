@@ -33,7 +33,7 @@ export default function Analytics() {
 
         if (fbPixelId && typeof window !== 'undefined') {
           try {
-            // Manually inject FB Pixel to have full control over initialization and prevent auto-PageView
+            // Retrieve existing fbq queue or define it
             if (!window.fbq) {
               window.fbq = function() {
                 window.fbq.callMethod ?
@@ -44,25 +44,25 @@ export default function Analytics() {
               window.fbq.loaded = !0;
               window.fbq.version = '2.0';
               window.fbq.queue = [];
-              
-              const initFB = () => {
-                if ((window as any).fbLoaded) return;
-                (window as any).fbLoaded = true;
-                const t = document.createElement('script');
-                t.async = !0;
-                t.src = 'https://connect.facebook.net/en_US/fbevents.js';
-                const s = document.getElementsByTagName('script')[0];
-                if (s && s.parentNode) {
-                  s.parentNode.insertBefore(t, s);
-                } else {
-                  document.head.appendChild(t);
-                }
-                ['scroll','mousemove','touchstart','click'].forEach(evt => window.removeEventListener(evt, initFB));
-              };
-
-              ['scroll','mousemove','touchstart','click'].forEach(evt => window.addEventListener(evt, initFB, {passive: true, once: true}));
-              // Fallback removed to satisfy performance metrics, requires user interaction to load.
             }
+            
+            const initFB = () => {
+              if ((window as any).fbLoaded) return;
+              (window as any).fbLoaded = true;
+              const t = document.createElement('script');
+              t.async = !0;
+              t.src = 'https://connect.facebook.net/en_US/fbevents.js';
+              const s = document.getElementsByTagName('script')[0];
+              if (s && s.parentNode) {
+                s.parentNode.insertBefore(t, s);
+              } else {
+                document.head.appendChild(t);
+              }
+              ['scroll','mousemove','touchstart','click'].forEach(evt => window.removeEventListener(evt, initFB));
+            };
+
+            ['scroll','mousemove','touchstart','click'].forEach(evt => window.addEventListener(evt, initFB, {passive: true, once: true}));
+            // Fallback removed to satisfy performance metrics, requires user interaction to load.
             
             // Initialize without sending PageView automatically
             window.fbq('set', 'autoConfig', false, fbPixelId);

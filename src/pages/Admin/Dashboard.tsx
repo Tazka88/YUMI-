@@ -6,7 +6,6 @@ import { LayoutDashboard, ShoppingBag, Users, Settings, LogOut, TrendingUp, Aler
 import { formatPrice } from '../../utils/formatPrice';
 import FooterSettings from './FooterSettings';
 import PageSettings from './PageSettings';
-import LandingPagesAdmin from './LandingPagesAdmin';
 import WilayasSettings from './WilayasSettings';
 import CommunesSettings from './CommunesSettings';
 import OfficesSettings from './OfficesSettings';
@@ -1737,13 +1736,6 @@ export default function AdminDashboard() {
             Gestion des Pages
           </button>
           <button 
-            onClick={() => setActiveTab('landing-pages')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-md transition-colors ${activeTab === 'landing-pages' ? 'bg-orange-500 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white'}`}
-          >
-            <LayoutTemplate size={20} />
-            Landing Pages
-          </button>
-          <button 
             onClick={() => setActiveTab('sections')}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-md transition-colors ${activeTab === 'sections' ? 'bg-orange-500 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white'}`}
           >
@@ -3121,10 +3113,6 @@ export default function AdminDashboard() {
 
         {activeTab === 'pages' && (
           <PageSettings />
-        )}
-
-        {activeTab === 'landing-pages' && (
-          <LandingPagesAdmin />
         )}
 
         {activeTab === 'sections' && (

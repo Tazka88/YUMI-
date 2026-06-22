@@ -4,7 +4,6 @@ import cors from 'cors';
 import helmet from 'helmet';
 import { sql, setupDb } from './src/db/setup.js';
 import apiRoutes from './src/api/routes.js';
-import landingPagesRoutes from './src/api/landing-pages.js';
 import path from 'path';
 import fs from 'fs';
 
@@ -46,7 +45,6 @@ async function startServer() {
   });
 
   // 1. API Routes (Mounted early to take precedence)
-  app.use('/api', landingPagesRoutes);
   app.use('/api', apiRoutes);
 
   // 2. Robots.txt - Ensuring it is correctly served to fix Facebook crawler 403

@@ -1,1 +1,0 @@
-async function test() { try { const res = await fetch('http://localhost:3000/api/landing-pages/boitier-de-commande-cocotte-clipso---precision-4-5-6-8-10l---mecanisme'); console.log(res.status, await res.json()); } catch(e) { console.log(e.message); }} test();

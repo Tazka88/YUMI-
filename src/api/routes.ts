@@ -1045,7 +1045,13 @@ router.post('/orders', orderLimiter, async (req, res) => {
                     ELSE v
                   END
                 )
-                FROM jsonb_array_elements(variations) as v
+                FROM jsonb_array_elements(
+                  CASE 
+                    WHEN jsonb_typeof(variations) = 'string' THEN (variations#>>'{}')::jsonb
+                    WHEN jsonb_typeof(variations) = 'array' THEN variations
+                    ELSE '[]'::jsonb
+                  END
+                ) as v
               )
             WHERE id = ${item.product_id} AND stock >= ${item.quantity}
           `;

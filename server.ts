@@ -65,7 +65,7 @@ Allow: /
 User-agent: Twitterbot
 Allow: /
 
-Sitemap: https://zorando.com/sitemap.xml`);
+Sitemap: https://www.zorando.com/sitemap.xml`);
   });
 
   // Serve fixed static files from public
@@ -81,7 +81,7 @@ Sitemap: https://zorando.com/sitemap.xml`);
       const brands = await sql`SELECT slug FROM brands`;
       const posts = await sql`SELECT slug FROM blog_posts WHERE status = 'published'`;
       
-      const baseUrl = 'https://zorando.com';
+      const baseUrl = 'https://www.zorando.com';
       
       let xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n`;
       
@@ -214,7 +214,7 @@ Sitemap: https://zorando.com/sitemap.xml`);
         let template = fs.readFileSync(path.join(distPath, 'template.html'), 'utf-8');
         let title = 'ZORANDO - Boutique en ligne';
         let description = 'Découvrez ZORANDO, votre boutique en ligne de confiance en Algérie. Achetez des produits de qualité au meilleur prix.';
-        const baseUrl = 'https://zorando.com';
+        const baseUrl = 'https://www.zorando.com';
         
         let reqCanonicalPath = req.path;
         if (reqCanonicalPath.length > 1 && reqCanonicalPath.endsWith('/')) {

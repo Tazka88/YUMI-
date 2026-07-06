@@ -3805,7 +3805,7 @@ export default function AdminDashboard() {
                           {productForm.seo_title || "Titre du produit | ZORANDO"}
                         </div>
                         <div className="text-[13px] text-[#006621] truncate whitespace-nowrap mb-1">
-                          https://zorando.com/product/{productForm.slug || 'slug-du-produit'}
+                          https://www.zorando.com/product/{productForm.slug || 'slug-du-produit'}
                         </div>
                         <div className="text-[13px] text-[#545454] leading-[1.4] line-clamp-2">
                           {productForm.seo_description || "Achetez ce produit au meilleur prix en Algérie. Livraison rapide et paiement à la livraison."}

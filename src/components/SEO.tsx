@@ -15,13 +15,13 @@ interface SEOProps {
 export default function SEO({ title, description, image, url, type = 'website', schema, exactTitle = false, keywords, noindex = false }: SEOProps) {
   const siteName = 'ZORANDO';
   const fullTitle = exactTitle ? title : `${title} | ${siteName}`;
-  const defaultImage = 'https://zorando.com/og-image-fb.jpg';
+  const defaultImage = 'https://www.zorando.com/og-image-fb.jpg';
   const finalImage = image || defaultImage;
   const rawUrl = url || (typeof window !== 'undefined' ? window.location.href : '');
   let currentUrl = rawUrl.split('?')[0];
-  // Toujours forcer zorando.com comme domaine canonique principal pour éviter le duplicate content
-  currentUrl = currentUrl.replace(/^https?:\/\/(www\.)?[^\/]+/, 'https://zorando.com');
-  if (currentUrl.length > 'https://zorando.com/'.length && currentUrl.endsWith('/')) {
+  // Toujours forcer www.zorando.com comme domaine canonique principal pour éviter le duplicate content
+  currentUrl = currentUrl.replace(/^https?:\/\/(www\.)?[^\/]+/, 'https://www.zorando.com');
+  if (currentUrl.length > 'https://www.zorando.com/'.length && currentUrl.endsWith('/')) {
     currentUrl = currentUrl.slice(0, -1);
   }
   

@@ -117,7 +117,7 @@ app.get('*', async (req, res, next) => {
 
     let title = 'ZORANDO - Boutique en ligne';
     let description = 'Découvrez ZORANDO, votre boutique en ligne de confiance en Algérie. Achetez des produits de qualité au meilleur prix.';
-    const host = req.get('host') || 'zorando.com';
+    const host = req.get('host') || 'www.zorando.com';
     const baseUrl = `https://${host}`;
     let headHtml = `<link rel="canonical" href="${baseUrl}${req.path}" />`;
     let seoHtml = `

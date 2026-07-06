@@ -340,7 +340,7 @@ router.post('/admin/login', loginLimiter, async (req, res) => {
 // --- PUBLIC ROUTES ---
 router.get('/robots.txt', (req, res) => {
   res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=60, stale-while-revalidate=300');
-  const host = req.get('host') || 'zorando.com';
+  const host = req.get('host') || 'www.zorando.com';
   const baseUrl = `https://${host}`;
   res.type('text/plain');
   res.send(`User-agent: *
@@ -1848,7 +1848,7 @@ router.get('/feed/meta-catalog.csv', async (req, res) => {
       return str;
     };
 
-    const baseUrl = 'https://zorando.com';
+    const baseUrl = 'https://www.zorando.com';
     
     const rows = exportedProducts.map((p: any) => {
       const id = formatField(String(p.id));

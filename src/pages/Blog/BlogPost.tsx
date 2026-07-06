@@ -75,14 +75,14 @@ export default function BlogPost() {
             "author": [{
                 "@type": "Organization",
                 "name": "ZORANDO",
-                "url": "https://zorando.com"
+                "url": "https://www.zorando.com"
             }],
             "publisher": {
               "@type": "Organization",
               "name": "ZORANDO",
               "logo": {
                 "@type": "ImageObject",
-                "url": "https://zorando.com/logo.png"
+                "url": "https://www.zorando.com/logo.png"
               }
             },
             "description": post.seo_description || post.excerpt

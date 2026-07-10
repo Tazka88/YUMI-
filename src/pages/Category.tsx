@@ -149,6 +149,8 @@ export default function Category() {
           newCategoryName = searchParams.get('title') || newCategoryName;
         }
 
+        url += (url.includes('?') ? '&' : '?') + `limit=1000`;
+
         const productsDataArray: any = await fetchWithCache(url, { signal, priority: 'high', maxAge: 60000 } as any).catch(() => []);
         let productsData = Array.isArray(productsDataArray) ? productsDataArray : [];
 

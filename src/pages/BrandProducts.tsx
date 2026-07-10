@@ -24,7 +24,7 @@ export default function BrandProducts() {
       .then(data => {
         setBrand(data);
         // Fetch products for this brand
-        return fetchWithCache(`/api/products?brand=${data.id}`, { signal, maxAge: 60000 });
+        return fetchWithCache(`/api/products?brand=${data.id}&limit=1000`, { signal, maxAge: 60000 });
       })
       .then(data => {
         if (Array.isArray(data)) {

@@ -349,11 +349,15 @@ Sitemap: https://www.zorando.com/sitemap.xml`);
           }
         } else if (req.path.startsWith('/product/')) {
           const slug = req.path.split('/')[2];
-          const [product] = await sql`SELECT id, name, description, price, promo_price, CASE WHEN image LIKE 'data:image/%' THEN '/api/images/products/' || id || '/image/' || slug || '.webp' ELSE image END as image FROM products WHERE slug = ${slug}`;
+          const [product] = await sql`SELECT id, name, description, seo_title, seo_description, seo_keywords, price, promo_price, CASE WHEN image LIKE 'data:image/%' THEN '/api/images/products/' || id || '/image/' || slug || '.webp' ELSE image END as image FROM products WHERE slug = ${slug}`;
           
           if (product) {
-            title = `${product.name} - ZORANDO`;
-            description = product.description ? product.description.substring(0, 160).replace(/<[^>]+>/g, '') : `Achetez ${product.name} au meilleur prix sur ZORANDO.`;
+            title = product.seo_title || `${product.name} - ZORANDO`;
+            description = product.seo_description || (product.description ? product.description.substring(0, 160).replace(/<[^>]+>/g, '') : `Achetez ${product.name} au meilleur prix sur ZORANDO.`);
+            
+            if (product.seo_keywords) {
+              headHtml += `<meta name="keywords" content="${product.seo_keywords}" />`;
+            }
             
             if (product.image) {
               if (product.image.startsWith('http')) {

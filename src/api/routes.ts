@@ -340,8 +340,7 @@ router.post('/admin/login', loginLimiter, async (req, res) => {
 // --- PUBLIC ROUTES ---
 router.get('/robots.txt', (req, res) => {
   res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=60, stale-while-revalidate=300');
-  const host = req.get('host') || 'www.zorando.com';
-  const baseUrl = `https://${host}`;
+  const baseUrl = 'https://www.zorando.com';
   res.type('text/plain');
   res.send(`User-agent: *
 Allow: /
@@ -367,7 +366,7 @@ router.get('/sitemap.xml', async (req, res) => {
 
   res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=60, stale-while-revalidate=300');
   try {
-    const baseUrl = process.env.APP_URL || `https://${req.get('host')}`;
+    const baseUrl = 'https://www.zorando.com';
     
     const [products, categories, brands, pages] = await Promise.all([
       sql`SELECT slug, created_at FROM products`,

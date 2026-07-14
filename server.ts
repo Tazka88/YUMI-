@@ -23,6 +23,15 @@ async function startServer() {
   // Trust proxy to handle X-Forwarded-For correctly
   app.set('trust proxy', 1);
 
+  // Redirect non-www to www to consolidate SEO
+  app.use((req, res, next) => {
+    const host = req.headers.host;
+    if (host && host === 'zorando.com') {
+      return res.redirect(301, `https://www.zorando.com${req.originalUrl}`);
+    }
+    next();
+  });
+
   // Create uploads directory if it doesn't exist
   const uploadsDir = path.join(process.cwd(), 'public', 'uploads');
   if (!fs.existsSync(uploadsDir)) {

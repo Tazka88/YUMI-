@@ -10,6 +10,7 @@ import rateLimit from 'express-rate-limit';
 import fs from 'fs';
 import capiRoutes from './capi.js';
 import dhdRoutes from './dhd.js';
+import ecomdzRoutes from './ecomdz.js';
 
 // Ensure profiles table has commune column
 sql`ALTER TABLE profiles ADD COLUMN IF NOT EXISTS commune VARCHAR(255)`.catch(err => console.error('Failed to add commune to profiles:', err));
@@ -72,6 +73,9 @@ router.use('/app-events/v1', capiRoutes);
 
 // Mount DHD routes
 router.use('/delivery', dhdRoutes);
+
+// Mount Ecom-DZ routes
+router.use('/ecomdz', ecomdzRoutes);
 
 
 // Helper to process images to avoid Vercel 4.5MB payload limit

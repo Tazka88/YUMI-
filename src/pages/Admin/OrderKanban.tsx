@@ -102,7 +102,7 @@ export default function OrderKanban({ orders, updateOrderStatus, orderSearchTerm
                                   <button 
                                     onClick={() => onSendToDhd(order.id)}
                                     className="p-1.5 text-gray-500 hover:text-orange-600 hover:bg-orange-50 rounded-md transition-colors"
-                                    title="Envoyer à DHD"
+                                    title="Envoyer à la livraison"
                                   >
                                     <Truck size={16} />
                                   </button>

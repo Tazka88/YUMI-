@@ -10,10 +10,15 @@ import rateLimit from 'express-rate-limit';
 import fs from 'fs';
 import capiRoutes from './capi.js';
 import dhdRoutes from './dhd.js';
-import ecomdzRoutes from './ecomdz.js';
+import ecomdzRoutes, { fetchEcomdzStopdesks } from './ecomdz.js';
 
 // Ensure profiles table has commune column
-sql`ALTER TABLE profiles ADD COLUMN IF NOT EXISTS commune VARCHAR(255)`.catch(err => console.error('Failed to add commune to profiles:', err));
+sql`ALTER TABLE profiles ADD COLUMN IF NOT EXISTS commune VARCHAR(255)`.catch(err => console.error(err));
+sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS delivery_company VARCHAR(50);`.catch(err => console.error(err));
+sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS stop_desk BOOLEAN;`.catch(err => console.error(err));
+sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS office_id VARCHAR(255);`.catch(err => console.error(err));
+sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS office_name VARCHAR(255);`.catch(err => console.error(err));
+sql`ALTER TABLE orders ALTER COLUMN office_id TYPE VARCHAR(255);`.catch(err => console.error(err));
 
 const router = Router();
 
@@ -940,7 +945,7 @@ router.get('/orders/user/:userId', async (req, res) => {
 });
 
 router.post('/orders', orderLimiter, async (req, res) => {
-  const { customer_name, customer_email, customer_phone, wilaya, commune, address, note, items, delivery_cost: clientDeliveryCost, customer_user_id, stop_desk, office_id } = req.body;
+  const { customer_name, customer_email, customer_phone, wilaya, commune, address, note, items, delivery_cost: clientDeliveryCost, customer_user_id, stop_desk, office_id, delivery_company, office_name } = req.body;
   
   if (!items || !Array.isArray(items) || items.length === 0) {
     return res.status(400).json({ error: 'La commande doit contenir au moins un article' });
@@ -1009,8 +1014,8 @@ router.post('/orders', orderLimiter, async (req, res) => {
 
     const orderData = await sql.begin(async (sql: any) => {
       const [order] = await sql`
-        INSERT INTO orders (customer_name, customer_email, customer_phone, wilaya, commune, address, note, total_amount, delivery_cost, customer_user_id, stop_desk, office_id)
-        VALUES (${customer_name || ''}, ${customer_email || null}, ${customer_phone || ''}, ${wilaya || ''}, ${commune || ''}, ${address || ''}, ${note || null}, ${calculatedTotal}, ${delivery_cost}, ${customer_user_id || null}, ${stop_desk ? true : false}, ${office_id || null})
+        INSERT INTO orders (customer_name, customer_email, customer_phone, wilaya, commune, address, note, total_amount, delivery_cost, customer_user_id, stop_desk, office_id, delivery_company, office_name)
+        VALUES (${customer_name || ''}, ${customer_email || null}, ${customer_phone || ''}, ${wilaya || ''}, ${commune || ''}, ${address || ''}, ${note || null}, ${calculatedTotal}, ${delivery_cost}, ${customer_user_id || null}, ${stop_desk ? true : false}, ${office_id || null}, ${delivery_company || 'dhd'}, ${office_name || null})
         RETURNING id
       `;
       
@@ -1513,7 +1518,7 @@ router.get('/admin/orders', authenticate, async (req, res) => {
     const [totalCount] = await sql`SELECT COUNT(*) as count FROM orders o ${whereClause}`;
 
     const orders = await sql`
-      SELECT o.id, o.order_id, o.created_at, o.status, o.total_amount, o.delivery_cost, o.address, o.wilaya, o.commune, o.office_id, o.stop_desk, o.customer_name, o.customer_email, o.customer_phone, o.note, o.customer_user_id,
+      SELECT o.id, o.order_id, o.created_at, o.status, o.total_amount, o.delivery_cost, o.address, o.wilaya, o.commune, o.office_id, o.office_name, o.delivery_company, o.stop_desk, o.customer_name, o.customer_email, o.customer_phone, o.note, o.customer_user_id,
       (SELECT JSON_AGG(JSON_BUILD_OBJECT('id', oi.id, 'product_id', oi.product_id, 'quantity', oi.quantity, 'price', oi.price, 'variation', oi.variation, 'status', oi.status, 'product_name', p.name, 'product_image', CASE WHEN p.image LIKE 'data:image/%' THEN '/api/images/products/' || p.id || '/image/product.webp' ELSE p.image END))
        FROM order_items oi 
        LEFT JOIN products p ON oi.product_id = p.id 
@@ -2250,6 +2255,61 @@ router.delete('/admin/wilayas/:id', authenticate, async (req, res) => {
     res.json({ message: 'Wilaya supprimée' });
   } catch (err) {
     res.status(500).json({ error: 'Erreur lors de la suppression de la wilaya' });
+  }
+});
+
+
+router.get('/all-stopdesks', async (req, res) => {
+  const cacheKey = 'all_stopdesks_merged';
+  const cached = getCache(cacheKey);
+  if (cached) return res.json(cached);
+
+  res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=86400, stale-while-revalidate=86400');
+  try {
+    // 1. DHD offices (from local DB as existing)
+    const dhdOffices = await sql`SELECT * FROM offices ORDER BY wilaya ASC, name ASC`;
+    
+    // 2. Ecom-DZ offices
+    const ecomdzData = await fetchEcomdzStopdesks();
+    
+    const mergedOffices = [];
+    
+    if (dhdOffices && Array.isArray(dhdOffices)) {
+      dhdOffices.forEach((o: any) => {
+        mergedOffices.push({
+          id: `dhd-${o.id}`,
+          original_id: o.id,
+          company: 'dhd',
+          name: o.name,
+          address: o.address,
+          wilaya: o.wilaya,
+          commune: o.commune,
+          phone: o.phone
+        });
+      });
+    }
+
+    if (ecomdzData && ecomdzData.Commune && Array.isArray(ecomdzData.Commune)) {
+      ecomdzData.Commune.forEach((o: any) => {
+        mergedOffices.push({
+          id: `ecomdz-${o.Code}`,
+          original_id: o.Code, // CodeStopdesk
+          company: 'ecomdz',
+          name: o.Libelle,
+          address: o.Adresse,
+          wilaya: o.Ville,
+          commune: o.Commune,
+          phone: ''
+        });
+      });
+    }
+
+    // Cache for 24 hours (86400 seconds)
+    setCache(cacheKey, mergedOffices, 86400);
+    res.json(mergedOffices);
+  } catch (err) {
+    console.error('Failed to fetch merged stopdesks:', err);
+    res.status(500).json({ error: 'Failed to fetch merged stopdesks' });
   }
 });
 

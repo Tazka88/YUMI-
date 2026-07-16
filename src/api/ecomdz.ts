@@ -68,3 +68,13 @@ router.post('/create-orders', (req, res) => {
 });
 
 export default router;
+
+export const fetchEcomdzStopdesks = async () => {
+  try {
+    const response = await ecomdzApi.get('/Stopdesk');
+    return response.data;
+  } catch (err) {
+    console.error('Error fetching EcomDZ stopdesks internally:', err);
+    return null;
+  }
+};

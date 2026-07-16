@@ -742,24 +742,28 @@ export default function AdminDashboard() {
         }
       }
 
-      let codeStopdesk = undefined;
+let codeStopdesk = undefined;
       if (orderData.stop_desk) {
-        const stopdeskRes = await fetch(`/api/ecomdz/stopdesk/${wilayaId}`);
-        const stopdeskData = await stopdeskRes.json();
-        
-        let matchedStopdesk = null;
-        if (orderData.office_name) {
-          matchedStopdesk = stopdeskData.Commune?.find((s: any) => s.Libelle.toLowerCase().includes(orderData.office_name.toLowerCase()) || orderData.office_name.toLowerCase().includes(s.Libelle.toLowerCase()));
-        }
-        
-        if (!matchedStopdesk && matchedCommune) {
-           matchedStopdesk = stopdeskData.Commune?.find((s: any) => s.Commune.toLowerCase() === matchedCommune.toLowerCase());
-        }
-        
-        if (matchedStopdesk) {
-          codeStopdesk = matchedStopdesk.Code;
+        if (orderData.office_id && isNaN(Number(orderData.office_id))) {
+          // If it's a string like '16A', use it directly
+          codeStopdesk = orderData.office_id;
         } else {
-          if (stopdeskData.Commune && stopdeskData.Commune.length > 0) {
+          // Fallback if we only have the name
+          const stopdeskRes = await fetch(`/api/ecomdz/stopdesk/${wilayaId}`);
+          const stopdeskData = await stopdeskRes.json();
+          
+          let matchedStopdesk = null;
+          if (orderData.office_name) {
+            matchedStopdesk = stopdeskData.Commune?.find((s: any) => s.Libelle.toLowerCase().includes(orderData.office_name.toLowerCase()) || orderData.office_name.toLowerCase().includes(s.Libelle.toLowerCase()));
+          }
+          
+          if (!matchedStopdesk && matchedCommune) {
+             matchedStopdesk = stopdeskData.Commune?.find((s: any) => s.Commune.toLowerCase() === matchedCommune.toLowerCase());
+          }
+          
+          if (matchedStopdesk) {
+            codeStopdesk = matchedStopdesk.Code;
+          } else if (stopdeskData.Commune && stopdeskData.Commune.length > 0) {
             codeStopdesk = stopdeskData.Commune[0].Code;
           } else {
             throw new Error(`Aucun bureau Stopdesk trouvé pour la wilaya ${wilayaId}`);
@@ -821,15 +825,17 @@ export default function AdminDashboard() {
 
 const handleBulkDelivery = async () => {
     if (selectedOrders.length === 0) return;
-    const loadId = toast.loading(`Envoi de ${selectedOrders.length} commandes vers ${deliveryCompany.toUpperCase()}...`);
+    const loadId = toast.loading(`Envoi de ${selectedOrders.length} commandes...`);
     let successCount = 0;
     
     for (const id of selectedOrders) {
-      const success = deliveryCompany === 'dhd' ? await sendToDhd(id, true) : await sendToEcomDz(id, true);
+      const order = orders.find(o => o.id === id);
+      const company = order?.delivery_company || deliveryCompany;
+      const success = company === 'ecomdz' ? await sendToEcomDz(id, true) : await sendToDhd(id, true);
       if (success) successCount++;
     }
     
-    toast.success(`${successCount}/${selectedOrders.length} envoyée(s) à ${deliveryCompany.toUpperCase()}`, { id: loadId });
+    toast.success(`${successCount}/${selectedOrders.length} envoyée(s)`, { id: loadId });
     setSelectedOrders([]);
   };
   const handleBulkDhd = async () => {
@@ -2045,7 +2051,7 @@ const handleBulkDelivery = async () => {
                   orderSearchTerm={orderSearchTerm} 
                   onDeleteOrder={deleteOrder}
                   onPrintOrder={printOrder}
-                  onSendToDhd={(id) => deliveryCompany === 'dhd' ? sendToDhd(id) : sendToEcomDz(id)}
+                  onSendToDhd={(id) => { const o = orders.find(x => x.id === id); const c = o?.delivery_company || deliveryCompany; return c === 'ecomdz' ? sendToEcomDz(id) : sendToDhd(id); }}
                 />
               </div>
             ) : (
@@ -2176,7 +2182,17 @@ const handleBulkDelivery = async () => {
                         </td>
                       <td className="px-6 py-4">
                         <div className="font-medium text-gray-900">{order.customer_name}</div>
+                        
                         <div className="text-xs text-gray-500 truncate max-w-[150px]">{order.address}</div>
+                        {order.delivery_company && (
+                          <div className="mt-1 flex items-center gap-1">
+                            <span className={`text-[10px] px-1.5 py-0.5 rounded uppercase font-bold ${order.delivery_company === 'ecomdz' ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'}`}>
+                              {order.delivery_company === 'ecomdz' ? 'ECOM-DZ' : 'DHD'}
+                            </span>
+                            {order.stop_desk && <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-700 font-medium">Stopdesk</span>}
+                          </div>
+                        )}
+
                       </td>
                       <td className="px-6 py-4">{order.customer_phone}</td>
                       <td className="px-6 py-4">{order.wilaya}</td>
@@ -2197,7 +2213,7 @@ const handleBulkDelivery = async () => {
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2">
                           <button 
-                            onClick={() => deliveryCompany === 'dhd' ? sendToDhd(order.id) : sendToEcomDz(order.id)}
+                            onClick={() => { const c = order.delivery_company || deliveryCompany; return c === 'ecomdz' ? sendToEcomDz(order.id) : sendToDhd(order.id); }}
                             className="p-1.5 text-orange-500 hover:text-orange-700 hover:bg-orange-50 rounded-md transition-colors"
                             title={`Envoyer à ${deliveryCompany.toUpperCase()}`}
                           >

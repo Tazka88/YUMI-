@@ -49,6 +49,7 @@ export default function Checkout() {
   const [wilayas, setWilayas] = useState<Wilaya[]>([]);
   const [offices, setOffices] = useState<any[]>([]);
   const [deliveryMode, setDeliveryMode] = useState<'domicile' | 'bureau'>('domicile');
+  const [homeDeliveryCompany, setHomeDeliveryCompany] = useState<'dhd' | 'ecomdz'>('dhd');
 
   useEffect(() => {
     fetchCommunes();
@@ -172,7 +173,7 @@ export default function Checkout() {
         if (Array.isArray(data)) {
           setWilayas(data.filter((w: any) => w.is_active === true || w.is_active === 1));
         }
-        const officesData = await fetchWithCache('/api/offices');
+        const officesData = await fetchWithCache('/api/all-stopdesks');
         if (Array.isArray(officesData)) setOffices(officesData);
       } catch (error) {
         console.error('Failed to fetch wilayas or offices:', error);
@@ -315,7 +316,9 @@ export default function Checkout() {
       total_amount: finalTotal,
       delivery_cost: effectiveDeliveryCost,
       stop_desk: deliveryMode === 'bureau',
-      office_id: deliveryMode === 'bureau' ? officeId : null,
+      office_id: deliveryMode === 'bureau' && selectedOffice ? selectedOffice.original_id : null,
+      office_name: deliveryMode === 'bureau' && selectedOffice ? selectedOffice.name : null,
+      delivery_company: deliveryMode === 'bureau' && selectedOffice ? selectedOffice.company : homeDeliveryCompany,
       customer_user_id: user?.id || null,
       items: checkoutItems.map(item => ({
         product_id: item.id,
@@ -609,6 +612,23 @@ export default function Checkout() {
               </div>
             </div>
 
+            
+            {deliveryMode === 'domicile' && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Société de livraison (Domicile) *</label>
+                <div className="grid grid-cols-2 gap-4">
+                  <label className={`cursor-pointer rounded-lg border p-3 flex flex-col items-center justify-center transition-colors ${homeDeliveryCompany === 'dhd' ? 'border-orange-500 bg-orange-50' : 'border-gray-200 hover:border-orange-200'}`}>
+                    <input type="radio" className="sr-only" name="homeDeliveryCompany" value="dhd" checked={homeDeliveryCompany === 'dhd'} onChange={() => setHomeDeliveryCompany('dhd')} />
+                    <span className={`font-semibold ${homeDeliveryCompany === 'dhd' ? 'text-orange-700' : 'text-gray-700'}`}>DHD</span>
+                  </label>
+                  <label className={`cursor-pointer rounded-lg border p-3 flex flex-col items-center justify-center transition-colors ${homeDeliveryCompany === 'ecomdz' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-blue-200'}`}>
+                    <input type="radio" className="sr-only" name="homeDeliveryCompany" value="ecomdz" checked={homeDeliveryCompany === 'ecomdz'} onChange={() => setHomeDeliveryCompany('ecomdz')} />
+                    <span className={`font-semibold ${homeDeliveryCompany === 'ecomdz' ? 'text-blue-700' : 'text-gray-700'}`}>Ecom-DZ</span>
+                  </label>
+                </div>
+              </div>
+            )}
+
             {deliveryMode === 'bureau' && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Choisir un point relais *</label>
@@ -658,6 +678,7 @@ export default function Checkout() {
                               <div className="flex items-center gap-2 mb-2">
                                 <Building2 size={18} className="text-gray-500" />
                                 <h4 className="font-bold text-gray-900 uppercase">{office.name}</h4>
+                                <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wide ${office.company === "ecomdz" ? "bg-blue-100 text-blue-700" : "bg-orange-100 text-orange-700"}`}>{office.company === "ecomdz" ? "Ecom-DZ" : "DHD"}</span>
                               </div>
                               <div className="space-y-1.5 text-sm text-gray-600 ml-6">
                                 <p className="flex items-start gap-2">

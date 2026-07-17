@@ -718,8 +718,7 @@ export default function AdminDashboard() {
       
       if (!res.ok) throw new Error(orderData.error);
       
-      const wilayaMatch = String(orderData.wilaya).match(/^(\d+)/);
-      const wilayaId = wilayaMatch ? parseInt(wilayaMatch[1]) : 16;
+      const wilayaId = getDhdWilayaId(orderData.wilaya);
 
       const activeItems = orderData.items?.filter((i: any) => i.status !== 'cancelled') || [];
       const productsNames = activeItems.map((i: any) => `${i.quantity}x ${i.product_name}`).join(', ') || 'Produit';
@@ -798,6 +797,13 @@ let codeStopdesk = undefined;
       
       if (!deliveryRes.ok) {
         throw new Error(deliveryData.error || 'Erreur lors de l\'envoi à Ecom-DZ');
+      }
+
+      if (deliveryData.Colis && deliveryData.Colis.length > 0) {
+        const firstColis = deliveryData.Colis[0];
+        if (firstColis.Erreur === 1 || firstColis.Erreur === true || !firstColis.Tracking) {
+           throw new Error(firstColis.Message || 'Erreur de validation Ecom-DZ');
+        }
       }
 
       const updateRes = await fetch(`/api/admin/orders/${id}/status`, {

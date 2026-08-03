@@ -69,6 +69,7 @@ export default function Product() {
   const [wishlistDocId, setWishlistDocId] = useState<number | null>(null);
   const [trackingIds, setTrackingIds] = useState({ ga: '', fb: '' });
   const [settings, setSettings] = useState<any>({});
+  const [showAllReviews, setShowAllReviews] = useState(false);
   const addItem = useCartStore(state => state.addItem);
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -1146,28 +1147,40 @@ export default function Product() {
                 Aucun avis pour le moment. Soyez le premier à donner votre avis !
               </div>
             ) : (
-              reviews.map(review => (
-                <div key={review.id} className="border-b border-gray-100 pb-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="font-bold text-gray-800">{review.customer_name}</span>
-                    <span className="text-xs text-gray-500">{new Date(review.created_at).toLocaleDateString()}</span>
+              <>
+                {(showAllReviews ? reviews : reviews.slice(0, 3)).map(review => (
+                  <div key={review.id} className="border-b border-gray-100 pb-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="font-bold text-gray-800">{review.customer_name}</span>
+                      <span className="text-xs text-gray-500">{new Date(review.created_at).toLocaleDateString()}</span>
+                    </div>
+                    <div className="flex text-orange-400 mb-2">
+                      {[1, 2, 3, 4, 5].map(star => (
+                        <Star key={star} fill={star <= review.rating ? "currentColor" : "none"} size={14} />
+                      ))}
+                    </div>
+                    <p className="text-sm text-gray-600 mb-3">{review.comment}</p>
+                    {review.image_url && (
+                      <img 
+                        src={review.image_url} 
+                        alt="Photo de l'avis" 
+                        className="w-24 h-24 object-cover rounded-md border cursor-pointer hover:opacity-90 transition-opacity"
+                        onClick={() => setModalImage(review.image_url)}
+                      />
+                    )}
                   </div>
-                  <div className="flex text-orange-400 mb-2">
-                    {[1, 2, 3, 4, 5].map(star => (
-                      <Star key={star} fill={star <= review.rating ? "currentColor" : "none"} size={14} />
-                    ))}
+                ))}
+                {reviews.length > 3 && (
+                  <div className="text-center pt-4">
+                    <button 
+                      onClick={() => setShowAllReviews(!showAllReviews)}
+                      className="text-orange-500 hover:text-orange-600 font-bold py-2 px-6 border border-orange-500 rounded-md hover:bg-orange-50 transition-colors"
+                    >
+                      {showAllReviews ? "Afficher moins" : "Lire plus"}
+                    </button>
                   </div>
-                  <p className="text-sm text-gray-600 mb-3">{review.comment}</p>
-                  {review.image_url && (
-                    <img 
-                      src={review.image_url} 
-                      alt="Photo de l'avis" 
-                      className="w-24 h-24 object-cover rounded-md border cursor-pointer hover:opacity-90 transition-opacity"
-                      onClick={() => setModalImage(review.image_url)}
-                    />
-                  )}
-                </div>
-              ))
+                )}
+              </>
             )}
           </div>
         </div>

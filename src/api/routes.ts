@@ -9,7 +9,6 @@ import path from 'path';
 import rateLimit from 'express-rate-limit';
 import fs from 'fs';
 import capiRoutes from './capi.js';
-import dhdRoutes from './dhd.js';
 import ecomdzRoutes, { fetchEcomdzStopdesks } from './ecomdz.js';
 
 // Ensure profiles table has commune column
@@ -76,8 +75,6 @@ router.use((req, res, next) => {
 // Mount CAPI routes (renamed to app-events to bypass adblockers)
 router.use('/app-events/v1', capiRoutes);
 
-// Mount DHD routes
-router.use('/delivery', dhdRoutes);
 
 // Mount Ecom-DZ routes
 router.use('/ecomdz', ecomdzRoutes);
@@ -1015,7 +1012,7 @@ router.post('/orders', orderLimiter, async (req, res) => {
     const orderData = await sql.begin(async (sql: any) => {
       const [order] = await sql`
         INSERT INTO orders (customer_name, customer_email, customer_phone, wilaya, commune, address, note, total_amount, delivery_cost, customer_user_id, stop_desk, office_id, delivery_company, office_name)
-        VALUES (${customer_name || ''}, ${customer_email || null}, ${customer_phone || ''}, ${wilaya || ''}, ${commune || ''}, ${address || ''}, ${note || null}, ${calculatedTotal}, ${delivery_cost}, ${customer_user_id || null}, ${stop_desk ? true : false}, ${office_id || null}, ${delivery_company || 'dhd'}, ${office_name || null})
+        VALUES (${customer_name || ''}, ${customer_email || null}, ${customer_phone || ''}, ${wilaya || ''}, ${commune || ''}, ${address || ''}, ${note || null}, ${calculatedTotal}, ${delivery_cost}, ${customer_user_id || null}, ${stop_desk ? true : false}, ${office_id || null}, ${delivery_company || 'ecomdz'}, ${office_name || null})
         RETURNING id
       `;
       
@@ -2266,28 +2263,11 @@ router.get('/all-stopdesks', async (req, res) => {
 
   res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=86400, stale-while-revalidate=86400');
   try {
-    // 1. DHD offices (from local DB as existing)
-    const dhdOffices = await sql`SELECT * FROM offices ORDER BY wilaya ASC, name ASC`;
-    
     // 2. Ecom-DZ offices
     const ecomdzData = await fetchEcomdzStopdesks();
     
     const mergedOffices = [];
     
-    if (dhdOffices && Array.isArray(dhdOffices)) {
-      dhdOffices.forEach((o: any) => {
-        mergedOffices.push({
-          id: `dhd-${o.id}`,
-          original_id: o.id,
-          company: 'dhd',
-          name: o.name,
-          address: o.address,
-          wilaya: o.wilaya,
-          commune: o.commune,
-          phone: o.phone
-        });
-      });
-    }
 
     if (ecomdzData && ecomdzData.Commune && Array.isArray(ecomdzData.Commune)) {
       ecomdzData.Commune.forEach((o: any) => {

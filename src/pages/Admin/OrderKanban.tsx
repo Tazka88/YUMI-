@@ -9,7 +9,6 @@ interface OrderKanbanProps {
   orderSearchTerm: string;
   onDeleteOrder: (id: number) => void;
   onPrintOrder: (id: number) => void;
-  onSendToDhd?: (id: number) => void;
 }
 
 const COLUMNS = [
@@ -20,7 +19,7 @@ const COLUMNS = [
   { id: 'annulée', title: 'Annulée', color: 'bg-red-50', headerColor: 'bg-red-100 text-red-800 border-red-200' }
 ];
 
-export default function OrderKanban({ orders, updateOrderStatus, orderSearchTerm, onDeleteOrder, onPrintOrder, onSendToDhd }: OrderKanbanProps) {
+export default function OrderKanban({ orders, updateOrderStatus, orderSearchTerm, onDeleteOrder, onPrintOrder }: OrderKanbanProps) {
   const filteredOrders = orders.filter(order => 
     !orderSearchTerm || 
     (order.order_id && order.order_id.toLowerCase().includes(orderSearchTerm.toLowerCase())) || 
@@ -95,7 +94,7 @@ export default function OrderKanban({ orders, updateOrderStatus, orderSearchTerm
                               {order.delivery_company && (
                                 <div className="mt-1.5 flex items-center gap-1">
                                   <span className={`text-[10px] px-1.5 py-0.5 rounded uppercase font-bold ${order.delivery_company === 'ecomdz' ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'}`}>
-                                    {order.delivery_company === 'ecomdz' ? 'ECOM-DZ' : 'DHD'}
+                                    {'ECOM-DZ'}
                                   </span>
                                   {order.stop_desk && <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-700 font-medium">Stopdesk</span>}
                                 </div>
@@ -108,15 +107,6 @@ export default function OrderKanban({ orders, updateOrderStatus, orderSearchTerm
                                 {new Date(order.created_at).toLocaleDateString()} {new Date(order.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
                               </div>
                               <div className="flex gap-2">
-                                {onSendToDhd && (
-                                  <button 
-                                    onClick={() => onSendToDhd(order.id)}
-                                    className="p-1.5 text-gray-500 hover:text-orange-600 hover:bg-orange-50 rounded-md transition-colors"
-                                    title="Envoyer à la livraison"
-                                  >
-                                    <Truck size={16} />
-                                  </button>
-                                )}
                                 <button 
                                   onClick={() => onPrintOrder(order.id)}
                                   className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"

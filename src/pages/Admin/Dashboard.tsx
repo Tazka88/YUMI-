@@ -58,7 +58,7 @@ export default function AdminDashboard() {
   const [refreshToggle, setRefreshToggle] = useState(0);
   const [orders, setOrders] = useState<any[]>([]);
   const [selectedOrders, setSelectedOrders] = useState<number[]>([]);
-  const [deliveryCompany, setDeliveryCompany] = useState<'dhd' | 'ecomdz'>('dhd');
+  const [deliveryCompany, setDeliveryCompany] = useState<'ecomdz'>('ecomdz');
   const [orderSearchTerm, setOrderSearchTerm] = useState('');
   const [orderView, setOrderView] = useState<'list' | 'kanban'>('kanban');
   const [orderStatusFilter, setOrderStatusFilter] = useState<string>('all');
@@ -619,91 +619,21 @@ export default function AdminDashboard() {
     "relizane": 48, "timimoun": 49, "bordj badji mokhtar": 50, "ouled djellal": 51, "béni abbès": 52, "in salah": 53,
     "in guezzam": 54, "touggourt": 55, "djanet": 56, "el m'ghair": 57, "el meniaa": 58
   };
-
-  const getDhdWilayaId = (wilayaName: string): number => {
+  const getWilayaId = (wilayaName: string): number => {
     if (!wilayaName) return 16;
-    const str = wilayaName.toString().toLowerCase().trim();
-    const match = str.match(/^\d+/);
-    if (match) return parseInt(match[0]);
-    for (const [name, id] of Object.entries(ALGERIA_WILAYAS)) {
-      if (str.includes(name) || str === name) return id;
+    const name = wilayaName.toLowerCase().trim();
+    const exactMatch = ALGERIA_WILAYAS[name];
+    if (exactMatch) return exactMatch;
+    for (const [key, value] of Object.entries(ALGERIA_WILAYAS)) {
+      if (name.includes(key) || key.includes(name)) return value;
     }
-    return 16; // default
+    return 16; // Default to Alger
   };
 
-  const sendToDhd = async (id: number, silent = false) => {
-    const token = localStorage.getItem('adminToken');
-    let loadId;
-    if (!silent) loadId = toast.loading('Envoi vers DHD Livraison...');
-    try {
-      const res = await fetch(`/api/admin/orders/${id}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const orderData = await res.json();
-      
-      if (!res.ok) throw new Error(orderData.error);
-      
-      const wilayaId = getDhdWilayaId(orderData.wilaya);
-      const activeItems = orderData.items?.filter((i: any) => i.status !== 'cancelled') || [];
-      const productsNames = activeItems.map((i: any) => `${i.quantity}x ${i.product_name}`).join(', ') || 'Produit';
 
-      const cleanPhone = (orderData.customer_phone || '').replace(/\D/g, '');
 
-      const payload: any = {
-        reference: orderData.order_id || `#${orderData.id}`,
-        nom_client: orderData.customer_name || 'Client',
-        telephone: cleanPhone || '0000000000',
-        adresse: orderData.address || 'Aucune adresse',
-        code_wilaya: wilayaId,
-        wilaya: wilayaId,
-        commune: orderData.commune || 'Centre',
-        montant: orderData.total_amount,
-        remarque: orderData.note || '',
-        produit: productsNames.substring(0, 250),
-        type: 1, // Livraison
-        stop_desk: orderData.stop_desk ? 1 : 0
-      };
 
-      if (orderData.office_id) {
-        payload.office_id = orderData.office_id;
-      }
 
-      const deliveryRes = await fetch('/api/delivery/create-order', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-      
-      const deliveryData = await deliveryRes.json();
-      
-      if (!deliveryRes.ok) {
-        let detailMsg = '';
-        if (deliveryData.details) {
-          if (Array.isArray(deliveryData.details)) {
-            detailMsg = deliveryData.details.map((d: any) => d.message).join(', ');
-          } else if (deliveryData.details.message) {
-            detailMsg = deliveryData.details.message;
-            if (deliveryData.details.errors) {
-              const errorsList = Object.values(deliveryData.details.errors).flat();
-              if (errorsList.length > 0) {
-                 detailMsg += ' : ' + errorsList.join(' | ');
-              }
-            }
-          }
-        }
-        throw new Error(detailMsg || deliveryData.error || 'Erreur API Livraison');
-      }
-
-      if (!silent) toast.success('Commande envoyée avec succès', { id: loadId });
-      
-      await updateOrderStatus(id, 'expédiée');
-      return true;
-    } catch (err: any) {
-      console.error(err);
-      if (!silent) toast.error(err.message, { id: loadId });
-      return false;
-    }
-  };
 
   
   const sendToEcomDz = async (id: number, silent = false) => {
@@ -718,7 +648,7 @@ export default function AdminDashboard() {
       
       if (!res.ok) throw new Error(orderData.error);
       
-      const wilayaId = getDhdWilayaId(orderData.wilaya);
+      const wilayaId = getWilayaId(orderData.wilaya);
 
       const activeItems = orderData.items?.filter((i: any) => i.status !== 'cancelled') || [];
       const productsNames = activeItems.map((i: any) => `${i.quantity}x ${i.product_name}`).join(', ') || 'Produit';
@@ -837,26 +767,14 @@ const handleBulkDelivery = async () => {
     for (const id of selectedOrders) {
       const order = orders.find(o => o.id === id);
       const company = order?.delivery_company || deliveryCompany;
-      const success = company === 'ecomdz' ? await sendToEcomDz(id, true) : await sendToDhd(id, true);
+      const success = await sendToEcomDz(id, true);
       if (success) successCount++;
     }
     
     toast.success(`${successCount}/${selectedOrders.length} envoyée(s)`, { id: loadId });
     setSelectedOrders([]);
   };
-  const handleBulkDhd = async () => {
-    if (selectedOrders.length === 0) return;
-    const loadId = toast.loading(`Envoi de ${selectedOrders.length} commandes...`);
-    let successCount = 0;
-    
-    for (const id of selectedOrders) {
-      const success = await sendToDhd(id, true);
-      if (success) successCount++;
-    }
-    
-    toast.success(`${successCount}/${selectedOrders.length} envoyée(s) à DHD`, { id: loadId });
-    setSelectedOrders([]);
-  };
+
 
   const handleSelectAllOrders = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.checked) {
@@ -2057,7 +1975,6 @@ const handleBulkDelivery = async () => {
                   orderSearchTerm={orderSearchTerm} 
                   onDeleteOrder={deleteOrder}
                   onPrintOrder={printOrder}
-                  onSendToDhd={(id) => { const o = orders.find(x => x.id === id); const c = o?.delivery_company || deliveryCompany; return c === 'ecomdz' ? sendToEcomDz(id) : sendToDhd(id); }}
                 />
               </div>
             ) : (
@@ -2096,10 +2013,9 @@ const handleBulkDelivery = async () => {
                         <div className="flex items-center gap-2">
                           <select 
                             value={deliveryCompany} 
-                            onChange={(e) => setDeliveryCompany(e.target.value as 'dhd' | 'ecomdz')}
+                            onChange={(e) => setDeliveryCompany(e.target.value as 'ecomdz')}
                             className="text-sm border-gray-300 rounded focus:ring-orange-500 focus:border-orange-500 h-[34px] py-1 px-2 bg-white"
                           >
-                            <option value="dhd">DHD</option>
                             <option value="ecomdz">Ecom-DZ</option>
                           </select>
                           <button
@@ -2192,8 +2108,8 @@ const handleBulkDelivery = async () => {
                         <div className="text-xs text-gray-500 truncate max-w-[150px]">{order.address}</div>
                         {order.delivery_company && (
                           <div className="mt-1 flex items-center gap-1">
-                            <span className={`text-[10px] px-1.5 py-0.5 rounded uppercase font-bold ${order.delivery_company === 'ecomdz' ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'}`}>
-                              {order.delivery_company === 'ecomdz' ? 'ECOM-DZ' : 'DHD'}
+                            <span className={`text-[10px] px-1.5 py-0.5 rounded uppercase font-bold ${'bg-blue-100 text-blue-700'}`}>
+                              'ECOM-DZ'
                             </span>
                             {order.stop_desk && <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-700 font-medium">Stopdesk</span>}
                           </div>
@@ -2219,7 +2135,7 @@ const handleBulkDelivery = async () => {
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2">
                           <button 
-                            onClick={() => { const c = order.delivery_company || deliveryCompany; return c === 'ecomdz' ? sendToEcomDz(order.id) : sendToDhd(order.id); }}
+                            onClick={() => { sendToEcomDz(order.id); }}
                             className="p-1.5 text-orange-500 hover:text-orange-700 hover:bg-orange-50 rounded-md transition-colors"
                             title={`Envoyer à ${deliveryCompany.toUpperCase()}`}
                           >

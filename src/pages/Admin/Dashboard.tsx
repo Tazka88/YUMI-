@@ -1975,6 +1975,7 @@ const handleBulkDelivery = async () => {
                   orderSearchTerm={orderSearchTerm} 
                   onDeleteOrder={deleteOrder}
                   onPrintOrder={printOrder}
+                  onSendToDelivery={(id) => sendToEcomDz(id)}
                 />
               </div>
             ) : (

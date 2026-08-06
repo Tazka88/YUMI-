@@ -834,7 +834,7 @@ export default function Checkout() {
               </div>
             </div>
             
-            <button type="submit" disabled={isSubmitting || !formData.wilaya || !formData.commune || !formData.name || !formData.phone || (deliveryMode === 'domicile' ? !formData.address : !officeId)}
+            <button onClick={handleSubmit} disabled={isSubmitting || !formData.wilaya || !formData.commune || !formData.name || !formData.phone || (deliveryMode === 'domicile' ? !formData.address : !officeId)}
               className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-4 px-4 rounded-md flex items-center justify-center gap-2 transition-colors shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isSubmitting ? (

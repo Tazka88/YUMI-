@@ -12,10 +12,11 @@ console.log('Initializing PostgreSQL connection...');
 
 export const sql = globalForPostgres.sql ?? postgres(connectionString, {
   ssl: connectionString.includes('localhost') || connectionString.includes('127.0.0.1') ? false : 'require',
-  max: 15,
-  idle_timeout: 3,
+  max: 5,
+  idle_timeout: 1,
   connect_timeout: 10,
   prepare: false,
+  max_lifetime: 60 * 5,
 });
 
 if (process.env.NODE_ENV !== 'production') {

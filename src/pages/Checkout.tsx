@@ -317,7 +317,7 @@ export default function Checkout() {
       stop_desk: deliveryMode === 'bureau',
       office_id: deliveryMode === 'bureau' && selectedOffice ? selectedOffice.original_id : null,
       office_name: deliveryMode === 'bureau' && selectedOffice ? selectedOffice.name : null,
-      delivery_company: deliveryMode === 'bureau' && selectedOffice ? selectedOffice.company : homeDeliveryCompany,
+      delivery_company: deliveryMode === 'bureau' && selectedOffice ? selectedOffice.company : 'ecomdz',
       customer_user_id: user?.id || null,
       items: checkoutItems.map(item => ({
         product_id: item.id,
@@ -816,8 +816,7 @@ export default function Checkout() {
                     value={discountEmail}
                     onChange={(e) => setDiscountEmail(e.target.value)}
                   />
-                  <button 
-                    onClick={handleApplyDiscount}
+                  <button type="button" onClick={handleApplyDiscount}
                     className="w-full bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold py-2 px-4 rounded transition-colors shadow-sm flex items-center justify-center gap-2"
                   >
                     <span>👉</span> Confirmer et appliquer la réduction
@@ -835,9 +834,7 @@ export default function Checkout() {
               </div>
             </div>
             
-            <button 
-              onClick={handleSubmit}
-              disabled={isSubmitting || !formData.wilaya || !formData.commune || !formData.name || !formData.phone || (deliveryMode === 'domicile' ? !formData.address : !officeId)}
+            <button type="submit" disabled={isSubmitting || !formData.wilaya || !formData.commune || !formData.name || !formData.phone || (deliveryMode === 'domicile' ? !formData.address : !officeId)}
               className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-4 px-4 rounded-md flex items-center justify-center gap-2 transition-colors shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isSubmitting ? (

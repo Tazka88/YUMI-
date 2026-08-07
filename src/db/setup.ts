@@ -15,7 +15,7 @@ console.log('Initializing PostgreSQL connection...');
 
 export const sql = globalForPostgres.sql ?? postgres(connectionString, {
   ssl: connectionString.includes('localhost') || connectionString.includes('127.0.0.1') ? false : 'require',
-  max: 1,
+  max: 5,
   idle_timeout: 1,
   connect_timeout: 10,
   prepare: false,

@@ -14,6 +14,7 @@ if (!KEY || !TOKEN) {
 // Configuration Axios pour Ecom-DZ
 const ecomdzApi = axios.create({
   baseURL: URL_API,
+  timeout: 5000,
   headers: {
     'Accept': 'application/json',
     'Content-Type': 'application/json',

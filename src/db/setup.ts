@@ -6,7 +6,10 @@ const globalForPostgres = globalThis as unknown as {
   sql: postgres.Sql | undefined;
 };
 
-let connectionString = process.env.DATABASE_URL || 'postgresql://postgres:Lifebook88855@db.evvbhalgyffagsesmvhu.supabase.co:5432/postgres';
+let connectionString = process.env.DATABASE_URL || 'postgresql://postgres:Lifebook88855@db.evvbhalgyffagsesmvhu.supabase.co:6543/postgres';
+if (connectionString.includes(':5432')) {
+  connectionString = connectionString.replace(':5432', ':6543');
+}
 
 console.log('Initializing PostgreSQL connection...');
 

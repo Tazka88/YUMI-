@@ -12,12 +12,6 @@ import capiRoutes from './capi.js';
 import ecomdzRoutes, { fetchEcomdzStopdesks } from './ecomdz.js';
 
 // Ensure profiles table has commune column
-sql`ALTER TABLE profiles ADD COLUMN IF NOT EXISTS commune VARCHAR(255)`.catch(err => console.error(err));
-sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS delivery_company VARCHAR(50);`.catch(err => console.error(err));
-sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS stop_desk BOOLEAN;`.catch(err => console.error(err));
-sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS office_id VARCHAR(255);`.catch(err => console.error(err));
-sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS office_name VARCHAR(255);`.catch(err => console.error(err));
-sql`ALTER TABLE orders ALTER COLUMN office_id TYPE VARCHAR(255);`.catch(err => console.error(err));
 
 const router = Router();
 

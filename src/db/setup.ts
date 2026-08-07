@@ -15,7 +15,7 @@ console.log('Initializing PostgreSQL connection...');
 
 export const sql = globalForPostgres.sql ?? postgres(connectionString, {
   ssl: connectionString.includes('localhost') || connectionString.includes('127.0.0.1') ? false : 'require',
-  max: 5,
+  max: 1,
   idle_timeout: 1,
   connect_timeout: 10,
   prepare: false,
@@ -43,7 +43,7 @@ export async function setupDb() {
     const schemaPath = path.join(process.cwd(), 'src', 'db', 'schema.sql');
     if (fs.existsSync(schemaPath)) {
       const schema = fs.readFileSync(schemaPath, 'utf8');
-      await sql.unsafe(schema);
+      // await sql.unsafe(schema);
       console.log('Database schema initialized successfully.');
     }
   } catch (error) {

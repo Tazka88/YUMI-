@@ -473,18 +473,26 @@ export default function Product() {
     }
   };
 
+  
   const avgRating = reviews.length > 0 
     ? (reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length).toFixed(1)
     : '0.0';
 
-  const productSchema = {
+  const rawUrl = window.location.href;
+  let cleanUrl = rawUrl.split('?')[0];
+  cleanUrl = cleanUrl.replace(/^https?:\/\/(www\.)?[^\/]+/, 'https://www.zorando.com');
+  if (cleanUrl.length > 'https://www.zorando.com/'.length && cleanUrl.endsWith('/')) {
+    cleanUrl = cleanUrl.slice(0, -1);
+  }
+
+  const productSchema: any = {
     "@context": "https://schema.org/",
     "@type": "Product",
     "name": product.name,
-    "image": product.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(product.name)}&background=random&size=800`,
+    "image": (product.image && product.image.startsWith('/')) ? `https://www.zorando.com${product.image}` : (product.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(product.name)}&background=random&size=800`),
     "description": product.description,
-    "sku": product.id.toString(),
-    "mpn": product.id.toString(),
+    "sku": product.sku || product.id.toString(),
+    "mpn": product.sku || product.id.toString(),
     "category": product.category_name || "General",
     "brand": {
       "@type": "Brand",
@@ -492,7 +500,7 @@ export default function Product() {
     },
     "offers": {
       "@type": "Offer",
-      "url": window.location.href,
+      "url": cleanUrl,
       "priceCurrency": "DZD",
       "price": currentPrice,
       "priceValidUntil": (isPromo && product.promo_price_end_date) ? new Date(product.promo_price_end_date).toISOString().split('T')[0] : new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0],
@@ -533,17 +541,77 @@ export default function Product() {
         "returnMethod": "https://schema.org/ReturnByMail",
         "returnFees": "https://schema.org/FreeReturn"
       }
-    },
-    ...(reviews.length > 0 ? {
-      "aggregateRating": {
-        "@type": "AggregateRating",
-        "ratingValue": Number(avgRating),
-        "reviewCount": reviews.length,
-        "bestRating": 5,
-        "worstRating": 1
-      }
-    } : {})
+    }
   };
+
+  if (reviews.length > 0) {
+    productSchema.aggregateRating = {
+      "@type": "AggregateRating",
+      "ratingValue": Number(avgRating),
+      "reviewCount": reviews.length,
+      "bestRating": 5,
+      "worstRating": 1
+    };
+
+    productSchema.review = reviews.map(r => ({
+      "@type": "Review",
+      "author": {
+        "@type": "Person",
+        "name": r.customer_name
+      },
+      "datePublished": new Date(r.created_at).toISOString().split('T')[0],
+      "reviewBody": r.comment,
+      "reviewRating": {
+        "@type": "Rating",
+        "ratingValue": r.rating,
+        "bestRating": "5",
+        "worstRating": "1"
+      }
+    }));
+  }
+
+  const breadcrumbList = [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "Accueil",
+      "item": "https://www.zorando.com/"
+    }
+  ];
+
+  let position = 2;
+  if (product.category_slug) {
+    breadcrumbList.push({
+      "@type": "ListItem",
+      "position": position++,
+      "name": product.category_name || "Catégorie",
+      "item": `https://www.zorando.com/category/${product.category_slug}`
+    });
+  }
+  
+  if (product.subcategory_slug) {
+    breadcrumbList.push({
+      "@type": "ListItem",
+      "position": position++,
+      "name": product.subcategory_name || "Sous-catégorie",
+      "item": `https://www.zorando.com/category/${product.category_slug}/${product.subcategory_slug}`
+    });
+  }
+
+  breadcrumbList.push({
+    "@type": "ListItem",
+    "position": position,
+    "name": product.name,
+    "item": cleanUrl
+  });
+
+  const breadcrumbSchema = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": breadcrumbList
+  };
+
+  const finalSchema = [productSchema, breadcrumbSchema];
 
   return (
     <div className="container mx-auto px-4 py-8 pb-24 md:pb-8">
@@ -551,10 +619,10 @@ export default function Product() {
         title={product.seo_title || product.name || 'Produit'} 
         description={product.seo_description || (product.description ? product.description.substring(0, 150) + '...' : 'Achetez ce produit au meilleur prix.')} 
         keywords={product.seo_keywords}
-        image={product.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(product.name)}&background=random&size=800`}
-        url={window.location.href}
+        image={(product.image && product.image.startsWith('/')) ? `https://www.zorando.com${product.image}` : (product.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(product.name)}&background=random&size=800`)}
+        url={cleanUrl}
         type="product"
-        schema={productSchema}
+        schema={finalSchema}
       />
       {/* Breadcrumb */}
       <div className="text-sm text-gray-500 mb-6 flex items-center gap-2 flex-wrap">

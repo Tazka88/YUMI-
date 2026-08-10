@@ -168,8 +168,8 @@ const serveImageData = async (res: any, imageData: string, targetWidth?: number,
   res.status(404).json({ error: 'Invalid image format' });
 };
 
-const PRODUCT_COLS = `p.id, p.category_id, p.subcategory_id, p.sub_subcategory_id, p.brand_id, p.name, p.slug, p.description, p.price, p.promo_price, p.stock, CASE WHEN p.image LIKE 'data:image/%' THEN '/api/images/products/' || p.id || '/image/' || COALESCE(NULLIF(p.slug, ''), 'product') || '.webp?v=' || LENGTH(p.image) ELSE p.image END as image, p.main_image_alt, p.video_url, p.is_popular, p.is_best_seller, p.is_new, p.is_recommended, p.is_fast_delivery, p.weight, p.is_active, p.features, p.key_points, p.faq_q1, p.faq_a1, p.faq_q2, p.faq_a2, p.variations, p.created_at, p.seo_title, p.seo_description, p.seo_keywords`;
-const PRODUCT_LIST_COLS = `p.id, p.category_id, p.subcategory_id, p.sub_subcategory_id, p.brand_id, p.name, p.slug, p.price, p.promo_price, p.stock, p.is_fast_delivery, p.is_popular, p.is_best_seller, p.is_new, p.is_recommended, p.is_active, p.variations, p.created_at, CASE WHEN p.image LIKE 'data:image/%' THEN '/api/images/products/' || p.id || '/image/' || COALESCE(NULLIF(p.slug, ''), 'product') || '.webp?v=' || LENGTH(p.image) ELSE p.image END as image`;
+const PRODUCT_COLS = `p.id, p.category_id, p.subcategory_id, p.sub_subcategory_id, p.brand_id, p.name, p.slug, p.description, p.price, p.promo_price, p.promo_price_start_date, p.promo_price_end_date, p.stock, CASE WHEN p.image LIKE 'data:image/%' THEN '/api/images/products/' || p.id || '/image/' || COALESCE(NULLIF(p.slug, ''), 'product') || '.webp?v=' || LENGTH(p.image) ELSE p.image END as image, p.main_image_alt, p.video_url, p.is_popular, p.is_best_seller, p.is_new, p.is_recommended, p.is_fast_delivery, p.weight, p.is_active, p.features, p.key_points, p.faq_q1, p.faq_a1, p.faq_q2, p.faq_a2, p.variations, p.created_at, p.seo_title, p.seo_description, p.seo_keywords`;
+const PRODUCT_LIST_COLS = `p.id, p.category_id, p.subcategory_id, p.sub_subcategory_id, p.brand_id, p.name, p.slug, p.price, p.promo_price, p.promo_price_start_date, p.promo_price_end_date, p.stock, p.is_fast_delivery, p.is_popular, p.is_best_seller, p.is_new, p.is_recommended, p.is_active, p.variations, p.created_at, CASE WHEN p.image LIKE 'data:image/%' THEN '/api/images/products/' || p.id || '/image/' || COALESCE(NULLIF(p.slug, ''), 'product') || '.webp?v=' || LENGTH(p.image) ELSE p.image END as image`;
 const BLOG_POSTS_COLS = `id, category_id, title, slug, excerpt, content, CASE WHEN image_url LIKE 'data:image/%' THEN '/api/images/blog_posts/' || id || '/image_url?v=' || LENGTH(image_url) ELSE image_url END as image_url, status, published_at, created_at, seo_title, seo_description`;
 const BLOG_POSTS_LIST_COLS = `p.id, p.category_id, p.title, p.slug, p.excerpt, CASE WHEN p.image_url LIKE 'data:image/%' THEN '/api/images/blog_posts/' || p.id || '/image_url?v=' || LENGTH(p.image_url) ELSE p.image_url END as image_url, p.status, p.published_at, p.created_at`;
 const PRODUCT_IMAGES_COLS = `id, product_id, is_main, alt_text, CASE WHEN image LIKE 'data:image/%' THEN '/api/images/product_images/' || id || '/image?v=' || LENGTH(image) ELSE image END as image`;
@@ -951,7 +951,7 @@ router.post('/orders', orderLimiter, async (req, res) => {
       const quantity = parseInt(item.quantity, 10);
       if (isNaN(quantity) || quantity <= 0) throw new Error('Quantité invalide');
       
-      const [product] = await sql`SELECT price, promo_price, stock, variations FROM products WHERE id = ${item.product_id}`;
+      const [product] = await sql`SELECT price, promo_price, promo_price_start_date, promo_price_end_date, stock, variations FROM products WHERE id = ${item.product_id}`;
       if (!product) throw new Error(`Produit invalide: ${item.product_id}`);
       
       let parsedVariations: any[] = [];
@@ -961,7 +961,14 @@ router.post('/orders', orderLimiter, async (req, res) => {
         parsedVariations = product.variations;
       }
       
-      let actualPrice = product.promo_price || product.price;
+      let isPromoValid = (() => {
+        if (!product.promo_price) return false;
+        const now = new Date();
+        if (product.promo_price_start_date && new Date(product.promo_price_start_date) > now) return false;
+        if (product.promo_price_end_date && new Date(product.promo_price_end_date) < now) return false;
+        return true;
+      })();
+      let actualPrice = isPromoValid ? product.promo_price : product.price;
       
       // Calculate active variation price if selected
       if (item.variation && parsedVariations.length > 0) {
@@ -1809,7 +1816,7 @@ router.get('/admin/export-meta-catalog', authenticate, async (req, res) => {
   }
 });
 
-const META_PRODUCT_COLS = `p.id, p.name, p.slug, SUBSTRING(p.description FROM 1 FOR 300) as description, p.price, p.promo_price, p.is_active, CASE WHEN p.image LIKE 'data:image/%' THEN '/api/images/products/' || p.id || '/image/' || COALESCE(NULLIF(p.slug, ''), 'product') || '.webp?v=' || LENGTH(p.image) ELSE p.image END as image`;
+const META_PRODUCT_COLS = `p.id, p.name, p.slug, SUBSTRING(p.description FROM 1 FOR 300) as description, p.price, p.promo_price, p.promo_price_start_date, p.promo_price_end_date, p.is_active, CASE WHEN p.image LIKE 'data:image/%' THEN '/api/images/products/' || p.id || '/image/' || COALESCE(NULLIF(p.slug, ''), 'product') || '.webp?v=' || LENGTH(p.image) ELSE p.image END as image`;
 
 // Public endpoint for Meta catalog scheduled fetch
 router.get('/feed/meta-catalog.csv', async (req, res) => {
@@ -1901,15 +1908,15 @@ function generateSlug(str: string): string {
 }
 
 router.post('/admin/products', authenticate, async (req, res) => {
-  const { category_id, subcategory_id, sub_subcategory_id, brand_id, brand_name, name, description, price, promo_price, stock, image, main_image_alt, video_url, is_popular, is_best_seller, is_new, is_recommended, is_fast_delivery, weight, is_active, images, features, key_points, faq_q1, faq_a1, faq_q2, faq_a2, variations, seo_title, seo_description, seo_keywords } = req.body;
+  const { category_id, subcategory_id, sub_subcategory_id, brand_id, brand_name, name, description, price, promo_price, stock, image, main_image_alt, video_url, is_popular, is_best_seller, is_new, is_recommended, is_fast_delivery, weight, is_active, images, features, key_points, faq_q1, faq_a1, faq_q2, faq_a2, variations, seo_title, seo_description, seo_keywords, promo_price_start_date, promo_price_end_date } = req.body;
   
   try {
     const generatedSlug = generateSlug(name);
     
     const productId = await sql.begin(async (sql: any) => {
       const [info] = await sql`
-        INSERT INTO products (category_id, subcategory_id, sub_subcategory_id, brand_id, brand_name, name, slug, description, price, promo_price, stock, image, main_image_alt, video_url, is_popular, is_best_seller, is_new, is_recommended, is_fast_delivery, weight, is_active, features, key_points, faq_q1, faq_a1, faq_q2, faq_a2, variations, seo_title, seo_description, seo_keywords)
-        VALUES (${category_id || null}, ${subcategory_id || null}, ${sub_subcategory_id || null}, ${brand_id || null}, ${brand_name || null}, ${name || ''}, ${generatedSlug || ''}, ${description || null}, ${price || 0}, ${promo_price || null}, ${stock || 0}, ${image || null}, ${main_image_alt || null}, ${video_url || null}, ${is_popular ? true : false}, ${is_best_seller ? true : false}, ${is_new ? true : false}, ${is_recommended ? true : false}, ${is_fast_delivery ? true : false}, ${weight || null}, ${is_active !== undefined ? is_active : true}, ${features ? sql.json(features) : null}, ${key_points ? sql.json(key_points) : null}, ${faq_q1 || null}, ${faq_a1 || null}, ${faq_q2 || null}, ${faq_a2 || null}, ${variations ? sql.json(variations) : null}, ${seo_title || null}, ${seo_description || null}, ${seo_keywords || null})
+        INSERT INTO products (category_id, subcategory_id, sub_subcategory_id, brand_id, brand_name, name, slug, description, price, promo_price, promo_price_start_date, promo_price_end_date, stock, image, main_image_alt, video_url, is_popular, is_best_seller, is_new, is_recommended, is_fast_delivery, weight, is_active, features, key_points, faq_q1, faq_a1, faq_q2, faq_a2, variations, seo_title, seo_description, seo_keywords)
+        VALUES (${category_id || null}, ${subcategory_id || null}, ${sub_subcategory_id || null}, ${brand_id || null}, ${brand_name || null}, ${name || ''}, ${generatedSlug || ''}, ${description || null}, ${price || 0}, ${promo_price || null}, ${promo_price_start_date || null}, ${promo_price_end_date || null}, ${stock || 0}, ${image || null}, ${main_image_alt || null}, ${video_url || null}, ${is_popular ? true : false}, ${is_best_seller ? true : false}, ${is_new ? true : false}, ${is_recommended ? true : false}, ${is_fast_delivery ? true : false}, ${weight || null}, ${is_active !== undefined ? is_active : true}, ${features ? sql.json(features) : null}, ${key_points ? sql.json(key_points) : null}, ${faq_q1 || null}, ${faq_a1 || null}, ${faq_q2 || null}, ${faq_a2 || null}, ${variations ? sql.json(variations) : null}, ${seo_title || null}, ${seo_description || null}, ${seo_keywords || null})
         RETURNING id
       `;
       
@@ -1935,20 +1942,20 @@ router.post('/admin/products', authenticate, async (req, res) => {
 });
 
 router.put('/admin/products/:id', authenticate, async (req, res) => {
-  const { category_id, subcategory_id, sub_subcategory_id, brand_id, brand_name, name, slug, description, price, promo_price, stock, image, main_image_alt, video_url, is_popular, is_best_seller, is_new, is_recommended, is_fast_delivery, weight, is_active, images, features, key_points, faq_q1, faq_a1, faq_q2, faq_a2, variations, seo_title, seo_description, seo_keywords } = req.body;
+  const { category_id, subcategory_id, sub_subcategory_id, brand_id, brand_name, name, slug, description, price, promo_price, stock, image, main_image_alt, video_url, is_popular, is_best_seller, is_new, is_recommended, is_fast_delivery, weight, is_active, images, features, key_points, faq_q1, faq_a1, faq_q2, faq_a2, variations, seo_title, seo_description, seo_keywords, promo_price_start_date, promo_price_end_date } = req.body;
   
   try {
     await sql.begin(async (sql: any) => {
       if (image && image.startsWith('/api/images/')) {
         await sql`
           UPDATE products 
-          SET category_id = ${category_id || null}, subcategory_id = ${subcategory_id || null}, sub_subcategory_id = ${sub_subcategory_id || null}, brand_id = ${brand_id || null}, brand_name = ${brand_name || null}, name = ${name || ''}, slug = ${slug || ''}, description = ${description || null}, price = ${price || 0}, promo_price = ${promo_price || null}, stock = ${stock || 0}, video_url = ${video_url || null}, is_popular = ${is_popular ? true : false}, is_best_seller = ${is_best_seller ? true : false}, is_new = ${is_new ? true : false}, is_recommended = ${is_recommended ? true : false}, is_fast_delivery = ${is_fast_delivery ? true : false}, weight = ${weight || null}, is_active = ${is_active !== undefined ? is_active : true}, features = ${features ? sql.json(features) : null}, key_points = ${key_points ? sql.json(key_points) : null}, faq_q1 = ${faq_q1 || null}, faq_a1 = ${faq_a1 || null}, faq_q2 = ${faq_q2 || null}, faq_a2 = ${faq_a2 || null}, variations = ${variations ? sql.json(variations) : null}, seo_title = ${seo_title || null}, seo_description = ${seo_description || null}, seo_keywords = ${seo_keywords || null}, main_image_alt = ${main_image_alt || null}
+          SET category_id = ${category_id || null}, subcategory_id = ${subcategory_id || null}, sub_subcategory_id = ${sub_subcategory_id || null}, brand_id = ${brand_id || null}, brand_name = ${brand_name || null}, name = ${name || ''}, slug = ${slug || ''}, description = ${description || null}, price = ${price || 0}, promo_price = ${promo_price || null}, promo_price_start_date = ${promo_price_start_date || null}, promo_price_end_date = ${promo_price_end_date || null}, stock = ${stock || 0}, video_url = ${video_url || null}, is_popular = ${is_popular ? true : false}, is_best_seller = ${is_best_seller ? true : false}, is_new = ${is_new ? true : false}, is_recommended = ${is_recommended ? true : false}, is_fast_delivery = ${is_fast_delivery ? true : false}, weight = ${weight || null}, is_active = ${is_active !== undefined ? is_active : true}, features = ${features ? sql.json(features) : null}, key_points = ${key_points ? sql.json(key_points) : null}, faq_q1 = ${faq_q1 || null}, faq_a1 = ${faq_a1 || null}, faq_q2 = ${faq_q2 || null}, faq_a2 = ${faq_a2 || null}, variations = ${variations ? sql.json(variations) : null}, seo_title = ${seo_title || null}, seo_description = ${seo_description || null}, seo_keywords = ${seo_keywords || null}, main_image_alt = ${main_image_alt || null}
           WHERE id = ${req.params.id}
         `;
       } else {
         await sql`
           UPDATE products 
-          SET category_id = ${category_id || null}, subcategory_id = ${subcategory_id || null}, sub_subcategory_id = ${sub_subcategory_id || null}, brand_id = ${brand_id || null}, brand_name = ${brand_name || null}, name = ${name || ''}, slug = ${slug || ''}, description = ${description || null}, price = ${price || 0}, promo_price = ${promo_price || null}, stock = ${stock || 0}, image = ${image || null}, video_url = ${video_url || null}, is_popular = ${is_popular ? true : false}, is_best_seller = ${is_best_seller ? true : false}, is_new = ${is_new ? true : false}, is_recommended = ${is_recommended ? true : false}, is_fast_delivery = ${is_fast_delivery ? true : false}, weight = ${weight || null}, is_active = ${is_active !== undefined ? is_active : true}, features = ${features ? sql.json(features) : null}, key_points = ${key_points ? sql.json(key_points) : null}, faq_q1 = ${faq_q1 || null}, faq_a1 = ${faq_a1 || null}, faq_q2 = ${faq_q2 || null}, faq_a2 = ${faq_a2 || null}, variations = ${variations ? sql.json(variations) : null}, seo_title = ${seo_title || null}, seo_description = ${seo_description || null}, seo_keywords = ${seo_keywords || null}, main_image_alt = ${main_image_alt || null}
+          SET category_id = ${category_id || null}, subcategory_id = ${subcategory_id || null}, sub_subcategory_id = ${sub_subcategory_id || null}, brand_id = ${brand_id || null}, brand_name = ${brand_name || null}, name = ${name || ''}, slug = ${slug || ''}, description = ${description || null}, price = ${price || 0}, promo_price = ${promo_price || null}, promo_price_start_date = ${promo_price_start_date || null}, promo_price_end_date = ${promo_price_end_date || null}, stock = ${stock || 0}, image = ${image || null}, video_url = ${video_url || null}, is_popular = ${is_popular ? true : false}, is_best_seller = ${is_best_seller ? true : false}, is_new = ${is_new ? true : false}, is_recommended = ${is_recommended ? true : false}, is_fast_delivery = ${is_fast_delivery ? true : false}, weight = ${weight || null}, is_active = ${is_active !== undefined ? is_active : true}, features = ${features ? sql.json(features) : null}, key_points = ${key_points ? sql.json(key_points) : null}, faq_q1 = ${faq_q1 || null}, faq_a1 = ${faq_a1 || null}, faq_q2 = ${faq_q2 || null}, faq_a2 = ${faq_a2 || null}, variations = ${variations ? sql.json(variations) : null}, seo_title = ${seo_title || null}, seo_description = ${seo_description || null}, seo_keywords = ${seo_keywords || null}, main_image_alt = ${main_image_alt || null}
           WHERE id = ${req.params.id}
         `;
       }

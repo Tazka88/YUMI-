@@ -95,7 +95,7 @@ export default function AdminDashboard() {
   });
   
   const [productForm, setProductForm] = useState({
-    name: '', slug: '', sku: '', category_id: '', subcategory_id: '', sub_subcategory_id: '', brand_id: '', brand_name: '', price: '', promo_price: '', stock: '', weight: '', description: '', image: '', video_url: '',
+    name: '', slug: '', sku: '', category_id: '', subcategory_id: '', sub_subcategory_id: '', brand_id: '', brand_name: '', price: '', promo_price: '', promo_price_start_date: '', promo_price_end_date: '', stock: '', weight: '', description: '', image: '', video_url: '',
     is_popular: false, is_best_seller: false, is_new: false, is_recommended: false, is_fast_delivery: false, is_active: true, images: [] as any[], variations: [] as any[],
     features: '', key_points: '', faq_q1: '', faq_a1: '', faq_q2: '', faq_a2: '', seo_title: '', seo_description: '', seo_keywords: '', main_image_alt: ''
   });
@@ -1040,6 +1040,8 @@ const handleBulkDelivery = async () => {
           name: fullProduct.name, slug: fullProduct.slug, sku: fullProduct.sku || '', category_id: fullProduct.category_id, subcategory_id: fullProduct.subcategory_id || '', sub_subcategory_id: fullProduct.sub_subcategory_id || '', brand_id: fullProduct.brand_id || '', brand_name: fullProduct.brand_name || '',
           price: fullProduct.price, 
           promo_price: (fullProduct.promo_price !== null && fullProduct.promo_price !== undefined) ? fullProduct.promo_price : '', 
+          promo_price_start_date: fullProduct.promo_price_start_date ? new Date(fullProduct.promo_price_start_date).toISOString().slice(0, 16) : '', 
+          promo_price_end_date: fullProduct.promo_price_end_date ? new Date(fullProduct.promo_price_end_date).toISOString().slice(0, 16) : '', 
           stock: fullProduct.stock, 
           weight: (fullProduct.weight !== null && fullProduct.weight !== undefined) ? fullProduct.weight : '',
           description: fullProduct.description || '', image: fullProduct.image || '', video_url: fullProduct.video_url || '',
@@ -1062,7 +1064,7 @@ const handleBulkDelivery = async () => {
     } else {
       setEditingProduct(null);
       setProductForm({
-        name: '', slug: '', sku: '', category_id: categories[0]?.id || '', subcategory_id: '', sub_subcategory_id: '', brand_id: '', brand_name: '', price: '', promo_price: '', stock: '', weight: '', description: '', image: '', video_url: '',
+        name: '', slug: '', sku: '', category_id: categories[0]?.id || '', subcategory_id: '', sub_subcategory_id: '', brand_id: '', brand_name: '', price: '', promo_price: '', promo_price_start_date: '', promo_price_end_date: '', stock: '', weight: '', description: '', image: '', video_url: '',
         is_popular: false, is_best_seller: false, is_new: false, is_recommended: false, is_fast_delivery: false, is_active: true, images: [], variations: [], features: '', key_points: '',
         faq_q1: '', faq_a1: '', faq_q2: '', faq_a2: '', seo_title: '', seo_description: '', seo_keywords: '', main_image_alt: ''
       });
@@ -1186,6 +1188,8 @@ const handleBulkDelivery = async () => {
       brand_id: productForm.brand_id || null,
       price: parseFloat(productForm.price.toString().replace(',', '.')),
       promo_price: (productForm.promo_price !== '' && productForm.promo_price !== null) ? parseFloat(productForm.promo_price.toString().replace(',', '.')) : null,
+      promo_price_start_date: productForm.promo_price_start_date || null,
+      promo_price_end_date: productForm.promo_price_end_date || null,
       stock: parseInt(productForm.stock as string, 10),
       weight: (productForm.weight !== '' && productForm.weight !== null) ? parseFloat(productForm.weight.toString().replace(',', '.')) : null,
       features: parsedFeatures,
@@ -3645,6 +3649,14 @@ const handleBulkDelivery = async () => {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Prix Promo (DA)</label>
                   <input type="number" min="0" className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500" value={productForm.promo_price} onChange={e => setProductForm({...productForm, promo_price: e.target.value})} />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Début promo (Optionnel)</label>
+                  <input type="datetime-local" className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500" value={productForm.promo_price_start_date} onChange={e => setProductForm({...productForm, promo_price_start_date: e.target.value})} />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Fin promo (Optionnel, SEO)</label>
+                  <input type="datetime-local" className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-orange-500" value={productForm.promo_price_end_date} onChange={e => setProductForm({...productForm, promo_price_end_date: e.target.value})} />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Stock *</label>

@@ -208,7 +208,14 @@ export default function Product() {
     if (product && trackingIds.fb && viewContentTrackedRef.current !== product.id.toString()) {
       viewContentTrackedRef.current = product.id.toString();
       const eventId = generateEventId();
-      const currentPrice = (product.promo_price !== null && product.promo_price !== undefined) ? Number(product.promo_price) : Number(product.price);
+      const isPromoValid = (() => {
+        if (product.promo_price === null || product.promo_price === undefined) return false;
+        const now = new Date();
+        if (product.promo_price_start_date && new Date(product.promo_price_start_date) > now) return false;
+        if (product.promo_price_end_date && new Date(product.promo_price_end_date) < now) return false;
+        return true;
+      })();
+      const currentPrice = isPromoValid ? Number(product.promo_price) : Number(product.price);
       const safeValue = isNaN(currentPrice) || currentPrice <= 0 ? 1 : Number(currentPrice.toFixed(2));
       
       try {
@@ -291,7 +298,13 @@ export default function Product() {
     );
   }
 
-  const isPromo = product.promo_price !== null;
+  const isPromo = (() => {
+    if (product.promo_price === null) return false;
+    const now = new Date();
+    if (product.promo_price_start_date && new Date(product.promo_price_start_date) > now) return false;
+    if (product.promo_price_end_date && new Date(product.promo_price_end_date) < now) return false;
+    return true;
+  })();
   const discount = isPromo ? Math.round(((product.price - product.promo_price!) / product.price) * 100) : 0;
   const currentPrice = isPromo ? product.promo_price! : product.price;
   const activePriceForDisplay = selectedVariation?.price || currentPrice;
@@ -482,7 +495,7 @@ export default function Product() {
       "url": window.location.href,
       "priceCurrency": "DZD",
       "price": currentPrice,
-      "priceValidUntil": new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0],
+      "priceValidUntil": (isPromo && product.promo_price_end_date) ? new Date(product.promo_price_end_date).toISOString().split('T')[0] : new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0],
       "availability": product.stock > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
       "itemCondition": "https://schema.org/NewCondition",
       "shippingDetails": {

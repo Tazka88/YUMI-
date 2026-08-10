@@ -88,6 +88,8 @@ CREATE TABLE IF NOT EXISTS products (
   description TEXT,
   price DECIMAL(10, 2) NOT NULL,
   promo_price DECIMAL(10, 2),
+  promo_price_start_date TIMESTAMP,
+  promo_price_end_date TIMESTAMP,
   stock INTEGER DEFAULT 0,
   image TEXT,
   is_popular BOOLEAN DEFAULT FALSE,

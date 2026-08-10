@@ -17,6 +17,8 @@ export interface Product {
   description: string;
   price: number;
   promo_price: number | null;
+  promo_price_start_date?: string | null;
+  promo_price_end_date?: string | null;
   stock: number;
   image: string;
   is_popular: boolean;

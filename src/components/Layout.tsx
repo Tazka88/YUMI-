@@ -286,7 +286,8 @@ export default function Layout() {
 
                 {showAccountDropdown && (
                     <div
-                      className="absolute top-full right-0 mt-1 w-64 bg-white border border-gray-100 rounded-xl shadow-xl z-50 overflow-hidden animate-fade-in-up"
+                      className="absolute top-full right-0 pt-2 z-50 animate-fade-in-up">
+                      <div className="w-64 bg-white border border-gray-100 rounded-xl shadow-xl overflow-hidden"
                     >
                       {!user && (
                         <div className="p-4 border-b border-gray-50">
@@ -324,6 +325,7 @@ export default function Layout() {
                           </button>
                         )}
                       </div>
+                      </div>
                     </div>
                   )}
               </div>
@@ -348,7 +350,8 @@ export default function Layout() {
 
                 {showHelpDropdown && (
                     <div
-                      className="absolute top-full right-0 mt-1 w-60 bg-white border border-gray-100 rounded-xl shadow-xl z-50 overflow-hidden animate-fade-in-up"
+                      className="absolute top-full right-0 pt-2 z-50 animate-fade-in-up">
+                      <div className="w-60 bg-white border border-gray-100 rounded-xl shadow-xl overflow-hidden"
                     >
                       <div className="py-2">
                         <Link to="/contact" className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 text-gray-700 transition-colors">
@@ -373,6 +376,7 @@ export default function Layout() {
                           <MessageCircle size={14} />
                           CHAT EN DIRECT
                         </button>
+                      </div>
                       </div>
                     </div>
                   )}

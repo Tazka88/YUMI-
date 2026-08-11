@@ -686,7 +686,7 @@ export default function Product() {
                     if (!videoId) return null;
                     
                     const isShort = product.video_url.includes('youtube.com/shorts/');
-                    const currentOrigin = typeof window !== 'undefined' ? window.location.origin : '';
+                    const currentOrigin = 'https://www.zorando.com';
                     const embedUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&loop=1&playlist=${videoId}&controls=0&showinfo=0&rel=0&enablejsapi=1${currentOrigin ? `&origin=${encodeURIComponent(currentOrigin)}` : ''}`;
                     
                     return (
@@ -738,7 +738,7 @@ export default function Product() {
                   const match = product.video_url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/))([\w-]{11})/);
                   const videoId = match ? match[1] : null;
                   if (!videoId) return null;
-                  const currentOrigin = typeof window !== 'undefined' ? window.location.origin : '';
+                  const currentOrigin = 'https://www.zorando.com';
                   const videoUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0&enablejsapi=1${currentOrigin ? `&origin=${encodeURIComponent(currentOrigin)}` : ''}`;
                   return (
                     <button 
@@ -938,10 +938,10 @@ export default function Product() {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-6 border-b border-gray-100">
               <div className="flex items-center gap-3">
                 <span className="text-sm font-medium text-gray-700">Partager :</span>
-                <a href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(window.location.href)}`} target="_blank" rel="noreferrer" className="w-8 h-8 flex items-center justify-center rounded-full bg-blue-600 text-white hover:bg-blue-700 transition-colors shadow-sm">
+                <a href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(cleanUrl)}`} target="_blank" rel="noreferrer" className="w-8 h-8 flex items-center justify-center rounded-full bg-blue-600 text-white hover:bg-blue-700 transition-colors shadow-sm">
                   <Facebook size={16} />
                 </a>
-                <a href={`https://wa.me/?text=${encodeURIComponent(window.location.href)}`} target="_blank" rel="noreferrer" className="w-8 h-8 flex items-center justify-center rounded-full bg-green-500 text-white hover:bg-green-600 transition-colors shadow-sm">
+                <a href={`https://wa.me/?text=${encodeURIComponent(cleanUrl)}`} target="_blank" rel="noreferrer" className="w-8 h-8 flex items-center justify-center rounded-full bg-green-500 text-white hover:bg-green-600 transition-colors shadow-sm">
                   <MessageCircle size={16} />
                 </a>
                 <a href={`https://www.instagram.com/`} target="_blank" rel="noreferrer" className="w-8 h-8 flex items-center justify-center rounded-full bg-gradient-to-tr from-yellow-400 via-red-500 to-purple-500 text-white hover:opacity-90 transition-opacity shadow-sm">

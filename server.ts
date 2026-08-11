@@ -25,8 +25,8 @@ async function startServer() {
 
   // Redirect non-www to www to consolidate SEO
   app.use((req, res, next) => {
-    const host = req.headers.host;
-    if (host && host === 'zorando.com') {
+    const hostname = req.hostname;
+    if (hostname === 'zorando.com') {
       return res.redirect(301, `https://www.zorando.com${req.originalUrl}`);
     }
     next();

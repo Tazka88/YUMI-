@@ -48,7 +48,7 @@ export default function BlogPost() {
     );
   }
 
-  const shareUrl = typeof window !== 'undefined' ? window.location.href : '';
+  const shareUrl = typeof window !== 'undefined' ? window.location.href.replace(/^https?:\/\/(www\.)?[^\/]+/, 'https://www.zorando.com') : '';
   const dateStr = post.published_at ? new Date(post.published_at).toLocaleDateString('fr-FR', {
     day: 'numeric', month: 'long', year: 'numeric'
   }) : '';

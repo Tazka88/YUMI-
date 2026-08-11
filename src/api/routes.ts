@@ -1772,7 +1772,7 @@ router.get('/admin/export-meta-catalog', authenticate, async (req, res) => {
       return str;
     };
 
-    const baseUrl = req.protocol + '://' + req.get('host');
+    const baseUrl = 'https://www.zorando.com';
     
     const rows = exportedProducts.map((p: any) => {
       const id = formatField(p.id);

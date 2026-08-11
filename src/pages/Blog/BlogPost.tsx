@@ -161,7 +161,7 @@ export default function BlogPost() {
           <img 
             src={post.image_url} 
             alt={post.main_image_alt || post.title} 
-            className="w-full rounded-2xl shadow-xl aspect-video object-cover"
+            className="w-full h-auto rounded-2xl shadow-xl object-contain"
           />
         </div>
       )}

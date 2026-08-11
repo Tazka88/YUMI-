@@ -185,7 +185,7 @@ router.get(['/images/:table/:id/:field', '/images/:table/:id/:field/:seoSlug'], 
   
   // Validate table and field to prevent SQL injection
   const allowedTables = ['products', 'categories', 'subcategories', 'sub_subcategories', 'brands', 'product_images', 'settings', 'slider_images', 'blog_posts', 'blog_categories', 'reviews'];
-  const allowedFields = ['image', 'value', 'image_url', 'slide_image', 'mobile_slide_image', 'mobile_image_url'];
+  const allowedFields = ['image', 'value', 'image_url', 'slide_image', 'mobile_slide_image', 'mobile_image_url', 'image_1_url', 'image_2_url', 'image_3_url'];
   
   if (!allowedTables.includes(table) || !allowedFields.includes(field)) {
     return res.status(400).json({ error: 'Invalid table or field' });
@@ -2483,7 +2483,7 @@ router.get('/blog/posts/:slug', async (req, res) => {
   res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=60, stale-while-revalidate=300');
   try {
     const [post] = await sql`
-      SELECT p.id, p.category_id, p.title, p.slug, p.excerpt, p.content, CASE WHEN p.image_url LIKE 'data:image/%' THEN '/api/images/blog_posts/' || p.id || '/image_url?v=' || LENGTH(p.image_url) ELSE p.image_url END as image_url, p.status, p.published_at, p.created_at, p.seo_title, p.seo_description, c.name as category_name, c.slug as category_slug 
+      SELECT p.id, p.category_id, p.title, p.slug, p.excerpt, p.content, CASE WHEN p.image_url LIKE 'data:image/%' THEN '/api/images/blog_posts/' || p.id || '/image_url?v=' || LENGTH(p.image_url) ELSE p.image_url END as image_url, CASE WHEN p.image_1_url LIKE 'data:image/%' THEN '/api/images/blog_posts/' || p.id || '/image_1_url?v=' || LENGTH(p.image_1_url) ELSE p.image_1_url END as image_1_url, p.image_1_alt, CASE WHEN p.image_2_url LIKE 'data:image/%' THEN '/api/images/blog_posts/' || p.id || '/image_2_url?v=' || LENGTH(p.image_2_url) ELSE p.image_2_url END as image_2_url, p.image_2_alt, CASE WHEN p.image_3_url LIKE 'data:image/%' THEN '/api/images/blog_posts/' || p.id || '/image_3_url?v=' || LENGTH(p.image_3_url) ELSE p.image_3_url END as image_3_url, p.image_3_alt, p.main_image_alt, p.status, p.published_at, p.created_at, p.seo_title, p.seo_description, c.name as category_name, c.slug as category_slug 
       FROM blog_posts p 
       LEFT JOIN blog_categories c ON p.category_id = c.id 
       WHERE p.slug = ${req.params.slug} AND p.status = 'published'
@@ -2540,8 +2540,8 @@ router.delete('/admin/blog/categories/:id', authenticate, async (req, res) => {
 router.get('/admin/blog/posts', authenticate, async (req, res) => {
   try {
     const posts = await sql`
-      SELECT ${sql.unsafe(BLOG_POSTS_LIST_COLS)}, c.name as category_name 
-      FROM blog_posts p 
+      SELECT p.id, p.category_id, p.title, p.slug, p.excerpt, p.content, CASE WHEN p.image_url LIKE 'data:image/%' THEN '/api/images/blog_posts/' || p.id || '/image_url?v=' || LENGTH(p.image_url) ELSE p.image_url END as image_url, p.image_1_url, p.image_1_alt, p.image_2_url, p.image_2_alt, p.image_3_url, p.image_3_alt, p.main_image_alt, p.status, p.published_at, p.created_at, p.seo_title, p.seo_description, c.name as category_name 
+       FROM blog_posts p 
       LEFT JOIN blog_categories c ON p.category_id = c.id 
       ORDER BY p.created_at DESC
     `;
@@ -2553,11 +2553,11 @@ router.get('/admin/blog/posts', authenticate, async (req, res) => {
 
 router.post('/admin/blog/posts', authenticate, async (req, res) => {
   try {
-    const { category_id, title, slug, excerpt, content, image_url, status, seo_title, seo_description } = req.body;
+    const { category_id, title, slug, excerpt, content, image_url, status, seo_title, seo_description, image_1_url, image_1_alt, image_2_url, image_2_alt, image_3_url, image_3_alt, main_image_alt } = req.body;
     const published_at = status === 'published' ? new Date().toISOString() : null;
     const [p] = await sql`
-      INSERT INTO blog_posts (category_id, title, slug, excerpt, content, image_url, status, seo_title, seo_description, published_at)
-      VALUES (${category_id || null}, ${title}, ${slug}, ${excerpt}, ${content}, ${image_url}, ${status}, ${seo_title}, ${seo_description}, ${published_at})
+      INSERT INTO blog_posts (category_id, title, slug, excerpt, content, image_url, status, seo_title, seo_description, published_at, image_1_url, image_1_alt, image_2_url, image_2_alt, image_3_url, image_3_alt, main_image_alt)
+      VALUES (${category_id || null}, ${title}, ${slug}, ${excerpt}, ${content}, ${image_url}, ${status}, ${seo_title}, ${seo_description}, ${published_at}, ${image_1_url || null}, ${image_1_alt || null}, ${image_2_url || null}, ${image_2_alt || null}, ${image_3_url || null}, ${image_3_alt || null}, ${main_image_alt || null})
       RETURNING id
     `;
     res.json({ id: p.id });
@@ -2568,7 +2568,7 @@ router.post('/admin/blog/posts', authenticate, async (req, res) => {
 
 router.put('/admin/blog/posts/:id', authenticate, async (req, res) => {
   try {
-    const { category_id, title, slug, excerpt, content, image_url, status, seo_title, seo_description } = req.body;
+    const { category_id, title, slug, excerpt, content, image_url, status, seo_title, seo_description, image_1_url, image_1_alt, image_2_url, image_2_alt, image_3_url, image_3_alt, main_image_alt } = req.body;
     const p = await sql`SELECT id, published_at FROM blog_posts WHERE id = ${req.params.id}`;
     if (!p.length) return res.status(404).json({ error: 'Not found' });
     
@@ -2580,7 +2580,10 @@ router.put('/admin/blog/posts/:id', authenticate, async (req, res) => {
     await sql`
       UPDATE blog_posts SET 
         category_id = ${category_id || null}, title = ${title}, slug = ${slug}, excerpt = ${excerpt}, 
-        content = ${content}, image_url = ${image_url}, status = ${status}, 
+        content = ${content}, image_url = ${image_url}, status = ${status},
+         image_1_url = ${image_1_url || null}, image_1_alt = ${image_1_alt || null},
+         image_2_url = ${image_2_url || null}, image_2_alt = ${image_2_alt || null},
+         image_3_url = ${image_3_url || null}, image_3_alt = ${image_3_alt || null}, main_image_alt = ${main_image_alt || null}, 
         seo_title = ${seo_title}, seo_description = ${seo_description}, 
         updated_at = CURRENT_TIMESTAMP,
         published_at = ${published_at}

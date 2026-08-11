@@ -53,6 +53,39 @@ export default function BlogPost() {
     day: 'numeric', month: 'long', year: 'numeric'
   }) : '';
 
+  const getProcessedContent = (content: string, post: any) => {
+    if (!content) return '';
+    
+    let cleanContent = DOMPurify.sanitize(content);
+    
+    const img1 = post.image_1_url ? `<div class="my-8"><img src="${post.image_1_url.replace(/"/g, '&quot;')}" alt="${(post.image_1_alt || post.title).replace(/"/g, '&quot;')}" loading="lazy" class="w-full rounded-2xl shadow-lg object-cover" /></div>` : '';
+    const img2 = post.image_2_url ? `<div class="my-8"><img src="${post.image_2_url.replace(/"/g, '&quot;')}" alt="${(post.image_2_alt || post.title).replace(/"/g, '&quot;')}" loading="lazy" class="w-full rounded-2xl shadow-lg object-cover" /></div>` : '';
+    const img3 = post.image_3_url ? `<div class="my-8"><img src="${post.image_3_url.replace(/"/g, '&quot;')}" alt="${(post.image_3_alt || post.title).replace(/"/g, '&quot;')}" loading="lazy" class="w-full rounded-2xl shadow-lg object-cover" /></div>` : '';
+    
+    if (!img1 && !img2 && !img3) return cleanContent;
+
+    const pTags = cleanContent.split('</p>');
+    if (pTags.length <= 2) {
+      return cleanContent + img1 + img2 + img3;
+    }
+
+    const pos1 = 1;
+    const pos2 = Math.max(2, Math.floor(pTags.length / 2));
+    const pos3 = Math.max(pos2 + 1, pTags.length - 2);
+    
+    let result = '';
+    for (let i = 0; i < pTags.length; i++) {
+      result += pTags[i] + (i < pTags.length - 1 ? '</p>' : '');
+      
+      if (i === pos1 - 1 && img1) result += img1;
+      if (i === pos2 - 1 && img2) result += img2;
+      if (i === pos3 - 1 && img3) result += img3;
+    }
+    
+    return result;
+  };
+
+
   return (
     <article className="min-h-screen bg-white">
       {/* SEO Meta Tags */}
@@ -94,7 +127,7 @@ export default function BlogPost() {
       <div className="relative pt-32 pb-20 lg:pt-40 lg:pb-28 overflow-hidden">
         {post.image_url && (
           <div className="absolute inset-0 z-0">
-            <img src={post.image_url} alt={post.title} className="w-full h-full object-cover opacity-20" />
+            <img src={post.image_url} alt={post.main_image_alt || post.title} className="w-full h-full object-cover opacity-20" />
             <div className="absolute inset-0 bg-gradient-to-b from-white/95 via-white/90 to-white"></div>
           </div>
         )}
@@ -127,7 +160,7 @@ export default function BlogPost() {
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 -mt-12 lg:-mt-16 relative z-20 mb-16">
           <img 
             src={post.image_url} 
-            alt={post.title} 
+            alt={post.main_image_alt || post.title} 
             className="w-full rounded-2xl shadow-xl aspect-video object-cover"
           />
         </div>
@@ -135,7 +168,7 @@ export default function BlogPost() {
 
       {/* Content */}
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8 prose prose-emerald prose-lg">
-         <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(post.content || '') }} />
+         <div dangerouslySetInnerHTML={{ __html: getProcessedContent(post.content, post) }} />
       </div>
 
       {/* Social Share */}

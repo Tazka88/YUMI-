@@ -1,32 +1,37 @@
 const fs = require('fs');
 let code = fs.readFileSync('src/api/routes.ts', 'utf8');
 
-// Insert new variables into POST /admin/products
+// Replace the GET single post query to include the new images
 code = code.replace(
-  'is_active, images, features, key_points, faq_q1, faq_a1, faq_q2, faq_a2, variations, seo_title, seo_description, seo_keywords } = req.body;',
-  'is_active, images, features, key_points, faq_q1, faq_a1, faq_q2, faq_a2, variations, seo_title, seo_description, seo_keywords, promo_price_start_date, promo_price_end_date } = req.body;'
+  "SELECT p.id, p.category_id, p.title, p.slug, p.excerpt, p.content, CASE WHEN p.image_url LIKE 'data:image/%' THEN '/api/images/blog_posts/' || p.id || '/image_url?v=' || LENGTH(p.image_url) ELSE p.image_url END as image_url, p.status, p.published_at, p.created_at, p.seo_title, p.seo_description, c.name as category_name, c.slug as category_slug",
+  "SELECT p.id, p.category_id, p.title, p.slug, p.excerpt, p.content, CASE WHEN p.image_url LIKE 'data:image/%' THEN '/api/images/blog_posts/' || p.id || '/image_url?v=' || LENGTH(p.image_url) ELSE p.image_url END as image_url, p.image_1_url, p.image_1_alt, p.image_2_url, p.image_2_alt, p.image_3_url, p.image_3_alt, p.main_image_alt, p.status, p.published_at, p.created_at, p.seo_title, p.seo_description, c.name as category_name, c.slug as category_slug"
+);
+
+// Replace POST /admin/blog/posts
+code = code.replace(
+  "const { category_id, title, slug, excerpt, content, image_url, status, seo_title, seo_description } = req.body;",
+  "const { category_id, title, slug, excerpt, content, image_url, status, seo_title, seo_description, image_1_url, image_1_alt, image_2_url, image_2_alt, image_3_url, image_3_alt, main_image_alt } = req.body;"
 );
 
 code = code.replace(
-  'INSERT INTO products (category_id, subcategory_id, sub_subcategory_id, brand_id, brand_name, name, slug, description, price, promo_price, stock, image, main_image_alt, video_url, is_popular, is_best_seller, is_new, is_recommended, is_fast_delivery, weight, is_active, features, key_points, faq_q1, faq_a1, faq_q2, faq_a2, variations, seo_title, seo_description, seo_keywords)',
-  'INSERT INTO products (category_id, subcategory_id, sub_subcategory_id, brand_id, brand_name, name, slug, description, price, promo_price, promo_price_start_date, promo_price_end_date, stock, image, main_image_alt, video_url, is_popular, is_best_seller, is_new, is_recommended, is_fast_delivery, weight, is_active, features, key_points, faq_q1, faq_a1, faq_q2, faq_a2, variations, seo_title, seo_description, seo_keywords)'
+  "INSERT INTO blog_posts (category_id, title, slug, excerpt, content, image_url, status, seo_title, seo_description, published_at)",
+  "INSERT INTO blog_posts (category_id, title, slug, excerpt, content, image_url, status, seo_title, seo_description, published_at, image_1_url, image_1_alt, image_2_url, image_2_alt, image_3_url, image_3_alt, main_image_alt)"
 );
 
 code = code.replace(
-  'VALUES (${category_id || null}, ${subcategory_id || null}, ${sub_subcategory_id || null}, ${brand_id || null}, ${brand_name || null}, ${name || \'\'}, ${generatedSlug || \'\'}, ${description || null}, ${price || 0}, ${promo_price || null}, ${stock || 0},',
-  'VALUES (${category_id || null}, ${subcategory_id || null}, ${sub_subcategory_id || null}, ${brand_id || null}, ${brand_name || null}, ${name || \'\'}, ${generatedSlug || \'\'}, ${description || null}, ${price || 0}, ${promo_price || null}, ${promo_price_start_date || null}, ${promo_price_end_date || null}, ${stock || 0},'
+  "VALUES (${category_id || null}, ${title}, ${slug}, ${excerpt}, ${content}, ${image_url}, ${status}, ${seo_title}, ${seo_description}, ${published_at})",
+  "VALUES (${category_id || null}, ${title}, ${slug}, ${excerpt}, ${content}, ${image_url}, ${status}, ${seo_title}, ${seo_description}, ${published_at}, ${image_1_url || null}, ${image_1_alt || null}, ${image_2_url || null}, ${image_2_alt || null}, ${image_3_url || null}, ${image_3_alt || null}, ${main_image_alt || null})"
 );
 
-
-// Insert new variables into PUT /admin/products/:id (note: it's modified twice due to the if/else)
+// Replace PUT /admin/blog/posts/:id
 code = code.replace(
-  'UPDATE products \n          SET category_id = ${category_id || null}, subcategory_id = ${subcategory_id || null}, sub_subcategory_id = ${sub_subcategory_id || null}, brand_id = ${brand_id || null}, brand_name = ${brand_name || null}, name = ${name || \'\'}, slug = ${slug || \'\'}, description = ${description || null}, price = ${price || 0}, promo_price = ${promo_price || null}, stock = ${stock || 0}, video_url = ${video_url || null}',
-  'UPDATE products \n          SET category_id = ${category_id || null}, subcategory_id = ${subcategory_id || null}, sub_subcategory_id = ${sub_subcategory_id || null}, brand_id = ${brand_id || null}, brand_name = ${brand_name || null}, name = ${name || \'\'}, slug = ${slug || \'\'}, description = ${description || null}, price = ${price || 0}, promo_price = ${promo_price || null}, promo_price_start_date = ${promo_price_start_date || null}, promo_price_end_date = ${promo_price_end_date || null}, stock = ${stock || 0}, video_url = ${video_url || null}'
+  "const { category_id, title, slug, excerpt, content, image_url, status, seo_title, seo_description } = req.body;",
+  "const { category_id, title, slug, excerpt, content, image_url, status, seo_title, seo_description, image_1_url, image_1_alt, image_2_url, image_2_alt, image_3_url, image_3_alt, main_image_alt } = req.body;"
 );
 
 code = code.replace(
-  'UPDATE products \n          SET category_id = ${category_id || null}, subcategory_id = ${subcategory_id || null}, sub_subcategory_id = ${sub_subcategory_id || null}, brand_id = ${brand_id || null}, brand_name = ${brand_name || null}, name = ${name || \'\'}, slug = ${slug || \'\'}, description = ${description || null}, price = ${price || 0}, promo_price = ${promo_price || null}, stock = ${stock || 0}, image = ${image || null}, video_url = ${video_url || null}',
-  'UPDATE products \n          SET category_id = ${category_id || null}, subcategory_id = ${subcategory_id || null}, sub_subcategory_id = ${sub_subcategory_id || null}, brand_id = ${brand_id || null}, brand_name = ${brand_name || null}, name = ${name || \'\'}, slug = ${slug || \'\'}, description = ${description || null}, price = ${price || 0}, promo_price = ${promo_price || null}, promo_price_start_date = ${promo_price_start_date || null}, promo_price_end_date = ${promo_price_end_date || null}, stock = ${stock || 0}, image = ${image || null}, video_url = ${video_url || null}'
+  "content = ${content}, image_url = ${image_url}, status = ${status},",
+  "content = ${content}, image_url = ${image_url}, status = ${status},\n         image_1_url = ${image_1_url || null}, image_1_alt = ${image_1_alt || null},\n         image_2_url = ${image_2_url || null}, image_2_alt = ${image_2_alt || null},\n         image_3_url = ${image_3_url || null}, image_3_alt = ${image_3_alt || null}, main_image_alt = ${main_image_alt || null},"
 );
 
 fs.writeFileSync('src/api/routes.ts', code);

@@ -1311,14 +1311,13 @@ router.post('/reviews/upload', upload.single('image'), async (req, res) => {
         const { data: publicUrlData } = supabase.storage.from('images').getPublicUrl(fileName);
         return res.json({ url: publicUrlData.publicUrl });
       } catch (supabaseError) {
-        console.error('Supabase upload failed, falling back to base64:', supabaseError);
-        // Fallback to base64 below
+        console.error('Supabase upload failed:', supabaseError);
+        return res.status(500).json({ error: 'Failed to upload image' });
       }
+    } else {
+      const base64 = buffer.toString('base64');
+      res.json({ url: `data:${contentType};base64,${base64}` });
     }
-
-    // Fallback to base64 if Supabase is not configured or fails
-    const base64 = buffer.toString('base64');
-    res.json({ url: `data:${contentType};base64,${base64}` });
   } catch (err) {
     console.error('Upload Error explicitly caught:', err);
     res.status(500).json({ error: 'Failed to upload image' });
@@ -1363,8 +1362,8 @@ router.post('/admin/upload', authenticate, upload.single('image'), async (req, r
         const customName = req.body.customName ? req.body.customName.replace(/[^a-z0-9-]/g, '') : '';
         const uniqueId = Math.random().toString(36).substring(7);
         const fileName = customName 
-          ? `${customName}-${uniqueId}.${ext}`
-          : `${Date.now()}-${uniqueId}.${ext}`;
+          ? `uploads/${customName}-${uniqueId}.${ext}`
+          : `uploads/${Date.now()}-${uniqueId}.${ext}`;
         
         const { data, error } = await supabase.storage
           .from('images') // The user must create this bucket in Supabase
@@ -1384,14 +1383,13 @@ router.post('/admin/upload', authenticate, upload.single('image'), async (req, r
 
         return res.json({ url: publicUrlData.publicUrl });
       } catch (supabaseError) {
-        console.error('Supabase upload error, falling back to base64:', supabaseError);
-        // Fallback to base64 below
+        console.error('Supabase upload error:', supabaseError);
+        return res.status(500).json({ error: 'Failed to process image' });
       }
+    } else {
+      const base64 = buffer.toString('base64');
+      res.json({ url: `data:${contentType};base64,${base64}` });
     }
-
-    // Fallback to base64 if Supabase is not configured
-    const base64 = buffer.toString('base64');
-    res.json({ url: `data:${contentType};base64,${base64}` });
   } catch (error) {
     console.error('Image processing error:', error);
     res.status(500).json({ error: 'Failed to process image' });

@@ -168,16 +168,16 @@ const serveImageData = async (res: any, imageData: string, targetWidth?: number,
   res.status(404).json({ error: 'Invalid image format' });
 };
 
-const PRODUCT_COLS = `p.id, p.sku, p.category_id, p.subcategory_id, p.sub_subcategory_id, p.brand_id, p.name, p.slug, p.description, p.price, p.promo_price, p.promo_price_start_date, p.promo_price_end_date, p.stock, CASE WHEN p.image LIKE 'data:image/%' THEN '/api/images/products/' || p.id || '/image/' || COALESCE(NULLIF(p.slug, ''), 'product') || '.webp?v=' || LENGTH(p.image) ELSE p.image END as image, p.main_image_alt, p.video_url, p.is_popular, p.is_best_seller, p.is_new, p.is_recommended, p.is_fast_delivery, p.weight, p.is_active, p.features, p.key_points, p.faq_q1, p.faq_a1, p.faq_q2, p.faq_a2, p.variations, p.created_at, p.seo_title, p.seo_description, p.seo_keywords`;
-const PRODUCT_LIST_COLS = `p.id, p.sku, p.category_id, p.subcategory_id, p.sub_subcategory_id, p.brand_id, p.name, p.slug, p.price, p.promo_price, p.promo_price_start_date, p.promo_price_end_date, p.stock, p.is_fast_delivery, p.is_popular, p.is_best_seller, p.is_new, p.is_recommended, p.is_active, p.variations, p.created_at, CASE WHEN p.image LIKE 'data:image/%' THEN '/api/images/products/' || p.id || '/image/' || COALESCE(NULLIF(p.slug, ''), 'product') || '.webp?v=' || LENGTH(p.image) ELSE p.image END as image`;
-const BLOG_POSTS_COLS = `id, category_id, title, slug, excerpt, content, CASE WHEN image_url LIKE 'data:image/%' THEN '/api/images/blog_posts/' || id || '/image_url?v=' || LENGTH(image_url) ELSE image_url END as image_url, status, published_at, created_at, seo_title, seo_description`;
-const BLOG_POSTS_LIST_COLS = `p.id, p.category_id, p.title, p.slug, p.excerpt, CASE WHEN p.image_url LIKE 'data:image/%' THEN '/api/images/blog_posts/' || p.id || '/image_url?v=' || LENGTH(p.image_url) ELSE p.image_url END as image_url, p.status, p.published_at, p.created_at`;
-const PRODUCT_IMAGES_COLS = `id, product_id, is_main, alt_text, CASE WHEN image LIKE 'data:image/%' THEN '/api/images/product_images/' || id || '/image?v=' || LENGTH(image) ELSE image END as image`;
-const CATEGORIES_COLS = `id, name, slug, CASE WHEN image LIKE 'data:image/%' THEN '/api/images/categories/' || id || '/image/' || COALESCE(NULLIF(slug, ''), 'category') || '.webp?v=' || LENGTH(image) ELSE image END as image, CASE WHEN slide_image LIKE 'data:image/%' THEN '/api/images/categories/' || id || '/slide_image/' || COALESCE(NULLIF(slug, ''), 'category') || '-slide.webp?v=' || LENGTH(slide_image) ELSE slide_image END as slide_image, CASE WHEN mobile_slide_image LIKE 'data:image/%' THEN '/api/images/categories/' || id || '/mobile_slide_image/' || COALESCE(NULLIF(slug, ''), 'category') || '-mobile-slide.webp?v=' || LENGTH(mobile_slide_image) ELSE mobile_slide_image END as mobile_slide_image`;
-const SLIDER_IMAGES_COLS = `id, category_id, position, is_active, title, description, button_text, button_link, created_at, CASE WHEN image_url LIKE 'data:image/%' THEN '/api/images/slider_images/' || id || '/image_url?v=' || LENGTH(image_url) ELSE image_url END as image_url, CASE WHEN mobile_image_url LIKE 'data:image/%' THEN '/api/images/slider_images/' || id || '/mobile_image_url?v=' || LENGTH(mobile_image_url) ELSE mobile_image_url END as mobile_image_url`;
-const BRANDS_COLS = `id, name, slug, description, seo_title, seo_description, h1_title, seo_content, CASE WHEN image LIKE 'data:image/%' THEN '/api/images/brands/' || id || '/image/' || COALESCE(NULLIF(slug, ''), 'brand') || '.webp?v=' || LENGTH(image) ELSE image END as image`;
-const SUBCAT_COLS = `id, category_id, name, slug, CASE WHEN image LIKE 'data:image/%' THEN '/api/images/subcategories/' || id || '/image/' || COALESCE(NULLIF(slug, ''), 'subcategory') || '.webp?v=' || LENGTH(image) ELSE image END as image`;
-const SUB_SUBCAT_COLS = `id, subcategory_id, name, slug, CASE WHEN image LIKE 'data:image/%' THEN '/api/images/sub_subcategories/' || id || '/image/' || COALESCE(NULLIF(slug, ''), 'subsubcategory') || '.webp?v=' || LENGTH(image) ELSE image END as image`;
+const PRODUCT_COLS = `p.id, p.sku, p.category_id, p.subcategory_id, p.sub_subcategory_id, p.brand_id, p.name, p.slug, p.description, p.price, p.promo_price, p.promo_price_start_date, p.promo_price_end_date, p.stock, p.image as image, p.main_image_alt, p.video_url, p.is_popular, p.is_best_seller, p.is_new, p.is_recommended, p.is_fast_delivery, p.weight, p.is_active, p.features, p.key_points, p.faq_q1, p.faq_a1, p.faq_q2, p.faq_a2, p.variations, p.created_at, p.seo_title, p.seo_description, p.seo_keywords`;
+const PRODUCT_LIST_COLS = `p.id, p.sku, p.category_id, p.subcategory_id, p.sub_subcategory_id, p.brand_id, p.name, p.slug, p.price, p.promo_price, p.promo_price_start_date, p.promo_price_end_date, p.stock, p.is_fast_delivery, p.is_popular, p.is_best_seller, p.is_new, p.is_recommended, p.is_active, p.variations, p.created_at, p.image as image`;
+const BLOG_POSTS_COLS = `id, category_id, title, slug, excerpt, content, image_url as image_url, status, published_at, created_at, seo_title, seo_description`;
+const BLOG_POSTS_LIST_COLS = `p.id, p.category_id, p.title, p.slug, p.excerpt, p.image_url as image_url, p.status, p.published_at, p.created_at`;
+const PRODUCT_IMAGES_COLS = `id, product_id, is_main, alt_text, image as image`;
+const CATEGORIES_COLS = `id, name, slug, image as image, slide_image as slide_image, mobile_slide_image as mobile_slide_image`;
+const SLIDER_IMAGES_COLS = `id, category_id, position, is_active, title, description, button_text, button_link, created_at, image_url as image_url, mobile_image_url as mobile_image_url`;
+const BRANDS_COLS = `id, name, slug, description, seo_title, seo_description, h1_title, seo_content, image as image`;
+const SUBCAT_COLS = `id, category_id, name, slug, image as image`;
+const SUB_SUBCAT_COLS = `id, subcategory_id, name, slug, image as image`;
 
 // Route to serve images from the database
 router.get(['/images/:table/:id/:field', '/images/:table/:id/:field/:seoSlug'], async (req, res) => {
@@ -1814,7 +1814,7 @@ router.get('/admin/export-meta-catalog', authenticate, async (req, res) => {
   }
 });
 
-const META_PRODUCT_COLS = `p.id, p.sku, p.name, p.slug, SUBSTRING(p.description FROM 1 FOR 300) as description, p.price, p.promo_price, p.promo_price_start_date, p.promo_price_end_date, p.is_active, CASE WHEN p.image LIKE 'data:image/%' THEN '/api/images/products/' || p.id || '/image/' || COALESCE(NULLIF(p.slug, ''), 'product') || '.webp?v=' || LENGTH(p.image) ELSE p.image END as image`;
+const META_PRODUCT_COLS = `p.id, p.sku, p.name, p.slug, SUBSTRING(p.description FROM 1 FOR 300) as description, p.price, p.promo_price, p.promo_price_start_date, p.promo_price_end_date, p.is_active, p.image as image`;
 
 // Public endpoint for Meta catalog scheduled fetch
 router.get('/feed/meta-catalog.csv', async (req, res) => {
@@ -2481,7 +2481,7 @@ router.get('/blog/posts/:slug', async (req, res) => {
   res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=60, stale-while-revalidate=300');
   try {
     const [post] = await sql`
-      SELECT p.id, p.category_id, p.title, p.slug, p.excerpt, p.content, CASE WHEN p.image_url LIKE 'data:image/%' THEN '/api/images/blog_posts/' || p.id || '/image_url?v=' || LENGTH(p.image_url) ELSE p.image_url END as image_url, CASE WHEN p.image_1_url LIKE 'data:image/%' THEN '/api/images/blog_posts/' || p.id || '/image_1_url?v=' || LENGTH(p.image_1_url) ELSE p.image_1_url END as image_1_url, p.image_1_alt, CASE WHEN p.image_2_url LIKE 'data:image/%' THEN '/api/images/blog_posts/' || p.id || '/image_2_url?v=' || LENGTH(p.image_2_url) ELSE p.image_2_url END as image_2_url, p.image_2_alt, CASE WHEN p.image_3_url LIKE 'data:image/%' THEN '/api/images/blog_posts/' || p.id || '/image_3_url?v=' || LENGTH(p.image_3_url) ELSE p.image_3_url END as image_3_url, p.image_3_alt, p.main_image_alt, p.status, p.published_at, p.created_at, p.seo_title, p.seo_description, c.name as category_name, c.slug as category_slug 
+      SELECT p.id, p.category_id, p.title, p.slug, p.excerpt, p.content, p.image_url as image_url, CASE WHEN p.image_1_url LIKE 'data:image/%' THEN '/api/images/blog_posts/' || p.id || '/image_1_url?v=' || LENGTH(p.image_1_url) ELSE p.image_1_url END as image_1_url, p.image_1_alt, CASE WHEN p.image_2_url LIKE 'data:image/%' THEN '/api/images/blog_posts/' || p.id || '/image_2_url?v=' || LENGTH(p.image_2_url) ELSE p.image_2_url END as image_2_url, p.image_2_alt, CASE WHEN p.image_3_url LIKE 'data:image/%' THEN '/api/images/blog_posts/' || p.id || '/image_3_url?v=' || LENGTH(p.image_3_url) ELSE p.image_3_url END as image_3_url, p.image_3_alt, p.main_image_alt, p.status, p.published_at, p.created_at, p.seo_title, p.seo_description, c.name as category_name, c.slug as category_slug 
       FROM blog_posts p 
       LEFT JOIN blog_categories c ON p.category_id = c.id 
       WHERE p.slug = ${req.params.slug} AND p.status = 'published'
@@ -2538,7 +2538,7 @@ router.delete('/admin/blog/categories/:id', authenticate, async (req, res) => {
 router.get('/admin/blog/posts', authenticate, async (req, res) => {
   try {
     const posts = await sql`
-      SELECT p.id, p.category_id, p.title, p.slug, p.excerpt, p.content, CASE WHEN p.image_url LIKE 'data:image/%' THEN '/api/images/blog_posts/' || p.id || '/image_url?v=' || LENGTH(p.image_url) ELSE p.image_url END as image_url, p.image_1_url, p.image_1_alt, p.image_2_url, p.image_2_alt, p.image_3_url, p.image_3_alt, p.main_image_alt, p.status, p.published_at, p.created_at, p.seo_title, p.seo_description, c.name as category_name 
+      SELECT p.id, p.category_id, p.title, p.slug, p.excerpt, p.content, p.image_url as image_url, p.image_1_url, p.image_1_alt, p.image_2_url, p.image_2_alt, p.image_3_url, p.image_3_alt, p.main_image_alt, p.status, p.published_at, p.created_at, p.seo_title, p.seo_description, c.name as category_name 
        FROM blog_posts p 
       LEFT JOIN blog_categories c ON p.category_id = c.id 
       ORDER BY p.created_at DESC

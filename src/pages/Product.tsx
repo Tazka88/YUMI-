@@ -205,7 +205,7 @@ export default function Product() {
   const viewContentTrackedRef = React.useRef<string | null>(null);
 
   useEffect(() => {
-    if (product && trackingIds.fb && viewContentTrackedRef.current !== product.id.toString()) {
+    if (product && viewContentTrackedRef.current !== product.id.toString()) {
       viewContentTrackedRef.current = product.id.toString();
       const eventId = generateEventId();
       const isPromoValid = (() => {
@@ -218,31 +218,52 @@ export default function Product() {
       const currentPrice = isPromoValid ? Number(product.promo_price) : Number(product.price);
       const safeValue = isNaN(currentPrice) || currentPrice <= 0 ? 1 : Number(currentPrice.toFixed(2));
       
-      try {
-        // Use window.fbq directly to ensure eventID is passed correctly (ReactPixel wrapper sometimes drops the 3rd argument)
-        if (typeof window !== 'undefined' && (window as any).fbq) {
-          (window as any).fbq('track', 'ViewContent', {
-            content_name: product.name,
-            content_ids: [product.id.toString()],
-            content_type: 'product',
+      // GA4 view_item event
+      if (typeof window !== 'undefined' && typeof window.gtag === 'function') {
+        try {
+          window.gtag("event", "view_item", {
+            currency: "DZD",
             value: safeValue,
-            currency: 'DZD'
-          }, { eventID: eventId });
+            items: [{
+              item_id: product.id.toString(),
+              item_name: product.name,
+              price: currentPrice,
+              quantity: 1,
+              item_category: product.category_name || undefined
+            }]
+          });
+        } catch (e) {
+          console.error('Failed to send GA view_item event', e);
         }
-        
-        sendCapiEvent({
-          eventName: 'ViewContent',
-          eventId: eventId,
-          customData: {
-            content_name: product.name,
-            content_ids: [product.id.toString()],
-            content_type: 'product',
-            value: safeValue,
-            currency: 'DZD'
+      }
+
+      if (trackingIds.fb) {
+        try {
+          // Use window.fbq directly to ensure eventID is passed correctly (ReactPixel wrapper sometimes drops the 3rd argument)
+          if (typeof window !== 'undefined' && (window as any).fbq) {
+            (window as any).fbq('track', 'ViewContent', {
+              content_name: product.name,
+              content_ids: [product.id.toString()],
+              content_type: 'product',
+              value: safeValue,
+              currency: 'DZD'
+            }, { eventID: eventId });
           }
-        });
-      } catch (e) {
-        console.error('Failed to send ViewContent event', e);
+          
+          sendCapiEvent({
+            eventName: 'ViewContent',
+            eventId: eventId,
+            customData: {
+              content_name: product.name,
+              content_ids: [product.id.toString()],
+              content_type: 'product',
+              value: safeValue,
+              currency: 'DZD'
+            }
+          });
+        } catch (e) {
+          console.error('Failed to send ViewContent event', e);
+        }
       }
     }
   }, [product?.id, trackingIds.fb]);
@@ -334,7 +355,8 @@ export default function Product() {
             item_id: product.id.toString(),
             item_name: product.name,
             price: activePrice,
-            quantity: quantity
+            quantity: quantity,
+            item_category: product.category_name || undefined
           }]
         });
       } catch (e) {

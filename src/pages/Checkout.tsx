@@ -382,6 +382,21 @@ export default function Checkout() {
                 item_category: item.category_name || undefined
               }))
             });
+            
+            // Explicit Google Ads Conversion
+            // Triggered ONLY on successful purchase
+            window.gtag("event", "ads_conversion_Paiement_1", {
+              transaction_id: String(responseData.order_id || responseData.id),
+              value: safeValue,
+              currency: "DZD"
+            });
+            
+            // Standard conversion fallback
+            window.gtag("event", "conversion", {
+              transaction_id: String(responseData.order_id || responseData.id),
+              value: safeValue,
+              currency: "DZD"
+            });
           } catch (e) {
             console.error('Failed to send GA purchase event', e);
           }

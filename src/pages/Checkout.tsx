@@ -383,19 +383,12 @@ export default function Checkout() {
               }))
             });
             
-            // Explicit Google Ads Conversion
-            // Triggered ONLY on successful purchase
-            window.gtag("event", "ads_conversion_Paiement_1", {
-              transaction_id: String(responseData.order_id || responseData.id),
-              value: safeValue,
-              currency: "DZD"
-            });
-            
-            // Standard conversion fallback
-            window.gtag("event", "conversion", {
-              transaction_id: String(responseData.order_id || responseData.id),
-              value: safeValue,
-              currency: "DZD"
+            // Explicit Google Ads Conversion (from Google Ads interface)
+            window.gtag('event', 'conversion', {
+              'send_to': 'AW-18384476935/KcjbCLSx-98cEIe2s75E',
+              'value': safeValue,
+              'currency': 'DZD',
+              'transaction_id': String(responseData.order_id || responseData.id)
             });
           } catch (e) {
             console.error('Failed to send GA purchase event', e);

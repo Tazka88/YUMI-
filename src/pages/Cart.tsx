@@ -21,7 +21,7 @@ export default function Cart() {
             items: items.map(item => ({
               item_id: item.id.toString(),
               item_name: item.name,
-              price: item.promo_price || item.price,
+              price: item.selectedVariation?.price || item.promo_price || item.price,
               quantity: item.quantity,
               item_category: item.category_name || undefined
             }))
@@ -36,7 +36,7 @@ export default function Cart() {
   const handleRemoveItem = (item) => {
     if (typeof window !== 'undefined' && typeof window.gtag === 'function') {
       try {
-        const itemPrice = item.promo_price || item.price;
+        const itemPrice = item.selectedVariation?.price || item.promo_price || item.price;
         const safeValue = isNaN(itemPrice * item.quantity) || itemPrice * item.quantity <= 0 ? 1 : Number(Number(itemPrice * item.quantity).toFixed(2));
         window.gtag("event", "remove_from_cart", {
           currency: "DZD",

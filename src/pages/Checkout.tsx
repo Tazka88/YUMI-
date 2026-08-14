@@ -236,7 +236,7 @@ export default function Checkout() {
             items: checkoutItems.map(item => ({
               item_id: item.id.toString(),
               item_name: item.name,
-              price: item.promo_price || item.price,
+              price: item.selectedVariation?.price || item.promo_price || item.price,
               quantity: item.quantity,
               item_category: item.category_name || undefined
             }))
@@ -377,7 +377,7 @@ export default function Checkout() {
               items: checkoutItems.map(item => ({
                 item_id: item.id.toString(),
                 item_name: item.name,
-                price: item.promo_price || item.price,
+                price: item.selectedVariation?.price || item.promo_price || item.price,
                 quantity: item.quantity,
                 item_category: item.category_name || undefined
               }))

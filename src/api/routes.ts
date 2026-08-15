@@ -288,6 +288,7 @@ export const authenticate = async (req: any, res: any, next: any) => {
 
   // Try Supabase Auth first if configured
   const supabase = getSupabase();
+    
   if (supabase) {
     const { data: { user }, error } = await supabase.auth.getUser(token);
     if (user && !error) {
@@ -1325,6 +1326,7 @@ router.post('/reviews/upload', upload.single('image'), async (req, res) => {
 });
 
 router.post('/admin/upload', authenticate, upload.single('image'), async (req, res) => {
+  
   if (!req.file) {
     return res.status(400).json({ error: 'No file uploaded' });
   }

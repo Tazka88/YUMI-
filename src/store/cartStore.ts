@@ -2,7 +2,6 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
 export interface Product {
-  sku?: string;
   id: number;
   category_id: number;
   category_name?: string;

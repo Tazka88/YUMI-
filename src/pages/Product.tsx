@@ -525,7 +525,7 @@ export default function Product() {
       "url": cleanUrl,
       "priceCurrency": "DZD",
       "price": currentPrice,
-      "priceValidUntil": (isPromo && product.promo_price_end_date) ? new Date(product.promo_price_end_date).toISOString().split('T')[0] : new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0],
+      ...(isPromo && product.promo_price_end_date ? { "priceValidUntil": new Date(product.promo_price_end_date).toISOString().split('T')[0] } : {}),
       "availability": product.stock > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
       "itemCondition": "https://schema.org/NewCondition",
       "shippingDetails": {

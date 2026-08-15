@@ -18,7 +18,7 @@ async function startServer() {
   });
 
   const app = express();
-  const PORT = 3000;
+  const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3000;
 
   // Trust proxy to handle X-Forwarded-For correctly
   app.set('trust proxy', 1);
@@ -85,10 +85,10 @@ Sitemap: https://www.zorando.com/sitemap.xml`);
 
   app.get('/sitemap.xml', async (req, res) => {
     try {
-      const products = await sql`SELECT slug FROM products`;
+      const products = await sql`SELECT slug, created_at, is_active FROM products WHERE is_active = true`;
       const categories = await sql`SELECT slug FROM categories`;
       const brands = await sql`SELECT slug FROM brands`;
-      const posts = await sql`SELECT slug FROM blog_posts WHERE status = 'published'`;
+      const posts = await sql`SELECT slug, created_at FROM blog_posts WHERE status = 'published'`;
       
       const baseUrl = 'https://www.zorando.com';
       
@@ -102,7 +102,8 @@ Sitemap: https://www.zorando.com/sitemap.xml`);
 
       // Blog Posts
       posts.forEach(post => {
-        xml += `  <url>\n    <loc>${baseUrl}/blog/${post.slug}</loc>\n    <changefreq>weekly</changefreq>\n    <priority>0.8</priority>\n  </url>\n`;
+        const lastMod = post.created_at ? `<lastmod>${new Date(post.created_at).toISOString()}</lastmod>\n    ` : '';
+        xml += `  <url>\n    <loc>${baseUrl}/blog/${post.slug}</loc>\n    ${lastMod}<changefreq>weekly</changefreq>\n    <priority>0.8</priority>\n  </url>\n`;
       });
 
       // Categories
@@ -118,7 +119,8 @@ Sitemap: https://www.zorando.com/sitemap.xml`);
       
       // Products
       products.forEach(prod => {
-        xml += `  <url>\n    <loc>${baseUrl}/product/${prod.slug}</loc>\n    <changefreq>weekly</changefreq>\n    <priority>0.9</priority>\n  </url>\n`;
+        const lastMod = prod.created_at ? `<lastmod>${new Date(prod.created_at).toISOString()}</lastmod>\n    ` : '';
+        xml += `  <url>\n    <loc>${baseUrl}/product/${prod.slug}</loc>\n    ${lastMod}<changefreq>weekly</changefreq>\n    <priority>0.9</priority>\n  </url>\n`;
       });
       
       xml += `</urlset>`;
@@ -229,7 +231,7 @@ Sitemap: https://www.zorando.com/sitemap.xml`);
         if (reqCanonicalPath.length > 1 && reqCanonicalPath.endsWith('/')) {
             reqCanonicalPath = reqCanonicalPath.slice(0, -1);
         }
-        let headHtml = `<link rel="canonical" href="${baseUrl}${reqCanonicalPath}" />`;
+        let headHtml = `<link rel="canonical" href="${baseUrl}${reqCanonicalPath}" id="ssr-canonical" />`;
         let seoHtml = `
           <div id="seo-content" style="display:none;">
             <h1>${title}</h1>
@@ -247,42 +249,16 @@ Sitemap: https://www.zorando.com/sitemap.xml`);
         if (req.path === '/' || req.path === '/index.html') {
           const categories = await sql`SELECT name, slug FROM categories`;
           const brands = await sql`SELECT name, slug FROM brands`;
+          
           headHtml += `
             <link rel="preload" as="image" href="/api/hero-banners/first-image/mobile" media="(max-width: 767px)" fetchpriority="high">
             <link rel="preload" as="image" href="/api/hero-banners/first-image/desktop" media="(min-width: 768px)" fetchpriority="high">
           `;
-          seoHtml = `
-            <div id="seo-content" style="display:none;">
-              <h1>Bienvenue sur ZORANDO - Boutique en ligne en Algérie</h1>
-              <p>${description}</p>
-              <h2>Nos Catégories</h2>
-              <ul>
-                ${categories.map(c => `<li><a href="/category/${c.slug}">${c.name}</a></li>`).join('\n')}
-              </ul>
-              <h2>Nos Marques</h2>
-              <ul>
-                ${brands.map(b => `<li><a href="/brands/${b.slug}">${b.name}</a></li>`).join('\n')}
-              </ul>
-              <nav>
-                <a href="/about">À propos</a>
-                <a href="/programme-fidelite">Programme de fidélité</a>
-                <a href="/retours">Retours</a>
-                <a href="/track-order">Suivi de commande</a>
-              </nav>
-            </div>
-          `;
+          
+          seoHtml = ''; // No hidden content anymore
         } else if (req.path === '/brands') {
           title = 'Toutes nos marques - ZORANDO';
-          const brands = await sql`SELECT name, slug FROM brands`;
-          seoHtml = `
-            <div id="seo-content" style="display:none;">
-              <h1>Toutes nos marques</h1>
-              <h2>Liste de toutes les marques partenaires</h2>
-              <ul>
-                ${brands.map(b => `<li><a href="/brands/${b.slug}">${b.name}</a></li>`).join('\n')}
-              </ul>
-            </div>
-          `;
+          seoHtml = ''; // No hidden content
         } else if (req.path.startsWith('/brands/')) {
           const slug = req.path.split('/')[2];
           const [brand] = await sql`SELECT id, name, description, seo_title, seo_description, h1_title, seo_content FROM brands WHERE slug = ${slug}`;
@@ -290,18 +266,7 @@ Sitemap: https://www.zorando.com/sitemap.xml`);
           if (brand) {
             title = brand.seo_title || `${brand.name} - ZORANDO`;
             description = brand.seo_description || brand.description || `Découvrez tous les produits de la marque ${brand.name} sur ZORANDO.`;
-            const products = await sql`SELECT name, slug FROM products WHERE brand_id = ${brand.id}`;
-            seoHtml = `
-              <div id="seo-content" style="display:none;">
-                <h1>${brand.h1_title || brand.name}</h1>
-                ${brand.seo_content ? brand.seo_content : ''}
-                <h2>Produits de marque ${brand.name}</h2>
-                <p>${description}</p>
-                <ul>
-                  ${products.map(p => `<li><a href="/product/${p.slug}">${p.name}</a></li>`).join('\n')}
-                </ul>
-              </div>
-            `;
+            seoHtml = ''; // No hidden content
           } else {
             isNotFound = true;
           }
@@ -312,45 +277,17 @@ Sitemap: https://www.zorando.com/sitemap.xml`);
           if (category) {
             title = `${category.name} - ZORANDO`;
             description = category.description || `Découvrez nos produits dans la catégorie ${category.name}.`;
-            const products = await sql`SELECT name, slug FROM products WHERE category_id = ${category.id}`;
-            seoHtml = `
-              <div id="seo-content" style="display:none;">
-                <h1>${category.name}</h1>
-                <h2>Achetez dans ${category.name}</h2>
-                <p>${description}</p>
-                <ul>
-                  ${products.map(p => `<li><a href="/product/${p.slug}">${p.name}</a></li>`).join('\n')}
-                </ul>
-              </div>
-            `;
+            seoHtml = ''; // No hidden content
           } else {
             const [subcat] = await sql`SELECT id, name FROM subcategories WHERE slug = ${slug}`;
             if (subcat) {
               title = `${subcat.name} - ZORANDO`;
-              const products = await sql`SELECT name, slug FROM products WHERE subcategory_id = ${subcat.id}`;
-              seoHtml = `
-                <div id="seo-content" style="display:none;">
-                  <h1>${subcat.name}</h1>
-                  <h2>Produits dans la sous-catégorie ${subcat.name}</h2>
-                  <ul>
-                    ${products.map(p => `<li><a href="/product/${p.slug}">${p.name}</a></li>`).join('\n')}
-                  </ul>
-                </div>
-              `;
+              seoHtml = ''; // No hidden content
             } else {
               const [subSubcat] = await sql`SELECT id, name FROM sub_subcategories WHERE slug = ${slug}`;
               if (subSubcat) {
                 title = `${subSubcat.name} - ZORANDO`;
-                const products = await sql`SELECT name, slug FROM products WHERE sub_subcategory_id = ${subSubcat.id}`;
-                seoHtml = `
-                  <div id="seo-content" style="display:none;">
-                    <h1>${subSubcat.name}</h1>
-                    <h2>Produits dans la section ${subSubcat.name}</h2>
-                    <ul>
-                      ${products.map(p => `<li><a href="/product/${p.slug}">${p.name}</a></li>`).join('\n')}
-                    </ul>
-                  </div>
-                `;
+                seoHtml = ''; // No hidden content
               } else {
                 isNotFound = true;
               }
@@ -358,7 +295,18 @@ Sitemap: https://www.zorando.com/sitemap.xml`);
           }
         } else if (req.path.startsWith('/product/')) {
           const slug = req.path.split('/')[2];
-          const [product] = await sql`SELECT id, name, description, seo_title, seo_description, seo_keywords, price, promo_price, CASE WHEN image LIKE 'data:image/%' THEN '/api/images/products/' || id || '/image/' || slug || '.webp' ELSE image END as image FROM products WHERE slug = ${slug}`;
+          const [product] = await sql`
+            SELECT p.id, p.name, p.description, p.seo_title, p.seo_description, p.seo_keywords, p.price, p.promo_price, p.promo_price_start_date, p.promo_price_end_date, p.sku, p.stock, 
+            CASE WHEN p.image LIKE 'data:image/%' THEN '/api/images/products/' || p.id || '/image/' || p.slug || '.webp' ELSE p.image END as image,
+            COALESCE(p.brand_name, b.name) as brand_name,
+            c.name as category_name,
+            (SELECT COUNT(*) FROM reviews r WHERE r.product_id = p.id) as reviews_count,
+            (SELECT COALESCE(AVG(rating), 0) FROM reviews r WHERE r.product_id = p.id) as avg_rating
+            FROM products p
+            LEFT JOIN brands b ON p.brand_id = b.id
+            LEFT JOIN categories c ON p.category_id = c.id
+            WHERE p.slug = ${slug}
+          `;
           
           if (product) {
             title = product.seo_title || `${product.name} - ZORANDO`;
@@ -378,15 +326,58 @@ Sitemap: https://www.zorando.com/sitemap.xml`);
               }
             }
             
-            const displayPrice = product.promo_price || product.price;
-            seoHtml = `
-              <div id="seo-content" style="display:none;">
-                <h1>${product.name}</h1>
-                <h2>Achetez ${product.name} au meilleur prix</h2>
-                <p>${description}</p>
-                <p>Prix: ${displayPrice} DZD</p>
-              </div>
-            `;
+            // Build Server-Side JSON-LD
+            const isPromo = product.promo_price !== null && product.promo_price !== undefined;
+            const now = new Date();
+            let isPromoValid = false;
+            if (isPromo) {
+                isPromoValid = true;
+                if (product.promo_price_start_date && new Date(product.promo_price_start_date) > now) isPromoValid = false;
+                if (product.promo_price_end_date && new Date(product.promo_price_end_date) < now) isPromoValid = false;
+            }
+            
+            const currentPrice = isPromoValid ? Number(product.promo_price) : Number(product.price);
+            
+            const schemaOffer: Record<string, any> = {
+                "@type": "Offer",
+                "url": `${baseUrl}/product/${slug}`,
+                "priceCurrency": "DZD",
+                "price": currentPrice,
+                "availability": product.stock > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+                "itemCondition": "https://schema.org/NewCondition"
+            };
+            
+            if (isPromoValid && product.promo_price_end_date) {
+                schemaOffer.priceValidUntil = new Date(product.promo_price_end_date).toISOString().split('T')[0];
+            }
+            
+            const productSchema: Record<string, any> = {
+                "@context": "https://schema.org/",
+                "@type": "Product",
+                "name": product.name,
+                "image": ogImage,
+                "description": description,
+                "sku": product.sku || product.id.toString(),
+                "mpn": product.sku || product.id.toString(),
+                "category": product.category_name || "General",
+                "brand": {
+                    "@type": "Brand",
+                    "name": product.brand_name || "ZORANDO"
+                },
+                "offers": schemaOffer
+            };
+            
+            if (product.reviews_count > 0) {
+                productSchema.aggregateRating = {
+                    "@type": "AggregateRating",
+                    "ratingValue": Number(product.avg_rating).toFixed(1),
+                    "reviewCount": product.reviews_count,
+                    "bestRating": 5,
+                    "worstRating": 1
+                };
+            }
+            
+            seoHtml = `<script type="application/ld+json">${JSON.stringify(productSchema)}</script>`;
           } else {
             isNotFound = true;
           }
@@ -414,31 +405,26 @@ Sitemap: https://www.zorando.com/sitemap.xml`);
               }
             }
             
-            seoHtml = `
-              <div id="seo-content" style="display:none;">
-                <h1>${title}</h1>
-                <p>${description}</p>
-              </div>
-            `;
+            seoHtml = ''; // No hidden content
           } else {
             isNotFound = true;
           }
         } else if (req.path === '/about') {
           title = 'À propos de nous - ZORANDO';
           description = 'Découvrez l\'histoire de ZORANDO, votre boutique en ligne de confiance en Algérie.';
-          seoHtml = `<div id="seo-content" style="display:none;"><h1>${title}</h1><h2>Notre Histoire</h2><p>${description}</p></div>`;
+          seoHtml = ''; // No hidden content
         } else if (req.path === '/programme-fidelite') {
           title = 'Programme de fidélité - ZORANDO';
           description = 'Rejoignez le programme de fidélité ZORANDO et profitez de récompenses exclusives.';
-          seoHtml = `<div id="seo-content" style="display:none;"><h1>${title}</h1><h2>Avantages et Récompenses</h2><p>${description}</p></div>`;
+          seoHtml = ''; // No hidden content
         } else if (req.path === '/retours') {
           title = 'Politique de retours - ZORANDO';
           description = 'Consultez notre politique de retours et remboursements.';
-          seoHtml = `<div id="seo-content" style="display:none;"><h1>${title}</h1><h2>Conditions de Retour</h2><p>${description}</p></div>`;
+          seoHtml = ''; // No hidden content
         } else if (req.path === '/track-order') {
           title = 'Suivre ma commande - ZORANDO';
           description = 'Suivez l\'état de votre commande ZORANDO en temps réel.';
-          seoHtml = `<div id="seo-content" style="display:none;"><h1>${title}</h1><h2>Tracking de Livraison</h2><p>${description}</p></div>`;
+          seoHtml = ''; // No hidden content
         }
 
         if (isNotFound) {
@@ -449,18 +435,7 @@ Sitemap: https://www.zorando.com/sitemap.xml`);
           res.status(200);
         }
 
-        const globalNav = `
-          <nav id="global-nav" style="display:none;">
-            <a href="/">Accueil</a>
-            <a href="/brands">Marques</a>
-            <a href="/about">À propos</a>
-            <a href="/programme-fidelite">Programme de fidélité</a>
-            <a href="/retours">Retours</a>
-            <a href="/track-order">Suivi de commande</a>
-          </nav>
-        `;
-
-        let finalHtml = template.replace('<!--seo-injection-->', globalNav + seoHtml);
+        let finalHtml = template.replace('<!--seo-injection-->', seoHtml);
         finalHtml = finalHtml.replace('<!--head-injection-->', headHtml);
         finalHtml = finalHtml.replace(/<title>.*?<\/title>/, `<title>${title}</title>`);
         finalHtml = finalHtml.replace(/<meta name="description" content=".*?" \/>/, `<meta name="description" content="${description}" />`);

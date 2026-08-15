@@ -1,4 +1,5 @@
 import { Helmet } from 'react-helmet-async';
+import { useEffect } from 'react';
 
 interface SEOProps {
   title: string;
@@ -21,6 +22,14 @@ export default function SEO({ title, description, image, url, type = 'website', 
   let currentUrl = rawUrl.split('?')[0];
   // Toujours forcer www.zorando.com comme domaine canonique principal pour éviter le duplicate content
   currentUrl = currentUrl.replace(/^https?:\/\/(www\.)?[^\/]+/, 'https://www.zorando.com');
+  useEffect(() => {
+    // Remove the SSR canonical to prevent duplicates with Helmet
+    const ssrCanonical = document.getElementById('ssr-canonical');
+    if (ssrCanonical) {
+      ssrCanonical.remove();
+    }
+  }, []);
+
   if (currentUrl.length > 'https://www.zorando.com/'.length && currentUrl.endsWith('/')) {
     currentUrl = currentUrl.slice(0, -1);
   }

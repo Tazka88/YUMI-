@@ -611,14 +611,15 @@ export default function Home() {
   return (
     <>
       <SEO 
-        title="Boutique en ligne" 
-        description="ZORANDO - Votre boutique en ligne de confiance. Découvrez nos meilleurs produits, promotions et nouveautés au meilleur prix." 
+        title="Boutique en Ligne Algérie : Achetez au Meilleur Prix" 
+        exactTitle={false}
+        description="Découvrez ZORANDO, votre boutique en ligne de confiance en Algérie. Mode, tech, maison et plus à des prix imbattables. Livraison rapide. Commandez vite !" 
         url={window.location.href}
       />
       <ThemeBackground activeTheme={activeTheme} themeImages={themeImages} />
       <div className="container mx-auto px-4 py-6">
         <h1 className="sr-only">
-          ZORANDO - Boutique en ligne en Algérie : Mode, Électroménager, Téléphonie, Beauté & Maison
+          Votre Shopping en Ligne de Confiance en Algérie
         </h1>
         {/* Hero Section with Sidebar and Carousel */}
         <div className="flex gap-4 lg:h-[384px] mb-6">

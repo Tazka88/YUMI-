@@ -37,8 +37,9 @@ export default function Brands() {
   return (
     <div className="container mx-auto px-4 py-8">
       <SEO 
-        title="Toutes les marques" 
-        description="Découvrez toutes les marques de produits disponibles sur ZORANDO."
+        title="Nos Marques Partenaires : Qualité et Choix Garantis" 
+        exactTitle={false}
+        description="Parcourez toutes les grandes marques disponibles sur ZORANDO. Des produits authentiques et certifiés dans toutes les catégories. Achetez vos marques préférées !"
       />
       <div className="text-sm text-gray-500 mb-6 flex items-center gap-2">
         <Link to="/" className="hover:text-orange-500">Accueil</Link>

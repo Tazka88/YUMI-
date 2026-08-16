@@ -11,6 +11,8 @@ interface Product {
   slug: string;
   price: number;
   promo_price: number | null;
+  promo_price_start_date?: string | null;
+  promo_price_end_date?: string | null;
   image: string;
   stock: number;
   is_fast_delivery?: boolean;

@@ -1,11 +1,1 @@
-const axios = require('axios');
-const FormData = require('form-data');
-const fs = require('fs');
-
-async function test() {
-  const form = new FormData();
-  form.append('image', Buffer.from('fake image data'), { filename: 'test.jpg', contentType: 'image/jpeg' });
-  
-  // We need to login as admin to get token first
-  // But wait, what if I just edit the route to not require auth temporarily?
-}
+const fetch = require('node-fetch'); // wait we don't have node-fetch in cjs easily, use http

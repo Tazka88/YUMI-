@@ -64,12 +64,15 @@ export default function BlogAdmin() {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('adminToken')}` },
         body: formData
       });
-      if (!res.ok) throw new Error();
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => null);
+        throw new Error(errorData?.error || 'Erreur lors du téléchargement');
+      }
       const data = await res.json();
       setEditingPost(prev => ({ ...prev, [fieldName]: data.url }));
       toast.success('Image téléchargée');
-    } catch {
-      toast.error('Erreur lors du téléchargement');
+    } catch (err: any) {
+      toast.error(err.message || 'Erreur lors du téléchargement');
     } finally {
       setUploading(false);
       e.target.value = '';

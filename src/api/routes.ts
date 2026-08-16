@@ -1316,8 +1316,7 @@ router.post('/reviews/upload', upload.single('image'), async (req, res) => {
         return res.status(500).json({ error: 'Failed to upload image' });
       }
     } else {
-      const base64 = buffer.toString('base64');
-      res.json({ url: `data:${contentType};base64,${base64}` });
+      return res.status(500).json({ error: 'Supabase storage is not configured (SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY missing)' });
     }
   } catch (err) {
     console.error('Upload Error explicitly caught:', err);
@@ -1389,8 +1388,7 @@ router.post('/admin/upload', authenticate, upload.single('image'), async (req, r
         return res.status(500).json({ error: 'Failed to process image' });
       }
     } else {
-      const base64 = buffer.toString('base64');
-      res.json({ url: `data:${contentType};base64,${base64}` });
+      return res.status(500).json({ error: 'Supabase storage is not configured (SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY missing)' });
     }
   } catch (error) {
     console.error('Image processing error:', error);

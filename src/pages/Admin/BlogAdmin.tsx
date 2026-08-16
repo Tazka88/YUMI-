@@ -340,68 +340,68 @@ export default function BlogAdmin() {
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Image principale de l'article</label>
                         <div className="flex flex-col gap-3">
-                            <div className="flex gap-2">
-                              <input type="text" className="flex-1 border-gray-300 rounded-lg p-2.5 border text-sm" value={editingPost.image_url || ''} onChange={(e) => setEditingPost({...editingPost, image_url: e.target.value})} placeholder="URL de l'image" />
-                              <button type="button" onClick={() => fileInputRef.current?.click()} disabled={uploading} className="px-4 bg-gray-100 hover:bg-gray-200 border border-gray-300 rounded-lg text-gray-700 flex items-center justify-center transition">
+                            <div className="flex items-center gap-4">
+                              {editingPost.image_url && (
+                                <img src={editingPost.image_url} alt="Preview" className="w-16 h-16 object-cover rounded border" />
+                              )}
+                              <label className="cursor-pointer bg-white border border-gray-300 px-4 py-2 rounded-md hover:bg-gray-50 flex items-center gap-2">
                                 {uploading ? <div className="w-5 h-5 border-2 border-gray-500 border-t-transparent rounded-full animate-spin"></div> : <Upload size={18} />}
-                              </button>
-                              <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={(e) => handleImageUpload(e, 'image_url')} />
+                                Télécharger une image
+                                <input type="file" className="hidden" accept="image/*" onChange={(e) => handleImageUpload(e, 'image_url')} />
+                              </label>
                             </div>
                             <input type="text" className="w-full border-gray-300 rounded-lg p-2.5 border text-sm" value={editingPost.main_image_alt || ''} onChange={(e) => setEditingPost({...editingPost, main_image_alt: e.target.value})} placeholder="Texte ALT pour l'image principale (ex: Défroisseur vapeur ROBUSTE)" />
-                            {editingPost.image_url && (
-                                <img src={editingPost.image_url} alt="" className="w-full h-32 object-cover rounded-lg border border-gray-200 shadow-sm" />
-                            )}
                         </div>
                     </div>
 
                     <div className="pt-4 border-t border-gray-200">
                         <label className="block text-sm font-medium text-gray-700 mb-1">Image contenu 1 (Après l'introduction)</label>
                         <div className="flex flex-col gap-3">
-                            <div className="flex gap-2">
-                              <input type="text" className="flex-1 border-gray-300 rounded-lg p-2.5 border text-sm" value={editingPost.image_1_url || ''} onChange={(e) => setEditingPost({...editingPost, image_1_url: e.target.value})} placeholder="URL de l'image 1" />
-                              <button type="button" onClick={() => image1Ref.current?.click()} disabled={uploading} className="px-4 bg-gray-100 hover:bg-gray-200 border border-gray-300 rounded-lg text-gray-700 flex items-center justify-center transition">
+                            <div className="flex items-center gap-4">
+                              {editingPost.image_1_url && (
+                                <img src={editingPost.image_1_url} alt="Preview" className="w-16 h-16 object-cover rounded border" />
+                              )}
+                              <label className="cursor-pointer bg-white border border-gray-300 px-4 py-2 rounded-md hover:bg-gray-50 flex items-center gap-2">
                                 <Upload size={18} />
-                              </button>
-                              <input type="file" ref={image1Ref} className="hidden" accept="image/*" onChange={(e) => handleImageUpload(e, 'image_1_url')} />
+                                Télécharger une image
+                                <input type="file" className="hidden" accept="image/*" onChange={(e) => handleImageUpload(e, 'image_1_url')} />
+                              </label>
                             </div>
                             <input type="text" className="w-full border-gray-300 rounded-lg p-2.5 border text-sm" value={editingPost.image_1_alt || ''} onChange={(e) => setEditingPost({...editingPost, image_1_alt: e.target.value})} placeholder="Texte ALT pour l'image 1" />
-                            {editingPost.image_1_url && (
-                                <img src={editingPost.image_1_url} alt="" className="w-full h-32 object-cover rounded-lg border border-gray-200 shadow-sm" />
-                            )}
                         </div>
                     </div>
 
                     <div className="pt-4 border-t border-gray-200">
                         <label className="block text-sm font-medium text-gray-700 mb-1">Image contenu 2 (Au milieu du contenu)</label>
                         <div className="flex flex-col gap-3">
-                            <div className="flex gap-2">
-                              <input type="text" className="flex-1 border-gray-300 rounded-lg p-2.5 border text-sm" value={editingPost.image_2_url || ''} onChange={(e) => setEditingPost({...editingPost, image_2_url: e.target.value})} placeholder="URL de l'image 2" />
-                              <button type="button" onClick={() => image2Ref.current?.click()} disabled={uploading} className="px-4 bg-gray-100 hover:bg-gray-200 border border-gray-300 rounded-lg text-gray-700 flex items-center justify-center transition">
+                            <div className="flex items-center gap-4">
+                              {editingPost.image_2_url && (
+                                <img src={editingPost.image_2_url} alt="Preview" className="w-16 h-16 object-cover rounded border" />
+                              )}
+                              <label className="cursor-pointer bg-white border border-gray-300 px-4 py-2 rounded-md hover:bg-gray-50 flex items-center gap-2">
                                 <Upload size={18} />
-                              </button>
-                              <input type="file" ref={image2Ref} className="hidden" accept="image/*" onChange={(e) => handleImageUpload(e, 'image_2_url')} />
+                                Télécharger une image
+                                <input type="file" className="hidden" accept="image/*" onChange={(e) => handleImageUpload(e, 'image_2_url')} />
+                              </label>
                             </div>
                             <input type="text" className="w-full border-gray-300 rounded-lg p-2.5 border text-sm" value={editingPost.image_2_alt || ''} onChange={(e) => setEditingPost({...editingPost, image_2_alt: e.target.value})} placeholder="Texte ALT pour l'image 2" />
-                            {editingPost.image_2_url && (
-                                <img src={editingPost.image_2_url} alt="" className="w-full h-32 object-cover rounded-lg border border-gray-200 shadow-sm" />
-                            )}
                         </div>
                     </div>
 
                     <div className="pt-4 border-t border-gray-200">
                         <label className="block text-sm font-medium text-gray-700 mb-1">Image contenu 3 (Avant la conclusion)</label>
                         <div className="flex flex-col gap-3">
-                            <div className="flex gap-2">
-                              <input type="text" className="flex-1 border-gray-300 rounded-lg p-2.5 border text-sm" value={editingPost.image_3_url || ''} onChange={(e) => setEditingPost({...editingPost, image_3_url: e.target.value})} placeholder="URL de l'image 3" />
-                              <button type="button" onClick={() => image3Ref.current?.click()} disabled={uploading} className="px-4 bg-gray-100 hover:bg-gray-200 border border-gray-300 rounded-lg text-gray-700 flex items-center justify-center transition">
+                            <div className="flex items-center gap-4">
+                              {editingPost.image_3_url && (
+                                <img src={editingPost.image_3_url} alt="Preview" className="w-16 h-16 object-cover rounded border" />
+                              )}
+                              <label className="cursor-pointer bg-white border border-gray-300 px-4 py-2 rounded-md hover:bg-gray-50 flex items-center gap-2">
                                 <Upload size={18} />
-                              </button>
-                              <input type="file" ref={image3Ref} className="hidden" accept="image/*" onChange={(e) => handleImageUpload(e, 'image_3_url')} />
+                                Télécharger une image
+                                <input type="file" className="hidden" accept="image/*" onChange={(e) => handleImageUpload(e, 'image_3_url')} />
+                              </label>
                             </div>
                             <input type="text" className="w-full border-gray-300 rounded-lg p-2.5 border text-sm" value={editingPost.image_3_alt || ''} onChange={(e) => setEditingPost({...editingPost, image_3_alt: e.target.value})} placeholder="Texte ALT pour l'image 3" />
-                            {editingPost.image_3_url && (
-                                <img src={editingPost.image_3_url} alt="" className="w-full h-32 object-cover rounded-lg border border-gray-200 shadow-sm" />
-                            )}
                         </div>
                     </div>
 

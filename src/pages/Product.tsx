@@ -8,6 +8,7 @@ import { getSupabase } from '../lib/supabase';
 import { formatPrice } from '../utils/formatPrice';
 import { ProductCard } from '../components/ProductCard';
 import SEO, { getCanonicalUrl } from '../components/SEO';
+import { buildProductSchema, buildBreadcrumbSchema } from '../lib/schemaUtils';
 import { fetchWithCache } from '../lib/utils';
 import { sendCapiEvent, generateEventId } from '../lib/capi';
 
@@ -502,132 +503,24 @@ export default function Product() {
 
   const cleanUrl = getCanonicalUrl();
 
-  const productSchema: any = {
-    "@context": "https://schema.org/",
-    "@type": "Product",
-    "name": product.name,
-    "image": (product.image && product.image.startsWith('/')) ? `https://www.zorando.com${product.image}` : (product.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(product.name)}&background=random&size=800`),
-    "description": product.description,
-    "sku": product.sku || product.id.toString(),
-    "mpn": product.sku || product.id.toString(),
-    "category": product.category_name || "General",
-    "brand": {
-      "@type": "Brand",
-      "name": product.brand_name || "ZORANDO"
-    },
-    "offers": {
-      "@type": "Offer",
-      "url": cleanUrl,
-      "priceCurrency": "DZD",
-      "price": currentPrice,
-      ...(isPromo && product.promo_price_end_date ? { "priceValidUntil": new Date(product.promo_price_end_date).toISOString().split('T')[0] } : {}),
-      "availability": product.stock > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
-      "itemCondition": "https://schema.org/NewCondition",
-      "shippingDetails": {
-        "@type": "OfferShippingDetails",
-        "shippingRate": {
-          "@type": "MonetaryAmount",
-          "value": settings?.shipping_base_price || 400,
-          "currency": "DZD"
-        },
-        "deliveryTime": {
-          "@type": "ShippingDeliveryTime",
-          "handlingTime": {
-            "@type": "QuantitativeValue",
-            "minValue": 0,
-            "maxValue": 1,
-            "unitCode": "d"
-          },
-          "transitTime": {
-            "@type": "QuantitativeValue",
-            "minValue": 1,
-            "maxValue": 7,
-            "unitCode": "d"
-          }
-        },
-        "shippingDestination": {
-          "@type": "DefinedRegion",
-          "addressCountry": "DZ"
-        }
-      },
-      "hasMerchantReturnPolicy": {
-        "@type": "MerchantReturnPolicy",
-        "applicableCountry": "DZ",
-        "returnPolicyCategory": "https://schema.org/MerchantReturnFiniteReturnWindow",
-        "merchantReturnDays": 7,
-        "returnMethod": "https://schema.org/ReturnByMail",
-        "returnFees": "https://schema.org/FreeReturn"
-      }
-    }
-  };
+  const productSchema = buildProductSchema(product, reviews, cleanUrl, 'https://www.zorando.com');
 
-  if (reviews.length > 0) {
-    productSchema.aggregateRating = {
-      "@type": "AggregateRating",
-      "ratingValue": Number(avgRating),
-      "reviewCount": reviews.length,
-      "bestRating": 5,
-      "worstRating": 1
-    };
-
-    productSchema.review = reviews.map(r => ({
-      "@type": "Review",
-      "author": {
-        "@type": "Person",
-        "name": r.customer_name
-      },
-      "datePublished": new Date(r.created_at).toISOString().split('T')[0],
-      "reviewBody": r.comment,
-      "reviewRating": {
-        "@type": "Rating",
-        "ratingValue": r.rating,
-        "bestRating": "5",
-        "worstRating": "1"
-      }
-    }));
-  }
-
-  const breadcrumbList = [
-    {
-      "@type": "ListItem",
-      "position": 1,
-      "name": "Accueil",
-      "item": "https://www.zorando.com/"
-    }
+  const breadcrumbItems = [
+    { name: 'Accueil', item: 'https://www.zorando.com/' }
   ];
-
   let position = 2;
   if (product.category_slug) {
-    breadcrumbList.push({
-      "@type": "ListItem",
-      "position": position++,
-      "name": product.category_name || "Catégorie",
-      "item": `https://www.zorando.com/category/${product.category_slug}`
-    });
+    breadcrumbItems.push({ name: product.category_name || 'Catégorie', item: `https://www.zorando.com/category/${product.category_slug}` });
   }
-  
   if (product.subcategory_slug) {
-    breadcrumbList.push({
-      "@type": "ListItem",
-      "position": position++,
-      "name": product.subcategory_name || "Sous-catégorie",
-      "item": `https://www.zorando.com/category/${product.category_slug}/${product.subcategory_slug}`
-    });
+    breadcrumbItems.push({ name: product.subcategory_name || 'Sous-catégorie', item: `https://www.zorando.com/category/${product.subcategory_slug}?sub=true` });
   }
+  if (product.sub_subcategory_slug) {
+    breadcrumbItems.push({ name: product.sub_subcategory_name || 'Sous-sous-catégorie', item: `https://www.zorando.com/category/${product.sub_subcategory_slug}?subsub=true` });
+  }
+  breadcrumbItems.push({ name: product.name, item: cleanUrl });
 
-  breadcrumbList.push({
-    "@type": "ListItem",
-    "position": position,
-    "name": product.name,
-    "item": cleanUrl
-  });
-
-  const breadcrumbSchema = {
-    "@context": "https://schema.org",
-    "@type": "BreadcrumbList",
-    "itemListElement": breadcrumbList
-  };
-
+  const breadcrumbSchema = buildBreadcrumbSchema(breadcrumbItems);
   const finalSchema = [productSchema, breadcrumbSchema];
 
   return (

@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import express from 'express';
+import { buildProductSchema, buildBreadcrumbSchema } from './src/lib/schemaUtils';
 import cors from 'cors';
 import helmet from 'helmet';
 import { sql, setupDb } from './src/db/setup.js';
@@ -331,46 +332,31 @@ Sitemap: https://www.zorando.com/sitemap.xml`);
             
             const currentPrice = isPromoValid ? Number(product.promo_price) : Number(product.price);
             
-            const schemaOffer: Record<string, any> = {
-                "@type": "Offer",
-                "url": `${baseUrl}/product/${slug}`,
-                "priceCurrency": "DZD",
-                "price": currentPrice,
-                "availability": product.stock > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
-                "itemCondition": "https://schema.org/NewCondition"
-            };
+            const reviews = await sql`SELECT customer_name, rating, comment, created_at FROM reviews WHERE product_id = ${product.id} AND status = 'published' ORDER BY created_at DESC`;
             
-            if (isPromoValid && product.promo_price_end_date) {
-                schemaOffer.priceValidUntil = new Date(product.promo_price_end_date).toISOString().split('T')[0];
+            // Note: Since API doesn't filter by published for now, I'll fetch all like the frontend:
+            const allReviews = await sql`SELECT customer_name, rating, comment, created_at FROM reviews WHERE product_id = ${product.id} ORDER BY created_at DESC`;
+            
+            const productSchema = buildProductSchema(product, allReviews, `${baseUrl}${reqCanonicalPath}`, baseUrl);
+            
+            const breadcrumbItems = [
+              { name: 'Accueil', item: baseUrl }
+            ];
+            if (product.category_slug) {
+              breadcrumbItems.push({ name: product.category_name || 'Catégorie', item: `${baseUrl}/category/${product.category_slug}` });
             }
-            
-            const productSchema: Record<string, any> = {
-                "@context": "https://schema.org/",
-                "@type": "Product",
-                "name": product.name,
-                "image": ogImage,
-                "description": description,
-                "sku": product.sku || product.id.toString(),
-                "mpn": product.sku || product.id.toString(),
-                "category": product.category_name || "General",
-                "brand": {
-                    "@type": "Brand",
-                    "name": product.brand_name || "ZORANDO"
-                },
-                "offers": schemaOffer
-            };
-            
-            if (product.reviews_count > 0) {
-                productSchema.aggregateRating = {
-                    "@type": "AggregateRating",
-                    "ratingValue": Number(product.avg_rating).toFixed(1),
-                    "reviewCount": product.reviews_count,
-                    "bestRating": 5,
-                    "worstRating": 1
-                };
+            if (product.subcategory_slug) {
+              breadcrumbItems.push({ name: product.subcategory_name, item: `${baseUrl}/category/${product.subcategory_slug}?sub=true` });
             }
+            if (product.sub_subcategory_slug) {
+              breadcrumbItems.push({ name: product.sub_subcategory_name, item: `${baseUrl}/category/${product.sub_subcategory_slug}?subsub=true` });
+            }
+            breadcrumbItems.push({ name: product.name, item: `${baseUrl}${reqCanonicalPath}` });
             
-            seoHtml = `<script type="application/ld+json">${JSON.stringify(productSchema)}</script>`;
+            const breadcrumbSchema = buildBreadcrumbSchema(breadcrumbItems);
+            
+            const graphSchema = { "@context": "https://schema.org", "@graph": [productSchema, breadcrumbSchema].filter(Boolean) };
+            seoHtml = `<script type="application/ld+json" data-rh="true">${JSON.stringify(graphSchema)}</script>`;
           } else {
             isNotFound = true;
           }

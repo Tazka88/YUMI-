@@ -1,0 +1,178 @@
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@context": "https://schema.org",
+      "@type": "Product",
+      "name": "Air Fryer MultiSmart MS-AF2310 10L Double Stack 2400W – Friteuse Sans Huile 2-en-1 Écran Tactile Couleur",
+      "image": "https://evvbhalgyffagsesmvhu.supabase.co/storage/v1/object/public/images/products/prod-228-1781268387109-uz454l.webp",
+      "description": "\nL’Air Fryer MultiSmart MS-AF2310 Double Stack 2-en-1 est une friteuse sans huile moderne et puissante conçue pour une cuisson saine, rapide et pratique. Avec sa grande capacité de 10 litres et sa puissance de 2400W, elle permet de préparer plusieurs plats en même temps, idéale pour toute la famille.\n\nSon système Double Stack 2-en-1 optimise l’espace et la cuisson simultanée, tandis que son écran tactile couleur offre une utilisation intuitive et moderne avec plusieurs programmes automatiques.\n\nGrâce à la technologie de circulation d’air chaud, vous obtenez des aliments croustillants à l’extérieur et tendres à l’intérieur, avec très peu ou pas d’huile.\n\nPoints forts :\n⚡ Puissance 2400W : cuisson rapide et homogène\n🥘 Grande capacité 10L : idéale pour les familles\n🧠 Écran tactile couleur : utilisation simple et moderne\n🔄 Système Double Stack 2-en-1 : cuisson simultanée optimisée\n🫒 Cuisson sans huile : repas plus sains au quotidien\n🍗 Résultat croustillant et savoureux : texture parfaite des aliments\n🏠 Idéale pour usage familial : repas complets et variés\n⚙️ Programmes automatiques : cuisson facile et rapide\n\nUne Air Fryer puissante et intelligente pour cuisiner plus sainement sans effort au quotidien.",
+      "sku": "PROD-00228",
+      "brand": {
+        "@type": "Brand",
+        "name": "Multismart"
+      },
+      "offers": {
+        "@type": "Offer",
+        "url": "https://www.zorando.com/product/air-fryer-multismart-ms-af2310-10l-double-stack-2400w-friteuse-sans-huile-2-en-1-ecran-tactile-couleur",
+        "priceCurrency": "DZD",
+        "price": 19400,
+        "availability": "https://schema.org/InStock",
+        "itemCondition": "https://schema.org/NewCondition"
+      },
+      "aggregateRating": {
+        "@type": "AggregateRating",
+        "ratingValue": 4.4,
+        "reviewCount": 8,
+        "bestRating": 5,
+        "worstRating": 1
+      },
+      "review": [
+        {
+          "@type": "Review",
+          "author": {
+            "@type": "Person",
+            "name": "Amira C."
+          },
+          "datePublished": "2026-07-10",
+          "reviewBody": "Magnifique, j'adore.",
+          "reviewRating": {
+            "@type": "Rating",
+            "ratingValue": 4,
+            "bestRating": 5,
+            "worstRating": 1
+          }
+        },
+        {
+          "@type": "Review",
+          "author": {
+            "@type": "Person",
+            "name": "Karim E."
+          },
+          "datePublished": "2026-07-02",
+          "reviewBody": "Forza, macha'Allah.",
+          "reviewRating": {
+            "@type": "Rating",
+            "ratingValue": 4,
+            "bestRating": 5,
+            "worstRating": 1
+          }
+        },
+        {
+          "@type": "Review",
+          "author": {
+            "@type": "Person",
+            "name": "Lyes L."
+          },
+          "datePublished": "2026-05-29",
+          "reviewBody": "Excellent rapport qualité-prix.",
+          "reviewRating": {
+            "@type": "Rating",
+            "ratingValue": 5,
+            "bestRating": 5,
+            "worstRating": 1
+          }
+        },
+        {
+          "@type": "Review",
+          "author": {
+            "@type": "Person",
+            "name": "Karim I."
+          },
+          "datePublished": "2026-05-23",
+          "reviewBody": "Parfait",
+          "reviewRating": {
+            "@type": "Rating",
+            "ratingValue": 5,
+            "bestRating": 5,
+            "worstRating": 1
+          }
+        },
+        {
+          "@type": "Review",
+          "author": {
+            "@type": "Person",
+            "name": "Sofia L."
+          },
+          "datePublished": "2026-05-02",
+          "reviewBody": "Super produit, je ne regrette pas.",
+          "reviewRating": {
+            "@type": "Rating",
+            "ratingValue": 4,
+            "bestRating": 5,
+            "worstRating": 1
+          }
+        },
+        {
+          "@type": "Review",
+          "author": {
+            "@type": "Person",
+            "name": "Walid Z."
+          },
+          "datePublished": "2026-04-30",
+          "reviewBody": "Rien à dire",
+          "reviewRating": {
+            "@type": "Rating",
+            "ratingValue": 5,
+            "bestRating": 5,
+            "worstRating": 1
+          }
+        },
+        {
+          "@type": "Review",
+          "author": {
+            "@type": "Person",
+            "name": "Fatima U."
+          },
+          "datePublished": "2026-04-29",
+          "reviewBody": "Parfait",
+          "reviewRating": {
+            "@type": "Rating",
+            "ratingValue": 4,
+            "bestRating": 5,
+            "worstRating": 1
+          }
+        },
+        {
+          "@type": "Review",
+          "author": {
+            "@type": "Person",
+            "name": "Kenza N."
+          },
+          "datePublished": "2026-04-04",
+          "reviewBody": "Magnifique",
+          "reviewRating": {
+            "@type": "Rating",
+            "ratingValue": 4,
+            "bestRating": 5,
+            "worstRating": 1
+          }
+        }
+      ]
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        {
+          "@type": "ListItem",
+          "position": 1,
+          "name": "Accueil",
+          "item": "https://www.zorando.com/"
+        },
+        {
+          "@type": "ListItem",
+          "position": 2,
+          "name": "Électroménager",
+          "item": "https://www.zorando.com/category/electromenager"
+        },
+        {
+          "@type": "ListItem",
+          "position": 3,
+          "name": "Air Fryer MultiSmart MS-AF2310 10L Double Stack 2400W – Friteuse Sans Huile 2-en-1 Écran Tactile Couleur",
+          "item": "https://www.zorando.com/product/air-fryer-multismart-ms-af2310-10l-double-stack-2400w-friteuse-sans-huile-2-en-1-ecran-tactile-couleur"
+        }
+      ]
+    }
+  ]
+}

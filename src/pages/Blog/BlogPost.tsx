@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import SEO from '../../components/SEO';
+import { buildBlogSchema, buildBreadcrumbSchema } from '../../lib/schemaUtils';
 import { Calendar, Tag, ChevronRight, Facebook, Twitter, Linkedin, Share2 } from 'lucide-react';
 import DOMPurify from 'dompurify';
 
@@ -95,28 +96,14 @@ export default function BlogPost() {
         image={post.main_image || post.image_url}
         type="article"
         url={window.location.href}
-        schema={{
-          "@context": "https://schema.org",
-          "@type": "Article",
-          "headline": post.seo_title || post.title,
-          "image": (post.main_image || post.image_url) ? [(post.main_image || post.image_url)] : [],
-          "datePublished": post.published_at || post.created_at,
-          "dateModified": post.updated_at || post.created_at,
-          "author": [{
-              "@type": "Organization",
-              "name": "ZORANDO",
-              "url": "https://www.zorando.com"
-          }],
-          "publisher": {
-            "@type": "Organization",
-            "name": "ZORANDO",
-            "logo": {
-              "@type": "ImageObject",
-              "url": "https://www.zorando.com/logo.png"
-            }
-          },
-          "description": post.seo_description || post.excerpt
-        }}
+        schema={[
+          buildBlogSchema(post, window.location.href, 'https://www.zorando.com'),
+          buildBreadcrumbSchema([
+            { name: 'Accueil', item: 'https://www.zorando.com/' },
+            { name: 'Blog', item: 'https://www.zorando.com/blog' },
+            { name: post.title, item: window.location.href }
+          ])
+        ]}
       />
 
       {/* Hero Section */}

@@ -5,6 +5,7 @@ import { useCartStore, Product } from '../store/cartStore';
 import { formatPrice } from '../utils/formatPrice';
 import { ProductCard } from '../components/ProductCard';
 import SEO from '../components/SEO';
+import { buildOrganizationSchema, buildWebSiteSchema } from '../lib/schemaUtils';
 import { getCategoryWithEmoji, CategoryNameDisplay } from '../components/Layout';
 import Slider from '../components/Slider';
 import { fetchWithCache } from '../lib/utils';
@@ -611,10 +612,10 @@ export default function Home() {
   return (
     <>
       <SEO 
-        title="Achat en Ligne en Algérie au Meilleur Prix" 
-        exactTitle={false}
-        description="Découvrez ZORANDO, votre boutique en ligne de confiance en Algérie. Mode, tech, maison et plus à des prix imbattables. Livraison rapide. Commandez vite !" 
-        url={window.location.href}
+        title="ZORANDO - Boutique en ligne" 
+        description="Découvrez ZORANDO, votre boutique en ligne de confiance en Algérie. Achetez des produits de qualité : électroménager, mode, beauté, maison, informatique et plus au meilleur prix." 
+        keywords="boutique en ligne, e-commerce, Algérie, achat en ligne, électroménager, mode, beauté, maison, ZORANDO"
+        schema={[buildWebSiteSchema(), buildOrganizationSchema()]}
       />
       <ThemeBackground activeTheme={activeTheme} themeImages={themeImages} />
       <div className="container mx-auto px-4 py-6">

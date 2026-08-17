@@ -58,7 +58,11 @@ export default function SEO({ title, description, image, url, type = 'website', 
       
       {schema && (
         <script type="application/ld+json">
-          {JSON.stringify(schema)}
+          {JSON.stringify(
+            Array.isArray(schema) 
+              ? { "@context": "https://schema.org", "@graph": schema.filter(Boolean) } 
+              : schema
+          )}
         </script>
       )}
     </Helmet>

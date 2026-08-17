@@ -1,5 +1,4 @@
 import { Helmet } from 'react-helmet-async';
-import { useEffect } from 'react';
 
 interface SEOProps {
   title: string;
@@ -13,26 +12,23 @@ interface SEOProps {
   noindex?: boolean;
 }
 
+export function getCanonicalUrl(url?: string) {
+  const rawUrl = url || (typeof window !== 'undefined' ? window.location.href : '');
+  let currentUrl = rawUrl.split('?')[0];
+  // Toujours forcer www.zorando.com comme domaine canonique principal pour éviter le duplicate content
+  currentUrl = currentUrl.replace(/^https?:\/\/(www\.)?[^\/]+/, 'https://www.zorando.com');
+  if (currentUrl.length > 'https://www.zorando.com/'.length && currentUrl.endsWith('/')) {
+    currentUrl = currentUrl.slice(0, -1);
+  }
+  return currentUrl;
+}
+
 export default function SEO({ title, description, image, url, type = 'website', schema, exactTitle = false, keywords, noindex = false }: SEOProps) {
   const siteName = 'ZORANDO';
   const fullTitle = exactTitle ? title : `${title} | ${siteName}`;
   const defaultImage = 'https://www.zorando.com/og-image-fb.jpg';
   const finalImage = image || defaultImage;
-  const rawUrl = url || (typeof window !== 'undefined' ? window.location.href : '');
-  let currentUrl = rawUrl.split('?')[0];
-  // Toujours forcer www.zorando.com comme domaine canonique principal pour éviter le duplicate content
-  currentUrl = currentUrl.replace(/^https?:\/\/(www\.)?[^\/]+/, 'https://www.zorando.com');
-  useEffect(() => {
-    // Remove the SSR canonical to prevent duplicates with Helmet
-    const ssrCanonical = document.getElementById('ssr-canonical');
-    if (ssrCanonical) {
-      ssrCanonical.remove();
-    }
-  }, []);
-
-  if (currentUrl.length > 'https://www.zorando.com/'.length && currentUrl.endsWith('/')) {
-    currentUrl = currentUrl.slice(0, -1);
-  }
+  const currentUrl = getCanonicalUrl(url);
   
   return (
     <Helmet>

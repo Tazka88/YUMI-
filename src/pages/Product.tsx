@@ -7,7 +7,7 @@ import { useAuth } from '../lib/AuthContext';
 import { getSupabase } from '../lib/supabase';
 import { formatPrice } from '../utils/formatPrice';
 import { ProductCard } from '../components/ProductCard';
-import SEO from '../components/SEO';
+import SEO, { getCanonicalUrl } from '../components/SEO';
 import { fetchWithCache } from '../lib/utils';
 import { sendCapiEvent, generateEventId } from '../lib/capi';
 
@@ -500,12 +500,7 @@ export default function Product() {
     ? (reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length).toFixed(1)
     : '0.0';
 
-  const rawUrl = window.location.href;
-  let cleanUrl = rawUrl.split('?')[0];
-  cleanUrl = cleanUrl.replace(/^https?:\/\/(www\.)?[^\/]+/, 'https://www.zorando.com');
-  if (cleanUrl.length > 'https://www.zorando.com/'.length && cleanUrl.endsWith('/')) {
-    cleanUrl = cleanUrl.slice(0, -1);
-  }
+  const cleanUrl = getCanonicalUrl();
 
   const productSchema: any = {
     "@context": "https://schema.org/",

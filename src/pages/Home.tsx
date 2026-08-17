@@ -611,7 +611,7 @@ export default function Home() {
   return (
     <>
       <SEO 
-        title="Boutique en Ligne Algérie : Achetez au Meilleur Prix" 
+        title="Achat en Ligne en Algérie au Meilleur Prix" 
         exactTitle={false}
         description="Découvrez ZORANDO, votre boutique en ligne de confiance en Algérie. Mode, tech, maison et plus à des prix imbattables. Livraison rapide. Commandez vite !" 
         url={window.location.href}

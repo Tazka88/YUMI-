@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Helmet } from 'react-helmet-async';
+import SEO from '../../components/SEO';
 import { Calendar, Tag, ChevronRight, Facebook, Twitter, Linkedin, Share2 } from 'lucide-react';
 import DOMPurify from 'dompurify';
 
@@ -88,40 +88,36 @@ export default function BlogPost() {
 
   return (
     <article className="min-h-screen bg-white">
-      {/* SEO Meta Tags */}
-      <Helmet>
-        <title>{post.seo_title || `${post.title} | Blog ZORANDO`}</title>
-        <meta name="description" content={post.seo_description || post.excerpt} />
-        <meta property="og:title" content={post.seo_title || post.title} />
-        <meta property="og:description" content={post.seo_description || post.excerpt} />
-        <meta property="og:image" content={post.image_url} />
-        <meta property="og:type" content="article" />
-        <meta name="twitter:card" content="summary_large_image" />
-        <script type="application/ld+json">
-          {JSON.stringify({
-            "@context": "https://schema.org",
-            "@type": "Article",
-            "headline": post.seo_title || post.title,
-            "image": post.image_url ? [post.image_url] : [],
-            "datePublished": post.published_at || post.created_at,
-            "dateModified": post.updated_at || post.created_at,
-            "author": [{
-                "@type": "Organization",
-                "name": "ZORANDO",
-                "url": "https://www.zorando.com"
-            }],
-            "publisher": {
+            {/* SEO Meta Tags */}
+      <SEO
+        title={post.seo_title || post.title || 'Blog ZORANDO'}
+        description={post.seo_description || post.excerpt || ''}
+        image={post.main_image || post.image_url}
+        type="article"
+        url={window.location.href}
+        schema={{
+          "@context": "https://schema.org",
+          "@type": "Article",
+          "headline": post.seo_title || post.title,
+          "image": (post.main_image || post.image_url) ? [(post.main_image || post.image_url)] : [],
+          "datePublished": post.published_at || post.created_at,
+          "dateModified": post.updated_at || post.created_at,
+          "author": [{
               "@type": "Organization",
               "name": "ZORANDO",
-              "logo": {
-                "@type": "ImageObject",
-                "url": "https://www.zorando.com/logo.png"
-              }
-            },
-            "description": post.seo_description || post.excerpt
-          })}
-        </script>
-      </Helmet>
+              "url": "https://www.zorando.com"
+          }],
+          "publisher": {
+            "@type": "Organization",
+            "name": "ZORANDO",
+            "logo": {
+              "@type": "ImageObject",
+              "url": "https://www.zorando.com/logo.png"
+            }
+          },
+          "description": post.seo_description || post.excerpt
+        }}
+      />
 
       {/* Hero Section */}
       <div className="relative pt-32 pb-20 lg:pt-40 lg:pb-28 overflow-hidden">

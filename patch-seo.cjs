@@ -1,21 +1,11 @@
 const fs = require('fs');
-let code = fs.readFileSync('src/components/SEO.tsx', 'utf-8');
-
-if (!code.includes('useEffect')) {
-  code = code.replace("import { Helmet } from 'react-helmet-async';", "import { Helmet } from 'react-helmet-async';\nimport { useEffect } from 'react';");
-}
+let code = fs.readFileSync('src/components/SEO.tsx', 'utf8');
 
 code = code.replace(
-  "  if (currentUrl.length > 'https://www.zorando.com/'.length && currentUrl.endsWith('/')) {",
-  `  useEffect(() => {
-    // Remove the SSR canonical to prevent duplicates with Helmet
-    const ssrCanonical = document.getElementById('ssr-canonical');
-    if (ssrCanonical) {
-      ssrCanonical.remove();
-    }
-  }, []);
-
-  if (currentUrl.length > 'https://www.zorando.com/'.length && currentUrl.endsWith('/')) {`
+  /  useEffect\(\(\) => \{\n    \/\/ Remove the SSR canonical to prevent duplicates with Helmet\n    const ssrCanonical = document\.getElementById\('ssr-canonical'\);\n    if \(ssrCanonical\) \{\n      ssrCanonical\.remove\(\);\n    \}\n  \}, \[\]\);\n/g,
+  ''
 );
+
+code = code.replace(/import \{ useEffect \} from 'react';\n/, '');
 
 fs.writeFileSync('src/components/SEO.tsx', code);

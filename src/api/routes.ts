@@ -369,9 +369,11 @@ router.get('/sitemap.xml', async (req, res) => {
   try {
     const baseUrl = 'https://www.zorando.com';
     
-    const [products, categories, brands, pages] = await Promise.all([
+    const [products, categories, subcategories, sub_subcategories, brands, pages] = await Promise.all([
       sql`SELECT slug, created_at FROM products`,
       sql`SELECT slug FROM categories`,
+      sql`SELECT slug FROM subcategories`,
+      sql`SELECT slug FROM sub_subcategories`,
       sql`SELECT slug FROM brands`,
       sql`SELECT slug, updated_at FROM pages`
     ]);
@@ -400,6 +402,24 @@ router.get('/sitemap.xml', async (req, res) => {
     <loc>${baseUrl}/category/${c.slug}</loc>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
+  </url>`;
+    });
+    
+    subcategories.forEach(c => {
+      xml += `
+  <url>
+    <loc>${baseUrl}/category/${c.slug}?sub=true</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>`;
+    });
+    
+    sub_subcategories.forEach(c => {
+      xml += `
+  <url>
+    <loc>${baseUrl}/category/${c.slug}?subsub=true</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.5</priority>
   </url>`;
     });
 

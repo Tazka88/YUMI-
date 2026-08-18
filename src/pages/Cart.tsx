@@ -60,7 +60,7 @@ export default function Cart() {
   if (items.length === 0) {
     return (
       <div className="container mx-auto px-4 py-16 flex flex-col items-center justify-center text-center min-h-[60vh]">
-        <SEO title="Panier" description="Votre panier ZORANDO." />
+        <SEO title="Panier" description="Votre panier ZORANDO." noindex={true} />
         <div className="bg-orange-100 p-6 rounded-full text-orange-500 mb-6">
           <ShoppingBag size={64} />
         </div>
@@ -77,7 +77,7 @@ export default function Cart() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <SEO title="Panier" description="Votre panier ZORANDO." />
+      <SEO title="Panier" description="Votre panier ZORANDO." noindex={true} />
       <h1 className="text-xl md:text-2xl font-bold text-gray-900 mb-4 px-4">Mon Panier ({items.length} articles)</h1>
 
       <div className="flex flex-col lg:flex-row gap-8">

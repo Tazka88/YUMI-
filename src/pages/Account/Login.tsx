@@ -3,6 +3,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { getSupabase } from '../../lib/supabase';
 import { toast } from 'react-hot-toast';
 import { LogIn, Mail, Lock, Chrome } from 'lucide-react';
+import SEO from '../../components/SEO';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -59,7 +60,9 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-[80vh] flex items-center justify-center bg-gray-50 px-4 py-12">
+    <>
+      <SEO title="Connexion - ZORANDO" description="Connectez-vous à votre compte ZORANDO." noindex={true} />
+      <div className="min-h-[80vh] flex items-center justify-center bg-gray-50 px-4 py-12">
       <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-2xl shadow-xl border border-gray-100">
         <div className="text-center">
           <div className="flex justify-center mb-4">
@@ -166,5 +169,7 @@ export default function Login() {
         </div>
       </div>
     </div>
-  );
+  
+    </>
+  )
 }

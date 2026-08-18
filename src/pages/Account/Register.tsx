@@ -5,6 +5,7 @@ import { toast } from 'react-hot-toast';
 import { UserPlus, Mail, Lock, User, Phone, MapPin, Navigation } from 'lucide-react';
 import { useCommunesStore } from '../../store/useCommunesStore';
 import { fetchWithCache } from '../../lib/utils';
+import SEO from '../../components/SEO';
 
 interface Wilaya {
   number: string;
@@ -125,7 +126,9 @@ export default function Register() {
   };
 
   return (
-    <div className="min-h-[80vh] flex items-center justify-center bg-gray-50 px-4 py-12">
+    <>
+      <SEO title="Créer un compte - ZORANDO" description="Créez votre compte ZORANDO." noindex={true} />
+      <div className="min-h-[80vh] flex items-center justify-center bg-gray-50 px-4 py-12">
       <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-2xl shadow-xl border border-gray-100">
         <div className="text-center">
           <div className="flex justify-center mb-4">
@@ -329,5 +332,7 @@ export default function Register() {
         </div>
       </div>
     </div>
-  );
+  
+    </>
+  )
 }

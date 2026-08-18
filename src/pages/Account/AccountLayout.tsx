@@ -12,6 +12,7 @@ import {
   Bell
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import SEO from '../../components/SEO';
 
 export default function AccountLayout({ children }: { children: React.ReactNode }) {
   const { user, profile, signOut: handleSignOut } = useAuth();
@@ -39,7 +40,9 @@ export default function AccountLayout({ children }: { children: React.ReactNode 
   ];
 
   return (
-    <div className="bg-gray-50 min-h-screen">
+    <>
+      <SEO title="Mon Compte - ZORANDO" description="Gérez votre compte ZORANDO." noindex={true} />
+      <div className="bg-gray-50 min-h-screen">
       <div className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
         <div className="flex flex-col lg:flex-row gap-8">
           {/* Sidebar */}
@@ -91,5 +94,7 @@ export default function AccountLayout({ children }: { children: React.ReactNode 
         </div>
       </div>
     </div>
-  );
+  
+    </>
+  )
 }

@@ -1,5 +1,6 @@
 import toast from 'react-hot-toast';
 import React, { useState, useEffect } from 'react';
+import SEO from '../components/SEO';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useCartStore } from '../store/cartStore';
 import { useAuth } from '../lib/AuthContext';
@@ -484,6 +485,8 @@ export default function Checkout() {
   }
 
   return (
+    <>
+      <SEO title="Paiement - ZORANDO" description="Finalisez votre commande." noindex={true} />
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-xl md:text-2xl font-bold text-gray-900 mb-4 px-4">Finaliser la commande</h1>
 
@@ -877,5 +880,6 @@ export default function Checkout() {
         </div>
       </div>
     </div>
-  );
+    </>
+  )
 }

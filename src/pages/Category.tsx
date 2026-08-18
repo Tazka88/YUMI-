@@ -209,6 +209,7 @@ export default function Category() {
         exactTitle={!!(slug && categorySEOData[slug])}
         description={slug && categorySEOData[slug] ? categorySEOData[slug].description : `Découvrez notre sélection de produits dans la catégorie ${categoryName}. Achetez au meilleur prix sur ZORANDO.`} 
         url={window.location.href}
+        noindex={!!searchQuery || !!searchParams.get('ids')}
       />
 
       <div className="flex flex-col md:flex-row gap-6">

@@ -93,6 +93,8 @@ Sitemap: https://www.zorando.com/sitemap.xml`);
     try {
       const products = await sql`SELECT slug, created_at, is_active FROM products WHERE is_active = true`;
       const categories = await sql`SELECT slug FROM categories`;
+      const subcategories = await sql`SELECT slug FROM subcategories`;
+      const sub_subcategories = await sql`SELECT slug FROM sub_subcategories`;
       const brands = await sql`SELECT slug FROM brands`;
       const posts = await sql`SELECT slug, created_at FROM blog_posts WHERE status = 'published'`;
       
@@ -115,6 +117,16 @@ Sitemap: https://www.zorando.com/sitemap.xml`);
       // Categories
       categories.forEach(cat => {
         xml += `  <url>\n    <loc>${baseUrl}/category/${cat.slug}</loc>\n    <changefreq>weekly</changefreq>\n    <priority>0.8</priority>\n  </url>\n`;
+      });
+
+      // Subcategories
+      subcategories.forEach(sub => {
+        xml += `  <url>\n    <loc>${baseUrl}/category/${sub.slug}?sub=true</loc>\n    <changefreq>weekly</changefreq>\n    <priority>0.7</priority>\n  </url>\n`;
+      });
+
+      // Sub-subcategories
+      sub_subcategories.forEach(subsub => {
+        xml += `  <url>\n    <loc>${baseUrl}/category/${subsub.slug}?subsub=true</loc>\n    <changefreq>weekly</changefreq>\n    <priority>0.6</priority>\n  </url>\n`;
       });
 
       // Brands

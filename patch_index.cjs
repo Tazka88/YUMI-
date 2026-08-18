@@ -1,14 +1,10 @@
 const fs = require('fs');
-const file = 'index.html';
-let content = fs.readFileSync(file, 'utf8');
+let code = fs.readFileSync('index.html', 'utf8');
 
-if (!content.includes("gtag('config', 'AW-18384476935');")) {
-  content = content.replace(
-    "gtag('config', 'G-7JLYM1QX3C', { send_page_view: false });",
-    "gtag('config', 'G-7JLYM1QX3C', { send_page_view: false });\n      gtag('config', 'AW-18384476935');"
-  );
-  fs.writeFileSync(file, content);
-  console.log('Patched index.html with AW config');
-} else {
-  console.log('AW config already present');
-}
+// Remove corrupted favicons
+code = code.replace(/<link rel="icon" href="\/favicon\.ico" sizes="any">\s*/g, '');
+code = code.replace(/<link rel="icon" type="image\/png" sizes="32x32" href="\/favicon-zorando-32x32\.png">\s*/g, '');
+code = code.replace(/<link rel="apple-touch-icon" sizes="192x192" href="\/icon-192\.png">\s*/g, '');
+
+fs.writeFileSync('index.html', code);
+console.log("index.html patched.");

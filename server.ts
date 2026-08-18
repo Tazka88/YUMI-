@@ -24,6 +24,11 @@ async function startServer() {
   // Trust proxy to handle X-Forwarded-For correctly
   app.set('trust proxy', 1);
 
+  // Redirection explicite du favicon pour éviter le Soft 404 du SSR
+  app.get('/favicon.ico', (req, res) => {
+    res.redirect(301, '/favicon-zorando.svg');
+  });
+
   // Redirect non-www to www to consolidate SEO
   app.use((req, res, next) => {
     const hostname = req.hostname;

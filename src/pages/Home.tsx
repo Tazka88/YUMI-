@@ -422,9 +422,9 @@ const CategorySidebar = ({ categories }: { categories: any[] }) => {
 const SEOSection = () => (
   <section className="bg-[#f9f9f9] border-t border-gray-200 py-10 font-serif text-sm leading-relaxed text-[#222]">
     <div className="container mx-auto px-4">
-      <h2 className="text-xl md:text-2xl font-bold border-b-2 border-gray-200 pb-2 mb-5 text-gray-900">
+      <h1 className="text-xl md:text-2xl font-bold border-b-2 border-gray-200 pb-2 mb-5 text-gray-900">
         Zorando : Votre Boutique en Ligne de Référence pour Acheter en Algérie
-      </h2>
+      </h1>
 
       <p className="mb-4">
         Bienvenue sur <strong className="font-bold">Zorando</strong>, la plateforme e-commerce algérienne qui révolutionne votre expérience d'achat en ligne. Zorando, c'est bien plus qu'une simple boutique : c'est une destination complète où acheteurs et vendeurs se retrouvent pour profiter des <strong className="font-bold">meilleurs prix</strong> sur des milliers de produits. Que vous soyez à la recherche d'électronique, de mode, de beauté ou d'articles de maison, Zorando vous garantit une expérience d'achat sûre, rapide et agréable.
@@ -619,9 +619,7 @@ export default function Home() {
       />
       <ThemeBackground activeTheme={activeTheme} themeImages={themeImages} />
       <div className="container mx-auto px-4 py-6">
-        <h1 className="sr-only">
-          Votre Shopping en Ligne de Confiance en Algérie
-        </h1>
+        
         {/* Hero Section with Sidebar and Carousel */}
         <div className="flex gap-4 lg:h-[384px] mb-6">
           <CategorySidebar categories={categories} />

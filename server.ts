@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import express from 'express';
 import { buildProductSchema, buildBreadcrumbSchema } from './src/lib/schemaUtils';
+import { categorySEOData } from './src/utils/seoData';
 import cors from 'cors';
 import helmet from 'helmet';
 import { sql, setupDb } from './src/db/setup.js';
@@ -292,21 +293,38 @@ Sitemap: https://www.zorando.com/sitemap.xml`);
           }
         } else if (req.path.startsWith('/category/')) {
           const slug = req.path.split('/')[2];
-          const [category] = await sql`SELECT id, name, description FROM categories WHERE slug = ${slug}`;
+          const [category] = await sql`SELECT id, name FROM categories WHERE slug = ${slug}`;
           
           if (category) {
-            title = `${category.name} - ZORANDO`;
-            description = category.description || `Découvrez nos produits dans la catégorie ${category.name}.`;
+            if (categorySEOData[slug]) {
+              title = categorySEOData[slug].title;
+              description = categorySEOData[slug].description;
+            } else {
+              title = `${category.name} | ZORANDO`;
+              description = `Découvrez notre sélection de produits dans la catégorie ${category.name}. Achetez au meilleur prix sur ZORANDO.`;
+            }
             seoHtml = ''; // No hidden content
           } else {
             const [subcat] = await sql`SELECT id, name FROM subcategories WHERE slug = ${slug}`;
             if (subcat) {
-              title = `${subcat.name} - ZORANDO`;
+              if (categorySEOData[slug]) {
+                title = categorySEOData[slug].title;
+                description = categorySEOData[slug].description;
+              } else {
+                title = `${subcat.name} | ZORANDO`;
+                description = `Découvrez notre sélection de produits dans la catégorie ${subcat.name}. Achetez au meilleur prix sur ZORANDO.`;
+              }
               seoHtml = ''; // No hidden content
             } else {
               const [subSubcat] = await sql`SELECT id, name FROM sub_subcategories WHERE slug = ${slug}`;
               if (subSubcat) {
-                title = `${subSubcat.name} - ZORANDO`;
+                if (categorySEOData[slug]) {
+                  title = categorySEOData[slug].title;
+                  description = categorySEOData[slug].description;
+                } else {
+                  title = `${subSubcat.name} | ZORANDO`;
+                  description = `Découvrez notre sélection de produits dans la catégorie ${subSubcat.name}. Achetez au meilleur prix sur ZORANDO.`;
+                }
                 seoHtml = ''; // No hidden content
               } else {
                 isNotFound = true;

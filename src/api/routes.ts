@@ -220,7 +220,7 @@ router.get('/hero-banners/first-image/:type', async (req, res) => {
   res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=60, stale-while-revalidate=300');
   const { type } = req.params;
   try {
-    const sliderImages = await sql`SELECT image_url, mobile_image_url FROM slider_images WHERE is_active = true AND category_id IS NULL ORDER BY position ASC LIMIT 1`;
+    const sliderImages = await sql`SELECT image_url, mobile_image_url FROM slider_images WHERE is_active = true AND category_id IS NULL ORDER BY position ASC, id ASC LIMIT 1`;
     if (!sliderImages || sliderImages.length === 0) {
       return res.status(404).send('Not found');
     }
@@ -522,7 +522,7 @@ router.get('/hero-banners', async (req, res) => {
 
   try {
     res.setHeader('Cache-Control', 'max-age=0, s-maxage=60, stale-while-revalidate=300');
-    const sliderImages = await sql`SELECT ${sql.unsafe(SLIDER_IMAGES_COLS)} FROM slider_images ORDER BY position ASC`;
+    const sliderImages = await sql`SELECT ${sql.unsafe(SLIDER_IMAGES_COLS)} FROM slider_images ORDER BY position ASC, id ASC`;
     
     sliderImages.forEach((s: any) => {
       s.image_url = processImage('slider_images', s.id, 'image_url', s.image_url);

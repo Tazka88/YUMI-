@@ -21,19 +21,7 @@ interface SliderProps {
 }
 
 export default function Slider({ categoryId = null }: SliderProps) {
-  const [slides, setSlides] = useState<SliderImage[]>(() => {
-    if (!categoryId) {
-      return [{
-        id: -1,
-        image_url: '/api/hero-banners/first-image/desktop',
-        mobile_image_url: '/api/hero-banners/first-image/mobile',
-        category_id: null,
-        position: 0,
-        is_active: true,
-      }];
-    }
-    return [];
-  });
+  const [slides, setSlides] = useState<SliderImage[]>([]);
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -42,12 +30,12 @@ export default function Slider({ categoryId = null }: SliderProps) {
       setIsLoading(true);
       try {
         const data: any = await fetchWithCache('/api/hero-banners');
-        
+
         const activeSlides = data.filter(s => s.is_active);
-        
+
         // Filter by category
         let categorySlides = activeSlides.filter(s => s.category_id === categoryId);
-        
+
         setSlides(categorySlides.sort((a, b) => a.position - b.position));
       } catch (err) {
         console.error('Failed to fetch slides', err);
@@ -110,6 +98,8 @@ export default function Slider({ categoryId = null }: SliderProps) {
               referrerPolicy="no-referrer"
               loading={index === 0 ? "eager" : "lazy"}
               fetchPriority={index === 0 ? "high" : "auto"}
+
+
               decoding={index === 0 ? "sync" : "async"}
             />
           </picture>

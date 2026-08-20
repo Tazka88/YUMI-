@@ -1,23 +1,8 @@
-const postgres = require('postgres');
-const sql = postgres(process.env.DATABASE_URL);
-
-async function test() {
-  // Test Product with Reviews: air-fryer-multismart-ms-af2310-10l-double-stack-2400w-friteuse-sans-huile-2-en-1-ecran-tactile-couleur
-  const [product] = await sql`
-    SELECT p.id, p.name, p.description, p.seo_title, p.seo_description, p.seo_keywords, p.price, p.promo_price, p.promo_price_start_date, p.promo_price_end_date, p.sku, p.stock, 
-    CASE WHEN p.image LIKE 'data:image/%' THEN '/api/images/products/' || p.id || '/image/' || p.slug || '.webp' ELSE p.image END as image,
-    COALESCE(p.brand_name, b.name) as brand_name,
-    c.name as category_name,
-    (SELECT COUNT(*) FROM reviews r WHERE r.product_id = p.id) as reviews_count,
-    (SELECT COALESCE(AVG(rating), 0) FROM reviews r WHERE r.product_id = p.id) as avg_rating
-    FROM products p
-    LEFT JOIN brands b ON p.brand_id = b.id
-    LEFT JOIN categories c ON p.category_id = c.id
-    WHERE p.slug = 'air-fryer-multismart-ms-af2310-10l-double-stack-2400w-friteuse-sans-huile-2-en-1-ecran-tactile-couleur'
-  `;
-
-  const reviews = await sql`SELECT customer_name, rating, comment, created_at FROM reviews WHERE product_id = ${product.id} ORDER BY created_at DESC`;
-  console.log(JSON.stringify({product, reviews}, null, 2));
+const { sql, setupDb } = require('./dist/server.cjs');
+async function run() {
+  await setupDb();
+  const res = await sql`SELECT id, image_url, mobile_image_url FROM slider_images WHERE id IN (24, 20, 22)`;
+  console.log(res);
   process.exit(0);
 }
-test();
+run();

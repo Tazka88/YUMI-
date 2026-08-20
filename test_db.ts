@@ -1,11 +1,8 @@
-import { sql } from './src/db/setup.js';
-async function test() {
-  try {
-    const res = await sql`SELECT column_name FROM information_schema.columns WHERE table_name = 'products'`;
-    console.log(res.map(r => r.column_name));
-  } catch(e) {
-    console.error(e);
-  }
+import { sql, setupDb } from './src/db/setup.js';
+async function run() {
+  await setupDb();
+  const res1 = await sql`SELECT id, position FROM slider_images WHERE is_active = true AND category_id IS NULL ORDER BY position ASC LIMIT 5`;
+  console.log(res1);
   process.exit(0);
 }
-test();
+run();

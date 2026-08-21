@@ -330,23 +330,12 @@ export default function Category() {
             </div>
           ) : null}
           <div className="bg-white p-4 lg:p-6 rounded-lg shadow-sm mb-6">
-            <div className="flex justify-between items-start mb-4">
+            <div className="flex justify-between items-center">
               <h1 className="text-2xl font-bold text-gray-800">
                 {slug && categorySEOData[slug] ? categorySEOData[slug].h1 : categoryName}
               </h1>
-              <span className="text-sm text-gray-500 whitespace-nowrap ml-4 mt-1">{filteredProducts.length} produits trouvés</span>
+              <span className="text-sm text-gray-500 whitespace-nowrap ml-4">{filteredProducts.length} produits trouvés</span>
             </div>
-            {slug && categorySEOData[slug] && (
-              <div className="prose prose-sm text-gray-600 max-w-none">
-                {categorySEOData[slug].intro.split('\n\n').map((paragraph, idx) => {
-                  const boldMatch = paragraph.match(/^\*\*(.*?)\*\*(.*)/);
-                  if (boldMatch) {
-                    return <p key={idx} className="mb-2"><strong className="text-gray-800">{boldMatch[1]}</strong>{boldMatch[2]}</p>;
-                  }
-                  return <p key={idx} className="mb-2">{paragraph}</p>;
-                })}
-              </div>
-            )}
           </div>
 
           {!loading && currentSubcategories.length > 0 && (
@@ -424,8 +413,21 @@ export default function Category() {
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                 {filteredProducts.map((p, i) => <ProductCard key={p.id} product={p} priority={i < 4} />)}
               </div>
+            {slug && categorySEOData[slug] && (
+              <div className="mt-12 bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                <div className="prose prose-sm text-gray-600 max-w-none">
+                  {categorySEOData[slug].intro.split('\n\n').map((paragraph, idx) => {
+                    const boldMatch = paragraph.match(/^\*\*(.*?)\*\*(.*)/);
+                    if (boldMatch) {
+                      return <p key={idx} className="mb-2"><strong className="text-gray-800">{boldMatch[1]}</strong>{boldMatch[2]}</p>;
+                    }
+                    return <p key={idx} className="mb-2">{paragraph}</p>;
+                  })}
+                </div>
+              </div>
+            )}
             {slug && categorySEOData[slug] && categorySEOData[slug].links && (
-              <div className="mt-12 bg-gray-50 p-6 rounded-xl border border-gray-100">
+              <div className="mt-6 bg-gray-50 p-6 rounded-xl border border-gray-100">
                 <h3 className="text-lg font-bold text-gray-800 mb-4">Continuez votre visite sur ZORANDO :</h3>
                 <ul className="space-y-3">
                   {categorySEOData[slug].links.map((link, idx) => (

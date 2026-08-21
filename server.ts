@@ -316,45 +316,39 @@ Sitemap: https://www.zorando.com/sitemap.xml`);
           }
         } else if (req.path.startsWith('/category/')) {
           const slug = req.path.split('/')[2];
-          const [category] = await sql`SELECT id, name FROM categories WHERE slug = ${slug}`;
           
-          if (category) {
-            if (categorySEOData[slug]) {
-              title = categorySEOData[slug].title;
-              description = categorySEOData[slug].description;
-              if (categorySEOData[slug].keywords) keywords = categorySEOData[slug].keywords;
-            } else {
-              title = `${category.name} | ZORANDO`;
-              description = `Découvrez notre sélection de produits dans la catégorie ${category.name}. Achetez au meilleur prix sur ZORANDO.`;
-            }
+          // FAST PATH: Use static SEO data first without querying the DB
+          if (categorySEOData && categorySEOData[slug]) {
+            title = categorySEOData[slug].title;
+            description = categorySEOData[slug].description;
+            if (categorySEOData[slug].keywords) keywords = categorySEOData[slug].keywords;
             seoHtml = ''; // No hidden content
           } else {
-            const [subcat] = await sql`SELECT id, name FROM subcategories WHERE slug = ${slug}`;
-            if (subcat) {
-              if (categorySEOData[slug]) {
-                title = categorySEOData[slug].title;
-                description = categorySEOData[slug].description;
-                if (categorySEOData[slug].keywords) keywords = categorySEOData[slug].keywords;
+            try {
+              const [category] = await sql`SELECT id, name FROM categories WHERE slug = ${slug}`;
+              if (category) {
+                title = `${category.name} | ZORANDO`;
+                description = `Découvrez notre sélection de produits dans la catégorie ${category.name}. Achetez au meilleur prix sur ZORANDO.`;
+                seoHtml = '';
               } else {
-                title = `${subcat.name} | ZORANDO`;
-                description = `Découvrez notre sélection de produits dans la catégorie ${subcat.name}. Achetez au meilleur prix sur ZORANDO.`;
-              }
-              seoHtml = ''; // No hidden content
-            } else {
-              const [subSubcat] = await sql`SELECT id, name FROM sub_subcategories WHERE slug = ${slug}`;
-              if (subSubcat) {
-                if (categorySEOData[slug]) {
-                  title = categorySEOData[slug].title;
-                  description = categorySEOData[slug].description;
-                  if (categorySEOData[slug].keywords) keywords = categorySEOData[slug].keywords;
+                const [subcat] = await sql`SELECT id, name FROM subcategories WHERE slug = ${slug}`;
+                if (subcat) {
+                  title = `${subcat.name} | ZORANDO`;
+                  description = `Découvrez notre sélection de produits dans la catégorie ${subcat.name}. Achetez au meilleur prix sur ZORANDO.`;
+                  seoHtml = '';
                 } else {
-                  title = `${subSubcat.name} | ZORANDO`;
-                  description = `Découvrez notre sélection de produits dans la catégorie ${subSubcat.name}. Achetez au meilleur prix sur ZORANDO.`;
+                  const [subSubcat] = await sql`SELECT id, name FROM sub_subcategories WHERE slug = ${slug}`;
+                  if (subSubcat) {
+                    title = `${subSubcat.name} | ZORANDO`;
+                    description = `Découvrez notre sélection de produits dans la catégorie ${subSubcat.name}. Achetez au meilleur prix sur ZORANDO.`;
+                    seoHtml = '';
+                  } else {
+                    isNotFound = true;
+                  }
                 }
-                seoHtml = ''; // No hidden content
-              } else {
-                isNotFound = true;
               }
+            } catch (err) {
+              console.error("DB error for category fallback:", err);
             }
           }
         } else if (req.path.startsWith('/product/')) {
@@ -516,6 +510,8 @@ Sitemap: https://www.zorando.com/sitemap.xml`);
           <meta data-rh="true" name="twitter:image" content="${typeof ogImage !== 'undefined' ? ogImage : ''}" />
         `;
         
+        console.log('Final title to inject:', title);
+        console.log('Final title to inject:', title);
         let finalHtml = template.replace('<!--seo-injection-->', typeof seoHtml !== 'undefined' ? seoHtml : '');
         finalHtml = finalHtml.replace('<!--head-injection-->', (typeof headHtml !== 'undefined' ? headHtml : '') + seoTags);
         

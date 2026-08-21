@@ -160,13 +160,13 @@ app.get('*', async (req, res, next) => {
           }
         }
         seoHtml = '';
-      } catch(e) {}
+      } catch(e) { console.error("DB Error in SSR:", e); }
     } else if (req.path === '/brands') {
       title = 'Toutes nos marques - ZORANDO';
       try {
         const brands = await sql`SELECT name, slug FROM brands`;
         seoHtml = '';
-      } catch(e) {}
+      } catch(e) { console.error("DB Error in SSR:", e); }
     } else if (req.path.startsWith('/brands/')) {
       const slug = req.path.split('/')[2];
       try {
@@ -177,29 +177,45 @@ app.get('*', async (req, res, next) => {
           const products = await sql`SELECT name, slug FROM products WHERE brand_id = ${brand.id}`;
           seoHtml = '';
         }
-      } catch(e) {}
+      } catch(e) { console.error("DB Error in SSR:", e); }
     } else if (req.path.startsWith('/category/')) {
-      const slug = req.path.split('/')[2];
-      try {
-        const [category] = await sql`SELECT id, name, description FROM categories WHERE slug = ${slug}`;
-        if (category) {
-          title = categorySEOData[slug]?.title || `${category.name} - ZORANDO`;
-          description = categorySEOData[slug]?.description || category.description || `Découvrez nos produits dans la catégorie ${category.name}.`;
-          if (categorySEOData[slug]?.keywords) keywords = categorySEOData[slug].keywords;
-          const products = await sql`SELECT name, slug FROM products WHERE category_id = ${category.id}`;
-          seoHtml = '';
-        } else {
-          const [subcat] = await sql`SELECT id, name FROM subcategories WHERE slug = ${slug}`;
-          if (subcat) {
-            title = categorySEOData[slug]?.title || `${subcat.name} - ZORANDO`;
-            description = categorySEOData[slug]?.description || `Découvrez nos produits dans la catégorie ${subcat.name}.`;
-            if (categorySEOData[slug]?.keywords) keywords = categorySEOData[slug].keywords;
-            const products = await sql`SELECT name, slug FROM products WHERE subcategory_id = ${subcat.id}`;
-            seoHtml = '';
+          const slug = req.path.split('/')[2];
+          
+          // FAST PATH: Use static SEO data first without querying the DB
+          if (categorySEOData && categorySEOData[slug]) {
+            title = categorySEOData[slug].title;
+            description = categorySEOData[slug].description;
+            if (categorySEOData[slug].keywords) keywords = categorySEOData[slug].keywords;
+            seoHtml = ''; // No hidden content
+          } else {
+            try {
+              const [category] = await sql`SELECT id, name FROM categories WHERE slug = ${slug}`;
+              if (category) {
+                title = `${category.name} | ZORANDO`;
+                description = `Découvrez notre sélection de produits dans la catégorie ${category.name}. Achetez au meilleur prix sur ZORANDO.`;
+                seoHtml = '';
+              } else {
+                const [subcat] = await sql`SELECT id, name FROM subcategories WHERE slug = ${slug}`;
+                if (subcat) {
+                  title = `${subcat.name} | ZORANDO`;
+                  description = `Découvrez notre sélection de produits dans la catégorie ${subcat.name}. Achetez au meilleur prix sur ZORANDO.`;
+                  seoHtml = '';
+                } else {
+                  const [subSubcat] = await sql`SELECT id, name FROM sub_subcategories WHERE slug = ${slug}`;
+                  if (subSubcat) {
+                    title = `${subSubcat.name} | ZORANDO`;
+                    description = `Découvrez notre sélection de produits dans la catégorie ${subSubcat.name}. Achetez au meilleur prix sur ZORANDO.`;
+                    seoHtml = '';
+                  } else {
+                    isNotFound = true;
+                  }
+                }
+              }
+            } catch (err) {
+              console.error("DB error for category fallback:", err);
+            }
           }
-        }
-      } catch(e) {}
-    } else if (req.path.startsWith('/product/')) {
+        } else if (req.path.startsWith('/product/')) {
       const slug = req.path.split('/')[2];
       try {
         const [product] = await sql`SELECT id, name, description, price, promo_price, image FROM products WHERE slug = ${slug}`;
@@ -222,7 +238,7 @@ app.get('*', async (req, res, next) => {
           const displayPrice = product.promo_price || product.price;
           seoHtml = '';
         }
-      } catch(e) {}
+      } catch(e) { console.error("DB Error in SSR:", e); }
     } else if (req.path === '/about') {
       title = 'À propos de nous - ZORANDO';
       description = 'Découvrez l\'histoire de ZORANDO, votre boutique en ligne de confiance en Algérie.';

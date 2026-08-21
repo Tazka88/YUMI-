@@ -234,7 +234,21 @@ Sitemap: https://www.zorando.com/sitemap.xml`);
     const distPath = path.join(process.cwd(), 'dist');
     app.use(express.static(distPath, { index: false })); // Disable default index.html serving
     
-    app.get('*', async (req, res, next) => {
+    const cleanForSEO = (text, truncateLength) => {
+  if (!text) return '';
+  let cleaned = text.replace(/<[^>]+>/g, ' ')
+                    .replace(/(?:\*\*|\*|__|_|#|>|`|~)/g, '')
+                    .replace(/\s+/g, ' ')
+                    .trim();
+  if (truncateLength && cleaned.length > truncateLength) {
+    const truncated = cleaned.substring(0, truncateLength);
+    const lastSpace = truncated.lastIndexOf(' ');
+    return lastSpace > 0 ? truncated.substring(0, lastSpace) + '...' : truncated + '...';
+  }
+  return cleaned;
+};
+
+  app.get('*', async (req, res, next) => {
       // If it looks like a static file request, let it fall through to 404
       if (req.path.match(/\.[a-zA-Z0-9]+$/) && !req.path.endsWith('.html')) {
         return next();
@@ -309,7 +323,7 @@ Sitemap: https://www.zorando.com/sitemap.xml`);
           
           if (brand) {
             title = brand.seo_title || `${brand.name} - ZORANDO`;
-            description = brand.seo_description || brand.description || `Découvrez tous les produits de la marque ${brand.name} sur ZORANDO.`;
+            description = brand.seo_description ? cleanForSEO(brand.seo_description) : (brand.description ? cleanForSEO(brand.description, 160) : `Découvrez tous les produits de la marque ${brand.name} sur ZORANDO.`);
             seoHtml = ''; // No hidden content
           } else {
             isNotFound = true;
@@ -368,11 +382,9 @@ Sitemap: https://www.zorando.com/sitemap.xml`);
           
           if (product) {
             title = product.seo_title || `${product.name} - ZORANDO`;
-            description = product.seo_description || (product.description ? product.description.substring(0, 160).replace(/<[^>]+>/g, '') : `Achetez ${product.name} au meilleur prix sur ZORANDO.`);
+            description = product.seo_description ? cleanForSEO(product.seo_description) : (product.description ? cleanForSEO(product.description, 160) : `Achetez ${product.name} au meilleur prix sur ZORANDO.`);
             
-            if (product.seo_keywords) {
-              headHtml += `<meta name="keywords" content="${product.seo_keywords}" />`;
-            }
+            if (product.seo_keywords) { keywords = product.seo_keywords; }
             
             if (product.image) {
               if (product.image.startsWith('http')) {
@@ -436,7 +448,7 @@ Sitemap: https://www.zorando.com/sitemap.xml`);
           if (landingPage) {
             const config = landingPage.config || {};
             title = config.seo_title || landingPage.seo_title || `${landingPage.product_name} | ZORANDO`;
-            description = config.seo_description || landingPage.seo_description || landingPage.product_description?.substring(0, 160).replace(/<[^>]+>/g, '') || `Découvrez ${landingPage.product_name} sur Zorando.`;
+            description = config.seo_description ? cleanForSEO(config.seo_description) : (landingPage.seo_description ? cleanForSEO(landingPage.seo_description) : (landingPage.product_description ? cleanForSEO(landingPage.product_description, 160) : `Découvrez ${landingPage.product_name} sur Zorando.`));
             
             if (landingPage.product_image) {
               if (landingPage.product_image.startsWith('http')) {
@@ -461,7 +473,7 @@ Sitemap: https://www.zorando.com/sitemap.xml`);
           `;
           if (post) {
             title = post.seo_title || post.title || 'ZORANDO Blog';
-            description = post.seo_description || post.excerpt || `Lisez notre article : ${post.title}`;
+            description = post.seo_description ? cleanForSEO(post.seo_description) : (post.excerpt ? cleanForSEO(post.excerpt, 160) : `Lisez notre article : ${post.title}`);
             if (post.main_image) {
               ogImage = post.main_image.startsWith('/') ? `${baseUrl}${post.main_image}` : `${baseUrl}/${post.main_image}`;
             }

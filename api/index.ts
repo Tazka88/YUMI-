@@ -98,7 +98,21 @@ app.use(async (req, res, next) => {
 });
 
 // Serve frontend with SEO injection for non-asset routes
-app.get('*', async (req, res, next) => {
+const cleanForSEO = (text, truncateLength) => {
+  if (!text) return '';
+  let cleaned = text.replace(/<[^>]+>/g, ' ')
+                    .replace(/(?:\*\*|\*|__|_|#|>|`|~)/g, '')
+                    .replace(/\s+/g, ' ')
+                    .trim();
+  if (truncateLength && cleaned.length > truncateLength) {
+    const truncated = cleaned.substring(0, truncateLength);
+    const lastSpace = truncated.lastIndexOf(' ');
+    return lastSpace > 0 ? truncated.substring(0, lastSpace) + '...' : truncated + '...';
+  }
+  return cleaned;
+};
+
+  app.get('*', async (req, res, next) => {
   // If it looks like a static file request (has extension dot), let it fall through
   if (req.path.match(/\.[a-zA-Z0-9]+$/) && !req.path.endsWith('.html')) {
     return next();
@@ -170,10 +184,10 @@ app.get('*', async (req, res, next) => {
     } else if (req.path.startsWith('/brands/')) {
       const slug = req.path.split('/')[2];
       try {
-        const [brand] = await sql`SELECT id, name, description FROM brands WHERE slug = ${slug}`;
+        const [brand] = await sql`SELECT id, name, description, seo_title, seo_description FROM brands WHERE slug = ${slug}`;
         if (brand) {
           title = `${brand.name} - ZORANDO`;
-          description = brand.description || `Découvrez tous les produits de la marque ${brand.name} sur ZORANDO.`;
+          description = brand.seo_description ? cleanForSEO(brand.seo_description) : (brand.description ? cleanForSEO(brand.description, 160) : `Découvrez tous les produits de la marque ${brand.name} sur ZORANDO.`);
           const products = await sql`SELECT name, slug FROM products WHERE brand_id = ${brand.id}`;
           seoHtml = '';
         }
@@ -218,10 +232,11 @@ app.get('*', async (req, res, next) => {
         } else if (req.path.startsWith('/product/')) {
       const slug = req.path.split('/')[2];
       try {
-        const [product] = await sql`SELECT id, name, description, price, promo_price, image FROM products WHERE slug = ${slug}`;
+        const [product] = await sql`SELECT id, name, description, seo_title, seo_description, seo_keywords, price, promo_price, image FROM products WHERE slug = ${slug}`;
         if (product) {
-          title = `${product.name} - ZORANDO`;
-          description = product.description ? product.description.substring(0, 160).replace(/<[^>]+>/g, '') : `Achetez ${product.name} au meilleur prix sur ZORANDO.`;
+          title = product.seo_title || `${product.name} - ZORANDO`;
+          description = product.seo_description ? cleanForSEO(product.seo_description) : (product.description ? cleanForSEO(product.description, 160) : `Achetez ${product.name} au meilleur prix sur ZORANDO.`);
+          if (product.seo_keywords) keywords = product.seo_keywords;
           
           if (product.image) {
             // Handle image format: Could be an external URL, base64 data, or an internal path

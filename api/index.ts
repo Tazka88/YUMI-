@@ -5,6 +5,7 @@ import apiRoutes from '../src/api/routes.js';
 import path from 'path';
 import fs from 'fs';
 import { sql } from '../src/db/setup.js';
+import { categorySEOData } from '../src/utils/seoData.js';
 
 const app = express();
 
@@ -117,6 +118,7 @@ app.get('*', async (req, res, next) => {
 
     let title = 'ZORANDO - Boutique en ligne';
     let description = 'Découvrez ZORANDO, votre boutique en ligne de confiance en Algérie. Achetez des produits de qualité au meilleur prix.';
+    let keywords = 'boutique en ligne, e-commerce, Algérie, achat en ligne, électroménager, mode, beauté, maison, ZORANDO';
     const host = req.get('host') || 'www.zorando.com';
     const baseUrl = `https://${host}`;
     let headHtml = `<link rel="canonical" href="${baseUrl}${req.path}" />`;
@@ -218,8 +220,9 @@ app.get('*', async (req, res, next) => {
       try {
         const [category] = await sql`SELECT id, name, description FROM categories WHERE slug = ${slug}`;
         if (category) {
-          title = `${category.name} - ZORANDO`;
-          description = category.description || `Découvrez nos produits dans la catégorie ${category.name}.`;
+          title = categorySEOData[slug]?.title || `${category.name} - ZORANDO`;
+          description = categorySEOData[slug]?.description || category.description || `Découvrez nos produits dans la catégorie ${category.name}.`;
+          if (categorySEOData[slug]?.keywords) keywords = categorySEOData[slug].keywords;
           const products = await sql`SELECT name, slug FROM products WHERE category_id = ${category.id}`;
           seoHtml = `
             <div id="seo-content" style="display:none;">
@@ -234,7 +237,9 @@ app.get('*', async (req, res, next) => {
         } else {
           const [subcat] = await sql`SELECT id, name FROM subcategories WHERE slug = ${slug}`;
           if (subcat) {
-            title = `${subcat.name} - ZORANDO`;
+            title = categorySEOData[slug]?.title || `${subcat.name} - ZORANDO`;
+            description = categorySEOData[slug]?.description || `Découvrez nos produits dans la catégorie ${subcat.name}.`;
+            if (categorySEOData[slug]?.keywords) keywords = categorySEOData[slug].keywords;
             const products = await sql`SELECT name, slug FROM products WHERE subcategory_id = ${subcat.id}`;
             seoHtml = `
               <div id="seo-content" style="display:none;">
@@ -310,17 +315,18 @@ app.get('*', async (req, res, next) => {
 
     let finalHtml = template.replace('<!--seo-injection-->', globalNav + seoHtml);
     finalHtml = finalHtml.replace('<!--head-injection-->', headHtml);
-    finalHtml = finalHtml.replace(/<title>.*?<\/title>/, `<title>${title}</title>`);
-    finalHtml = finalHtml.replace(/<meta name="description" content=".*?" \/>/, `<meta name="description" content="${description}" />`);
+    finalHtml = finalHtml.replace(/<title.*?>.*?<\/title>/, `<title data-rh="true">${title}</title>`);
+    finalHtml = finalHtml.replace(/<meta.*?name="description".*?>/, `<meta data-rh="true" name="description" content="${description}" />`);
+    finalHtml = finalHtml.replace(/<meta.*?name="keywords".*?>/, `<meta data-rh="true" name="keywords" content="${keywords}" />`);
     
     // Update OG Tags dynamically
-    finalHtml = finalHtml.replace(/<meta property="og:title" content=".*?" \/>/g, `<meta property="og:title" content="${title}" />`);
-    finalHtml = finalHtml.replace(/<meta property="og:description" content=".*?" \/>/g, `<meta property="og:description" content="${description}" />`);
-    finalHtml = finalHtml.replace(/<meta property="og:image" content=".*?" \/>/g, `<meta property="og:image" content="${ogImage}" />`);
-    finalHtml = finalHtml.replace(/<meta property="og:url" content=".*?" \/>/g, `<meta property="og:url" content="${ogUrl}" />`);
-    finalHtml = finalHtml.replace(/<meta name="twitter:title" content=".*?" \/>/g, `<meta name="twitter:title" content="${title}" />`);
-    finalHtml = finalHtml.replace(/<meta name="twitter:description" content=".*?" \/>/g, `<meta name="twitter:description" content="${description}" />`);
-    finalHtml = finalHtml.replace(/<meta name="twitter:image" content=".*?" \/>/g, `<meta name="twitter:image" content="${ogImage}" />`);
+    finalHtml = finalHtml.replace(/<meta.*?property="og:title".*?>/g, `<meta data-rh="true" property="og:title" content="${title}" />`);
+    finalHtml = finalHtml.replace(/<meta.*?property="og:description".*?>/g, `<meta data-rh="true" property="og:description" content="${description}" />`);
+    finalHtml = finalHtml.replace(/<meta.*?property="og:image".*?>/g, `<meta data-rh="true" property="og:image" content="${ogImage}" />`);
+    finalHtml = finalHtml.replace(/<meta.*?property="og:url".*?>/g, `<meta data-rh="true" property="og:url" content="${ogUrl}" />`);
+    finalHtml = finalHtml.replace(/<meta.*?name="twitter:title".*?>/g, `<meta data-rh="true" name="twitter:title" content="${title}" />`);
+    finalHtml = finalHtml.replace(/<meta.*?name="twitter:description".*?>/g, `<meta data-rh="true" name="twitter:description" content="${description}" />`);
+    finalHtml = finalHtml.replace(/<meta.*?name="twitter:image".*?>/g, `<meta data-rh="true" name="twitter:image" content="${ogImage}" />`);
     
     res.header('X-Robots-Tag', 'all');
     res.header('Content-Type', 'text/html; charset=utf-8');

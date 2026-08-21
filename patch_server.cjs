@@ -1,21 +1,36 @@
 const fs = require('fs');
 let code = fs.readFileSync('server.ts', 'utf8');
 
-const target = `  // Trust proxy to handle X-Forwarded-For correctly
-  app.set('trust proxy', 1);`;
-
-const replacement = `  // Trust proxy to handle X-Forwarded-For correctly
-  app.set('trust proxy', 1);
-
-  // Redirection explicite du favicon pour éviter le Soft 404 du SSR
-  app.get('/favicon.ico', (req, res) => {
-    res.redirect(301, '/favicon-zorando.svg');
-  });`;
-
-if (code.includes(target) && !code.includes('/favicon.ico')) {
-    code = code.replace(target, replacement);
-    fs.writeFileSync('server.ts', code);
-    console.log("server.ts patched.");
-} else {
-    console.log("Not patched. Target not found or already patched.");
+if (!code.includes("let keywords = 'boutique en ligne")) {
+  code = code.replace(
+    "let description = 'Découvrez ZORANDO, votre boutique en ligne de confiance en Algérie. Achetez des produits de qualité au meilleur prix.';",
+    "let description = 'Découvrez ZORANDO, votre boutique en ligne de confiance en Algérie. Achetez des produits de qualité au meilleur prix.';\n        let keywords = 'boutique en ligne, e-commerce, Algérie, achat en ligne, électroménager, mode, beauté, maison, ZORANDO';"
+  );
 }
+
+// Update category/subcat blocks to use keywords
+code = code.replace(
+  "title = categorySEOData[slug].title;\n              description = categorySEOData[slug].description;",
+  "title = categorySEOData[slug].title;\n              description = categorySEOData[slug].description;\n              if (categorySEOData[slug].keywords) keywords = categorySEOData[slug].keywords;"
+);
+
+code = code.replace(
+  "title = categorySEOData[slug].title;\n                description = categorySEOData[slug].description;",
+  "title = categorySEOData[slug].title;\n                description = categorySEOData[slug].description;\n                if (categorySEOData[slug].keywords) keywords = categorySEOData[slug].keywords;"
+);
+
+code = code.replace(
+  "title = categorySEOData[slug].title;\n                  description = categorySEOData[slug].description;",
+  "title = categorySEOData[slug].title;\n                  description = categorySEOData[slug].description;\n                  if (categorySEOData[slug].keywords) keywords = categorySEOData[slug].keywords;"
+);
+
+// Add the replace for keywords
+if (!code.includes("name=\"keywords\"")) {
+  code = code.replace(
+    "finalHtml = finalHtml.replace(/<meta.*?name=\"description\".*?>/, `<meta data-rh=\"true\" name=\"description\" content=\"${description}\" />`);",
+    "finalHtml = finalHtml.replace(/<meta.*?name=\"description\".*?>/, `<meta data-rh=\"true\" name=\"description\" content=\"${description}\" />`);\n        finalHtml = finalHtml.replace(/<meta.*?name=\"keywords\".*?>/, `<meta data-rh=\"true\" name=\"keywords\" content=\"${keywords}\" />`);"
+  );
+}
+
+fs.writeFileSync('server.ts', code);
+console.log("server.ts patched successfully");

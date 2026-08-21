@@ -207,7 +207,8 @@ export default function Category() {
       <SEO 
         title={slug && categorySEOData[slug] ? categorySEOData[slug].title : categoryName} 
         exactTitle={!!(slug && categorySEOData[slug])}
-        description={slug && categorySEOData[slug] ? categorySEOData[slug].description : `Découvrez notre sélection de produits dans la catégorie ${categoryName}. Achetez au meilleur prix sur ZORANDO.`} 
+        description={slug && categorySEOData[slug] ? categorySEOData[slug].description : `Découvrez notre sélection de produits dans la catégorie ${categoryName}. Achetez au meilleur prix sur ZORANDO.`}
+        keywords={slug && categorySEOData[slug]?.keywords ? categorySEOData[slug].keywords : undefined} 
         url={window.location.href}
         noindex={!!searchQuery || !!searchParams.get('ids')}
       />

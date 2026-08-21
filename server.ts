@@ -244,6 +244,7 @@ Sitemap: https://www.zorando.com/sitemap.xml`);
         let template = fs.readFileSync(path.join(distPath, 'template.html'), 'utf-8');
         let title = 'ZORANDO - Boutique en ligne';
         let description = 'Découvrez ZORANDO, votre boutique en ligne de confiance en Algérie. Achetez des produits de qualité au meilleur prix.';
+        let keywords = 'boutique en ligne, e-commerce, Algérie, achat en ligne, électroménager, mode, beauté, maison, ZORANDO';
         const baseUrl = 'https://www.zorando.com';
         
         let reqCanonicalPath = req.path;
@@ -321,6 +322,7 @@ Sitemap: https://www.zorando.com/sitemap.xml`);
             if (categorySEOData[slug]) {
               title = categorySEOData[slug].title;
               description = categorySEOData[slug].description;
+              if (categorySEOData[slug].keywords) keywords = categorySEOData[slug].keywords;
             } else {
               title = `${category.name} | ZORANDO`;
               description = `Découvrez notre sélection de produits dans la catégorie ${category.name}. Achetez au meilleur prix sur ZORANDO.`;
@@ -332,6 +334,7 @@ Sitemap: https://www.zorando.com/sitemap.xml`);
               if (categorySEOData[slug]) {
                 title = categorySEOData[slug].title;
                 description = categorySEOData[slug].description;
+                if (categorySEOData[slug].keywords) keywords = categorySEOData[slug].keywords;
               } else {
                 title = `${subcat.name} | ZORANDO`;
                 description = `Découvrez notre sélection de produits dans la catégorie ${subcat.name}. Achetez au meilleur prix sur ZORANDO.`;
@@ -343,6 +346,7 @@ Sitemap: https://www.zorando.com/sitemap.xml`);
                 if (categorySEOData[slug]) {
                   title = categorySEOData[slug].title;
                   description = categorySEOData[slug].description;
+                  if (categorySEOData[slug].keywords) keywords = categorySEOData[slug].keywords;
                 } else {
                   title = `${subSubcat.name} | ZORANDO`;
                   description = `Découvrez notre sélection de produits dans la catégorie ${subSubcat.name}. Achetez au meilleur prix sur ZORANDO.`;

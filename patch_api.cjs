@@ -1,45 +1,72 @@
 const fs = require('fs');
-let code = fs.readFileSync('api/index.ts', 'utf8');
 
-const target = `        const categories = await sql\`SELECT name, slug FROM categories\`;
-        const brands = await sql\`SELECT name, slug FROM brands\`;
-        headHtml = \`
-          <link rel="canonical" href="\${baseUrl}\${req.path}" />
-          <link rel="preload" as="image" href="/api/hero-banners/first-image/mobile" media="(max-width: 767px)" fetchpriority="high">
-          <link rel="preload" as="image" href="/api/hero-banners/first-image/desktop" media="(min-width: 768px)" fetchpriority="high">
-        \`;`;
+// Patch api/index.ts
+let apiCode = fs.readFileSync('api/index.ts', 'utf8');
 
-const replacement = `        const categories = await sql\`SELECT name, slug FROM categories\`;
-        const brands = await sql\`SELECT name, slug FROM brands\`;
-        const [firstSlide] = await sql\`SELECT id, image_url, mobile_image_url FROM slider_images WHERE is_active = true AND category_id IS NULL ORDER BY position ASC, id ASC LIMIT 1\`;
+if (!apiCode.includes("import { categorySEOData }")) {
+  apiCode = apiCode.replace(
+    "import { sql } from '../src/db/setup.js';",
+    "import { sql } from '../src/db/setup.js';\nimport { categorySEOData } from '../src/utils/seoData.js';"
+  );
+}
 
-        headHtml = \`\\n          <link rel="canonical" href="\${baseUrl}\${req.path}" />\`;
+// Add keywords variable
+if (!apiCode.includes("let keywords = 'boutique en ligne")) {
+  apiCode = apiCode.replace(
+    "let description = 'Découvrez ZORANDO, votre boutique en ligne de confiance en Algérie. Achetez des produits de qualité au meilleur prix.';",
+    "let description = 'Découvrez ZORANDO, votre boutique en ligne de confiance en Algérie. Achetez des produits de qualité au meilleur prix.';\n    let keywords = 'boutique en ligne, e-commerce, Algérie, achat en ligne, électroménager, mode, beauté, maison, ZORANDO';"
+  );
+}
 
-        if (firstSlide) {
-          const getHash = (image) => {
-            if (!image) return '';
-            const vMatch = image.match(/v=([^&]+)/);
-            if (vMatch && vMatch[1]) return vMatch[1];
-            let code = 0;
-            for (let i = 0; i < image.length; i++) code = Math.imul(31, code) + image.charCodeAt(i) | 0;
-            return Math.abs(code).toString(36);
-          };
+// Update category block
+const catTarget = `        if (category) {
+          title = \`\${category.name} - ZORANDO\`;
+          description = category.description || \`Découvrez nos produits dans la catégorie \${category.name}.\`;`;
+const catReplace = `        if (category) {
+          title = categorySEOData[slug]?.title || \`\${category.name} - ZORANDO\`;
+          description = categorySEOData[slug]?.description || category.description || \`Découvrez nos produits dans la catégorie \${category.name}.\`;
+          if (categorySEOData[slug]?.keywords) keywords = categorySEOData[slug].keywords;`;
+apiCode = apiCode.replace(catTarget, catReplace);
 
-          if (firstSlide.mobile_image_url) {
-            const hash = getHash(firstSlide.mobile_image_url);
-            const mobileUrl = \`/api/images/slider_images/\${firstSlide.id}/mobile_image_url\${hash ? '?v=' + hash + '&' : '?'}w=640\`;
-            headHtml += \`\\n          <link rel="preload" as="image" href="\${mobileUrl}" media="(max-width: 767px)" fetchpriority="high">\`;
-          }
+// Update subcat block
+const subcatTarget = `          if (subcat) {
+            title = \`\${subcat.name} - ZORANDO\`;`;
+const subcatReplace = `          if (subcat) {
+            title = categorySEOData[slug]?.title || \`\${subcat.name} - ZORANDO\`;
+            description = categorySEOData[slug]?.description || \`Découvrez nos produits dans la catégorie \${subcat.name}.\`;
+            if (categorySEOData[slug]?.keywords) keywords = categorySEOData[slug].keywords;`;
+apiCode = apiCode.replace(subcatTarget, subcatReplace);
 
-          const desktopImage = firstSlide.image_url || firstSlide.mobile_image_url;
-          if (desktopImage) {
-            const hash = getHash(desktopImage);
-            const field = firstSlide.image_url ? 'image_url' : 'mobile_image_url';
-            const width = firstSlide.image_url ? 1600 : 640;
-            const desktopUrl = \`/api/images/slider_images/\${firstSlide.id}/\${field}\${hash ? '?v=' + hash + '&' : '?'}w=\${width}\`;
-            headHtml += \`\\n          <link rel="preload" as="image" href="\${desktopUrl}" media="(min-width: 768px)" fetchpriority="high">\`;
-          }
-        }`;
+// Fix regexes
+const regexTarget = `    finalHtml = finalHtml.replace('<!--head-injection-->', headHtml);
+    finalHtml = finalHtml.replace(/<title>.*?<\\/title>/, \`<title>\${title}</title>\`);
+    finalHtml = finalHtml.replace(/<meta name="description" content=".*?" \\/>/, \`<meta name="description" content="\${description}" />\`);
+    
+    // Update OG Tags dynamically
+    finalHtml = finalHtml.replace(/<meta property="og:title" content=".*?" \\/>/g, \`<meta property="og:title" content="\${title}" />\`);
+    finalHtml = finalHtml.replace(/<meta property="og:description" content=".*?" \\/>/g, \`<meta property="og:description" content="\${description}" />\`);
+    finalHtml = finalHtml.replace(/<meta property="og:image" content=".*?" \\/>/g, \`<meta property="og:image" content="\${ogImage}" />\`);
+    finalHtml = finalHtml.replace(/<meta property="og:url" content=".*?" \\/>/g, \`<meta property="og:url" content="\${ogUrl}" />\`);
+    finalHtml = finalHtml.replace(/<meta name="twitter:title" content=".*?" \\/>/g, \`<meta name="twitter:title" content="\${title}" />\`);
+    finalHtml = finalHtml.replace(/<meta name="twitter:description" content=".*?" \\/>/g, \`<meta name="twitter:description" content="\${description}" />\`);
+    finalHtml = finalHtml.replace(/<meta name="twitter:image" content=".*?" \\/>/g, \`<meta name="twitter:image" content="\${ogImage}" />\`);`;
 
-code = code.replace(target, replacement);
-fs.writeFileSync('api/index.ts', code);
+const regexReplace = `    finalHtml = finalHtml.replace('<!--head-injection-->', headHtml);
+    finalHtml = finalHtml.replace(/<title.*?>.*?<\\/title>/, \`<title data-rh="true">\${title}</title>\`);
+    finalHtml = finalHtml.replace(/<meta.*?name="description".*?>/, \`<meta data-rh="true" name="description" content="\${description}" />\`);
+    finalHtml = finalHtml.replace(/<meta.*?name="keywords".*?>/, \`<meta data-rh="true" name="keywords" content="\${keywords}" />\`);
+    
+    // Update OG Tags dynamically
+    finalHtml = finalHtml.replace(/<meta.*?property="og:title".*?>/g, \`<meta data-rh="true" property="og:title" content="\${title}" />\`);
+    finalHtml = finalHtml.replace(/<meta.*?property="og:description".*?>/g, \`<meta data-rh="true" property="og:description" content="\${description}" />\`);
+    finalHtml = finalHtml.replace(/<meta.*?property="og:image".*?>/g, \`<meta data-rh="true" property="og:image" content="\${ogImage}" />\`);
+    finalHtml = finalHtml.replace(/<meta.*?property="og:url".*?>/g, \`<meta data-rh="true" property="og:url" content="\${ogUrl}" />\`);
+    finalHtml = finalHtml.replace(/<meta.*?name="twitter:title".*?>/g, \`<meta data-rh="true" name="twitter:title" content="\${title}" />\`);
+    finalHtml = finalHtml.replace(/<meta.*?name="twitter:description".*?>/g, \`<meta data-rh="true" name="twitter:description" content="\${description}" />\`);
+    finalHtml = finalHtml.replace(/<meta.*?name="twitter:image".*?>/g, \`<meta data-rh="true" name="twitter:image" content="\${ogImage}" />\`);`;
+
+apiCode = apiCode.replace(regexTarget, regexReplace);
+
+fs.writeFileSync('api/index.ts', apiCode);
+console.log("api/index.ts patched successfully.");
+

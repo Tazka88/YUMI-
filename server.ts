@@ -261,7 +261,7 @@ Sitemap: https://www.zorando.com/sitemap.xml`);
         }
         
         let headHtml = `<link data-rh="true" rel="canonical" href="${baseUrl}${reqCanonicalPath}${structuralQuery}" />`;
-        let seoHtml = ``;
+        let seoHtml = '';
         // Prefer JPEG for Facebook if it exists
         let ogImage = `${baseUrl}/og-image-fb.jpg`;
         let ogUrl = `${baseUrl}${req.path}`;
@@ -503,19 +503,21 @@ Sitemap: https://www.zorando.com/sitemap.xml`);
           res.status(200);
         }
 
-        let finalHtml = template.replace('<!--seo-injection-->', seoHtml);
-        finalHtml = finalHtml.replace('<!--head-injection-->', headHtml);
-        finalHtml = finalHtml.replace(/<title.*?>.*?<\/title>/, `<title data-rh="true">${title}</title>`);
-        finalHtml = finalHtml.replace(/<meta.*?name="description".*?>/, `<meta data-rh="true" name="description" content="${description}" />`);
+        let seoTags = `
+          <title data-rh="true">${title}</title>
+          <meta data-rh="true" name="description" content="${description}" />
+          ${typeof keywords !== 'undefined' && keywords ? `<meta data-rh="true" name="keywords" content="${keywords}" />` : ''}
+          <meta data-rh="true" property="og:title" content="${title}" />
+          <meta data-rh="true" property="og:description" content="${description}" />
+          <meta data-rh="true" property="og:image" content="${typeof ogImage !== 'undefined' ? ogImage : ''}" />
+          <meta data-rh="true" property="og:url" content="${typeof ogUrl !== 'undefined' ? ogUrl : ''}" />
+          <meta data-rh="true" name="twitter:title" content="${title}" />
+          <meta data-rh="true" name="twitter:description" content="${description}" />
+          <meta data-rh="true" name="twitter:image" content="${typeof ogImage !== 'undefined' ? ogImage : ''}" />
+        `;
         
-        // Update OG Tags dynamically
-        finalHtml = finalHtml.replace(/<meta.*?property="og:title".*?>/g, `<meta data-rh="true" property="og:title" content="${title}" />`);
-        finalHtml = finalHtml.replace(/<meta.*?property="og:description".*?>/g, `<meta data-rh="true" property="og:description" content="${description}" />`);
-        finalHtml = finalHtml.replace(/<meta.*?property="og:image".*?>/g, `<meta data-rh="true" property="og:image" content="${ogImage}" />`);
-        finalHtml = finalHtml.replace(/<meta.*?property="og:url".*?>/g, `<meta data-rh="true" property="og:url" content="${ogUrl}" />`);
-        finalHtml = finalHtml.replace(/<meta.*?name="twitter:title".*?>/g, `<meta data-rh="true" name="twitter:title" content="${title}" />`);
-        finalHtml = finalHtml.replace(/<meta.*?name="twitter:description".*?>/g, `<meta data-rh="true" name="twitter:description" content="${description}" />`);
-        finalHtml = finalHtml.replace(/<meta.*?name="twitter:image".*?>/g, `<meta data-rh="true" name="twitter:image" content="${ogImage}" />`);
+        let finalHtml = template.replace('<!--seo-injection-->', typeof seoHtml !== 'undefined' ? seoHtml : '');
+        finalHtml = finalHtml.replace('<!--head-injection-->', (typeof headHtml !== 'undefined' ? headHtml : '') + seoTags);
         
         if (isNotFound) {
           res.header('X-Robots-Tag', 'noindex, follow');

@@ -122,14 +122,7 @@ app.get('*', async (req, res, next) => {
     const host = req.get('host') || 'www.zorando.com';
     const baseUrl = `https://${host}`;
     let headHtml = `<link rel="canonical" href="${baseUrl}${req.path}" />`;
-    let seoHtml = `
-      <div id="seo-content" style="display:none;">
-        <h1>${title}</h1>
-        <h2>ZORANDO - Informations</h2>
-        <p>${description}</p>
-        <p>Page: ${req.path}</p>
-      </div>
-    `;
+    let seoHtml = '';
     let ogImage = `${baseUrl}/og-image-fb.jpg`;
     let ogUrl = `${baseUrl}${req.path}`;
 
@@ -166,34 +159,13 @@ app.get('*', async (req, res, next) => {
             headHtml += `\n          <link rel="preload" as="image" href="${desktopUrl}" media="(min-width: 768px)" fetchpriority="high">`;
           }
         }
-        seoHtml = `
-          <div id="seo-content" style="display:none;">
-            <h1>Bienvenue sur ZORANDO - Boutique en ligne en Algérie</h1>
-            <p>${description}</p>
-            <h2>Nos Catégories</h2>
-            <ul>
-              ${categories.map(c => `<li><a href="/category/${c.slug}">${c.name}</a></li>`).join('\n')}
-            </ul>
-            <h2>Nos Marques</h2>
-            <ul>
-              ${brands.map(b => `<li><a href="/brands/${b.slug}">${b.name}</a></li>`).join('\n')}
-            </ul>
-          </div>
-        `;
+        seoHtml = '';
       } catch(e) {}
     } else if (req.path === '/brands') {
       title = 'Toutes nos marques - ZORANDO';
       try {
         const brands = await sql`SELECT name, slug FROM brands`;
-        seoHtml = `
-          <div id="seo-content" style="display:none;">
-            <h1>Toutes nos marques</h1>
-            <h2>Liste de toutes les marques partenaires</h2>
-            <ul>
-              ${brands.map(b => `<li><a href="/brands/${b.slug}">${b.name}</a></li>`).join('\n')}
-            </ul>
-          </div>
-        `;
+        seoHtml = '';
       } catch(e) {}
     } else if (req.path.startsWith('/brands/')) {
       const slug = req.path.split('/')[2];
@@ -203,16 +175,7 @@ app.get('*', async (req, res, next) => {
           title = `${brand.name} - ZORANDO`;
           description = brand.description || `Découvrez tous les produits de la marque ${brand.name} sur ZORANDO.`;
           const products = await sql`SELECT name, slug FROM products WHERE brand_id = ${brand.id}`;
-          seoHtml = `
-            <div id="seo-content" style="display:none;">
-              <h1>${brand.name}</h1>
-              <h2>Produits de marque ${brand.name}</h2>
-              <p>${description}</p>
-              <ul>
-                ${products.map(p => `<li><a href="/product/${p.slug}">${p.name}</a></li>`).join('\n')}
-              </ul>
-            </div>
-          `;
+          seoHtml = '';
         }
       } catch(e) {}
     } else if (req.path.startsWith('/category/')) {
@@ -224,16 +187,7 @@ app.get('*', async (req, res, next) => {
           description = categorySEOData[slug]?.description || category.description || `Découvrez nos produits dans la catégorie ${category.name}.`;
           if (categorySEOData[slug]?.keywords) keywords = categorySEOData[slug].keywords;
           const products = await sql`SELECT name, slug FROM products WHERE category_id = ${category.id}`;
-          seoHtml = `
-            <div id="seo-content" style="display:none;">
-              <h1>${category.name}</h1>
-              <h2>Achetez dans ${category.name}</h2>
-              <p>${description}</p>
-              <ul>
-                ${products.map(p => `<li><a href="/product/${p.slug}">${p.name}</a></li>`).join('\n')}
-              </ul>
-            </div>
-          `;
+          seoHtml = '';
         } else {
           const [subcat] = await sql`SELECT id, name FROM subcategories WHERE slug = ${slug}`;
           if (subcat) {
@@ -241,15 +195,7 @@ app.get('*', async (req, res, next) => {
             description = categorySEOData[slug]?.description || `Découvrez nos produits dans la catégorie ${subcat.name}.`;
             if (categorySEOData[slug]?.keywords) keywords = categorySEOData[slug].keywords;
             const products = await sql`SELECT name, slug FROM products WHERE subcategory_id = ${subcat.id}`;
-            seoHtml = `
-              <div id="seo-content" style="display:none;">
-                <h1>${subcat.name}</h1>
-                <h2>Produits dans la sous-catégorie ${subcat.name}</h2>
-                <ul>
-                  ${products.map(p => `<li><a href="/product/${p.slug}">${p.name}</a></li>`).join('\n')}
-                </ul>
-              </div>
-            `;
+            seoHtml = '';
           }
         }
       } catch(e) {}
@@ -274,32 +220,25 @@ app.get('*', async (req, res, next) => {
           }
           
           const displayPrice = product.promo_price || product.price;
-          seoHtml = `
-            <div id="seo-content" style="display:none;">
-              <h1>${product.name}</h1>
-              <h2>Achetez ${product.name} au meilleur prix</h2>
-              <p>${description}</p>
-              <p>Prix: ${displayPrice} DZD</p>
-            </div>
-          `;
+          seoHtml = '';
         }
       } catch(e) {}
     } else if (req.path === '/about') {
       title = 'À propos de nous - ZORANDO';
       description = 'Découvrez l\'histoire de ZORANDO, votre boutique en ligne de confiance en Algérie.';
-      seoHtml = `<div id="seo-content" style="display:none;"><h1>${title}</h1><h2>Notre Histoire</h2><p>${description}</p></div>`;
+      seoHtml = '';
     } else if (req.path === '/programme-fidelite') {
       title = 'Programme de fidélité - ZORANDO';
       description = 'Rejoignez le programme de fidélité ZORANDO et profitez de récompenses exclusives.';
-      seoHtml = `<div id="seo-content" style="display:none;"><h1>${title}</h1><h2>Avantages et Récompenses</h2><p>${description}</p></div>`;
+      seoHtml = '';
     } else if (req.path === '/retours') {
       title = 'Politique de retours - ZORANDO';
       description = 'Consultez notre politique de retours et remboursements.';
-      seoHtml = `<div id="seo-content" style="display:none;"><h1>${title}</h1><h2>Conditions de Retour</h2><p>${description}</p></div>`;
+      seoHtml = '';
     } else if (req.path === '/track-order') {
       title = 'Suivre ma commande - ZORANDO';
       description = 'Suivez l\'état de votre commande ZORANDO en temps réel.';
-      seoHtml = `<div id="seo-content" style="display:none;"><h1>${title}</h1><h2>Tracking de Livraison</h2><p>${description}</p></div>`;
+      seoHtml = '';
     }
 
     const globalNav = `
@@ -313,20 +252,21 @@ app.get('*', async (req, res, next) => {
       </nav>
     `;
 
-    let finalHtml = template.replace('<!--seo-injection-->', globalNav + seoHtml);
-    finalHtml = finalHtml.replace('<!--head-injection-->', headHtml);
-    finalHtml = finalHtml.replace(/<title.*?>.*?<\/title>/, `<title data-rh="true">${title}</title>`);
-    finalHtml = finalHtml.replace(/<meta.*?name="description".*?>/, `<meta data-rh="true" name="description" content="${description}" />`);
-    finalHtml = finalHtml.replace(/<meta.*?name="keywords".*?>/, `<meta data-rh="true" name="keywords" content="${keywords}" />`);
+    let seoTags = `
+      <title data-rh="true">${title}</title>
+      <meta data-rh="true" name="description" content="${description}" />
+      ${keywords ? `<meta data-rh="true" name="keywords" content="${keywords}" />` : ''}
+      <meta data-rh="true" property="og:title" content="${title}" />
+      <meta data-rh="true" property="og:description" content="${description}" />
+      <meta data-rh="true" property="og:image" content="${ogImage}" />
+      <meta data-rh="true" property="og:url" content="${ogUrl}" />
+      <meta data-rh="true" name="twitter:title" content="${title}" />
+      <meta data-rh="true" name="twitter:description" content="${description}" />
+      <meta data-rh="true" name="twitter:image" content="${ogImage}" />
+    `;
     
-    // Update OG Tags dynamically
-    finalHtml = finalHtml.replace(/<meta.*?property="og:title".*?>/g, `<meta data-rh="true" property="og:title" content="${title}" />`);
-    finalHtml = finalHtml.replace(/<meta.*?property="og:description".*?>/g, `<meta data-rh="true" property="og:description" content="${description}" />`);
-    finalHtml = finalHtml.replace(/<meta.*?property="og:image".*?>/g, `<meta data-rh="true" property="og:image" content="${ogImage}" />`);
-    finalHtml = finalHtml.replace(/<meta.*?property="og:url".*?>/g, `<meta data-rh="true" property="og:url" content="${ogUrl}" />`);
-    finalHtml = finalHtml.replace(/<meta.*?name="twitter:title".*?>/g, `<meta data-rh="true" name="twitter:title" content="${title}" />`);
-    finalHtml = finalHtml.replace(/<meta.*?name="twitter:description".*?>/g, `<meta data-rh="true" name="twitter:description" content="${description}" />`);
-    finalHtml = finalHtml.replace(/<meta.*?name="twitter:image".*?>/g, `<meta data-rh="true" name="twitter:image" content="${ogImage}" />`);
+    let finalHtml = template.replace('<!--seo-injection-->', globalNav + seoHtml);
+    finalHtml = finalHtml.replace('<!--head-injection-->', headHtml + seoTags);
     
     res.header('X-Robots-Tag', 'all');
     res.header('Content-Type', 'text/html; charset=utf-8');

@@ -3826,11 +3826,25 @@ const handleBulkDelivery = async () => {
                         
                         // Function to smartly truncate without cutting words completely
                         const smartTruncate = (text: string, max: number) => {
-                          if (text.length <= max) return text;
-                          const truncated = text.substring(0, max);
-                          const lastSpaceIndex = truncated.lastIndexOf(' ');
-                          let cleaned = lastSpaceIndex > 0 ? truncated.substring(0, lastSpaceIndex) : truncated;
-                          return cleaned.replace(/\.+$/, '').trim();
+                          if (!text) return "";
+                          if (text.length <= max) return text.replace(/\.{2,}$/, '').trim();
+                          
+                          let lastPoint = text.substring(0, max).lastIndexOf('.');
+                          if (lastPoint > max * 0.7) {
+                            return text.substring(0, lastPoint + 1).replace(/\.{2,}$/, '').trim();
+                          }
+                          
+                          let lastComma = text.substring(0, max).lastIndexOf(',');
+                          if (lastComma > max * 0.7) {
+                            return text.substring(0, lastComma).replace(/\.{2,}$/, '').trim();
+                          }
+                          
+                          let lastSpace = text.substring(0, max).lastIndexOf(' ');
+                          if (lastSpace > 0) {
+                            return text.substring(0, lastSpace).replace(/\.{2,}$/, '').trim();
+                          }
+                          
+                          return text.substring(0, max).replace(/\.{2,}$/, '').trim();
                         };
 
                         setProductForm({

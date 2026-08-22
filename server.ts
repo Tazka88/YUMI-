@@ -236,16 +236,32 @@ Sitemap: https://www.zorando.com/sitemap.xml`);
     
     const cleanForSEO = (text, truncateLength) => {
   if (!text) return '';
-  let cleaned = text.replace(/<[^>]+>/g, ' ')
+  const maxLength = truncateLength || 155;
+  let cleanText = text.replace(/<[^>]+>/g, ' ')
                     .replace(/(?:\*\*|\*|__|_|#|>|`|~)/g, '')
                     .replace(/\s+/g, ' ')
                     .trim();
-  if (truncateLength && cleaned.length > truncateLength) {
-    let truncated = cleaned.substring(0, truncateLength);
-    let lastSpace = truncated.lastIndexOf(' ');
-    cleaned = truncated.substring(0, lastSpace > 0 ? lastSpace : truncateLength);
+  
+  if (cleanText.length > maxLength) {
+    let lastPoint = cleanText.substring(0, maxLength).lastIndexOf('.');
+    if (lastPoint > maxLength * 0.7) {
+      return cleanText.substring(0, lastPoint + 1).replace(/\.{2,}$/, '').trim();
+    }
+    
+    let lastComma = cleanText.substring(0, maxLength).lastIndexOf(',');
+    if (lastComma > maxLength * 0.7) {
+      return cleanText.substring(0, lastComma).replace(/\.{2,}$/, '').trim();
+    }
+    
+    let lastSpace = cleanText.substring(0, maxLength).lastIndexOf(' ');
+    if (lastSpace > 0) {
+      return cleanText.substring(0, lastSpace).replace(/\.{2,}$/, '').trim();
+    }
+    
+    return cleanText.substring(0, maxLength).replace(/\.{2,}$/, '').trim();
   }
-  return cleaned.replace(/\.+$/, '').trim();
+  
+  return cleanText.replace(/\.{2,}$/, '').trim();
 };
 
   app.get('*', async (req, res, next) => {

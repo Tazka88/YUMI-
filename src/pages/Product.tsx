@@ -521,7 +521,7 @@ export default function Product() {
   breadcrumbItems.push({ name: product.name, item: cleanUrl });
 
   const breadcrumbSchema = buildBreadcrumbSchema(breadcrumbItems);
-  const finalSchema = [productSchema, breadcrumbSchema];
+  // finalSchema is removed to avoid duplicating the schema rendered by the SSR
 
   return (
     <div className="container mx-auto px-4 py-8 pb-24 md:pb-8">
@@ -532,7 +532,6 @@ export default function Product() {
         image={(product.image && product.image.startsWith('/')) ? `https://www.zorando.com${product.image}` : (product.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(product.name)}&background=random&size=800`)}
         url={cleanUrl}
         type="product"
-        schema={finalSchema}
       />
       {/* Breadcrumb */}
       <div className="text-sm text-gray-500 mb-6 flex items-center gap-2 flex-wrap">

@@ -128,7 +128,31 @@ const cleanForSEO = (text, truncateLength) => {
   return cleanText.replace(/\.{2,}$/, '').trim();
 };
 
-  app.get('*', async (req, res, next) => {
+  
+  const staticRedirects = {
+    '/brands/bestway': '/brands/piscines-bestway-algerie',
+    '/brands/hoco': '/brands/accessoires-hoco-algerie',
+    '/brands/kemei': '/brands/tondeuses-kemei-algerie',
+    '/brands/moulinex': '/brands/electromenager-moulinex-algerie',
+    '/brands/philips': '/brands/electromenager-philips-algerie',
+    '/brands/robuste': '/brands/electromenager-robuste-algerie',
+    '/brands/sonashi': '/brands/electromenager-sonashi-algerie',
+    '/brands/anker': '/brands/accessoires-anker-algerie',
+    '/brands/enzo': '/brands/coiffure-enzo-algerie',
+    '/brands/karcher': '/brands/nettoyage-karcher-algerie',
+    '/blog/hoco-power-bank-en-algerie-guide-complet-prix-et-avis-2026': '/blog'
+  };
+
+  app.use((req, res, next) => {
+    const newUrl = staticRedirects[req.path];
+    if (newUrl) {
+      const qs = req.url.includes('?') ? req.url.substring(req.url.indexOf('?')) : '';
+      return res.redirect(301, newUrl + qs);
+    }
+    next();
+  });
+
+app.get('*', async (req, res, next) => {
   // If it looks like a static file request (has extension dot), let it fall through
   if (req.path.match(/\.[a-zA-Z0-9]+$/) && !req.path.endsWith('.html')) {
     return next();
@@ -153,6 +177,7 @@ const cleanForSEO = (text, truncateLength) => {
     const baseUrl = `https://${host}`;
     let headHtml = `<link rel="canonical" href="${baseUrl}${req.path}" />`;
     let seoHtml = '';
+    let isNotFound = false;
     let ogImage = `${baseUrl}/og-image-fb.jpg`;
     let ogUrl = `${baseUrl}${req.path}`;
 
@@ -206,6 +231,8 @@ const cleanForSEO = (text, truncateLength) => {
           description = brand.seo_description ? cleanForSEO(brand.seo_description) : (brand.description ? cleanForSEO(brand.description, 160) : `Découvrez tous les produits de la marque ${brand.name} sur ZORANDO.`);
           const products = await sql`SELECT name, slug FROM products WHERE brand_id = ${brand.id}`;
           seoHtml = '';
+        } else {
+          isNotFound = true;
         }
       } catch(e) { console.error("DB Error in SSR:", e); }
     } else if (req.path.startsWith('/category/')) {
@@ -331,8 +358,27 @@ const cleanForSEO = (text, truncateLength) => {
           }
           
           headHtml += `\n<script type="application/ld+json">\n${JSON.stringify(schemaData)}\n</script>\n`;
+        } else {
+          isNotFound = true;
         }
       } catch(e) { console.error("DB Error in SSR:", e); }
+    } else if (req.path.startsWith('/blog/')) {
+      const slug = req.path.split('/')[2];
+      try {
+        const [post] = await sql`SELECT title, excerpt, seo_title, seo_description, main_image FROM blog_posts WHERE slug = ${slug} AND status = 'published'`;
+        if (post) {
+          title = post.seo_title || post.title || 'ZORANDO Blog';
+          description = post.seo_description ? cleanForSEO(post.seo_description) : (post.excerpt ? cleanForSEO(post.excerpt, 160) : `Lisez notre article : ${post.title}`);
+          if (post.main_image) {
+            ogImage = post.main_image.startsWith('/') ? `${baseUrl}${post.main_image}` : `${baseUrl}/${post.main_image}`;
+          }
+        } else {
+          isNotFound = true;
+        }
+      } catch(e) { console.error("DB Error in SSR:", e); }
+    } else if (req.path === '/blog') {
+      title = 'Blog & Actualités - ZORANDO';
+      description = 'Découvrez les dernières tendances, astuces et actualités sur le blog ZORANDO.';
     } else if (req.path === '/about') {
       title = 'À propos de nous - ZORANDO';
       description = 'Découvrez l\'histoire de ZORANDO, votre boutique en ligne de confiance en Algérie.';
@@ -362,6 +408,12 @@ const cleanForSEO = (text, truncateLength) => {
       </nav>
     `;
 
+    
+    if (isNotFound) {
+      title = 'Page Introuvable - ZORANDO';
+      description = 'La page que vous recherchez n\'existe pas ou a été supprimée.';
+    }
+
     let seoTags = `
       <title data-rh="true">${title}</title>
       <meta data-rh="true" name="description" content="${description}" />
@@ -375,20 +427,27 @@ const cleanForSEO = (text, truncateLength) => {
       <meta data-rh="true" name="twitter:image" content="${ogImage}" />
     `;
     
-    let finalHtml = template.replace('<!--seo-injection-->', globalNav + seoHtml);
+    let finalHtml = template.replace('<!--seo-injection-->', globalNav + (seoHtml || ''));
     finalHtml = finalHtml.replace('<!--head-injection-->', headHtml + seoTags);
     
-    res.header('X-Robots-Tag', 'all');
-    res.header('Content-Type', 'text/html; charset=utf-8');
-    
-    // Add Vercel Edge Cache Control for Public HTML
-    if (req.method === 'GET' && (!req.headers.cookie || !req.headers.cookie.match(/session|token|auth|user/i))) {
-      res.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate=300');
-    } else {
+    if (isNotFound) {
+      res.header('X-Robots-Tag', 'noindex, follow');
       res.setHeader('Cache-Control', 'no-cache');
+      res.status(404).send(finalHtml);
+    } else {
+      res.header('X-Robots-Tag', 'all');
+      res.header('Content-Type', 'text/html; charset=utf-8');
+      
+      // Add Vercel Edge Cache Control for Public HTML
+      if (req.method === 'GET' && (!req.headers.cookie || !req.headers.cookie.match(/session|token|auth|user/i))) {
+        res.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate=300');
+      } else {
+        res.setHeader('Cache-Control', 'no-cache');
+      }
+      
+      res.status(200).send(finalHtml);
     }
-    
-    res.status(200).send(finalHtml);
+
   } catch (err) {
     console.error('SEO Injection Error:', err);
     res.status(500).send('Erreur lors du rendu de la page SEO');

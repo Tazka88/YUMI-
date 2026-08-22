@@ -164,6 +164,7 @@ Sitemap: https://www.zorando.com/sitemap.xml`);
     '/brands/anker': '/brands/accessoires-anker-algerie',
     '/brands/enzo': '/brands/coiffure-enzo-algerie',
     '/brands/karcher': '/brands/nettoyage-karcher-algerie',
+    '/blog/hoco-power-bank-en-algerie-guide-complet-prix-et-avis-2026': '/blog',
     '/brands/multismart': '/brands/electromenager-multismart-algerie',
     '/brands/nespresso': '/brands/cafe-nespresso-algerie',
     '/brands/tefal': '/brands/cuisine-tefal-algerie',
@@ -264,7 +265,31 @@ Sitemap: https://www.zorando.com/sitemap.xml`);
   return cleanText.replace(/\.{2,}$/, '').trim();
 };
 
-  app.get('*', async (req, res, next) => {
+  
+  const staticRedirects = {
+    '/brands/bestway': '/brands/piscines-bestway-algerie',
+    '/brands/hoco': '/brands/accessoires-hoco-algerie',
+    '/brands/kemei': '/brands/tondeuses-kemei-algerie',
+    '/brands/moulinex': '/brands/electromenager-moulinex-algerie',
+    '/brands/philips': '/brands/electromenager-philips-algerie',
+    '/brands/robuste': '/brands/electromenager-robuste-algerie',
+    '/brands/sonashi': '/brands/electromenager-sonashi-algerie',
+    '/brands/anker': '/brands/accessoires-anker-algerie',
+    '/brands/enzo': '/brands/coiffure-enzo-algerie',
+    '/brands/karcher': '/brands/nettoyage-karcher-algerie',
+    '/blog/hoco-power-bank-en-algerie-guide-complet-prix-et-avis-2026': '/blog'
+  };
+
+  app.use((req, res, next) => {
+    const newUrl = staticRedirects[req.path];
+    if (newUrl) {
+      const qs = req.url.includes('?') ? req.url.substring(req.url.indexOf('?')) : '';
+      return res.redirect(301, newUrl + qs);
+    }
+    next();
+  });
+
+app.get('*', async (req, res, next) => {
       // If it looks like a static file request, let it fall through to 404
       if (req.path.match(/\.[a-zA-Z0-9]+$/) && !req.path.endsWith('.html')) {
         return next();

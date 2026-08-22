@@ -241,15 +241,11 @@ Sitemap: https://www.zorando.com/sitemap.xml`);
                     .replace(/\s+/g, ' ')
                     .trim();
   if (truncateLength && cleaned.length > truncateLength) {
-    const truncated = cleaned.substring(0, truncateLength);
-    const lastPeriod = truncated.lastIndexOf('.');
-    if (lastPeriod > 0) {
-      return truncated.substring(0, lastPeriod + 1);
-    }
-    const lastSpace = truncated.lastIndexOf(' ');
-    return lastSpace > 0 ? truncated.substring(0, lastSpace) : truncated;
+    let truncated = cleaned.substring(0, truncateLength);
+    let lastSpace = truncated.lastIndexOf(' ');
+    cleaned = truncated.substring(0, lastSpace > 0 ? lastSpace : truncateLength);
   }
-  return cleaned;
+  return cleaned.replace(/\.+$/, '').trim();
 };
 
   app.get('*', async (req, res, next) => {

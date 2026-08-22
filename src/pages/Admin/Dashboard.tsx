@@ -3829,7 +3829,8 @@ const handleBulkDelivery = async () => {
                           if (text.length <= max) return text;
                           const truncated = text.substring(0, max);
                           const lastSpaceIndex = truncated.lastIndexOf(' ');
-                          return lastSpaceIndex > 0 ? truncated.substring(0, lastSpaceIndex) + '...' : truncated + '...';
+                          let cleaned = lastSpaceIndex > 0 ? truncated.substring(0, lastSpaceIndex) : truncated;
+                          return cleaned.replace(/\.+$/, '').trim();
                         };
 
                         setProductForm({

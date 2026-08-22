@@ -1,27 +1,31 @@
 const fs = require('fs');
 
-const oldCode = `  if (truncateLength && cleaned.length > truncateLength) {
-    const truncated = cleaned.substring(0, truncateLength);
-    const lastSpace = truncated.lastIndexOf(' ');
-    return lastSpace > 0 ? truncated.substring(0, lastSpace) + '...' : truncated + '...';
-  }`;
+const replacement = `const cleanForSEO = (text, truncateLength) => {
+  if (!text) return '';
+  let cleaned = text.replace(/<[^>]+>/g, ' ')
+                    .replace(/(?:\\*\\*|\\*|__|_|#|>|\`|~)/g, '')
+                    .replace(/\\s+/g, ' ')
+                    .trim();
+  if (truncateLength && cleaned.length > truncateLength) {
+    let truncated = cleaned.substring(0, truncateLength);
+    let lastSpace = truncated.lastIndexOf(' ');
+    cleaned = truncated.substring(0, lastSpace > 0 ? lastSpace : truncateLength);
+  }
+  return cleaned.replace(/\\.+$/, '').trim();
+};`;
 
-const newCode = `  if (truncateLength && cleaned.length > truncateLength) {
-    const truncated = cleaned.substring(0, truncateLength);
-    const lastPeriod = truncated.lastIndexOf('.');
-    if (lastPeriod > 0) {
-      return truncated.substring(0, lastPeriod + 1);
-    }
-    const lastSpace = truncated.lastIndexOf(' ');
-    return lastSpace > 0 ? truncated.substring(0, lastSpace) : truncated;
-  }`;
-
-function patch(filepath) {
+function patchCleanForSeo(filepath) {
   let content = fs.readFileSync(filepath, 'utf8');
-  content = content.replace(oldCode, newCode);
-  fs.writeFileSync(filepath, content);
-  console.log('patched ' + filepath);
+  // Regex to match the entire const cleanForSEO function block
+  const blockRegex = /const cleanForSEO = \(text, truncateLength\) => \{[\s\S]*?\n\};\n?/m;
+  if (blockRegex.test(content)) {
+    content = content.replace(blockRegex, replacement + '\n');
+    fs.writeFileSync(filepath, content);
+    console.log('Patched ' + filepath);
+  } else {
+    console.log('Could not find cleanForSEO block in ' + filepath);
+  }
 }
 
-patch('server.ts');
-patch('api/index.ts');
+patchCleanForSeo('server.ts');
+patchCleanForSeo('api/index.ts');

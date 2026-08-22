@@ -1,40 +1,27 @@
 const fs = require('fs');
-const file = 'src/components/SEO.tsx';
-let code = fs.readFileSync(file, 'utf8');
-code = code.replace(
-`export function getCanonicalUrl(url?: string) {
-  const rawUrl = url || (typeof window !== 'undefined' ? window.location.href : '');
-  let currentUrl = rawUrl.split('?')[0];
-  // Toujours forcer www.zorando.com comme domaine canonique principal pour éviter le duplicate content
-  currentUrl = currentUrl.replace(/^https?:\\/\\/(www\\.)?[^\\/]+/, 'https://www.zorando.com');
-  if (currentUrl.length > 'https://www.zorando.com/'.length && currentUrl.endsWith('/')) {
-    currentUrl = currentUrl.slice(0, -1);
-  }
-  return currentUrl;
-}`,
-`export function getCanonicalUrl(url?: string) {
-  const rawUrl = url || (typeof window !== 'undefined' ? window.location.href : '');
-  let baseUrl = rawUrl.split('?')[0];
-  let queryString = rawUrl.includes('?') ? rawUrl.split('?')[1] : '';
-  
-  // Toujours forcer www.zorando.com comme domaine canonique principal pour éviter le duplicate content
-  baseUrl = baseUrl.replace(/^https?:\\/\\/(www\\.)?[^\\/]+/, 'https://www.zorando.com');
-  if (baseUrl.length > 'https://www.zorando.com/'.length && baseUrl.endsWith('/')) {
-    baseUrl = baseUrl.slice(0, -1);
-  }
-  
-  // Preserver uniquement les parametres structurels
-  if (queryString) {
-    const params = new URLSearchParams(queryString);
-    const structuralParams = new URLSearchParams();
-    if (params.get('sub') === 'true') structuralParams.set('sub', 'true');
-    if (params.get('subsub') === 'true') structuralParams.set('subsub', 'true');
-    
-    if (structuralParams.toString()) {
-      return \`\${baseUrl}?\${structuralParams.toString()}\`;
+
+const oldCode = `  if (truncateLength && cleaned.length > truncateLength) {
+    const truncated = cleaned.substring(0, truncateLength);
+    const lastSpace = truncated.lastIndexOf(' ');
+    return lastSpace > 0 ? truncated.substring(0, lastSpace) + '...' : truncated + '...';
+  }`;
+
+const newCode = `  if (truncateLength && cleaned.length > truncateLength) {
+    const truncated = cleaned.substring(0, truncateLength);
+    const lastPeriod = truncated.lastIndexOf('.');
+    if (lastPeriod > 0) {
+      return truncated.substring(0, lastPeriod + 1);
     }
-  }
-  
-  return baseUrl;
-}`);
-fs.writeFileSync(file, code);
+    const lastSpace = truncated.lastIndexOf(' ');
+    return lastSpace > 0 ? truncated.substring(0, lastSpace) : truncated;
+  }`;
+
+function patch(filepath) {
+  let content = fs.readFileSync(filepath, 'utf8');
+  content = content.replace(oldCode, newCode);
+  fs.writeFileSync(filepath, content);
+  console.log('patched ' + filepath);
+}
+
+patch('server.ts');
+patch('api/index.ts');

@@ -106,8 +106,12 @@ const cleanForSEO = (text, truncateLength) => {
                     .trim();
   if (truncateLength && cleaned.length > truncateLength) {
     const truncated = cleaned.substring(0, truncateLength);
+    const lastPeriod = truncated.lastIndexOf('.');
+    if (lastPeriod > 0) {
+      return truncated.substring(0, lastPeriod + 1);
+    }
     const lastSpace = truncated.lastIndexOf(' ');
-    return lastSpace > 0 ? truncated.substring(0, lastSpace) + '...' : truncated + '...';
+    return lastSpace > 0 ? truncated.substring(0, lastSpace) : truncated;
   }
   return cleaned;
 };

@@ -14,7 +14,7 @@ export function buildBreadcrumbSchema(items: { name: string; item: string }[]) {
 
 export function buildProductSchema(product: any, reviews: any[], currentUrl: string, baseUrl: string = 'https://www.zorando.com') {
   const isPromo = product.promo_price && Number(product.promo_price) < Number(product.price);
-  const currentPrice = isPromo ? Number(product.promo_price) : Number(product.price);
+  const currentPrice = isPromo ? Number(product.promo_price).toFixed(2) : Number(product.price).toFixed(2);
 
   let imageUrl = product.image;
   if (imageUrl && imageUrl.startsWith('/')) {

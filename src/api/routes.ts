@@ -1804,8 +1804,8 @@ router.get('/admin/export-meta-catalog', authenticate, async (req, res) => {
       const availability = p.is_active !== false ? 'in stock' : 'out of stock';
       const condition = 'new';
       
-      const priceVal = p.promo_price > 0 ? p.promo_price : p.price;
-      const price = `${Number(priceVal).toFixed(2)} DZD`;
+      const price = `${Number(p.price).toFixed(2)} DZD`;
+      const sale_price = p.promo_price > 0 ? `${Number(p.promo_price).toFixed(2)} DZD` : null;
       
       const link = `${baseUrl}/product/${p.slug}`;
       
@@ -1885,8 +1885,8 @@ router.get('/feed/meta-catalog.csv', async (req, res) => {
       const availability = p.is_active !== false ? 'in stock' : 'out of stock';
       const condition = 'new';
       
-      const priceVal = p.promo_price > 0 ? p.promo_price : p.price;
-      const price = `${Number(priceVal).toFixed(2)} DZD`;
+      const price = `${Number(p.price).toFixed(2)} DZD`;
+      const sale_price = p.promo_price > 0 ? `${Number(p.promo_price).toFixed(2)} DZD` : null;
       
       const link = `${baseUrl}/product/${p.slug}`;
       
@@ -1973,8 +1973,8 @@ router.get('/merchant-feed.xml', async (req, res) => {
       const availability = p.stock > 0 ? 'in_stock' : 'out_of_stock';
       const condition = 'new';
       
-      const priceVal = p.promo_price > 0 ? p.promo_price : p.price;
-      const price = `${Number(priceVal).toFixed(2)} DZD`;
+      const sale_price = p.promo_price > 0 ? `${Number(p.promo_price).toFixed(2)} DZD` : null;
+      const price = `${Number(p.price).toFixed(2)} DZD`;
       
       const link = escapeXml(`${baseUrl}/product/${p.slug}`);
       
@@ -1997,6 +1997,9 @@ router.get('/merchant-feed.xml', async (req, res) => {
       xml += `    <g:link>${link}</g:link>\n`;
       xml += `    <g:image_link>${image_link}</g:image_link>\n`;
       xml += `    <g:price>${price}</g:price>\n`;
+      if (sale_price) {
+        xml += `    <g:sale_price>${sale_price}</g:sale_price>\n`;
+      }
       xml += `    <g:availability>${availability}</g:availability>\n`;
       xml += `    <g:brand>${brand}</g:brand>\n`;
       xml += `    <g:condition>${condition}</g:condition>\n`;

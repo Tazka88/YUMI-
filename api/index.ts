@@ -293,7 +293,7 @@ app.get('*', async (req, res, next) => {
             }
           }
           
-          const displayPrice = product.promo_price || product.price;
+          const displayPrice = (product.promo_price && Number(product.promo_price) > 0) ? Number(product.promo_price).toFixed(2) : Number(product.price).toFixed(2);
           seoHtml = '';
           
           const schemaData = {

@@ -88,19 +88,21 @@ export default function Slider({ categoryId = null }: SliderProps) {
           }`}
         >
           <picture>
-            {slide.mobile_image_url && (
-              <source media="(max-width: 767px)" srcSet={getResizedImageUrl(slide.mobile_image_url, 640)} />
+            {slide.mobile_image_url ? (
+              <source media="(max-width: 767px)" srcSet={getResizedImageUrl(slide.mobile_image_url, 768, 'webp', 75)} />
+            ) : (
+              <source media="(max-width: 767px)" srcSet={getResizedImageUrl(slide.image_url, 768, 'webp', 75)} />
             )}
             <img 
-              src={slide.image_url ? getResizedImageUrl(slide.image_url, 1600) : getResizedImageUrl(slide.mobile_image_url!, 640)} 
+              src={slide.image_url ? getResizedImageUrl(slide.image_url, 1600, 'webp', 80) : getResizedImageUrl(slide.mobile_image_url!, 768, 'webp', 75)} 
               alt={slide.title || "Slide"} 
               className="w-full h-full object-cover object-center"
               referrerPolicy="no-referrer"
               loading={index === 0 ? "eager" : "lazy"}
               fetchPriority={index === 0 ? "high" : "auto"}
-
-
               decoding={index === 0 ? "sync" : "async"}
+              width={slide.image_url ? 1600 : 768}
+              height={slide.image_url ? 500 : 800}
             />
           </picture>
           {(slide.title || slide.description || slide.button_text) && (

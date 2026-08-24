@@ -1,7 +1,7 @@
-export const getResizedImageUrl = (url: string | null | undefined, width: number) => {
+export const getResizedImageUrl = (url: string | null | undefined, width: number, format = 'webp', q = 75) => {
   if (!url) return '';
   if (url.startsWith('/api/images/')) {
-    return `${url}${url.includes('?') ? '&' : '?'}w=${width}`;
+    return `${url}${url.includes('?') ? '&' : '?'}w=${width}&f=${format}&q=${q}`;
   }
   return url;
 };

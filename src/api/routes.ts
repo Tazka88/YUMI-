@@ -110,56 +110,96 @@ const getSharp = async () => {
 };
 
 // Helper to serve image data directly without CPU intensive sharp usage or Regex at runtime
-const serveImageData = async (res: any, imageData: string, targetWidth?: number, cacheControl = 'public, max-age=31536000, immutable') => {
+const serveImageData = async (req: any, res: any, imageData: string, targetWidth?: number, cacheControl = 'public, max-age=31536000, immutable') => {
+  let processWithSharp = async (inputBuffer, originalExt) => {
+    let outputBuffer = inputBuffer;
+    let ext = originalExt;
+    const w = req?.query?.w || targetWidth;
+    const f = req?.query?.f;
+    const q = req?.query?.q;
+    
+    if (w || f === 'webp' || q) {
+      try {
+        const sharp = (await import('sharp')).default;
+        let s = sharp(inputBuffer);
+        if (w) {
+          s = s.resize(Number(w), null, { withoutEnlargement: true });
+        }
+        if (f === 'webp' || ext === 'webp') {
+          s = s.webp({ quality: q ? Number(q) : 80 });
+          ext = 'webp';
+        } else if (q) {
+          if (ext === 'jpeg' || ext === 'jpg') {
+            s = s.jpeg({ quality: Number(q) });
+          } else if (ext === 'png') {
+            s = s.png({ quality: Number(q) });
+          }
+        }
+        outputBuffer = await s.toBuffer();
+      } catch (e) {
+        console.warn('Sharp processing failed:', e);
+      }
+    }
+    return { buffer: outputBuffer, ext };
+  };
+
   if (imageData.startsWith('data:image/')) {
-    // Avoid RegExp on potentially megabytes of base64 data to save Active CPU
     const commaIndex = imageData.indexOf(',');
-    const extStart = 11; // 'data:image/'.length
+    const extStart = 11;
     const extEnd = imageData.indexOf(';', extStart);
     
     if (commaIndex !== -1 && extEnd !== -1) {
-      const ext = imageData.substring(extStart, extEnd);
+      let ext = imageData.substring(extStart, extEnd);
       const base64Data = imageData.substring(commaIndex + 1);
-      const buffer = Buffer.from(base64Data, 'base64');
+      let buffer = Buffer.from(base64Data, 'base64');
+      
+      if (ext !== 'svg+xml') {
+        const processed = await processWithSharp(buffer, ext);
+        buffer = processed.buffer;
+        ext = processed.ext;
+      }
       
       res.setHeader('Content-Type', `image/${ext === 'svg+xml' ? 'svg+xml' : ext}`);
       res.setHeader('Cache-Control', cacheControl);
       res.setHeader('Vercel-CDN-Cache-Control', 'max-age=31536000, immutable');
       res.setHeader('CDN-Cache-Control', 'max-age=31536000, immutable');
-      
       return res.send(buffer);
     }
   }
   
-  // Proxy external URLs so Vercel Edge can cache them and save Supabase Egress
   if (imageData.startsWith('http') || imageData.startsWith('https')) {
     try {
       const resp = await fetch(imageData);
       if (resp.ok) {
         const arrayBuffer = await resp.arrayBuffer();
-        res.setHeader('Content-Type', resp.headers.get('content-type') || 'image/webp');
+        let buffer = Buffer.from(arrayBuffer);
+        let contentType = resp.headers.get('content-type') || 'image/webp';
+        let ext = contentType.split('/')[1] || 'jpeg';
+        
+        if (ext !== 'svg+xml') {
+          const processed = await processWithSharp(buffer, ext);
+          buffer = processed.buffer;
+          ext = processed.ext;
+          contentType = `image/${ext}`;
+        }
+        
+        res.setHeader('Content-Type', contentType);
         res.setHeader('Cache-Control', cacheControl);
-        // Instruct Vercel Edge to cache this for 30 days
         res.setHeader('Vercel-CDN-Cache-Control', 'max-age=31536000, immutable');
         res.setHeader('CDN-Cache-Control', 'max-age=31536000, immutable');
-        return res.send(Buffer.from(arrayBuffer));
+        return res.send(buffer);
       } else if (resp.status === 402) {
-        // Supabase specific Error for Egress Quota Exceeded
-        console.warn('Supabase Quota Exceeded for URL:', imageData);
-        // Serve a simple placeholder so layout doesn't break
         res.setHeader('Content-Type', 'image/svg+xml');
-        res.setHeader('Cache-Control', 'public, max-age=60'); // Don't cache the error for long
+        res.setHeader('Cache-Control', 'public, max-age=60');
         return res.send(`<svg width="400" height="400" xmlns="http://www.w3.org/2000/svg"><rect width="400" height="400" fill="#f3f4f6"/><path d="M150 150 L250 250 M250 150 L150 250" stroke="#d1d5db" stroke-width="4" stroke-linecap="round"/><rect width="180" height="140" x="110" y="130" fill="none" stroke="#d1d5db" stroke-width="4" rx="10"/></svg>`);
       }
     } catch (err) {
       console.warn('Proxy fetch failed, falling back to redirect:', err);
     }
-    // Fallback directly
     res.setHeader('Cache-Control', cacheControl);
     return res.redirect(301, imageData);
   }
-
-  // Local paths fallback
+  
   if (imageData.startsWith('/')) {
     res.setHeader('Cache-Control', cacheControl);
     return res.redirect(301, imageData);
@@ -207,7 +247,7 @@ router.get(['/images/:table/:id/:field', '/images/:table/:id/:field/:seoSlug'], 
     const imageData = result[0][field];
     const width = parseInt(req.query.w as string);
     
-    await serveImageData(res, imageData, width);
+    await serveImageData(req, res, imageData, width);
 
   } catch (err) {
     console.error('Error serving image:', err);
@@ -235,7 +275,7 @@ router.get('/hero-banners/first-image/:type', async (req, res) => {
     
     const width = type === 'mobile' ? 640 : 1600;
     // Serve with short cache, or no cache if it's updated frequently. Let's use 5 minutes for performance but freshness
-    await serveImageData(res, imageData, width, 'public, max-age=300');
+    await serveImageData(req, res, imageData, width, 'public, max-age=300');
     
   } catch (err) {
     console.error('Error serving first hero banner:', err);

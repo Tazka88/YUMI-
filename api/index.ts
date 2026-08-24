@@ -98,7 +98,7 @@ app.use(async (req, res, next) => {
 });
 
 // Serve frontend with SEO injection for non-asset routes
-const cleanForSEO = (text, truncateLength) => {
+const cleanForSEO = (text: any, truncateLength?: number) => {
   if (!text) return '';
   const maxLength = truncateLength || 155;
   let cleanText = text.replace(/<[^>]+>/g, ' ')
@@ -334,13 +334,15 @@ app.get('*', async (req, res, next) => {
              schemaData["@graph"][1].itemListElement.push({
                 "@type": "ListItem",
                 "position": 3,
-                "name": product.name
+                "name": product.name,
+                "item": `${baseUrl}${req.path}`
              });
           } else {
              schemaData["@graph"][1].itemListElement.push({
                 "@type": "ListItem",
                 "position": 2,
-                "name": product.name
+                "name": product.name,
+                "item": `${baseUrl}${req.path}`
              });
           }
           

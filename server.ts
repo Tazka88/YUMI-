@@ -235,7 +235,7 @@ Sitemap: https://www.zorando.com/sitemap.xml`);
     const distPath = path.join(process.cwd(), 'dist');
     app.use(express.static(distPath, { index: false })); // Disable default index.html serving
     
-    const cleanForSEO = (text, truncateLength) => {
+    const cleanForSEO = (text: any, truncateLength?: number) => {
   if (!text) return '';
   const maxLength = truncateLength || 155;
   let cleanText = text.replace(/<[^>]+>/g, ' ')

@@ -1,4 +1,4 @@
-export const categorySEOData: Record<string, { title: string, description: string, h1: string, intro: string, links: { text: string, url: string }[] }> = {
+export const categorySEOData: Record<string, { title: string, description: string, h1: string, intro: string, links: { text: string, url: string }[], keywords?: string }> = {
   'mode': {
     title: 'Vêtements et Mode Tendance : Renouvelez Votre Style',
     description: 'Découvrez les dernières tendances mode sur ZORANDO. Vêtements et chaussures de qualité à petits prix en Algérie. Renouvelez votre garde-robe dès aujourd\'hui !',

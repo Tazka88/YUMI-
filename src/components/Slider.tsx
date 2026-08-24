@@ -69,7 +69,7 @@ export default function Slider({ categoryId = null }: SliderProps) {
 
   if (isLoading && categoryId) {
     return (
-      <div className="mb-8 rounded-xl overflow-hidden shadow-md relative w-full aspect-[4/5] sm:aspect-[1/1] lg:aspect-auto lg:h-full min-h-[200px] bg-gray-200 animate-pulse">
+      <div className="mb-8 rounded-xl overflow-hidden shadow-md relative w-full aspect-[768/800] md:aspect-[1600/500] bg-gray-200 animate-pulse">
       </div>
     );
   }
@@ -79,7 +79,7 @@ export default function Slider({ categoryId = null }: SliderProps) {
   }
 
   return (
-    <div className="mb-8 lg:mb-0 rounded-xl overflow-hidden shadow-md relative w-full aspect-[4/5] sm:aspect-[1/1] lg:aspect-auto lg:h-full min-h-[200px] group bg-gray-100">
+    <div className="mb-8 lg:mb-0 rounded-xl overflow-hidden shadow-md relative w-full aspect-[768/800] md:aspect-[1600/500] group bg-gray-100">
       {visibleSlides.map((slide, index) => (
         <div
           key={slide.id}
@@ -89,12 +89,12 @@ export default function Slider({ categoryId = null }: SliderProps) {
         >
           <picture>
             {slide.mobile_image_url ? (
-              <source media="(max-width: 767px)" srcSet={getResizedImageUrl(slide.mobile_image_url, 768, 'webp', 75)} />
+              <source media="(max-width: 767px)" srcSet={slide.mobile_image_url} />
             ) : (
-              <source media="(max-width: 767px)" srcSet={getResizedImageUrl(slide.image_url, 768, 'webp', 75)} />
+              <source media="(max-width: 767px)" srcSet={slide.image_url} />
             )}
             <img 
-              src={slide.image_url ? getResizedImageUrl(slide.image_url, 1600, 'webp', 80) : getResizedImageUrl(slide.mobile_image_url!, 768, 'webp', 75)} 
+              src={slide.image_url || slide.mobile_image_url} 
               alt={slide.title || "Slide"} 
               className="w-full h-full object-cover object-center"
               referrerPolicy="no-referrer"

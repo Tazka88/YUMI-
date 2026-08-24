@@ -1,14 +1,24 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { Link } from 'react-router-dom';
 import { ShoppingCart, Star, ChevronRight, ChevronLeft, Truck, ShieldCheck, RefreshCcw, Headset, Users, Moon, Map, Mountain, TreePine, Sun, BookOpen, Pencil, Ruler, Backpack, Apple, Tag, Percent, ArrowDown, ShoppingBag, Umbrella, Waves, Flame, Shirt, Sparkles, Smartphone, Refrigerator, Sofa, Laptop, Dumbbell, Gamepad2, Car } from 'lucide-react';
 import { useCartStore, Product } from '../store/cartStore';
 import { formatPrice } from '../utils/formatPrice';
 import { ProductCard } from '../components/ProductCard';
+const ProductGrid = lazy(() => import('../components/ProductGrid'));
 import SEO from '../components/SEO';
 import { buildOrganizationSchema, buildWebSiteSchema } from '../lib/schemaUtils';
 import { getCategoryWithEmoji, CategoryNameDisplay } from '../components/Layout';
 import Slider from '../components/Slider';
 import { fetchWithCache } from '../lib/utils';
+
+
+const GridSkeleton = () => (
+  <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-4">
+    {[...Array(5)].map((_, i) => (
+      <div key={i} className="aspect-[4/5] bg-gray-100 rounded-xl animate-pulse"></div>
+    ))}
+  </div>
+);
 
 const THEME_IMAGES: Record<string, string> = {
   ramadan:      "/images/themes/ramadan.jpg",
@@ -767,13 +777,7 @@ export default function Home() {
           return (
             <section key={section.id}>
               <FlashSalesHeader link={`/category/all?special_offers=true&title=${encodeURIComponent('Ventes Flash')}`} />
-              <div className="flex overflow-x-auto snap-x hide-scrollbar md:grid md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-4 pb-4 md:pb-0 px-4 -mx-4 md:px-0 md:mx-0">
-                {promotions.slice(0, 10).map((p, i) => (
-                  <div key={p.id} className="w-[160px] sm:w-[200px] shrink-0 snap-start md:w-auto">
-                    <ProductCard product={p} priority={i < 4} isFlashSale={true} />
-                  </div>
-                ))}
-              </div>
+              <Suspense fallback={<GridSkeleton />}><ProductGrid products={promotions.slice(0, 10)} isCarousel={true} isFlashSale={true} /></Suspense>
             </section>
           );
         }
@@ -781,9 +785,7 @@ export default function Home() {
           return (
             <section key={section.id}>
               <SectionHeader title={section.title || "Meilleures Ventes 🏆"} link={`/category/all?sort=top_sales&title=${encodeURIComponent(section.title || 'Meilleures Ventes')}`} />
-              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-4">
-                {bestSellers.slice(0, 10).map((p, i) => <ProductCard key={p.id} product={p} priority={i < 4} />)}
-              </div>
+              <Suspense fallback={<GridSkeleton />}><ProductGrid products={bestSellers.slice(0, 10)} /></Suspense>
             </section>
           );
         }
@@ -791,9 +793,7 @@ export default function Home() {
           return (
             <section key={section.id}>
               <SectionHeader title={section.title || "Produits Populaires 🔥"} link={`/category/all?sort=trending&title=${encodeURIComponent(section.title || 'Produits Populaires')}`} />
-              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-4">
-                {popularProducts.slice(0, 10).map((p, i) => <ProductCard key={p.id} product={p} priority={i < 4} />)}
-              </div>
+              <Suspense fallback={<GridSkeleton />}><ProductGrid products={popularProducts.slice(0, 10)} /></Suspense>
             </section>
           );
         }
@@ -801,9 +801,7 @@ export default function Home() {
           return (
             <section key={section.id}>
               <SectionHeader title={section.title || "Nouveautés 🆕"} link={`/category/all?sort=newest&title=${encodeURIComponent(section.title || 'Nouveautés')}`} />
-              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-4">
-                {newProducts.slice(0, 10).map((p, i) => <ProductCard key={p.id} product={p} priority={i < 4} />)}
-              </div>
+              <Suspense fallback={<GridSkeleton />}><ProductGrid products={newProducts.slice(0, 10)} /></Suspense>
             </section>
           );
         }
@@ -811,9 +809,7 @@ export default function Home() {
           return (
             <section key={section.id}>
               <SectionHeader title={section.title || "Découverte Aléatoire 🎲"} link={`/category/all?sort=random&title=${encodeURIComponent(section.title || 'Découverte Aléatoire')}`} />
-              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-4">
-                {randomProducts.slice(0, 10).map((p, i) => <ProductCard key={p.id} product={p} priority={i < 4} />)}
-              </div>
+              <Suspense fallback={<GridSkeleton />}><ProductGrid products={randomProducts.slice(0, 10)} /></Suspense>
             </section>
           );
         }
@@ -837,17 +833,9 @@ export default function Home() {
             <section key={section.id}>
               <SectionHeader title={`${section.title} ${section.emoji || ''}`} link={link} />
               {isCarousel ? (
-                <div className="flex overflow-x-auto snap-x hide-scrollbar md:grid md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-4 pb-4 md:pb-0 px-4 -mx-4 md:px-0 md:mx-0">
-                  {sectionProducts.map((p, i) => (
-                    <div key={`${section.id}-${p.id}`} className="w-[160px] sm:w-[200px] shrink-0 snap-start md:w-auto">
-                      <ProductCard product={p} priority={i < 4} />
-                    </div>
-                  ))}
-                </div>
+                <Suspense fallback={<GridSkeleton />}><ProductGrid products={sectionProducts} isCarousel={true} /></Suspense>
               ) : (
-                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-4">
-                  {sectionProducts.map((p, i) => <ProductCard key={`${section.id}-${p.id}`} product={p} priority={i < 4} />)}
-                </div>
+                <Suspense fallback={<GridSkeleton />}><ProductGrid products={sectionProducts} /></Suspense>
               )}
             </section>
           );

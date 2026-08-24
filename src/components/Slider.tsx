@@ -98,9 +98,9 @@ export default function Slider({ categoryId = null }: SliderProps) {
               alt={slide.title || "Slide"} 
               className="w-full h-full object-cover object-center"
               referrerPolicy="no-referrer"
-              loading={index === 0 ? "eager" : "lazy"}
-              fetchPriority={index === 0 ? "high" : "auto"}
-              decoding={index === 0 ? "sync" : "async"}
+              loading="eager"
+              fetchPriority="high"
+              decoding="async"
               width={slide.image_url ? 1600 : 768}
               height={slide.image_url ? 500 : 800}
             />

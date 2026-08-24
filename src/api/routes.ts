@@ -564,12 +564,7 @@ router.get('/hero-banners', async (req, res) => {
     res.setHeader('Cache-Control', 'max-age=0, s-maxage=60, stale-while-revalidate=300');
     const sliderImages = await sql`SELECT ${sql.unsafe(SLIDER_IMAGES_COLS)} FROM slider_images ORDER BY position ASC, id ASC`;
     
-    sliderImages.forEach((s: any) => {
-      s.image_url = processImage('slider_images', s.id, 'image_url', s.image_url);
-      if (s.mobile_image_url) {
-        s.mobile_image_url = processImage('slider_images', s.id, 'mobile_image_url', s.mobile_image_url);
-      }
-    });
+    // Bypassing processImage to serve raw Supabase URLs for optimal LCP
     
     // Using s-maxage set at start of request
     setCache(cacheKey, sliderImages, 60);

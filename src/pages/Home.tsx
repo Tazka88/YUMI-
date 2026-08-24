@@ -307,7 +307,8 @@ const MasonryCategoryCard: React.FC<{ cat: any, index: number }> = ({ cat, index
         <img 
           src={getResizedImageUrl(cat.image, index % 5 === 0 ? 800 : 400) || `https://ui-avatars.com/api/?name=${encodeURIComponent(cat.name)}&background=random&color=fff&size=400`} 
           alt={cat.name}
-          loading={index < 4 ? "eager" : "lazy"}
+          loading="lazy"
+          decoding="async"
           className="w-full h-full object-cover object-center transition-transform duration-700 group-hover:scale-105"
           referrerPolicy="no-referrer"
         />

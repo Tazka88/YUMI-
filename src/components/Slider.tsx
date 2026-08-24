@@ -79,13 +79,13 @@ export default function Slider({ categoryId = null }: SliderProps) {
   }
 
   return (
-    <div className="mb-8 lg:mb-0 rounded-xl overflow-hidden shadow-md relative w-full aspect-[768/800] md:aspect-[1600/500] group bg-gray-100">
+    <div className="mb-8 lg:mb-0 rounded-xl overflow-hidden shadow-md relative w-full aspect-[768/800] md:aspect-[1600/500] group bg-gray-100 slider-container no-animation"
+      style={{ contentVisibility: "visible", contain: "layout" } as React.CSSProperties}>
       {visibleSlides.map((slide, index) => (
         <div
           key={slide.id}
-          className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
-            index === currentSlide ? 'opacity-100 z-10' : 'opacity-0 z-0'
-          }`}
+          className={`absolute inset-0 ${index === 0 && currentSlide === 0 ? "opacity-100 z-10" : `transition-opacity duration-1000 ease-in-out ${index === currentSlide ? "opacity-100 z-10" : "opacity-0 z-0"}`}`}
+          style={index === 0 && currentSlide === 0 ? { opacity: 1, zIndex: 1, visibility: "visible", animation: "none", transition: "none" } : {}}
         >
           <picture>
             {slide.mobile_image_url ? (
@@ -96,14 +96,14 @@ export default function Slider({ categoryId = null }: SliderProps) {
             <img 
               src={slide.image_url || slide.mobile_image_url} 
               alt={slide.title || "Slide"} 
-              className="w-full h-full object-cover object-center"
+              className={`w-full h-full object-cover object-center ${index === 0 ? "slider-image" : ""}`}
               referrerPolicy="no-referrer"
               loading={index === 0 ? "eager" : "lazy"}
               fetchPriority={index === 0 ? "high" : "auto"}
               {...(index !== 0 ? { decoding: "async" } : {})}
               width={slide.image_url ? 1600 : 768}
               height={slide.image_url ? 500 : 800}
-              style={{ display: 'block' }}
+              style={index === 0 ? { display: "block", opacity: 1, zIndex: 1, visibility: "visible" } : {}}
             />
           </picture>
           {(slide.title || slide.description || slide.button_text) && (

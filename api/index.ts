@@ -175,7 +175,7 @@ app.get('*', async (req, res, next) => {
     let keywords = 'boutique en ligne, e-commerce, Algérie, achat en ligne, électroménager, mode, beauté, maison, ZORANDO';
     const host = req.get('host') || 'www.zorando.com';
     const baseUrl = `https://${host}`;
-    let headHtml = `<link rel="canonical" href="${baseUrl}${req.path}" />`;
+    let headHtml = `<link rel="canonical" href="${baseUrl}${req.path}" />\n<link rel="preload" as="font" href="https://fonts.gstatic.com/s/roboto/v30/KFOmCnqEu92Fr1Mu4mxK.woff2" type="font/woff2" crossorigin="anonymous">`;
     let seoHtml = '';
     let isNotFound = false;
     let ogImage = `${baseUrl}/og-image-fb.jpg`;
@@ -187,7 +187,7 @@ app.get('*', async (req, res, next) => {
         const brands = await sql`SELECT name, slug FROM brands`;
         const [firstSlide] = await sql`SELECT id, image_url, mobile_image_url FROM slider_images WHERE is_active = true AND category_id IS NULL ORDER BY position ASC, id ASC LIMIT 1`;
 
-        headHtml = `\n          <link rel="canonical" href="${baseUrl}${req.path}" />`;
+        headHtml = `\n          <link rel="canonical" href="${baseUrl}${req.path}" />\n          <link rel="preload" as="font" href="https://fonts.gstatic.com/s/roboto/v30/KFOmCnqEu92Fr1Mu4mxK.woff2" type="font/woff2" crossorigin="anonymous">`;
 
         if (firstSlide) {
           if (firstSlide.mobile_image_url) {

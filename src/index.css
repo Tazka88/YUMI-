@@ -232,3 +232,16 @@
 .seo-description b, .seo-description strong {
   @apply font-bold text-gray-900;
 }
+
+/* Force LCP optimizations */
+.slider-container.no-animation * {
+  animation: none !important;
+  transition: none !important;
+}
+.slider-image {
+  opacity: 1 !important;
+}
+.slider-container {
+  content-visibility: visible;
+  contain: layout;
+}

@@ -78,8 +78,8 @@ export const ProductCard: React.FC<{ product: Product; priority?: boolean; isFla
         <Link to={`/product/${product.slug}`} className="block w-full h-full">
           <img 
             src={getResizedImageUrl(product.image, 400) || `https://ui-avatars.com/api/?name=${encodeURIComponent(product.name)}&background=random&size=400`} 
-            srcSet={product.image && product.image.startsWith('/api/images/') ? `${getResizedImageUrl(product.image, 200)} 200w, ${getResizedImageUrl(product.image, 400)} 400w` : undefined}
-            sizes="(max-width: 640px) 200px, 400px"
+            srcSet={product.image && product.image.startsWith('/api/images/') ? `${getResizedImageUrl(product.image, 200)} 200w, ${getResizedImageUrl(product.image, 300)} 300w, ${getResizedImageUrl(product.image, 400)} 400w, ${getResizedImageUrl(product.image, 600)} 600w` : undefined}
+            sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 20vw"
             alt={product.name}
             loading={priority ? "eager" : "lazy"}
             fetchPriority={priority ? "high" : "auto"}

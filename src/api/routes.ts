@@ -564,11 +564,15 @@ router.get('/hero-banners', async (req, res) => {
     res.setHeader('Cache-Control', 'max-age=0, s-maxage=60, stale-while-revalidate=300');
     const sliderImages = await sql`SELECT ${sql.unsafe(SLIDER_IMAGES_COLS)} FROM slider_images ORDER BY position ASC, id ASC`;
     
-    // Bypassing processImage to serve raw Supabase URLs for optimal LCP
+    // Process images to route through our API for sizing and WebP conversion
+    const processedImages = sliderImages.map((s: any) => ({
+      ...s,
+      image_url: processImage('slider_images', s.id, 'image_url', s.image_url, 'banner'),
+      mobile_image_url: processImage('slider_images', s.id, 'mobile_image_url', s.mobile_image_url, 'banner-mobile')
+    }));
     
-    // Using s-maxage set at start of request
-    setCache(cacheKey, sliderImages, 60);
-    res.json(sliderImages);
+    setCache(cacheKey, processedImages, 60);
+    res.json(processedImages);
 
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch slider images' });

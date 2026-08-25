@@ -306,6 +306,8 @@ const MasonryCategoryCard: React.FC<{ cat: any, index: number }> = ({ cat, index
       <div className={`w-full h-full relative overflow-hidden bg-white ${aspectClass}`}>
         <img 
           src={getResizedImageUrl(cat.image, index % 5 === 0 ? 800 : 400) || `https://ui-avatars.com/api/?name=${encodeURIComponent(cat.name)}&background=random&color=fff&size=400`} 
+          srcSet={cat.image && cat.image.startsWith('/api/images/') ? `${getResizedImageUrl(cat.image, 300)} 300w, ${getResizedImageUrl(cat.image, 400)} 400w, ${getResizedImageUrl(cat.image, 600)} 600w, ${getResizedImageUrl(cat.image, 800)} 800w` : undefined}
+          sizes={index % 5 === 0 ? "(max-width: 768px) 100vw, 50vw" : "(max-width: 768px) 50vw, 25vw"}
           alt={cat.name}
           loading="lazy"
           decoding="async"
@@ -732,7 +734,9 @@ export default function Home() {
                       >
                         {brand.image ? (
                           <img 
-                            src={brand.image} 
+                            src={getResizedImageUrl(brand.image, 200)} 
+                            srcSet={brand.image && brand.image.startsWith('/api/images/') ? `${getResizedImageUrl(brand.image, 140)} 140w, ${getResizedImageUrl(brand.image, 200)} 200w, ${getResizedImageUrl(brand.image, 400)} 400w` : undefined}
+                            sizes="(max-width: 640px) 140px, 180px"
                             alt={brand.name} 
                             width="200"
                             height="120"

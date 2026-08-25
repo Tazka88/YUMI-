@@ -89,20 +89,31 @@ export default function Slider({ categoryId = null }: SliderProps) {
         >
           <picture>
             {slide.mobile_image_url ? (
-              <source media="(max-width: 767px)" srcSet={slide.mobile_image_url} />
+              <source 
+                media="(max-width: 767px)" 
+                srcSet={slide.mobile_image_url.startsWith('/api/images/') ? `${getResizedImageUrl(slide.mobile_image_url, 400)} 400w, ${getResizedImageUrl(slide.mobile_image_url, 800)} 800w, ${getResizedImageUrl(slide.mobile_image_url, 1200)} 1200w` : slide.mobile_image_url} 
+                sizes="100vw"
+              />
             ) : (
-              <source media="(max-width: 767px)" srcSet={slide.image_url} />
+              <source 
+                media="(max-width: 767px)" 
+                srcSet={slide.image_url.startsWith('/api/images/') ? `${getResizedImageUrl(slide.image_url, 400)} 400w, ${getResizedImageUrl(slide.image_url, 800)} 800w, ${getResizedImageUrl(slide.image_url, 1200)} 1200w` : slide.image_url} 
+                sizes="100vw"
+              />
             )}
+            <source 
+              media="(min-width: 768px)" 
+              srcSet={slide.image_url.startsWith('/api/images/') ? `${getResizedImageUrl(slide.image_url, 800)} 800w, ${getResizedImageUrl(slide.image_url, 1200)} 1200w, ${getResizedImageUrl(slide.image_url, 1600)} 1600w, ${getResizedImageUrl(slide.image_url, 2000)} 2000w` : slide.image_url} 
+              sizes="100vw"
+            />
             <img 
-              src={slide.image_url || slide.mobile_image_url} 
+              src={getResizedImageUrl(slide.image_url || slide.mobile_image_url, 1600)} 
               alt={slide.title || "Slide"} 
               className={`w-full h-full object-cover object-center ${index === 0 ? "slider-image" : ""}`}
               referrerPolicy="no-referrer"
               loading={index === 0 ? "eager" : "lazy"}
               fetchPriority={index === 0 ? "high" : "auto"}
               {...(index !== 0 ? { decoding: "async" } : {})}
-              width={slide.image_url ? 1600 : 768}
-              height={slide.image_url ? 500 : 800}
               style={index === 0 ? { display: "block", opacity: 1, zIndex: 1, visibility: "visible" } : {}}
             />
           </picture>

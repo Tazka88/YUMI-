@@ -537,7 +537,13 @@ app.get('*', async (req, res, next) => {
           res.status(200);
         }
 
-        let seoTags = `
+        
+    // Nettoyage robuste du titre
+    let cleanTitle = title.replace(/\s*[-–—|]\s*ZORANDO\s*$/i, '');
+    cleanTitle = cleanTitle.replace(/[-–—\s]+$/, '');
+    title = cleanTitle + ' | Zorando';
+    
+    let seoTags = `
           <title data-rh="true">${title}</title>
           <meta data-rh="true" name="description" content="${description}" />
           ${typeof keywords !== 'undefined' && keywords ? `<meta data-rh="true" name="keywords" content="${keywords}" />` : ''}

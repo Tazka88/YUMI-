@@ -404,7 +404,12 @@ app.get('*', async (req, res, next) => {
       description = 'La page que vous recherchez n\'existe pas ou a été supprimée.';
     }
 
-    title = title.replace(/[-–—\s]+(\| Zorando)?$/, '') + (title.includes('| Zorando') ? ' | Zorando' : '');
+    
+    // Nettoyage robuste du titre
+    let cleanTitle = title.replace(/\s*[-–—|]\s*ZORANDO\s*$/i, '');
+    cleanTitle = cleanTitle.replace(/[-–—\s]+$/, '');
+    title = cleanTitle + ' | Zorando';
+    
     let seoTags = `
       <title data-rh="true">${title}</title>
       <meta data-rh="true" name="description" content="${description}" />

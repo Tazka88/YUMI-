@@ -8,7 +8,7 @@ import { getSupabase } from '../lib/supabase';
 import { formatPrice } from '../utils/formatPrice';
 import { ProductCard } from '../components/ProductCard';
 import SEO, { getCanonicalUrl } from '../components/SEO';
-import { buildProductSchema, buildBreadcrumbSchema } from '../lib/schemaUtils';
+import { buildProductSchema, buildBreadcrumbSchema, smartTruncate } from '../lib/schemaUtils';
 import { fetchWithCache } from '../lib/utils';
 import { sendCapiEvent, generateEventId } from '../lib/capi';
 
@@ -527,7 +527,7 @@ export default function Product() {
     <div className="container mx-auto px-4 py-8 pb-24 md:pb-8">
       <SEO 
         title={product.seo_title || product.name || 'Produit'} 
-        description={product.seo_description || (product.description ? product.description.substring(0, 150) + '...' : 'Achetez ce produit au meilleur prix.')} 
+        description={product.seo_description || (product.description ? smartTruncate(product.description.replace(/<[^>]+>/g, ' '), 155) : 'Achetez ce produit au meilleur prix.')} 
         keywords={product.seo_keywords}
         image={(product.image && product.image.startsWith('/')) ? `https://www.zorando.com${product.image}` : (product.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(product.name)}&background=random&size=800`)}
         url={cleanUrl}

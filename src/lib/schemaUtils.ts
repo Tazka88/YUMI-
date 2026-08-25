@@ -48,14 +48,23 @@ export function buildProductSchema(product: any, reviews: any[], currentUrl: str
     "priceCurrency": "DZD",
     "price": currentPrice,
     "availability": product.stock > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
-    "itemCondition": "https://schema.org/NewCondition"
+    "itemCondition": "https://schema.org/NewCondition",
+    "seller": {
+      "@type": "Organization",
+      "name": "Zorando",
+      "url": "https://www.zorando.com"
+    }
   };
 
   if (isPromo && product.promo_price_end_date) {
     const endDate = new Date(product.promo_price_end_date);
     if (endDate > new Date()) {
       offer.priceValidUntil = endDate.toISOString().split('T')[0];
+    } else {
+      offer.priceValidUntil = "2027-12-31";
     }
+  } else {
+    offer.priceValidUntil = "2027-12-31";
   }
 
   schema.offers = offer;
@@ -149,4 +158,21 @@ export function buildBlogSchema(post: any, currentUrl: string, baseUrl: string =
       "@id": currentUrl
     }
   };
+}
+
+/**
+ * Tronque un texte sans couper les mots et nettoie la ponctuation finale.
+ * @param text - Le texte à tronquer (ex: description du produit)
+ * @param maxLength - La longueur maximale souhaitée (ex: 155 pour une meta description)
+ */
+export function smartTruncate(text: string, maxLength: number): string {
+  if (!text || text.length <= maxLength) return text;
+  
+  // Coupe au dernier espace pour ne pas couper un mot en deux
+  const truncated = text.substring(0, text.lastIndexOf(' ', maxLength));
+  
+  // Nettoie les tirets, points de suspension ou espaces suspendus à la fin
+  const cleaned = truncated.replace(/[-–—\s]+$/, '');
+  
+  return cleaned + (cleaned.length < text.length ? '...' : '');
 }

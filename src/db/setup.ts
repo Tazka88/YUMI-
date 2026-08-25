@@ -7,19 +7,17 @@ const globalForPostgres = globalThis as unknown as {
 };
 
 let connectionString = process.env.DATABASE_URL || 'postgresql://postgres:Lifebook88855@db.evvbhalgyffagsesmvhu.supabase.co:6543/postgres';
-
 if (connectionString.includes(':5432')) {
   connectionString = connectionString.replace(':5432', ':6543');
 }
 
 export const sql = globalForPostgres.sql ?? postgres(connectionString, {
   ssl: connectionString.includes('localhost') || connectionString.includes('127.0.0.1') ? false : 'require',
-  // Paramètres optimisés pour Vercel (Environnement Serverless)
-  max: 10, // Nombre max de connexions par instance Serverless
-  idle_timeout: 2, // Les connexions inactives se ferment après 2s pour éviter qu'elles ne gèlent sur Vercel
-  connect_timeout: 10,
-  prepare: false, // Requis pour PgBouncer transaction mode
-  max_lifetime: 60 * 5,
+  max: 30, // Higher max for local development to handle many concurrent image requests
+  idle_timeout: 5, // Fast idle timeout to avoid stale connections
+  connect_timeout: 15,
+  prepare: false, // Required for PgBouncer transaction mode
+  max_lifetime: 60 * 10,
 });
 
 if (process.env.NODE_ENV !== 'production') {
@@ -39,7 +37,6 @@ export async function setupDb() {
     ]);
     
     clearTimeout(timer!);
-
     // Initialize schema
     const schemaPath = path.join(process.cwd(), 'src', 'db', 'schema.sql');
     if (fs.existsSync(schemaPath)) {

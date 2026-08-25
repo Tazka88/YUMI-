@@ -204,7 +204,7 @@ app.get('*', async (req, res, next) => {
         seoHtml = '';
       } catch(e) { console.error("DB Error in SSR:", e); }
     } else if (req.path === '/brands') {
-      title = 'Toutes nos marques - ZORANDO';
+      title = 'Toutes nos marques | Zorando';
       try {
         const brands = await sql`SELECT name, slug FROM brands`;
         seoHtml = '';
@@ -214,7 +214,7 @@ app.get('*', async (req, res, next) => {
       try {
         const [brand] = await sql`SELECT id, name, description, seo_title, seo_description FROM brands WHERE slug = ${slug}`;
         if (brand) {
-          title = `${brand.name} - ZORANDO`;
+          title = `${brand.name} | Zorando`;
           description = brand.seo_description ? cleanForSEO(brand.seo_description) : (brand.description ? cleanForSEO(brand.description, 160) : `Découvrez tous les produits de la marque ${brand.name} sur ZORANDO.`);
           const products = await sql`SELECT name, slug FROM products WHERE brand_id = ${brand.id}`;
           seoHtml = '';
@@ -264,7 +264,7 @@ app.get('*', async (req, res, next) => {
       try {
         const [product] = await sql`SELECT p.id, p.name, p.description, p.seo_title, p.seo_description, p.seo_keywords, p.price, p.promo_price, p.image, p.stock, c.name as category_name, c.slug as category_slug, b.name as brand_name FROM products p LEFT JOIN categories c ON p.category_id = c.id LEFT JOIN brands b ON p.brand_id = b.id WHERE p.slug = ${slug}`;
         if (product) {
-          title = product.seo_title || `${product.name} - ZORANDO`;
+          title = product.seo_title || `${product.name} | Zorando`;
           description = product.seo_description ? cleanForSEO(product.seo_description) : (product.description ? cleanForSEO(product.description, 160) : `Achetez ${product.name} au meilleur prix sur ZORANDO.`);
           if (product.seo_keywords) keywords = product.seo_keywords;
           
@@ -303,6 +303,7 @@ app.get('*', async (req, res, next) => {
                   "price": displayPrice.toString(),
                   "availability": product.stock > 0 ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
                   "itemCondition": "https://schema.org/NewCondition",
+                  "priceValidUntil": "2027-12-31",
                   "seller": {
                     "@type": "Organization",
                     "name": "Zorando",
@@ -366,28 +367,28 @@ app.get('*', async (req, res, next) => {
         }
       } catch(e) { console.error("DB Error in SSR:", e); }
     } else if (req.path === '/blog') {
-      title = 'Blog & Actualités - ZORANDO';
+      title = 'Blog & Actualités | Zorando';
       description = 'Découvrez les dernières tendances, astuces et actualités sur le blog ZORANDO.';
     } else if (req.path === '/about') {
-      title = 'À propos de nous - ZORANDO';
+      title = 'À propos de nous | Zorando';
       description = 'Découvrez l\'histoire de ZORANDO, votre boutique en ligne de confiance en Algérie.';
       seoHtml = '';
     } else if (req.path === '/programme-fidelite') {
-      title = 'Programme de fidélité - ZORANDO';
+      title = 'Programme de fidélité | Zorando';
       description = 'Rejoignez le programme de fidélité ZORANDO et profitez de récompenses exclusives.';
       seoHtml = '';
     } else if (req.path === '/retours') {
-      title = 'Politique de retours - ZORANDO';
+      title = 'Politique de retours | Zorando';
       description = 'Consultez notre politique de retours et remboursements.';
       seoHtml = '';
     } else if (req.path === '/track-order') {
-      title = 'Suivre ma commande - ZORANDO';
+      title = 'Suivre ma commande | Zorando';
       description = 'Suivez l\'état de votre commande ZORANDO en temps réel.';
       seoHtml = '';
     }
 
     const globalNav = `
-      <nav id="global-nav" style="display:none;">
+      <nav id="global-nav" class="sr-only">
         <a href="/">Accueil</a>
         <a href="/brands">Marques</a>
         <a href="/about">À propos</a>
@@ -399,10 +400,11 @@ app.get('*', async (req, res, next) => {
 
     
     if (isNotFound) {
-      title = 'Page Introuvable - ZORANDO';
+      title = 'Page Introuvable | Zorando';
       description = 'La page que vous recherchez n\'existe pas ou a été supprimée.';
     }
 
+    title = title.replace(/[-–—\s]+(\| Zorando)?$/, '') + (title.includes('| Zorando') ? ' | Zorando' : '');
     let seoTags = `
       <title data-rh="true">${title}</title>
       <meta data-rh="true" name="description" content="${description}" />
@@ -414,7 +416,8 @@ app.get('*', async (req, res, next) => {
       <meta data-rh="true" name="twitter:title" content="${title}" />
       <meta data-rh="true" name="twitter:description" content="${description}" />
       <meta data-rh="true" name="twitter:image" content="${ogImage}" />
-    `;
+    
+      <meta data-rh="true" name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />`;
     
     let finalHtml = template.replace('<!--seo-injection-->', globalNav + (seoHtml || ''));
     finalHtml = finalHtml.replace('<!--head-injection-->', headHtml + seoTags);

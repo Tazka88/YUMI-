@@ -40,7 +40,8 @@ export function getCanonicalUrl(url?: string) {
 
 export default function SEO({ title, description, image, url, type = 'website', schema, exactTitle = false, keywords, noindex = false }: SEOProps) {
   const siteName = 'ZORANDO';
-  const fullTitle = exactTitle ? title : `${title} | ${siteName}`;
+  const cleanTitle = title.replace(/[-–—\s]+$/, '');
+  const fullTitle = exactTitle ? cleanTitle : `${cleanTitle} | ${siteName}`;
   const defaultImage = 'https://www.zorando.com/og-image-fb.jpg';
   const finalImage = image || defaultImage;
   const currentUrl = getCanonicalUrl(url);

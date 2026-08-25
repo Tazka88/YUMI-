@@ -343,14 +343,14 @@ app.get('*', async (req, res, next) => {
           
           seoHtml = ''; // No hidden content anymore
         } else if (req.path === '/brands') {
-          title = 'Toutes nos marques - ZORANDO';
+          title = 'Toutes nos marques | Zorando';
           seoHtml = ''; // No hidden content
         } else if (req.path.startsWith('/brands/')) {
           const slug = req.path.split('/')[2];
           const [brand] = await sql`SELECT id, name, description, seo_title, seo_description, h1_title, seo_content FROM brands WHERE slug = ${slug}`;
           
           if (brand) {
-            title = brand.seo_title || `${brand.name} - ZORANDO`;
+            title = brand.seo_title || `${brand.name} | Zorando`;
             description = brand.seo_description ? cleanForSEO(brand.seo_description) : (brand.description ? cleanForSEO(brand.description, 160) : `Découvrez tous les produits de la marque ${brand.name} sur ZORANDO.`);
             seoHtml = ''; // No hidden content
           } else {
@@ -409,7 +409,7 @@ app.get('*', async (req, res, next) => {
           `;
           
           if (product) {
-            title = product.seo_title || `${product.name} - ZORANDO`;
+            title = product.seo_title || `${product.name} | Zorando`;
             description = product.seo_description ? cleanForSEO(product.seo_description) : (product.description ? cleanForSEO(product.description, 160) : `Achetez ${product.name} au meilleur prix sur ZORANDO.`);
             
             if (product.seo_keywords) { keywords = product.seo_keywords; }
@@ -509,28 +509,28 @@ app.get('*', async (req, res, next) => {
             isNotFound = true;
           }
         } else if (req.path === '/blog') {
-          title = 'Blog & Actualités - ZORANDO';
+          title = 'Blog & Actualités | Zorando';
           description = 'Découvrez les dernières tendances, astuces et actualités sur le blog ZORANDO.';
         } else if (req.path === '/about') {
-          title = 'À propos de nous - ZORANDO';
+          title = 'À propos de nous | Zorando';
           description = 'Découvrez l\'histoire de ZORANDO, votre boutique en ligne de confiance en Algérie.';
           seoHtml = ''; // No hidden content
         } else if (req.path === '/programme-fidelite') {
-          title = 'Programme de fidélité - ZORANDO';
+          title = 'Programme de fidélité | Zorando';
           description = 'Rejoignez le programme de fidélité ZORANDO et profitez de récompenses exclusives.';
           seoHtml = ''; // No hidden content
         } else if (req.path === '/retours') {
-          title = 'Politique de retours - ZORANDO';
+          title = 'Politique de retours | Zorando';
           description = 'Consultez notre politique de retours et remboursements.';
           seoHtml = ''; // No hidden content
         } else if (req.path === '/track-order') {
-          title = 'Suivre ma commande - ZORANDO';
+          title = 'Suivre ma commande | Zorando';
           description = 'Suivez l\'état de votre commande ZORANDO en temps réel.';
           seoHtml = ''; // No hidden content
         }
 
         if (isNotFound) {
-          title = 'Page Introuvable - ZORANDO';
+          title = 'Page Introuvable | Zorando';
           description = 'La page que vous recherchez n\'existe pas ou a été supprimée.';
           res.status(404);
         } else {
@@ -548,7 +548,8 @@ app.get('*', async (req, res, next) => {
           <meta data-rh="true" name="twitter:title" content="${title}" />
           <meta data-rh="true" name="twitter:description" content="${description}" />
           <meta data-rh="true" name="twitter:image" content="${typeof ogImage !== 'undefined' ? ogImage : ''}" />
-        `;
+        
+          <meta data-rh="true" name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />`;
         
         console.log('Final title to inject:', title);
         console.log('Final title to inject:', title);

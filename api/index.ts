@@ -190,15 +190,20 @@ app.get('*', async (req, res, next) => {
         headHtml = `\n          <link rel="canonical" href="${baseUrl}${req.path}" />\n          <link rel="preload" as="font" href="https://fonts.gstatic.com/s/roboto/v30/KFOmCnqEu92Fr1Mu4mxK.woff2" type="font/woff2" crossorigin="anonymous">`;
 
         if (firstSlide) {
-          if (firstSlide.mobile_image_url) {
-            headHtml += `\n          <link rel="preload" as="image" href="${firstSlide.mobile_image_url}" media="(max-width: 767px)" fetchpriority="high">`;
-          } else if (firstSlide.image_url) {
-            headHtml += `\n          <link rel="preload" as="image" href="${firstSlide.image_url}" media="(max-width: 767px)" fetchpriority="high">`;
+          const getImg = (u, w) => (u && u.startsWith('/api/images/')) ? `${u}?w=${w}&q=80` : u;
+          const mobileUrl = firstSlide.mobile_image_url || firstSlide.image_url;
+          if (mobileUrl) {
+            if (mobileUrl.startsWith('/api/images/')) {
+               const srcSet = `${getImg(mobileUrl, 400)} 400w, ${getImg(mobileUrl, 800)} 800w, ${getImg(mobileUrl, 1200)} 1200w`;
+               headHtml += `\n          <link rel="preload" as="image" imagesrcset="${srcSet}" imagesizes="100vw" media="(max-width: 767px)" fetchpriority="high">`;
+            } else {
+               headHtml += `\n          <link rel="preload" as="image" href="${mobileUrl}" media="(max-width: 767px)" fetchpriority="high">`;
+            }
           }
 
           const desktopImage = firstSlide.image_url || firstSlide.mobile_image_url;
           if (desktopImage) {
-            headHtml += `\n          <link rel="preload" as="image" href="${desktopImage}" media="(min-width: 768px)" fetchpriority="high">`;
+            headHtml += `\n          <link rel="preload" as="image" href="${getImg(desktopImage, 1600)}" media="(min-width: 768px)" fetchpriority="high">`;
           }
         }
         seoHtml = '';

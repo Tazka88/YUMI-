@@ -328,23 +328,7 @@ app.get('*', async (req, res, next) => {
           const brands = await sql`SELECT name, slug FROM brands`;
           
           const [firstSlide] = await sql`SELECT id, image_url, mobile_image_url FROM slider_images WHERE is_active = true AND category_id IS NULL ORDER BY position ASC, id ASC LIMIT 1`;
-          if (firstSlide) {
-          const getImg = (u, w) => (u && u.startsWith('/api/images/')) ? `${u}?w=${w}&q=80` : u;
-          const mobileUrl = firstSlide.mobile_image_url || firstSlide.image_url;
-          if (mobileUrl) {
-            if (mobileUrl.startsWith('/api/images/')) {
-               const srcSet = `${getImg(mobileUrl, 400)} 400w, ${getImg(mobileUrl, 800)} 800w, ${getImg(mobileUrl, 1200)} 1200w`;
-               headHtml += `\n          <link rel="preload" as="image" imagesrcset="${srcSet}" imagesizes="100vw" media="(max-width: 767px)" fetchpriority="high">`;
-            } else {
-               headHtml += `\n          <link rel="preload" as="image" href="${mobileUrl}" media="(max-width: 767px)" fetchpriority="high">`;
-            }
-          }
-
-          const desktopImage = firstSlide.image_url || firstSlide.mobile_image_url;
-          if (desktopImage) {
-            headHtml += `\n          <link rel="preload" as="image" href="${getImg(desktopImage, 1600)}" media="(min-width: 768px)" fetchpriority="high">`;
-          }
-        }
+          // Preload removed (Plan B) to avoid double-download and resource starvation.
           
           seoHtml = ''; // No hidden content anymore
         } else if (req.path === '/brands') {

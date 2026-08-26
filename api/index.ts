@@ -178,6 +178,7 @@ app.get('*', async (req, res, next) => {
     let headHtml = `<link rel="canonical" href="${baseUrl}${req.path}" />\n<link rel="preload" as="font" href="https://fonts.gstatic.com/s/roboto/v30/KFOmCnqEu92Fr1Mu4mxK.woff2" type="font/woff2" crossorigin="anonymous">`;
     let seoHtml = '';
     let isNotFound = false;
+    let rootHtml = '';
     let ogImage = `${baseUrl}/og-image-fb.jpg`;
     let ogUrl = `${baseUrl}${req.path}`;
 
@@ -189,7 +190,39 @@ app.get('*', async (req, res, next) => {
 
         headHtml = `\n          <link rel="canonical" href="${baseUrl}${req.path}" />\n          <link rel="preload" as="font" href="https://fonts.gstatic.com/s/roboto/v30/KFOmCnqEu92Fr1Mu4mxK.woff2" type="font/woff2" crossorigin="anonymous">`;
 
-        // Preload removed (Plan B) to avoid double-download and resource starvation.
+        if (firstSlide) {
+          const getImg = (u, w) => (u && u.startsWith('/api/images/')) ? `${u}?w=${w}&q=80` : u;
+          
+          let pictureHtml = '';
+          if (firstSlide.mobile_image_url) {
+             const mUrl = firstSlide.mobile_image_url;
+             const srcSet = mUrl.startsWith('/api/images/') ? `${getImg(mUrl, 400)} 400w, ${getImg(mUrl, 800)} 800w, ${getImg(mUrl, 1200)} 1200w` : mUrl;
+             pictureHtml += `<source media="(max-width: 767px)" srcset="${srcSet}" sizes="100vw" />`;
+          }
+          
+          const desktopImage = firstSlide.image_url || firstSlide.mobile_image_url;
+          if (desktopImage) {
+            pictureHtml += `<img 
+              src="${getImg(desktopImage, 1600)}" 
+              alt="${firstSlide.title || 'Slide'}" 
+              loading="eager" 
+              fetchpriority="high"
+              decoding="sync"
+              class="w-full h-full object-cover object-center slider-image"
+              style="display: block; opacity: 1; z-index: 1; visibility: visible;"
+            />`;
+          }
+
+          rootHtml = `
+            <div class="mb-8 lg:mb-0 rounded-xl overflow-hidden shadow-md relative w-full aspect-[768/800] md:aspect-[1600/500] group bg-gray-100 slider-container no-animation" style="content-visibility: visible; contain: layout;">
+              <div class="absolute inset-0 opacity-100 z-10" style="opacity: 1; z-index: 1; visibility: visible;">
+                <picture>
+                  ${pictureHtml}
+                </picture>
+              </div>
+            </div>
+          `;
+        }
         seoHtml = '';
       } catch(e) { console.error("DB Error in SSR:", e); }
     } else if (req.path === '/brands') {
@@ -415,6 +448,7 @@ app.get('*', async (req, res, next) => {
     
     let finalHtml = template.replace('<!--seo-injection-->', globalNav + (seoHtml || ''));
     finalHtml = finalHtml.replace('<!--head-injection-->', headHtml + seoTags);
+    finalHtml = finalHtml.replace('<!--root-injection-->', rootHtml);
     
     if (isNotFound) {
       res.header('X-Robots-Tag', 'noindex, follow');

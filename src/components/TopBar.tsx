@@ -23,7 +23,14 @@ export const ZORANDO_TOPBAR_CONFIG = {
 };
 
 export default function TopBar() {
-  const [isVisible, setIsVisible] = useState(false);
+  const [isVisible, setIsVisible] = useState(() => {
+    if (!ZORANDO_TOPBAR_CONFIG.active) return false;
+    const closedUntil = localStorage.getItem('zorando_topbar_closed_until');
+    if (closedUntil && parseInt(closedUntil) > Date.now()) {
+      return false;
+    }
+    return true;
+  });
   const [currentIndex, setCurrentIndex] = useState(0);
   const { settings, fetchSettings } = useSettingsStore();
   const [isLoading, setIsLoading] = useState(true);
@@ -40,6 +47,7 @@ export default function TopBar() {
       : ZORANDO_TOPBAR_CONFIG.messages;
 
     if (!ZORANDO_TOPBAR_CONFIG.active || !messages || messages.length === 0) {
+      setIsVisible(false);
       return;
     }
 
@@ -55,7 +63,7 @@ export default function TopBar() {
     }, ZORANDO_TOPBAR_CONFIG.rotationSpeed);
 
     return () => clearInterval(interval);
-  }, [settings]);
+  }, [settings, isLoading]);
 
   if (!isVisible) return null;
 

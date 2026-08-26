@@ -15,7 +15,7 @@ import { fetchWithCache } from '../lib/utils';
 const GridSkeleton = () => (
   <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-4">
     {[...Array(5)].map((_, i) => (
-      <div key={i} className="aspect-[4/5] bg-gray-100 rounded-xl animate-pulse"></div>
+      <div key={i} className="h-[280px] sm:h-[320px] w-full bg-gray-100 rounded-xl animate-pulse"></div>
     ))}
   </div>
 );
@@ -550,11 +550,12 @@ export default function Home() {
             if (url) {
               fetchDynamic(url)
                 .then(products => {
-                  if (Array.isArray(products)) {
-                    setCustomProducts(prev => ({ ...prev, [section.id]: products }));
-                  }
+                  setCustomProducts(prev => ({ ...prev, [section.id]: Array.isArray(products) ? products : [] }));
                 })
-                .catch(handleFetchError);
+                .catch(err => {
+                  handleFetchError(err);
+                  setCustomProducts(prev => ({ ...prev, [section.id]: [] }));
+                });
             }
           });
         } catch (e) {}
@@ -566,13 +567,12 @@ export default function Home() {
     Promise.all([
       fetchDynamic('/api/products?sort=trending&limit=12').then(data => { if (Array.isArray(data)) setPopularProducts(data); }),
       fetchDynamic('/api/products?sort=top_sales&limit=12').then(data => { if (Array.isArray(data)) setBestSellers(data); }),
-      fetchDynamic('/api/products?sort=newest&limit=12').then(data => { if (Array.isArray(data)) setNewProducts(data); })
+      fetchDynamic('/api/products?sort=newest&limit=12').then(data => { if (Array.isArray(data)) setNewProducts(data); }),
+      fetchDynamic('/api/products?sort=random&limit=12').then(data => { if (Array.isArray(data)) setRandomProducts(data); }),
+      fetchDynamic('/api/products?promo_active=true&limit=12').then(data => { if (Array.isArray(data)) setPromotions(data); })
     ]).catch(handleFetchError).finally(() => {
       setIsInitialLoading(false);
     });
-    
-    fetchDynamic('/api/products?sort=random&limit=12').then(data => { if (Array.isArray(data)) setRandomProducts(data); }).catch(handleFetchError);
-    fetchDynamic('/api/products?promo_active=true&limit=12').then(data => { if (Array.isArray(data)) setPromotions(data); }).catch(handleFetchError);
 
     const loadSections = () => {
       fetchDynamic('/api/settings')
@@ -594,12 +594,13 @@ export default function Home() {
                 
                 if (url) {
                   fetchDynamic(url)
-                    .then(products => {
-                      if (Array.isArray(products)) {
-                        setCustomProducts(prev => ({ ...prev, [section.id]: products }));
-                      }
-                    })
-                    .catch(console.error);
+                .then(products => {
+                  setCustomProducts(prev => ({ ...prev, [section.id]: Array.isArray(products) ? products : [] }));
+                })
+                .catch(err => {
+                  console.error(err);
+                  setCustomProducts(prev => ({ ...prev, [section.id]: [] }));
+                });
                 }
               });
             } catch (e) {}
@@ -692,8 +693,20 @@ export default function Home() {
           {categories.length === 0 ? (
             // Skeleton loader for categories
             [...Array(6)].map((_, i) => {
+              let spanClasses = '';
+              let aspectClass = '';
+              if (i % 5 === 0) {
+                spanClasses = 'col-span-2 row-span-1';
+                aspectClass = 'aspect-[16/9]';
+              } else if (i % 4 === 0) {
+                spanClasses = 'col-span-1 row-span-2';
+                aspectClass = 'aspect-[9/16]';
+              } else {
+                spanClasses = 'col-span-1 row-span-1';
+                aspectClass = 'aspect-square';
+              }
               return (
-                <div key={i} className="rounded-2xl bg-gray-100 animate-pulse aspect-square col-span-1 row-span-1"></div>
+                <div key={i} className={`rounded-2xl bg-gray-100 animate-pulse block ${spanClasses} ${aspectClass}`}></div>
               );
             })
           ) : (
@@ -819,8 +832,13 @@ export default function Home() {
           );
         }
         if (['custom', 'category', 'brand'].includes(section.type)) {
+          
+          // If the key is not in customProducts yet, it means we haven't finished fetching it.
+          const isSectionLoading = !(section.id in customProducts);
           const sectionProducts = customProducts[section.id] || [];
-          if (sectionProducts.length === 0) return null;
+          
+          if (!isSectionLoading && sectionProducts.length === 0) return null;
+
           
           let link = "/category/all";
           if (section.type === 'category' && section.categoryId) {
@@ -837,7 +855,9 @@ export default function Home() {
           return (
             <section key={section.id}>
               <SectionHeader title={`${section.title} ${section.emoji || ''}`} link={link} />
-              {isCarousel ? (
+              {isSectionLoading ? (
+                <GridSkeleton />
+              ) : isCarousel ? (
                 <Suspense fallback={<GridSkeleton />}><ProductGrid products={sectionProducts} isCarousel={true} /></Suspense>
               ) : (
                 <Suspense fallback={<GridSkeleton />}><ProductGrid products={sectionProducts} /></Suspense>

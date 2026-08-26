@@ -67,9 +67,9 @@ export default function Slider({ categoryId = null }: SliderProps) {
     }
   }, [visibleSlides.length, currentSlide]);
 
-  if (isLoading && categoryId) {
+  if (isLoading) {
     return (
-      <div className="mb-8 rounded-xl overflow-hidden shadow-md relative w-full aspect-[768/800] md:aspect-[1600/500] bg-gray-200 animate-pulse">
+      <div className="mb-8 lg:mb-0 rounded-xl overflow-hidden shadow-md relative w-full aspect-[768/800] md:aspect-[1600/500] bg-gray-200 animate-pulse">
       </div>
     );
   }

@@ -626,7 +626,7 @@ export default function Home() {
   return (
     <>
       <SEO 
-        title="ZORANDO - Boutique en ligne" 
+        title="Boutique en ligne Électroménager, Mode, Beauté" 
         description="Découvrez ZORANDO, votre boutique en ligne de confiance en Algérie. Achetez des produits de qualité : électroménager, mode, beauté, maison, informatique et plus au meilleur prix." 
         keywords="boutique en ligne, e-commerce, Algérie, achat en ligne, électroménager, mode, beauté, maison, ZORANDO"
         schema={[buildWebSiteSchema(), buildOrganizationSchema()]}

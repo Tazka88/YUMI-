@@ -302,7 +302,7 @@ app.get('*', async (req, res, next) => {
 
       try {
         let template = fs.readFileSync(path.join(distPath, 'template.html'), 'utf-8');
-        let title = 'ZORANDO - Boutique en ligne';
+        let title = 'Boutique en ligne Électroménager, Mode, Beauté';
         let description = 'Découvrez ZORANDO, votre boutique en ligne de confiance en Algérie. Achetez des produits de qualité au meilleur prix.';
         let keywords = 'boutique en ligne, e-commerce, Algérie, achat en ligne, électroménager, mode, beauté, maison, ZORANDO';
         const baseUrl = 'https://www.zorando.com';

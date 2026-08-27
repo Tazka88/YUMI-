@@ -21,14 +21,14 @@ const GridSkeleton = () => (
 );
 
 const THEME_IMAGES: Record<string, string> = {
-  ramadan:      "/images/themes/ramadan.jpg",
-  aid:          "/images/themes/aid.jpg",
-  independance: "/images/themes/independance.jpg",
-  yennayer:     "/images/themes/yennayer.jpg",
-  mouloud:      "/images/themes/mouloud.jpg",
-  rentree:      "/images/themes/rentree.jpg",
-  soldes:       "/images/themes/soldes.jpg",
-  ete:          "/images/themes/ete.jpg",
+  ramadan:      "",
+  aid:          "",
+  independance: "",
+  yennayer:     "",
+  mouloud:      "",
+  rentree:      "",
+  soldes:       "",
+  ete:          "",
   normal:       ""
 };
 

@@ -25,6 +25,11 @@ if (typeof window !== 'undefined') {
   };
 }
 
+// Nettoyer les balises SEO injectées par le SSR avant que React 19 ne les injecte à nouveau
+if (typeof document !== 'undefined') {
+  document.querySelectorAll('[data-rh="true"]').forEach(el => el.remove());
+}
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <App />

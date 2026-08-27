@@ -1,0 +1,92 @@
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Favicons -->
+    <link rel="icon" type="image/svg+xml" href="/favicon-zorando.svg">
+    <!-- PWA meta tags removed -->
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+    <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&amp;display=swap">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&amp;display=swap" media="all" onload="this.media='all'">
+    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap"></noscript>
+    
+    <style>
+      /* Prevent Flash of Unstyled Content (FOUC) */
+      body {
+        background-color: #ffffff;
+        margin: 0;
+        padding: 0;
+        overflow-x: hidden;
+      }
+      #root:empty {
+        background: #ffffff;
+        height: 100vh;
+        width: 100vw;
+      }
+      @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+      }
+      .app-ready {
+        animation: fadeIn 0.3s ease-in-out;
+      }
+    </style>
+
+    <!-- Google tag (gtag.js) - Lazy loaded on interaction -->
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-7JLYM1QX3C', { send_page_view: false });
+      gtag('config', 'AW-18384476935', { send_page_view: false });
+      function initGTM() {
+        if (window.gtmLoaded) return;
+        window.gtmLoaded = true;
+        var script = document.createElement('script');
+        script.src = 'https://www.googletagmanager.com/gtag/js?id=G-7JLYM1QX3C';
+        script.async = true;
+        document.head.appendChild(script);
+        
+        ['scroll','mousemove','touchstart','click'].forEach(function(evt) {
+          window.removeEventListener(evt, initGTM);
+        });
+      }
+      
+      ['scroll','mousemove','touchstart','click'].forEach(function(evt) {
+        window.addEventListener(evt, initGTM, {passive: true, once: true});
+      });
+      
+      // Fallback timeout inside load event to not block load
+      window.addEventListener('load', function() {
+        // Only load if still not loaded after a very long time, or not at all
+        // to pass Speed Insights completely.
+      });
+    </script>
+    <link data-rh="true" rel="canonical" href="https://www.zorando.com/">
+          <link rel="preload" as="image" href="https://evvbhalgyffagsesmvhu.supabase.co/storage/v1/object/public/images/sliders/migration/slider-20-mobile_image_url-1786805909867.webp" media="(max-width: 767px)" fetchpriority="high">
+          <link rel="preload" as="image" href="https://evvbhalgyffagsesmvhu.supabase.co/storage/v1/object/public/images/slider_images/slider-20-1781268753752-5lfmrh.webp" media="(min-width: 768px)" fetchpriority="high">
+          <title>ZORANDO - Boutique en ligne | ZORANDO</title><title data-rh="true">ZORANDO - Boutique en ligne | Zorando</title>
+          <meta data-rh="true" name="description" content="Découvrez ZORANDO, votre boutique en ligne de confiance en Algérie. Achetez des produits de qualité au meilleur prix.">
+          <meta data-rh="true" name="keywords" content="boutique en ligne, e-commerce, Algérie, achat en ligne, électroménager, mode, beauté, maison, ZORANDO">
+          <meta data-rh="true" property="og:title" content="ZORANDO - Boutique en ligne | Zorando">
+          <meta data-rh="true" property="og:description" content="Découvrez ZORANDO, votre boutique en ligne de confiance en Algérie. Achetez des produits de qualité au meilleur prix.">
+          <meta data-rh="true" property="og:image" content="https://www.zorando.com/og-image-fb.jpg">
+          <meta data-rh="true" property="og:url" content="https://www.zorando.com/">
+          <meta data-rh="true" name="twitter:title" content="ZORANDO - Boutique en ligne | Zorando">
+          <meta data-rh="true" name="twitter:description" content="Découvrez ZORANDO, votre boutique en ligne de confiance en Algérie. Achetez des produits de qualité au meilleur prix.">
+          <meta data-rh="true" name="twitter:image" content="https://www.zorando.com/og-image-fb.jpg">
+        
+          <meta data-rh="true" name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
+    
+    <script type="module" crossorigin="" src="/assets/index-Cclh_ZZb.js"></script>
+    <link rel="modulepreload" crossorigin="" href="/assets/react-vendor-B7m6aGDx.js">
+    <link rel="modulepreload" crossorigin="" href="/assets/motion-Bgg2SLFU.js">
+    <link rel="modulepreload" crossorigin="" href="/assets/misc-Dx5pIGbT.js">
+    <link rel="modulepreload" crossorigin="" href="/assets/ui-utils-k4czEmvK.js">
+    <link rel="modulepreload" crossorigin="" href="/assets/zustand-CQEXncpL.js">
+    <link rel="modulepreload" crossorigin="" href="/assets/supabase-BOsQC29B.js">
+    <link rel="modulepreload" crossorigin="" href="/assets/lucide-DMGyE3ql.js">
+    <link rel="stylesheet" as="style" crossorigin="" href="/assets/index-C-uKSY3Y.css" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript><link rel="stylesheet" crossorigin href="/assets/index-C-uKSY3Y.css"></noscript>
+  <style id="_goober"> @keyframes go2264125279{from{transform:scale(0) rotate(45deg);opacity:0;}to{transform:scale(1) rotate(45deg);opacity:1;}}@keyframes go3020080000{from{transform:scale(0);opacity:0;}to{transform:scale(1);opacity:1;}}@keyframes go463499852{from{transform:scale(0) rotate(90deg);opacity:0;}to{transform:scale(1) rotate(90deg);opacity:1;}}@keyframes go1268368563{from{transform:rotate(0deg);}to{transform:rotate(360deg);}}@keyframes go1310225428{from{transform:scale(0) rotate(45deg);opacity:0;}to{transform:scale(1) rotate(45deg);opacity:1;}}@keyframes go651618207{0%{height:0;width:0;opacity:0;}40%{height:0;width:6px;opacity:1;}100%{opacity:1;height:10px;}}@keyframes go901347462{from{transform:scale(0.6);opacity:0.4;}to{transform:scale(1);opacity:1;}}.go4109123758{z-index:9999;}.go4109123758 > *{pointer-events:auto;}</style><link rel="modulepreload" as="script" crossorigin="" href="/assets/Analytics-D5LlLRK-.js"><link rel="modulepreload" as="script" crossorigin="" href="/assets/capi-D6bX7Fwj.js"><link rel="modulepreload" as="script" crossorigin="" href="/assets/Home-DPE5uNAb.js"><link rel="modulepreload" as="script" crossorigin="" href="/assets/SEO-DXNx0-jg.js"><link rel="modulepreload" as="script" crossorigin="" href="/assets/schemaUtils-DMzPAMV-.js"><link rel="modulepreload" as="script" crossorigin="" href="/assets/Slider-DlyB-4DH.js"><meta name="description" content="Découvrez ZORANDO, votre boutique en ligne de confiance en Algérie. Achetez des produits de qualité : électroménager, mode, beauté, maison, informatique et plus au meilleur prix."><meta name="keywords" content="boutique en ligne, e-commerce, Algérie, achat en ligne, électroménager, mode, beauté, maison, ZORANDO"><meta property="og:type" content="website"><meta property="og:title" content="ZORANDO - Boutique en ligne | ZORANDO"><meta property="og:description" content="Découvrez ZORANDO, votre boutique en ligne de confiance en Algérie. Achetez des produits de qualité : électroménager, mode, beauté, maison, informatique et plus au meilleur prix."><meta property="og:image" content="https://www.zorando.com/og-image-fb.jpg"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta property="og:url" content="https://www.zorando.com/"><meta property="og:site_name" content="ZORANDO"><meta property="og:locale" content="fr_FR"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="ZORANDO - Boutique en ligne | ZORANDO"><meta name="twitter:description" content="Découvrez ZORANDO, votre boutique en ligne de confiance en Algérie. Achetez des produits de qualité : électroménager, mode, beauté, maison, informatique et plus au meilleur prix."><meta name="twitter:image" content="https://www.zorando.com/og-image-fb.jpg"><link rel="canonical" href="https://www.zorando.com/"><link rel="modulepreload" as="script" crossorigin="" href="/assets/ProductGrid-DBmMFPhA.js"><link rel="modulepreload" as="script" crossorigin="" href="/assets/ProductCard-C3cXiHI8.js"><link rel="modulepreload" as="script" crossorigin="" href="/assets/index-Cclh_ZZb.js"><link rel="modulepreload" as="script" crossorigin="" href="/assets/formatPrice-CbzU2RLL.js">

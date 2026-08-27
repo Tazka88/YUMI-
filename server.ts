@@ -30,11 +30,16 @@ async function startServer() {
     res.redirect(301, '/favicon-zorando.svg');
   });
 
-  // Redirect non-www to www to consolidate SEO
+  // Redirect non-www to www and force HTTPS to consolidate SEO
   app.use((req, res, next) => {
     const hostname = req.hostname;
-    if (hostname === 'zorando.com') {
-      return res.redirect(301, `https://www.zorando.com${req.originalUrl}`);
+    const isHttp = req.headers['x-forwarded-proto'] === 'http';
+    
+    // Ignore localhost during development
+    if (hostname !== 'localhost' && hostname !== '127.0.0.1' && !hostname.includes('run.app')) {
+      if (hostname === 'zorando.com' || isHttp) {
+        return res.redirect(301, `https://www.zorando.com${req.originalUrl}`);
+      }
     }
     next();
   });
@@ -397,14 +402,21 @@ app.get('*', async (req, res, next) => {
           const slug = req.path.split('/')[2];
           const [product] = await sql`
             SELECT p.id, p.name, p.description, p.seo_title, p.seo_description, p.seo_keywords, p.price, p.promo_price, p.promo_price_start_date, p.promo_price_end_date, p.sku, p.stock, 
-            CASE WHEN p.image LIKE 'data:image/%' THEN '/api/images/products/' || p.id || '/image/' || p.slug || '.webp' ELSE p.image END as image,
+             CASE WHEN p.image LIKE 'data:image/%' THEN '/api/images/products/' || p.id || '/image/' || p.slug || '.webp' ELSE p.image END as image,
             COALESCE(p.brand_name, b.name) as brand_name,
             c.name as category_name,
+            c.slug as category_slug,
+            sub.name as subcategory_name,
+            sub.slug as subcategory_slug,
+            subsub.name as sub_subcategory_name,
+            subsub.slug as sub_subcategory_slug,
             (SELECT COUNT(*) FROM reviews r WHERE r.product_id = p.id) as reviews_count,
             (SELECT COALESCE(AVG(rating), 0) FROM reviews r WHERE r.product_id = p.id) as avg_rating
             FROM products p
             LEFT JOIN brands b ON p.brand_id = b.id
             LEFT JOIN categories c ON p.category_id = c.id
+            LEFT JOIN subcategories sub ON p.subcategory_id = sub.id
+            LEFT JOIN sub_subcategories subsub ON p.sub_subcategory_id = subsub.id
             WHERE p.slug = ${slug}
           `;
           

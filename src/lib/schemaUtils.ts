@@ -13,8 +13,8 @@ export function buildBreadcrumbSchema(items: { name: string; item: string }[]) {
 }
 
 export function buildProductSchema(product: any, reviews: any[], currentUrl: string, baseUrl: string = 'https://www.zorando.com') {
-  const isPromo = product.promo_price && Number(product.promo_price) < Number(product.price);
-  const currentPrice = isPromo ? Number(product.promo_price).toFixed(2) : Number(product.price).toFixed(2);
+  const isPromo = product.promo_price !== null && product.promo_price !== undefined && !isNaN(Number(product.promo_price)) && Number(product.promo_price) > 0 && Number(product.promo_price) < Number(product.price);
+  const currentPrice = isPromo ? Number(product.promo_price).toFixed(2) : (!isNaN(Number(product.price)) ? Number(product.price).toFixed(2) : "0.00");
 
   let imageUrl = product.image;
   if (imageUrl && imageUrl.startsWith('/')) {
@@ -73,6 +73,7 @@ export function buildProductSchema(product: any, reviews: any[], currentUrl: str
 
   if (reviewCount > 0) {
     let avgRating = Number(product.avg_rating || 0);
+    if (avgRating < 1 && reviewCount > 0) avgRating = 5;
     if (reviews && reviews.length > 0) {
       avgRating = Number((reviews.reduce((acc: number, r: any) => acc + Number(r.rating), 0) / reviews.length).toFixed(1));
     }

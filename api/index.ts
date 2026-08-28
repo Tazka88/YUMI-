@@ -6,6 +6,7 @@ import path from 'path';
 import fs from 'fs';
 import { sql } from '../src/db/setup.js';
 import { categorySEOData } from '../src/utils/seoData.js';
+import { buildProductSchema, buildBreadcrumbSchema } from '../src/lib/schemaUtils.js';
 
 const app = express();
 
@@ -262,7 +263,26 @@ app.get('*', async (req, res, next) => {
         } else if (req.path.startsWith('/product/')) {
       const slug = req.path.split('/')[2];
       try {
-        const [product] = await sql`SELECT p.id, p.name, p.description, p.seo_title, p.seo_description, p.seo_keywords, p.price, p.promo_price, p.image, p.stock, c.name as category_name, c.slug as category_slug, b.name as brand_name FROM products p LEFT JOIN categories c ON p.category_id = c.id LEFT JOIN brands b ON p.brand_id = b.id WHERE p.slug = ${slug}`;
+        const [product] = await sql`
+          SELECT p.id, p.name, p.description, p.seo_title, p.seo_description, p.seo_keywords, p.price, p.promo_price, p.promo_price_start_date, p.promo_price_end_date, p.sku, p.stock, 
+             CASE WHEN p.image LIKE 'data:image/%' THEN '/api/images/products/' || p.id || '/image/' || p.slug || '.webp' ELSE p.image END as image,
+            COALESCE(p.brand_name, b.name) as brand_name,
+            c.name as category_name,
+            c.slug as category_slug,
+            b.name as brand_name,
+            sub.name as subcategory_name,
+            sub.slug as subcategory_slug,
+            subsub.name as sub_subcategory_name,
+            subsub.slug as sub_subcategory_slug,
+            (SELECT COUNT(*) FROM reviews r WHERE r.product_id = p.id) as reviews_count,
+            (SELECT COALESCE(AVG(rating), 0) FROM reviews r WHERE r.product_id = p.id) as avg_rating
+            FROM products p
+            LEFT JOIN brands b ON p.brand_id = b.id
+            LEFT JOIN categories c ON p.category_id = c.id
+            LEFT JOIN subcategories sub ON p.subcategory_id = sub.id
+            LEFT JOIN sub_subcategories subsub ON p.sub_subcategory_id = subsub.id
+            WHERE p.slug = ${slug}
+        `;
         if (product) {
           title = product.seo_title || `${product.name} | Zorando`;
           description = product.seo_description ? cleanForSEO(product.seo_description) : (product.description ? cleanForSEO(product.description, 160) : `Achetez ${product.name} au meilleur prix sur ZORANDO.`);
@@ -280,74 +300,39 @@ app.get('*', async (req, res, next) => {
             }
           }
           
-          const displayPrice = (product.promo_price && Number(product.promo_price) > 0) ? Number(product.promo_price).toFixed(2) : Number(product.price).toFixed(2);
-          seoHtml = '';
-          
-          const schemaData = {
-            "@context": "https://schema.org",
-            "@graph": [
-              {
-                "@type": "Product",
-                "name": product.name,
-                "image": [ogImage],
-                "description": product.seo_description || cleanForSEO(product.description, 160) || "",
-                "sku": String(product.id),
-                "brand": {
-                  "@type": "Brand",
-                  "name": product.brand_name || 'Zorando'
-                },
-                "offers": {
-                  "@type": "Offer",
-                  "url": `${baseUrl}/product/${slug}`,
-                  "priceCurrency": "DZD",
-                  "price": displayPrice.toString(),
-                  "availability": product.stock > 0 ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
-                  "itemCondition": "https://schema.org/NewCondition",
-                  "priceValidUntil": "2027-12-31",
-                  "seller": {
-                    "@type": "Organization",
-                    "name": "Zorando",
-                    "url": baseUrl
-                  }
-                }
-              },
-              {
-                "@type": "BreadcrumbList",
-                "itemListElement": [
-                  {
-                    "@type": "ListItem",
-                    "position": 1,
-                    "name": "Accueil",
-                    "item": baseUrl
-                  }
-                ]
-              }
-            ]
-          };
-
-          if (product.category_name && product.category_slug) {
-             schemaData["@graph"][1].itemListElement.push({
-                "@type": "ListItem",
-                "position": 2,
-                "name": product.category_name,
-                "item": `${baseUrl}/category/${product.category_slug}`
-             });
-             schemaData["@graph"][1].itemListElement.push({
-                "@type": "ListItem",
-                "position": 3,
-                "name": product.name,
-                "item": `${baseUrl}${req.path}`
-             });
-          } else {
-             schemaData["@graph"][1].itemListElement.push({
-                "@type": "ListItem",
-                "position": 2,
-                "name": product.name,
-                "item": `${baseUrl}${req.path}`
-             });
+          let isPromoValid = false;
+          if (product.promo_price !== null && product.promo_price !== undefined && !isNaN(Number(product.promo_price)) && Number(product.promo_price) > 0 && Number(product.promo_price) < Number(product.price)) {
+              const now = new Date();
+              isPromoValid = true;
+              if (product.promo_price_start_date && new Date(product.promo_price_start_date) > now) isPromoValid = false;
+              if (product.promo_price_end_date && new Date(product.promo_price_end_date) < now) isPromoValid = false;
           }
           
-          headHtml += `\n<script type="application/ld+json">\n${JSON.stringify(schemaData)}\n</script>\n`;
+          const currentPrice = isPromoValid ? Number(product.promo_price) : Number(product.price);
+          
+          const allReviews = await sql`SELECT customer_name, rating, comment, created_at FROM reviews WHERE product_id = ${product.id} ORDER BY created_at DESC`;
+          
+          const productSchema = buildProductSchema(product, allReviews, `${baseUrl}${req.path}`, baseUrl);
+          
+          const breadcrumbItems = [
+            { name: 'Accueil', item: baseUrl }
+          ];
+          if (product.category_slug) {
+            breadcrumbItems.push({ name: product.category_name || 'Catégorie', item: `${baseUrl}/category/${product.category_slug}` });
+          }
+          if (product.subcategory_slug) {
+            breadcrumbItems.push({ name: product.subcategory_name, item: `${baseUrl}/category/${product.subcategory_slug}?sub=true` });
+          }
+          if (product.sub_subcategory_slug) {
+            breadcrumbItems.push({ name: product.sub_subcategory_name, item: `${baseUrl}/category/${product.sub_subcategory_slug}?subsub=true` });
+          }
+          breadcrumbItems.push({ name: product.name, item: `${baseUrl}${req.path}` });
+          
+          const breadcrumbSchema = buildBreadcrumbSchema(breadcrumbItems);
+          
+          const schemaData = { "@context": "https://schema.org", "@graph": [productSchema, breadcrumbSchema].filter(Boolean) };
+          
+          headHtml += `\n<script type="application/ld+json" data-rh="true">\n${JSON.stringify(schemaData)}\n</script>\n`;
         } else {
           isNotFound = true;
         }

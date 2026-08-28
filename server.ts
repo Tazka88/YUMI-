@@ -474,7 +474,28 @@ app.get('*', async (req, res, next) => {
             delete productSchema["@context"];
             delete breadcrumbSchema["@context"];
             const graphSchema = { "@context": "https://schema.org", "@graph": [productSchema, breadcrumbSchema].filter(Boolean) };
-            seoHtml = `<script type="application/ld+json">${JSON.stringify(graphSchema)}</script>`;
+            
+            headHtml += `<meta property="og:type" content="product" />\n`;
+            headHtml += `<meta name="twitter:card" content="summary_large_image" />\n`;
+            headHtml += `<meta property="product:price:amount" content="${displayPrice}" />\n`;
+            headHtml += `<meta property="product:price:currency" content="DZD" />\n`;
+            
+            const staticBody = `
+              <div style="display:none;" id="seo-static-content">
+                <h1>${product.name}</h1>
+                <img src="${ogImage}" alt="${product.name}" />
+                <p><strong>Prix:</strong> ${displayPrice} DZD</p>
+                <div>${description}</div>
+                <div>
+                  <h2>Catégories</h2>
+                  <ul>
+                    <li><a href="${baseUrl}/category/${product.category_slug}">${product.category_name}</a></li>
+                  </ul>
+                </div>
+              </div>
+            `;
+            
+            seoHtml = `<script type="application/ld+json">${JSON.stringify(graphSchema)}</script>\n${staticBody}`;
           } else {
             isNotFound = true;
           }
@@ -573,7 +594,7 @@ app.get('*', async (req, res, next) => {
         
         console.log('Final title to inject:', title);
         console.log('Final title to inject:', title);
-        let finalHtml = template.replace('<!--seo-injection-->', typeof seoHtml !== 'undefined' ? seoHtml : '');
+        let finalHtml = template.replace('<div id="root"></div>', `<div id="root">${typeof seoHtml !== 'undefined' ? seoHtml : ''}</div>`);
         finalHtml = finalHtml.replace('<!--head-injection-->', (typeof headHtml !== 'undefined' ? headHtml : '') + seoTags);
         
         if (isNotFound) {

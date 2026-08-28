@@ -335,6 +335,28 @@ app.get('*', async (req, res, next) => {
           const schemaData = { "@context": "https://schema.org", "@graph": [productSchema, breadcrumbSchema].filter(Boolean) };
           
           headHtml += `\n<script type="application/ld+json">\n${JSON.stringify(schemaData)}\n</script>\n`;
+          
+          headHtml += `<meta property="og:type" content="product" />\n`;
+          headHtml += `<meta name="twitter:card" content="summary_large_image" />\n`;
+          headHtml += `<meta property="product:price:amount" content="${displayPrice}" />\n`;
+          headHtml += `<meta property="product:price:currency" content="DZD" />\n`;
+          
+          // Inject static HTML for Googlebot in the root div (Point 1, 4, 6)
+          const staticBody = `
+            <div style="display:none;" id="seo-static-content">
+              <h1>${product.name}</h1>
+              <img src="${ogImage}" alt="${product.name}" />
+              <p><strong>Prix:</strong> ${displayPrice} DZD</p>
+              <div>${description}</div>
+              <div>
+                <h2>Catégories</h2>
+                <ul>
+                  <li><a href="${baseUrl}/category/${product.category_slug}">${product.category_name}</a></li>
+                </ul>
+              </div>
+            </div>
+          `;
+          seoHtml = staticBody;
         } else {
           isNotFound = true;
         }

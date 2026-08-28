@@ -23,11 +23,27 @@ export function buildProductSchema(product: any, reviews: any[], currentUrl: str
     imageUrl = `${baseUrl}/api/images/products/${product.id}/image/${product.slug}.webp`;
   }
 
+  const images: string[] = [];
+  if (imageUrl) images.push(imageUrl);
+  
+  if (product.images && Array.isArray(product.images)) {
+    for (let img of product.images) {
+      if (img && img.startsWith('/')) {
+        images.push(`${baseUrl}${img}`);
+      } else if (img) {
+        images.push(img);
+      }
+    }
+  }
+
+  // Deduplicate array
+  const uniqueImages = [...new Set(images)];
+
   const schema: any = {
     "@context": "https://schema.org",
     "@type": "Product",
     "name": product.name,
-    "image": imageUrl,
+    "image": uniqueImages.length > 0 ? uniqueImages : undefined,
     "description": product.description ? product.description.substring(0, 5000).replace(/<[^>]+>/g, '') : '',
   };
 

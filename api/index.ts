@@ -312,6 +312,9 @@ app.get('*', async (req, res, next) => {
           
           const allReviews = await sql`SELECT customer_name, rating, comment, created_at FROM reviews WHERE product_id = ${product.id} ORDER BY created_at DESC`;
           
+          const extraImages = await sql`SELECT image FROM product_images WHERE product_id = ${product.id} ORDER BY id ASC`;
+          product.images = extraImages.map((img: any) => img.image);
+          
           const productSchema = buildProductSchema(product, allReviews, `${baseUrl}${req.path}`, baseUrl);
           
           const breadcrumbItems = [

@@ -471,8 +471,10 @@ app.get('*', async (req, res, next) => {
             
             const breadcrumbSchema = buildBreadcrumbSchema(breadcrumbItems);
             
+            delete productSchema["@context"];
+            delete breadcrumbSchema["@context"];
             const graphSchema = { "@context": "https://schema.org", "@graph": [productSchema, breadcrumbSchema].filter(Boolean) };
-            seoHtml = `<script type="application/ld+json" data-rh="true">${JSON.stringify(graphSchema)}</script>`;
+            seoHtml = `<script type="application/ld+json">${JSON.stringify(graphSchema)}</script>`;
           } else {
             isNotFound = true;
           }

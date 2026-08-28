@@ -330,9 +330,11 @@ app.get('*', async (req, res, next) => {
           
           const breadcrumbSchema = buildBreadcrumbSchema(breadcrumbItems);
           
+          delete productSchema["@context"];
+          delete breadcrumbSchema["@context"];
           const schemaData = { "@context": "https://schema.org", "@graph": [productSchema, breadcrumbSchema].filter(Boolean) };
           
-          headHtml += `\n<script type="application/ld+json" data-rh="true">\n${JSON.stringify(schemaData)}\n</script>\n`;
+          headHtml += `\n<script type="application/ld+json">\n${JSON.stringify(schemaData)}\n</script>\n`;
         } else {
           isNotFound = true;
         }

@@ -477,14 +477,14 @@ app.get('*', async (req, res, next) => {
             
             headHtml += `<meta property="og:type" content="product" />\n`;
             headHtml += `<meta name="twitter:card" content="summary_large_image" />\n`;
-            headHtml += `<meta property="product:price:amount" content="${displayPrice}" />\n`;
+            headHtml += `<meta property="product:price:amount" content="${currentPrice.toFixed(2)}" />\n`;
             headHtml += `<meta property="product:price:currency" content="DZD" />\n`;
             
             const staticBody = `
               <div style="display:none;" id="seo-static-content">
                 <h1>${product.name}</h1>
                 <img src="${ogImage}" alt="${product.name}" />
-                <p><strong>Prix:</strong> ${displayPrice} DZD</p>
+                <p><strong>Prix:</strong> ${currentPrice.toFixed(2)} DZD</p>
                 <div>${description}</div>
                 <div>
                   <h2>Catégories</h2>
@@ -594,7 +594,8 @@ app.get('*', async (req, res, next) => {
         
         console.log('Final title to inject:', title);
         console.log('Final title to inject:', title);
-        let finalHtml = template.replace('<div id="root"></div>', `<div id="root">${typeof seoHtml !== 'undefined' ? seoHtml : ''}</div>`);
+        let finalHtml = template.replace('<!--seo-injection-->', '');
+        finalHtml = finalHtml.replace('<div id="root"></div>', `<div id="root">${typeof seoHtml !== 'undefined' ? seoHtml : ''}</div>`);
         finalHtml = finalHtml.replace('<!--head-injection-->', (typeof headHtml !== 'undefined' ? headHtml : '') + seoTags);
         
         if (isNotFound) {

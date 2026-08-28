@@ -338,7 +338,7 @@ app.get('*', async (req, res, next) => {
           
           headHtml += `<meta property="og:type" content="product" />\n`;
           headHtml += `<meta name="twitter:card" content="summary_large_image" />\n`;
-          headHtml += `<meta property="product:price:amount" content="${displayPrice}" />\n`;
+          headHtml += `<meta property="product:price:amount" content="${currentPrice.toFixed(2)}" />\n`;
           headHtml += `<meta property="product:price:currency" content="DZD" />\n`;
           
           // Inject static HTML for Googlebot in the root div (Point 1, 4, 6)
@@ -346,7 +346,7 @@ app.get('*', async (req, res, next) => {
             <div style="display:none;" id="seo-static-content">
               <h1>${product.name}</h1>
               <img src="${ogImage}" alt="${product.name}" />
-              <p><strong>Prix:</strong> ${displayPrice} DZD</p>
+              <p><strong>Prix:</strong> ${currentPrice.toFixed(2)} DZD</p>
               <div>${description}</div>
               <div>
                 <h2>Catégories</h2>
@@ -433,7 +433,8 @@ app.get('*', async (req, res, next) => {
     
       <meta data-rh="true" name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />`;
     
-    let finalHtml = template.replace('<!--seo-injection-->', globalNav + (seoHtml || ''));
+    let finalHtml = template.replace('<!--seo-injection-->', globalNav);
+    finalHtml = finalHtml.replace('<div id="root"></div>', `<div id="root">${seoHtml || ''}</div>`);
     finalHtml = finalHtml.replace('<!--head-injection-->', headHtml + seoTags);
     
     if (isNotFound) {

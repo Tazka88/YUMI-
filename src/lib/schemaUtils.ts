@@ -35,6 +35,22 @@ export function buildProductSchema(product: any, reviews: any[], currentUrl: str
     schema.sku = product.sku;
   }
 
+  let mpn = '';
+  if (product.brand_name && product.name) {
+    // E.g., if brand_name is "Kemei" and name is "Tondeuse Kemei KM-1847 Sans Fil"
+    const brandRegex = new RegExp(`\\b${product.brand_name}\\s+([^\\s]+)`, 'i');
+    const match = product.name.match(brandRegex);
+    if (match && match[1]) {
+      mpn = match[1].replace(/[^a-zA-Z0-9-]/g, '');
+    }
+  }
+
+  if (mpn) {
+    schema.mpn = mpn;
+  } else {
+    schema.identifier_exists = false;
+  }
+
   if (product.brand_name) {
     schema.brand = {
       "@type": "Brand",

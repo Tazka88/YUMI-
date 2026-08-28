@@ -340,6 +340,7 @@ app.get('*', async (req, res, next) => {
           headHtml += `<meta name="twitter:card" content="summary_large_image" />\n`;
           headHtml += `<meta property="product:price:amount" content="${currentPrice.toFixed(2)}" />\n`;
           headHtml += `<meta property="product:price:currency" content="DZD" />\n`;
+          headHtml += `<meta property="product:availability" content="${product.stock > 0 ? 'in stock' : 'out of stock'}" />\n`;
           
           // Inject static HTML for Googlebot in the root div (Point 1, 4, 6)
           const staticBody = `

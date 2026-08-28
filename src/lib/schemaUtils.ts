@@ -28,10 +28,13 @@ export function buildProductSchema(product: any, reviews: any[], currentUrl: str
   
   if (product.images && Array.isArray(product.images)) {
     for (let img of product.images) {
-      if (img && img.startsWith('/')) {
-        images.push(`${baseUrl}${img}`);
-      } else if (img) {
-        images.push(img);
+      const imgStr = typeof img === 'string' ? img : img?.image;
+      if (imgStr && typeof imgStr === 'string') {
+        if (imgStr.startsWith('/')) {
+          images.push(`${baseUrl}${imgStr}`);
+        } else {
+          images.push(imgStr);
+        }
       }
     }
   }

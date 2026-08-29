@@ -629,7 +629,7 @@ app.get('*', async (req, res, next) => {
         res.header('Cache-Control', 'no-cache');
         res.send(finalHtml);
       } catch (err) {
-        console.error('SEO Injection Error:', err);
+        console.error('SEO Injection Error:', err); fs.appendFileSync('seo_error.log', err.stack + '\n');
         res.sendFile(path.join(distPath, 'template.html'));
       }
     });

@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <script type="module" src="/@vite/client"></script>
+
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- Favicons -->
+    <link rel="icon" type="image/svg+xml" href="/favicon-zorando.svg">
+    <!-- PWA meta tags removed -->
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" media="print" onload="this.media='all'">
+    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap"></noscript>
+    
+    <style>
+      /* Prevent Flash of Unstyled Content (FOUC) */
+      body {
+        background-color: #ffffff;
+        margin: 0;
+        padding: 0;
+        overflow-x: hidden;
+      }
+      #root:empty {
+        background: #ffffff;
+        height: 100vh;
+        width: 100vw;
+      }
+      @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+      }
+      .app-ready {
+        animation: fadeIn 0.3s ease-in-out;
+      }
+    </style>
+
+    <!-- Google tag (gtag.js) - Lazy loaded on interaction -->
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-7JLYM1QX3C', { send_page_view: false });
+      gtag('config', 'AW-18384476935', { send_page_view: false });
+      function initGTM() {
+        if (window.gtmLoaded) return;
+        window.gtmLoaded = true;
+        var script = document.createElement('script');
+        script.src = 'https://www.googletagmanager.com/gtag/js?id=G-7JLYM1QX3C';
+        script.async = true;
+        document.head.appendChild(script);
+        
+        ['scroll','mousemove','touchstart','click'].forEach(function(evt) {
+          window.removeEventListener(evt, initGTM);
+        });
+      }
+      
+      ['scroll','mousemove','touchstart','click'].forEach(function(evt) {
+        window.addEventListener(evt, initGTM, {passive: true, once: true});
+      });
+      
+      // Fallback timeout inside load event to not block load
+      window.addEventListener('load', function() {
+        // Only load if still not loaded after a very long time, or not at all
+        // to pass Speed Insights completely.
+      });
+    </script>
+    <!--head-injection-->
+    <!--seo-injection-->
+  </head>
+  <body>
+    <div id="root"></div>
+
+
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+

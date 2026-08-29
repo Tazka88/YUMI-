@@ -226,10 +226,13 @@ app.get('*', async (req, res, next) => {
         }
       } catch(e) { console.error("DB Error in SSR:", e); }
     } else if (req.path.startsWith('/category/')) {
-          const slug = req.path.split('/')[2];
-          
-          // FAST PATH: Use static SEO data first without querying the DB
-          if (categorySEOData && categorySEOData[slug]) {
+      const slug = req.path.split('/')[2];
+      
+      if (slug === 'all') {
+        title = 'Tous les produits | ZORANDO';
+        description = 'Découvrez tous nos produits sur ZORANDO. Nouveautés, ventes flash et meilleures ventes. Achetez au meilleur prix.';
+        seoHtml = '';
+      } else if (categorySEOData && categorySEOData[slug]) {
             title = categorySEOData[slug].title;
             description = categorySEOData[slug].description;
             if (categorySEOData[slug].keywords) keywords = categorySEOData[slug].keywords;

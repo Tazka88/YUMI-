@@ -271,7 +271,10 @@ Sitemap: https://www.zorando.com/sitemap.xml`);
 };
 
   
-  const staticRedirects = {
+  const staticRedirects: Record<string, string> = {
+    '/product/hoco-casque-sans-w45': '/product/hoco-casque-sans-fil-bluetooth-5-3-400mah-w45',
+    '/product/mi-band-10-bracelet-inteligent-150-modes-sportifs-cran-amoled-1-72-pouces-bt5-4-endurance-21-jours-5atm-diffusion-de-frequence-cardiaque': '/product/mi-band-10-bracelet-inteligent-150-modes-sportifs-ecran-amoled-1-72-pouces-bt5-4-endurance-21-jours-5atm-diffusion-de-frequence-cardiaque',
+    '/product/mi-band-10-bracelet-inteligent-150-modes-sportifs-ecran-amoled-172-pouces-bt54-endurance-21-jours-5atm-diffusion-de-frequence-cardiaque': '/product/mi-band-10-bracelet-inteligent-150-modes-sportifs-ecran-amoled-1-72-pouces-bt5-4-endurance-21-jours-5atm-diffusion-de-frequence-cardiaque',
     '/brands/bestway': '/brands/piscines-bestway-algerie',
     '/brands/hoco': '/brands/accessoires-hoco-algerie',
     '/brands/kemei': '/brands/tondeuses-kemei-algerie',
@@ -422,7 +425,17 @@ app.get('*', async (req, res, next) => {
           
           if (product) {
             title = product.seo_title || `${product.name} | Zorando`;
-            description = product.seo_description ? cleanForSEO(product.seo_description) : (product.description ? cleanForSEO(product.description, 160) : `Achetez ${product.name} au meilleur prix sur ZORANDO.`);
+            if (product.seo_description) {
+            description = cleanForSEO(product.seo_description);
+          } else if (product.description) {
+            const shortDesc = cleanForSEO(product.description, 80);
+            description = `Découvrez ${product.name} sur Zorando. ${shortDesc} Commandez vite au meilleur prix !`;
+            if (description.length > 160) {
+              description = `Découvrez ${product.name} sur Zorando. Commandez vite au meilleur prix !`;
+            }
+          } else {
+            description = `Achetez ${product.name} au meilleur prix sur ZORANDO.`;
+          }
             
             if (product.seo_keywords) { keywords = product.seo_keywords; }
             

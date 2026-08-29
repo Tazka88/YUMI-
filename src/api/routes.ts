@@ -2066,10 +2066,11 @@ function generateSlug(str: string): string {
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
+    .replace(/[.,'"]/g, '-') // Replace dots, commas, quotes with hyphens
     .trim()
-    .replace(/[^a-z0-9 -]/g, '')
-    .replace(/\s+/g, '-')
-    .replace(/-+/g, '-');
+    .replace(/[^a-z0-9\s-]/g, '') // Keep letters, numbers, spaces, hyphens
+    .replace(/[\s-]+/g, '-') // Collapse multiple spaces/hyphens
+    .replace(/^-+|-+$/g, '');
 }
 
 router.post('/admin/products', authenticate, async (req, res) => {

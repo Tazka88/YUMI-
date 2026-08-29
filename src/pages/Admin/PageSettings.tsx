@@ -26,22 +26,17 @@ export default function PageSettings() {
   }, []);
 
   const generateSlug = (title: string) => {
-    return title
-      .toLowerCase()
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/(^-|-$)+/g, '');
-  };
-
-  const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const title = e.target.value;
-    if (!editingPage) {
-      setPageForm({ ...pageForm, title, slug: generateSlug(title) });
-    } else {
-      setPageForm({ ...pageForm, title });
-    }
-  };
+  if (!title) return '';
+  return title
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[.,'"]/g, '-') // Replace dots, commas, quotes with hyphens
+    .trim()
+    .replace(/[^a-z0-9\s-]/g, '') // Keep letters, numbers, spaces, hyphens
+    .replace(/[\s-]+/g, '-') // Collapse multiple spaces/hyphens
+    .replace(/^-+|-+$/g, '');
+}
 
   const handlePageSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

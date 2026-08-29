@@ -8,50 +8,21 @@ const generateSlug = (text: string) => {
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
+    .replace(/[.,'"]/g, '-')
     .trim()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/(^-|-$)/g, '');
-};
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/[\s-]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
 
 export default function BlogAdmin() {
-  const [posts, setPosts] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
-  const [activeTab, setActiveTab] = useState<'posts' | 'categories'>('posts');
-  const [uploading, setUploading] = useState(false);
-  
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const image1Ref = useRef<HTMLInputElement>(null);
-  const image2Ref = useRef<HTMLInputElement>(null);
-  const image3Ref = useRef<HTMLInputElement>(null);
-
-  
+  const [posts, setPosts] = useState<any[]>([]);
   const [editingPost, setEditingPost] = useState<any>(null);
   const [editingCategory, setEditingCategory] = useState<any>(null);
+  const [uploading, setUploading] = useState(false);
 
-  useEffect(() => {
-    fetchData();
-  }, []);
 
-  const fetchData = async () => {
-    setLoading(true);
-    try {
-      const headers = { 'Authorization': `Bearer ${localStorage.getItem('adminToken')}` };
-      const [resPosts, resCats] = await Promise.all([
-        fetch(`/api/admin/blog/posts`, { headers }),
-        fetch(`/api/admin/blog/categories`, { headers })
-      ]);
-      if (resPosts.ok) setPosts(await resPosts.json());
-      if (resCats.ok) setCategories(await resCats.json());
-    } catch (err) {
-      toast.error('Erreur de chargement');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, fieldName: string = 'image_url') => {
     const file = e.target.files?.[0];
     if (!file) return;

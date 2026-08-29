@@ -485,7 +485,7 @@ app.get('*', async (req, res, next) => {
           headHtml += `<meta property="product:availability" content="${product.stock > 0 ? 'in stock' : 'out of stock'}" />\n`;
             
             const staticBody = `
-              <div style="position:absolute; left:-9999px; top:auto; width:1px; height:1px; overflow:hidden;" id="seo-static-content">
+              <div style="position:absolute; left:-9999px; top:auto; width:1px; height:1px; overflow:hidden;" id="seo-static-content" aria-hidden="true">
                 <h1>${product.name}</h1>
                 <img src="${ogImage}" alt="${product.name}" />
                 <p><strong>Prix:</strong> ${currentPrice.toFixed(2)} DZD</p>

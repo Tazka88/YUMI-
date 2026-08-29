@@ -347,7 +347,7 @@ app.get('*', async (req, res, next) => {
           
           // Inject static HTML for Googlebot in the root div (Point 1, 4, 6)
           const staticBody = `
-            <div style="position:absolute; left:-9999px; top:auto; width:1px; height:1px; overflow:hidden;" id="seo-static-content">
+            <div style="position:absolute; left:-9999px; top:auto; width:1px; height:1px; overflow:hidden;" id="seo-static-content" aria-hidden="true">
               <h1>${product.name}</h1>
               <img src="${ogImage}" alt="${product.name}" />
               <p><strong>Prix:</strong> ${currentPrice.toFixed(2)} DZD</p>

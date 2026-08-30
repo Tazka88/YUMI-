@@ -407,7 +407,7 @@ app.get('*', async (req, res, next) => {
         } else if (req.path.startsWith('/product/')) {
           const slug = req.path.split('/')[2];
           const [product] = await sql`
-            SELECT p.id, p.name, p.description, p.seo_title, p.seo_description, p.seo_keywords, p.price, p.promo_price, p.promo_price_start_date, p.promo_price_end_date, p.sku, p.stock, 
+            SELECT p.id, p.name, p.description, p.seo_title, p.seo_description, p.seo_keywords, p.price, p.promo_price, p.promo_price_start_date, p.promo_price_end_date, p.sku, p.stock, p.is_active, 
              CASE WHEN p.image LIKE 'data:image/%' THEN '/api/images/products/' || p.id || '/image/' || p.slug || '.webp' ELSE p.image END as image,
             COALESCE(p.brand_name, b.name) as brand_name,
             c.name as category_name,
@@ -427,6 +427,11 @@ app.get('*', async (req, res, next) => {
           `;
           
           if (product) {
+            if (product.is_active === false) {
+              const redirectUrl = product.category_slug ? `/category/${product.category_slug}` : '/';
+              res.redirect(301, redirectUrl);
+              return;
+            }
             title = product.seo_title || `${product.name} | Zorando`;
             if (product.seo_description) {
             description = cleanForSEO(product.seo_description);

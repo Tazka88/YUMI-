@@ -410,7 +410,7 @@ router.get('/sitemap.xml', async (req, res) => {
     const baseUrl = 'https://www.zorando.com';
     
     const [products, categories, subcategories, sub_subcategories, brands, pages] = await Promise.all([
-      sql`SELECT slug, created_at FROM products`,
+      sql`SELECT slug, created_at FROM products WHERE is_active = true`,
       sql`SELECT slug FROM categories`,
       sql`SELECT slug FROM subcategories`,
       sql`SELECT slug FROM sub_subcategories`,

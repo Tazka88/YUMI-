@@ -501,7 +501,7 @@ app.use((err: any, req: any, res: any, next: any) => {
 // Export the Express API for Vercel Serverless Functions
 
 async function startServer() {
-  const PORT = process.env.PORT || 3000;
+  const PORT = Number(process.env.PORT || 3000);
   
   if (process.env.NODE_ENV !== 'production') {
     const { createServer: createViteServer } = await import('vite');

@@ -1,7 +1,0 @@
-const postgres = require('postgres');
-const sql = postgres('postgresql://postgres:Lifebook88855@db.evvbhalgyffagsesmvhu.supabase.co:6543/postgres', { ssl: 'require' });
-(async () => {
-  const reviews = await sql`SELECT status, count(*) FROM reviews WHERE product_id = 37 GROUP BY status`;
-  console.log("Reviews stats:", reviews);
-  process.exit(0);
-})();

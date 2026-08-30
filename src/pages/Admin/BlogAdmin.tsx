@@ -21,6 +21,29 @@ export default function BlogAdmin() {
   const [editingPost, setEditingPost] = useState<any>(null);
   const [editingCategory, setEditingCategory] = useState<any>(null);
   const [uploading, setUploading] = useState(false);
+  const [search, setSearch] = useState('');
+
+  const fetchData = async () => {
+    try {
+      const [resPosts, resCats] = await Promise.all([
+        fetch('/api/admin/blog/posts', { headers: { 'Authorization': `Bearer ${localStorage.getItem('adminToken')}` } }),
+        fetch('/api/admin/blog/categories', { headers: { 'Authorization': `Bearer ${localStorage.getItem('adminToken')}` } })
+      ]);
+      if (resPosts.ok) {
+        setPosts(await resPosts.json());
+      }
+      if (resCats.ok) {
+        setCategories(await resCats.json());
+      }
+    } catch (err) {
+      console.error('Error fetching blog data:', err);
+      toast.error('Erreur lors du chargement des données');
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
 
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, fieldName: string = 'image_url') => {

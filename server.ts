@@ -204,13 +204,28 @@ app.get('*', async (req, res, next) => {
             headHtml += `\n          <link rel="preload" as="image" href="${desktopImage}" media="(min-width: 768px)" fetchpriority="high">`;
           }
         }
-        seoHtml = '';
+        seoHtml = `
+          <div style="position:absolute; left:-9999px; top:auto; width:1px; height:1px; overflow:hidden;" id="seo-static-content" aria-hidden="true">
+            <h1>ZORANDO - Boutique en ligne en Algérie</h1>
+            <p>${description}</p>
+            <h2>Nos Catégories</h2>
+            <ul>${categories.map((c) => `<li><a href="/category/${c.slug}">${c.name}</a></li>`).join('')}</ul>
+            <h2>Nos Marques</h2>
+            <ul>${brands.map((b) => `<li><a href="/brands/${b.slug}">${b.name}</a></li>`).join('')}</ul>
+          </div>
+        `;
       } catch(e) { console.error("DB Error in SSR:", e); }
     } else if (req.path === '/brands') {
       title = 'Toutes nos marques | Zorando';
       try {
         const brands = await sql`SELECT name, slug FROM brands`;
-        seoHtml = '';
+        seoHtml = `
+          <div style="position:absolute; left:-9999px; top:auto; width:1px; height:1px; overflow:hidden;" id="seo-static-content" aria-hidden="true">
+            <h1>${title}</h1>
+            <p>Découvrez toutes les marques partenaires de Zorando.</p>
+            <ul>${brands.map((b) => `<li><a href="/brands/${b.slug}">${b.name}</a></li>`).join('')}</ul>
+          </div>
+        `;
       } catch(e) { console.error("DB Error in SSR:", e); }
     } else if (req.path.startsWith('/brands/')) {
       const slug = req.path.split('/')[2];
@@ -219,8 +234,15 @@ app.get('*', async (req, res, next) => {
         if (brand) {
           title = `${brand.name} | Zorando`;
           description = brand.seo_description ? cleanForSEO(brand.seo_description) : (brand.description ? cleanForSEO(brand.description, 160) : `Découvrez tous les produits de la marque ${brand.name} sur ZORANDO.`);
-          const products = await sql`SELECT name, slug FROM products WHERE brand_id = ${brand.id}`;
-          seoHtml = '';
+          const products = await sql`SELECT name, slug FROM products WHERE brand_id = ${brand.id} AND is_active = true LIMIT 50`;
+          seoHtml = `
+          <div style="position:absolute; left:-9999px; top:auto; width:1px; height:1px; overflow:hidden;" id="seo-static-content" aria-hidden="true">
+            <h1>${title}</h1>
+            <p>${description}</p>
+            <h2>Produits ${brand.name}</h2>
+            <ul>${products.map((p) => `<li><a href="/product/${p.slug}">${p.name}</a></li>`).join('')}</ul>
+          </div>
+          `;
         } else {
           isNotFound = true;
         }
@@ -231,19 +253,19 @@ app.get('*', async (req, res, next) => {
       if (slug === 'all') {
         title = 'Tous les produits | ZORANDO';
         description = 'Découvrez tous nos produits sur ZORANDO. Nouveautés, ventes flash et meilleures ventes. Achetez au meilleur prix.';
-        seoHtml = '';
+        seoHtml = `<div style="position:absolute; left:-9999px; top:auto; width:1px; height:1px; overflow:hidden;" id="seo-static-content" aria-hidden="true"><h1>${title}</h1><p>${description}</p></div>`;
       } else if (categorySEOData && categorySEOData[slug]) {
             title = categorySEOData[slug].title;
             description = categorySEOData[slug].description;
             if (categorySEOData[slug].keywords) keywords = categorySEOData[slug].keywords;
-            seoHtml = ''; // No hidden content
+            seoHtml = `<div style="position:absolute; left:-9999px; top:auto; width:1px; height:1px; overflow:hidden;" id="seo-static-content" aria-hidden="true"><h1>${title}</h1><p>${description}</p></div>`;
           } else {
             try {
               const [category] = await sql`SELECT id, name FROM categories WHERE slug = ${slug}`;
               if (category) {
                 title = `${category.name} | ZORANDO`;
                 description = `Découvrez notre sélection de produits dans la catégorie ${category.name}. Achetez au meilleur prix sur ZORANDO.`;
-                seoHtml = '';
+                seoHtml = `<div style="position:absolute; left:-9999px; top:auto; width:1px; height:1px; overflow:hidden;" id="seo-static-content" aria-hidden="true"><h1>${title}</h1><p>${description}</p></div>`;
               } else {
                 const [subcat] = await sql`SELECT id, name FROM subcategories WHERE slug = ${slug}`;
                 if (subcat) {
@@ -398,6 +420,10 @@ app.get('*', async (req, res, next) => {
           if (post.main_image) {
             ogImage = post.main_image.startsWith('/') ? `${baseUrl}${post.main_image}` : `${baseUrl}/${post.main_image}`;
           }
+          seoHtml = `<div style="position:absolute; left:-9999px; top:auto; width:1px; height:1px; overflow:hidden;" id="seo-static-content" aria-hidden="true">
+            <h1>${post.title}</h1>
+            <p>${post.excerpt}</p>
+          </div>`;
         } else {
           isNotFound = true;
         }
@@ -405,6 +431,14 @@ app.get('*', async (req, res, next) => {
     } else if (req.path === '/blog') {
       title = 'Blog & Actualités | Zorando';
       description = 'Découvrez les dernières tendances, astuces et actualités sur le blog ZORANDO.';
+      try {
+        const posts = await sql`SELECT title, slug, excerpt FROM blog_posts WHERE status = 'published' ORDER BY created_at DESC LIMIT 20`;
+        seoHtml = `<div style="position:absolute; left:-9999px; top:auto; width:1px; height:1px; overflow:hidden;" id="seo-static-content" aria-hidden="true">
+          <h1>${title}</h1>
+          <p>${description}</p>
+          <ul>${posts.map((p) => `<li><h2><a href="/blog/${p.slug}">${p.title}</a></h2><p>${p.excerpt}</p></li>`).join('')}</ul>
+        </div>`;
+      } catch (e) { console.error("DB error in blog SSR", e); }
     } else if (req.path === '/about') {
       title = 'À propos de nous | Zorando';
       description = 'Découvrez l\'histoire de ZORANDO, votre boutique en ligne de confiance en Algérie.';

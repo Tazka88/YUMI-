@@ -328,7 +328,7 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     if (swrProducts) {
-      if (swrProducts.products) { setProducts(swrProducts.products); setTotalPages(Math.ceil((swrProducts.totalCount || 1) / itemsPerPage)); }
+      if (swrProducts.products) { setProducts(swrProducts.products); setTotalPages(Math.ceil((swrProducts.totalCount || swrProducts.total || 1) / itemsPerPage)); }
       else if (Array.isArray(swrProducts)) { setProducts(swrProducts); setTotalPages(Math.ceil(swrProducts.length / itemsPerPage)); }
     }
   }, [swrProducts, itemsPerPage]);

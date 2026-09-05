@@ -37,7 +37,7 @@ export default function Brands() {
   return (
     <div className="container mx-auto px-4 py-8">
       <SEO 
-        title="Nos Marques Partenaires : Qualité et Choix Garantis" 
+        title="Toutes nos marques : Qualité et Choix Garantis" 
         exactTitle={false}
         description="Parcourez toutes les grandes marques disponibles sur ZORANDO. Des produits authentiques et certifiés dans toutes les catégories. Achetez vos marques préférées !"
       />
@@ -76,7 +76,7 @@ export default function Brands() {
               <ImageIcon size={32} className="text-gray-400" />
             </div>
             <h3 className="text-lg font-bold text-gray-800 mb-2">Aucune marque disponible</h3>
-            <p className="text-gray-500">Revenez plus tard pour découvrir nos marques partenaires.</p>
+            <p className="text-gray-500">Revenez plus tard pour découvrir nos nouvelles marques.</p>
           </div>
         )}
       </div>

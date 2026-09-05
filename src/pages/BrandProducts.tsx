@@ -114,7 +114,7 @@ export default function BrandProducts() {
 
   if (isCategoryPage) {
     h1Title = `${currentCategory.name} ${brand.name} Algérie`;
-    pageTitle = `${currentCategory.name} ${brand.name} Algérie – ${currentCategory.name} et appareils | Zorando`;
+    pageTitle = `${currentCategory.name} ${brand.name} Algérie – ${currentCategory.name} au meilleur prix | Zorando`;
     metaDescription = `Découvrez les ${currentCategory.name.toLowerCase()} ${brand.name} disponibles en Algérie sur Zorando. Consultez les modèles, caractéristiques et prix des ${currentCategory.name.toLowerCase()} ${brand.name}.`;
     
     seoIntro = (
@@ -128,17 +128,17 @@ export default function BrandProducts() {
       </div>
     );
   } else {
-    h1Title = brand.h1_title || `${brand.name} Algérie – Électroménager et appareils ${brand.name}`;
-    pageTitle = brand.seo_title || `${brand.name} Algérie – Produits et Électroménager | Zorando`;
-    metaDescription = brand.seo_description || brand.description || `Découvrez tous les produits de la marque ${brand.name} disponibles en Algérie sur Zorando. Électroménager, appareils et bien plus au meilleur prix.`;
+    h1Title = brand.h1_title || `${brand.name} Algérie – Tous les produits ${brand.name}`;
+    pageTitle = brand.seo_title || `${brand.name} Algérie – Catalogue de produits | Zorando`;
+    metaDescription = brand.seo_description || brand.description || `Découvrez tous les produits de la marque ${brand.name} disponibles en Algérie sur Zorando. Le meilleur catalogue au meilleur prix.`;
     
     seoIntro = (
       <div className="prose prose-sm max-w-none text-gray-600 mb-6">
         <p>
           Découvrez notre sélection de produits <strong>{brand.name} Algérie</strong> sur Zorando. 
-          Nous proposons une large gamme de produits et d'<strong>électroménager {brand.name}</strong>, 
+          Nous proposons une gamme complète de <strong>produits {brand.name}</strong>, 
           reconnus pour leur qualité et leur fiabilité. 
-          Découvrez ci-dessous toutes les <strong>catégories d'appareils {brand.name}</strong> disponibles 
+          Parcourez ci-dessous toutes les <strong>catégories {brand.name}</strong> disponibles 
           pour faciliter votre quotidien. Achetez en ligne vos produits {brand.name} en toute sécurité en Algérie.
         </p>
       </div>
@@ -205,7 +205,7 @@ export default function BrandProducts() {
               <div key={`${cat.level}-${cat.id}`} className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 hover:border-orange-200 transition-colors flex flex-col">
                 <h3 className="text-lg font-bold text-gray-800 mb-2">{cat.name} {brand.name} Algérie</h3>
                 <p className="text-sm text-gray-500 mb-4 flex-1">
-                  Découvrez les {cat.name.toLowerCase()} et appareils {brand.name} disponibles en Algérie.
+                  Découvrez la gamme de {cat.name.toLowerCase()} {brand.name} disponible en Algérie.
                 </p>
                 <Link 
                   to={`/brands/${brand.slug}/${cat.slug}`}

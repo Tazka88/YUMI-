@@ -122,7 +122,7 @@ export async function sendCapiEvent({ eventName, eventId, customData, userData }
       }
 
       // Use keepalive to ensure the request completes even if the page unloads
-      const response = await fetch('/api/app-events/v1', {
+      const response = await fetch('/api/ui-sync', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

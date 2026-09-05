@@ -67,7 +67,7 @@ router.use((req, res, next) => {
 });
 
 // Mount CAPI routes (renamed to app-events to bypass adblockers)
-router.use('/app-events/v1', capiRoutes);
+router.use('/ui-sync', capiRoutes);
 
 
 // Mount Ecom-DZ routes
@@ -409,15 +409,13 @@ router.get('/sitemap.xml', async (req, res) => {
   try {
     const baseUrl = 'https://www.zorando.com';
     
-    const [products, categories, subcategories, sub_subcategories, brands, pages, brandCategories, brandSubCategories, brandSubSubCategories] = await Promise.all([
+    const [products, categories, subcategories, sub_subcategories, brands, pages, brandSubSubCategories] = await Promise.all([
       sql`SELECT slug, created_at FROM products WHERE is_active = true`,
       sql`SELECT slug FROM categories`,
       sql`SELECT slug FROM subcategories`,
       sql`SELECT slug FROM sub_subcategories`,
       sql`SELECT slug FROM brands`,
       sql`SELECT slug, updated_at FROM pages`,
-      sql`SELECT DISTINCT b.slug as brand_slug, c.slug as category_slug FROM products p JOIN brands b ON p.brand_id = b.id JOIN categories c ON p.category_id = c.id WHERE p.is_active = true AND p.category_id IS NOT NULL`,
-      sql`SELECT DISTINCT b.slug as brand_slug, c.slug as category_slug FROM products p JOIN brands b ON p.brand_id = b.id JOIN subcategories c ON p.subcategory_id = c.id WHERE p.is_active = true AND p.subcategory_id IS NOT NULL`,
       sql`SELECT DISTINCT b.slug as brand_slug, c.slug as category_slug FROM products p JOIN brands b ON p.brand_id = b.id JOIN sub_subcategories c ON p.sub_subcategory_id = c.id WHERE p.is_active = true AND p.sub_subcategory_id IS NOT NULL`
     ]);
 
@@ -492,8 +490,7 @@ router.get('/sitemap.xml', async (req, res) => {
       }
     };
     
-    brandCategories.forEach(row => addBrandCat(row.brand_slug, row.category_slug));
-    brandSubCategories.forEach(row => addBrandCat(row.brand_slug, row.category_slug));
+    // On ne garde QUE les sous-sous-catégories pour éviter le duplicate content SEO
     brandSubSubCategories.forEach(row => addBrandCat(row.brand_slug, row.category_slug));
 
 
@@ -714,24 +711,13 @@ router.get('/brands/:slug/categories', async (req, res) => {
   res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=60, stale-while-revalidate=300');
   try {
     const categories = await sql`
-      SELECT c.id, c.name, c.slug, 'category' as level 
-      FROM categories c 
-      JOIN products p ON p.category_id = c.id 
-      JOIN brands b ON p.brand_id = b.id 
-      WHERE b.slug = ${req.params.slug} AND p.is_active = true
-      UNION
-      SELECT c.id, c.name, c.slug, 'subcategory' as level 
-      FROM subcategories c 
-      JOIN products p ON p.subcategory_id = c.id 
-      JOIN brands b ON p.brand_id = b.id 
-      WHERE b.slug = ${req.params.slug} AND p.is_active = true
-      UNION
-      SELECT c.id, c.name, c.slug, 'sub_subcategory' as level 
-      FROM sub_subcategories c 
-      JOIN products p ON p.sub_subcategory_id = c.id 
-      JOIN brands b ON p.brand_id = b.id 
-      WHERE b.slug = ${req.params.slug} AND p.is_active = true
-      ORDER BY name ASC
+      SELECT DISTINCT
+        c.id, c.name, c.slug, 'sub_subcategory' as level 
+       FROM sub_subcategories c 
+       JOIN products p ON p.sub_subcategory_id = c.id 
+       JOIN brands b ON p.brand_id = b.id 
+       WHERE b.slug = ${req.params.slug} AND p.is_active = true
+       ORDER BY c.name ASC
     `;
     
     setCache(cacheKey, categories, 60); // 60 seconds cache

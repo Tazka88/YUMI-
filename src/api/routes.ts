@@ -840,6 +840,15 @@ router.get('/products', async (req, res) => {
   try {
     const idArray = ids ? ids.split(',').map(id => Number(id)).filter(id => !isNaN(id)) : [];
     
+    let searchCondition = sql`true`;
+    if (search) {
+      const searchWords = search.trim().split(/\s+/).filter(word => word.length > 0);
+      if (searchWords.length > 0) {
+        const conditions = searchWords.map(word => sql`p.name ILIKE ${'%' + word + '%'}`);
+        searchCondition = sql`(${conditions.reduce((acc, curr) => sql`${acc} AND ${curr}`)})`;
+      }
+    }
+    
     let orderClause = sql`ORDER BY p.created_at DESC`;
     if (sort === 'newest') {
       orderClause = sql`ORDER BY p.created_at DESC`;
@@ -863,7 +872,7 @@ router.get('/products', async (req, res) => {
         AND (${subcategory || null}::text IS NULL OR p.subcategory_id = (SELECT id FROM subcategories WHERE slug = ${subcategory || null} OR id = ${Number(subcategory) || 0} LIMIT 1) OR p.sub_subcategory_id IN (SELECT id FROM sub_subcategories WHERE subcategory_id = (SELECT id FROM subcategories WHERE slug = ${subcategory || null} OR id = ${Number(subcategory) || 0} LIMIT 1)))
         AND (${sub_subcategory || null}::text IS NULL OR p.sub_subcategory_id = (SELECT id FROM sub_subcategories WHERE slug = ${sub_subcategory || null} OR id = ${Number(sub_subcategory) || 0} LIMIT 1))
         AND (${brand || null}::text IS NULL OR p.brand_id = (SELECT id FROM brands WHERE slug = ${brand || null} OR id = ${Number(brand) || 0} LIMIT 1))
-        AND (${search || null}::text IS NULL OR p.name ILIKE ${search ? '%' + search + '%' : null})
+        AND (${searchCondition})
         AND (${popular === 'true' ? true : null}::boolean IS NULL OR p.is_popular = true)
         AND (${best_seller === 'true' ? true : null}::boolean IS NULL OR p.is_best_seller = true)
         AND (${isNew === 'true' ? true : null}::boolean IS NULL OR p.is_new = true)
@@ -1749,8 +1758,15 @@ router.get('/admin/products', authenticate, async (req, res) => {
     let conditions = [];
     
     if (search) {
-      const searchTerm = `%${search}%`;
-      conditions.push(sql`(p.name ILIKE ${searchTerm} OR p.description ILIKE ${searchTerm} OR p.id::text ILIKE ${searchTerm} OR p.sku ILIKE ${searchTerm})`);
+      const searchWords = search.trim().split(/\s+/).filter(word => word.length > 0);
+      if (searchWords.length > 0) {
+        const wordConditions = searchWords.map(word => {
+           const searchTerm = `%${word}%`;
+           return sql`(p.name ILIKE ${searchTerm} OR p.description ILIKE ${searchTerm} OR p.id::text ILIKE ${searchTerm} OR p.sku ILIKE ${searchTerm})`;
+        });
+        const combined = sql`(${wordConditions.reduce((acc, curr) => sql`${acc} AND ${curr}`)})`;
+        conditions.push(combined);
+      }
     }
 
     if (category_id) {

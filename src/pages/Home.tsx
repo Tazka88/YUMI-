@@ -286,17 +286,9 @@ const MasonryCategoryCard: React.FC<{ cat: any, index: number }> = ({ cat, index
   let spanClasses = '';
   let aspectClass = '';
   
-  // Predictable pattern instead of dynamic loading which causes stuttering
-  if (index % 5 === 0) {
-    spanClasses = 'col-span-2 row-span-1';
-    aspectClass = 'aspect-[16/9]';
-  } else if (index % 4 === 0) {
-    spanClasses = 'col-span-1 row-span-2';
-    aspectClass = 'aspect-[9/16]';
-  } else {
-    spanClasses = 'col-span-1 row-span-1';
-    aspectClass = 'aspect-square';
-  }
+  // Homogeneous layout
+  spanClasses = 'col-span-1 row-span-1';
+  aspectClass = 'aspect-square';
 
   return (
     <Link 
@@ -689,22 +681,12 @@ export default function Home() {
           </Link>
         </div>
         
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6 px-2 sm:px-0 grid-flow-row-dense">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6 px-2 sm:px-0">
           {categories.length === 0 ? (
             // Skeleton loader for categories
             [...Array(6)].map((_, i) => {
-              let spanClasses = '';
-              let aspectClass = '';
-              if (i % 5 === 0) {
-                spanClasses = 'col-span-2 row-span-1';
-                aspectClass = 'aspect-[16/9]';
-              } else if (i % 4 === 0) {
-                spanClasses = 'col-span-1 row-span-2';
-                aspectClass = 'aspect-[9/16]';
-              } else {
-                spanClasses = 'col-span-1 row-span-1';
-                aspectClass = 'aspect-square';
-              }
+              let spanClasses = 'col-span-1 row-span-1';
+              let aspectClass = 'aspect-square';
               return (
                 <div key={i} className={`rounded-2xl bg-gray-100 animate-pulse block ${spanClasses} ${aspectClass}`}></div>
               );

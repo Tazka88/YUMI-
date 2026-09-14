@@ -45,7 +45,7 @@ export const ProductCard: React.FC<{ product: Product; priority?: boolean; isFla
 
   return (
     <div className="bg-white rounded-xl shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden group flex flex-col h-full relative border border-gray-100">
-      <div className="relative block h-36 sm:h-48 overflow-hidden">
+      <div className="relative block aspect-[4/5] sm:aspect-square bg-gray-50/50 overflow-hidden shrink-0">
         {/* Badges - Top left */}
         <div className="absolute top-1 left-1 sm:top-2 sm:left-2 flex flex-col gap-1 z-10">
           {isPromo && (
@@ -86,7 +86,7 @@ export const ProductCard: React.FC<{ product: Product; priority?: boolean; isFla
             decoding="async"
             width="400"
             height="400"
-            className={`w-full h-full object-contain p-4 bg-white group-hover:scale-110 transition-transform duration-500 ${isOutOfStock ? 'opacity-50 grayscale' : ''}`}
+            className={`w-full h-full object-contain p-2 sm:p-3 drop-shadow-sm group-hover:scale-110 transition-transform duration-500 mix-blend-multiply ${isOutOfStock ? 'opacity-50 grayscale' : ''}`}
             referrerPolicy="no-referrer"
           />
 
@@ -101,7 +101,7 @@ export const ProductCard: React.FC<{ product: Product; priority?: boolean; isFla
         </Link>
       </div>
       
-      <div className="p-3 sm:p-4 flex flex-col flex-grow">
+      <div className="p-2 sm:p-3 flex flex-col flex-grow bg-white">
         <Link to={`/product/${product.slug}`} className="text-xs sm:text-sm text-gray-800 hover:text-orange-500 line-clamp-2 mb-1 sm:mb-2 flex-grow font-medium leading-snug">
           {product.name}
         </Link>

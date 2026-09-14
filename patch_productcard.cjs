@@ -2,22 +2,21 @@ const fs = require('fs');
 
 let content = fs.readFileSync('src/components/ProductCard.tsx', 'utf8');
 
-// The block to replace
-const oldBlock = `<div className="flex items-end gap-1.5 sm:gap-2">
-                <div className="text-base sm:text-lg font-bold text-gray-900">{formatPrice(product.promo_price!)}</div>
-                <div className="text-[10px] sm:text-xs text-gray-500 line-through mb-0.5 sm:mb-1">{formatPrice(product.price)}</div>
-              </div>`;
+// Replace the image wrapper and the text block container
+content = content.replace(
+  '<div className="relative block h-36 sm:h-48 overflow-hidden">',
+  '<div className="relative block aspect-[4/5] sm:aspect-square bg-gray-50/50 overflow-hidden shrink-0">'
+);
 
-const newBlock = `<div className="flex items-end gap-1.5 sm:gap-2">
-                <div className="text-base sm:text-lg font-bold text-gray-900">{formatPrice(product.promo_price!)}</div>
-                <span className="sr-only"> au lieu de </span>
-                <div className="text-[10px] sm:text-xs text-gray-500 line-through mb-0.5 sm:mb-1">{formatPrice(product.price)}</div>
-              </div>`;
+content = content.replace(
+  'className={`w-full h-full object-contain p-4 bg-white group-hover:scale-110 transition-transform duration-500 ${isOutOfStock ? \'opacity-50 grayscale\' : \'\'}`}',
+  'className={`w-full h-full object-contain p-2 sm:p-3 drop-shadow-sm group-hover:scale-110 transition-transform duration-500 mix-blend-multiply ${isOutOfStock ? \'opacity-50 grayscale\' : \'\'}`}'
+);
 
-if (content.includes(oldBlock)) {
-    content = content.replace(oldBlock, newBlock);
-    fs.writeFileSync('src/components/ProductCard.tsx', content);
-    console.log('Patched ProductCard.tsx');
-} else {
-    console.log('Failed to patch ProductCard.tsx, block not found');
-}
+content = content.replace(
+  '<div className="p-3 sm:p-4 flex flex-col flex-grow">',
+  '<div className="p-2 sm:p-3 flex flex-col flex-grow bg-white">'
+);
+
+fs.writeFileSync('src/components/ProductCard.tsx', content);
+console.log('Patched ProductCard.tsx');

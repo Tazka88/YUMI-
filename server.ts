@@ -230,9 +230,9 @@ app.get('*', async (req, res, next) => {
     } else if (req.path.startsWith('/brands/')) {
       const parts = req.path.split('/');
       const slug = parts[2];
-      const categorySlug = parts[3];
+      const categorySlug = parts[3]; console.log('SSR BRAND ROUTE:', slug, categorySlug);
 
-      if (slug === 'electromenager-moulinex-algerie' && categorySlug === 'bouilloires') {
+      if (req.path.includes('electromenager-moulinex-algerie') && req.path.includes('bouilloires')) {
         title = '🍳 Bouilloires Moulinex en Algérie | Prix & Achat | ZORANDO';
         description = 'Découvrez les bouilloires Moulinex disponibles chez ZORANDO : 0,8 L, 1,2 L, 1,7 L, 2000 W, 2400 W et plus. Prix compétitifs, livraison dans les 58 wilayas et paiement à la livraison.';
         keywords = '';

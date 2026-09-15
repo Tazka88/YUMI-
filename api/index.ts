@@ -218,7 +218,7 @@ app.get('*', async (req, res, next) => {
       const categorySlug = parts[3];
 
       if (req.path.includes('electromenager-moulinex-algerie') && req.path.includes('bouilloires')) {
-        title = '🍳 Bouilloires Moulinex en Algérie | Prix & Achat | ZORANDO';
+        title = 'Bouilloires Moulinex en Algérie | Prix & Achat | ZORANDO';
         description = 'Découvrez les bouilloires Moulinex disponibles chez ZORANDO : 0,8 L, 1,2 L, 1,7 L, 2000 W, 2400 W et plus. Prix compétitifs, livraison dans les 58 wilayas et paiement à la livraison.';
         keywords = '';
         ogUrl = `${baseUrl}${req.path}`;
@@ -275,8 +275,8 @@ app.get('*', async (req, res, next) => {
           });
 
           seoHtml = `
-          <div style="position:absolute; left:-9999px; top:auto; width:1px; height:1px; overflow:hidden;" id="seo-static-content" aria-hidden="true">
-            <h1>☕ Bouilloires Moulinex en Algérie</h1>
+          <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 prose" id="seo-static-content">
+            <h1>Bouilloires Moulinex en Algérie</h1>
             <p>Vous recherchez une bouilloire Moulinex en Algérie pour préparer rapidement votre thé, café ou infusion ? ZORANDO vous propose une sélection de bouilloires électriques Moulinex adaptées à différents besoins et budgets. Retrouvez des modèles compacts de 0,8 L, des capacités de 1,2 L et des bouilloires familiales de 1,7 L, avec différentes puissances comme 2000 W et 2400 W selon les modèles. Comparez facilement les bouilloires Moulinex disponibles : capacité, puissance, matière, filtre anticalcaire, socle 360°, arrêt automatique et autres caractéristiques techniques. Chaque fiche produit présente les informations essentielles pour vous aider à choisir le modèle adapté à votre utilisation. Commandez votre bouilloire Moulinex en ligne sur ZORANDO et profitez de prix compétitifs, de la livraison dans les 58 wilayas d'Algérie et du paiement à la livraison.</p>
             ${productsHtml}
             <h2>Quelle bouilloire Moulinex choisir ?</h2>

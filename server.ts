@@ -226,27 +226,38 @@ app.get('*', async (req, res, next) => {
     } else if (req.path.startsWith('/brands/')) {
       const parts = req.path.split('/');
       const slug = parts[2];
-      const categorySlug = parts[3]; 
+      const categorySlug = parts[3];
+      console.log('SSR BRAND CAT:', slug, categorySlug); 
 
       if (categorySlug) {
         try {
           const [brand] = await sql`SELECT id, name, slug FROM brands WHERE slug = ${slug}`;
-          const [category] = await sql`SELECT id, name, slug FROM categories WHERE slug = ${categorySlug}`;
           
-          if (brand && category) {
+          let cat = null;
+          let catLevel = '';
+          const [category] = await sql`SELECT id, name, slug FROM categories WHERE slug = ${categorySlug}`;
+          if (category) { cat = category; catLevel = 'category_id'; }
+          else {
+            const [subcat] = await sql`SELECT id, name, slug FROM subcategories WHERE slug = ${categorySlug}`;
+            if (subcat) { cat = subcat; catLevel = 'subcategory_id'; }
+            else {
+              const [subsubcat] = await sql`SELECT id, name, slug FROM sub_subcategories WHERE slug = ${categorySlug}`;
+              if (subsubcat) { cat = subsubcat; catLevel = 'sub_subcategory_id'; }
+            }
+          }
+          
+          if (brand && cat) {
             if (brand.slug === 'electromenager-moulinex-algerie') {
-              const catName = category.name;
+              const catName = cat.name;
               title = `${catName} Moulinex en Algérie | Prix & Achat | ZORANDO`;
               description = `Découvrez la gamme de ${catName.toLowerCase()} Moulinex disponibles chez ZORANDO. Prix compétitifs, livraison dans les 58 wilayas et paiement à la livraison.`;
               ogUrl = `${baseUrl}${req.path}`;
               
-              const products = await sql`
-                SELECT p.name, p.slug, p.price, p.promo_price, p.stock, p.sku, 
-                CASE WHEN p.image LIKE 'data:image/%' THEN '' ELSE p.image END as image
-                FROM products p
-                WHERE p.brand_id = ${brand.id} AND p.category_id = ${category.id} AND p.is_active = true
-                LIMIT 50
-              `;
+              const products = catLevel === 'category_id' 
+                ? await sql`SELECT p.name, p.slug, p.price, p.promo_price, p.stock, p.sku, CASE WHEN p.image LIKE 'data:image/%' THEN '' ELSE p.image END as image FROM products p WHERE p.brand_id = ${brand.id} AND p.category_id = ${cat.id} AND p.is_active = true LIMIT 50`
+                : catLevel === 'subcategory_id' 
+                ? await sql`SELECT p.name, p.slug, p.price, p.promo_price, p.stock, p.sku, CASE WHEN p.image LIKE 'data:image/%' THEN '' ELSE p.image END as image FROM products p WHERE p.brand_id = ${brand.id} AND p.subcategory_id = ${cat.id} AND p.is_active = true LIMIT 50`
+                : await sql`SELECT p.name, p.slug, p.price, p.promo_price, p.stock, p.sku, CASE WHEN p.image LIKE 'data:image/%' THEN '' ELSE p.image END as image FROM products p WHERE p.brand_id = ${brand.id} AND p.sub_subcategory_id = ${cat.id} AND p.is_active = true LIMIT 50`;
               
               let productsHtml = products.map((p: any) => `
                 <div>
@@ -279,7 +290,7 @@ app.get('*', async (req, res, next) => {
                   { "@type": "ListItem", "position": 1, "name": "Accueil", "item": `${baseUrl}/` },
                   { "@type": "ListItem", "position": 2, "name": "Marques", "item": `${baseUrl}/brands` },
                   { "@type": "ListItem", "position": 3, "name": brand.name, "item": `${baseUrl}/brands/${slug}` },
-                  { "@type": "ListItem", "position": 4, "name": category.name, "item": `${baseUrl}${req.path}` }
+                  { "@type": "ListItem", "position": 4, "name": cat.name, "item": `${baseUrl}${req.path}` }
                 ]
               };
 
@@ -320,17 +331,15 @@ app.get('*', async (req, res, next) => {
               </div>
               `;
             } else {
-              title = `${category.name} ${brand.name} en Algérie | Prix & Achat | ZORANDO`;
-              description = `Découvrez les ${category.name.toLowerCase()} ${brand.name} disponibles en Algérie sur Zorando. Consultez les modèles, caractéristiques et prix des ${category.name.toLowerCase()} ${brand.name}.`;
+              title = `${cat.name} ${brand.name} en Algérie | Prix & Achat | ZORANDO`;
+              description = `Découvrez les ${cat.name.toLowerCase()} ${brand.name} disponibles en Algérie sur Zorando. Consultez les modèles, caractéristiques et prix des ${cat.name.toLowerCase()} ${brand.name}.`;
               ogUrl = `${baseUrl}${req.path}`;
               
-              const products = await sql`
-                SELECT p.name, p.slug, p.price, p.promo_price, p.stock, p.sku, 
-                CASE WHEN p.image LIKE 'data:image/%' THEN '' ELSE p.image END as image
-                FROM products p
-                WHERE p.brand_id = ${brand.id} AND p.category_id = ${category.id} AND p.is_active = true
-                LIMIT 50
-              `;
+              const products = catLevel === 'category_id' 
+                ? await sql`SELECT p.name, p.slug, p.price, p.promo_price, p.stock, p.sku, CASE WHEN p.image LIKE 'data:image/%' THEN '' ELSE p.image END as image FROM products p WHERE p.brand_id = ${brand.id} AND p.category_id = ${cat.id} AND p.is_active = true LIMIT 50`
+                : catLevel === 'subcategory_id' 
+                ? await sql`SELECT p.name, p.slug, p.price, p.promo_price, p.stock, p.sku, CASE WHEN p.image LIKE 'data:image/%' THEN '' ELSE p.image END as image FROM products p WHERE p.brand_id = ${brand.id} AND p.subcategory_id = ${cat.id} AND p.is_active = true LIMIT 50`
+                : await sql`SELECT p.name, p.slug, p.price, p.promo_price, p.stock, p.sku, CASE WHEN p.image LIKE 'data:image/%' THEN '' ELSE p.image END as image FROM products p WHERE p.brand_id = ${brand.id} AND p.sub_subcategory_id = ${cat.id} AND p.is_active = true LIMIT 50`;
               
               let productsHtml = products.map((p: any) => `
                 <div>
@@ -363,7 +372,7 @@ app.get('*', async (req, res, next) => {
                   { "@type": "ListItem", "position": 1, "name": "Accueil", "item": `${baseUrl}/` },
                   { "@type": "ListItem", "position": 2, "name": "Marques", "item": `${baseUrl}/brands` },
                   { "@type": "ListItem", "position": 3, "name": brand.name, "item": `${baseUrl}/brands/${slug}` },
-                  { "@type": "ListItem", "position": 4, "name": category.name, "item": `${baseUrl}${req.path}` }
+                  { "@type": "ListItem", "position": 4, "name": cat.name, "item": `${baseUrl}${req.path}` }
                 ]
               };
 
@@ -376,10 +385,10 @@ app.get('*', async (req, res, next) => {
 
               seoHtml = `
               <div id="seo-static-content" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 prose prose-sm max-w-none text-gray-700">
-                <h1>${category.name} ${brand.name} en Algérie</h1>
+                <h1>${cat.name} ${brand.name} en Algérie</h1>
                 <p>${description}</p>
                 ${productsHtml}
-                <h2>Les produits ${category.name} ${brand.name} disponibles chez ZORANDO</h2>
+                <h2>Les produits ${cat.name} ${brand.name} disponibles chez ZORANDO</h2>
                 <p>Comparez les modèles pour trouver le bon équilibre entre capacité, puissance et prix. Profitez de la livraison dans les 58 wilayas d'Algérie.</p>
               </div>
               `;

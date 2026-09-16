@@ -184,117 +184,146 @@ app.get('*', async (req, res, next) => {
     let ogImage = `${baseUrl}/og-image-fb.jpg`;
     let ogUrl = `${baseUrl}${req.path}`;
 
-    if (req.path === '/' || req.path === '/index.html') {
+        if (req.path === '/' || req.path === '/index.html') {
+      title = 'ZORANDO - Boutique en ligne en Algérie';
+      description = 'Découvrez ZORANDO, votre boutique en ligne de confiance en Algérie. Achetez des produits de qualité au meilleur prix. Livraison 58 wilayas.';
       try {
-        const categories = await sql`SELECT name, slug FROM categories`;
-        const brands = await sql`SELECT name, slug FROM brands`;
-        const [firstSlide] = await sql`SELECT id, image_url, mobile_image_url FROM slider_images WHERE is_active = true AND category_id IS NULL ORDER BY position ASC, id ASC LIMIT 1`;
-
-        headHtml = `\n          <link rel="canonical" href="${baseUrl}${req.path}" />\n          <link rel="preload" as="font" href="https://fonts.gstatic.com/s/roboto/v30/KFOmCnqEu92Fr1Mu4mxK.woff2" type="font/woff2" crossorigin="anonymous">`;
-
-        if (firstSlide) {
-          if (firstSlide.mobile_image_url) {
-            headHtml += `\n          <link rel="preload" as="image" href="${firstSlide.mobile_image_url}" media="(max-width: 767px)" fetchpriority="high">`;
-          } else if (firstSlide.image_url) {
-            headHtml += `\n          <link rel="preload" as="image" href="${firstSlide.image_url}" media="(max-width: 767px)" fetchpriority="high">`;
-          }
-
-          const desktopImage = firstSlide.image_url || firstSlide.mobile_image_url;
+        const categories = await sql`SELECT name, slug FROM categories ORDER BY name ASC`;
+        const brands = await sql`SELECT name, slug FROM brands ORDER BY name ASC`;
+        let desktopImage = '';
+        const [hero] = await sql`SELECT image_desktop FROM hero_slides WHERE is_active = true ORDER BY order_index ASC LIMIT 1`;
+        if (hero) {
+          desktopImage = hero.image_desktop.startsWith('/') ? `${baseUrl}${hero.image_desktop}` : `${baseUrl}/${hero.image_desktop}`;
+          ogImage = desktopImage;
           if (desktopImage) {
-            headHtml += `\n          <link rel="preload" as="image" href="${desktopImage}" media="(min-width: 768px)" fetchpriority="high">`;
+            headHtml += `
+          <link rel="preload" as="image" href="${desktopImage}" media="(min-width: 768px)" fetchpriority="high">`;
           }
         }
-        seoHtml = '';
+        seoHtml = `
+          <div id="seo-static-content" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 prose prose-sm max-w-none text-gray-700">
+            <h1>ZORANDO - Boutique en ligne en Algérie</h1>
+            <p>${description}</p>
+            <h2>Nos Catégories</h2>
+            <ul>${categories.map((c: any) => `<li><a href="/category/${c.slug}">${c.name}</a></li>`).join('')}</ul>
+            <h2>Nos Marques</h2>
+            <ul>${brands.map((b: any) => `<li><a href="/brands/${b.slug}">${b.name}</a></li>`).join('')}</ul>
+          </div>
+        `;
       } catch(e) { console.error("DB Error in SSR:", e); }
     } else if (req.path === '/brands') {
       title = 'Toutes nos marques | Zorando';
       try {
-        const brands = await sql`SELECT name, slug FROM brands`;
-        seoHtml = '';
+        const brands = await sql`SELECT name, slug FROM brands ORDER BY name ASC`;
+        seoHtml = `
+          <div id="seo-static-content" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 prose prose-sm max-w-none text-gray-700">
+            <h1>${title}</h1>
+            <p>Découvrez toutes les marques partenaires de Zorando.</p>
+            <ul>${brands.map((b: any) => `<li><a href="/brands/${b.slug}">${b.name}</a></li>`).join('')}</ul>
+          </div>
+        `;
       } catch(e) { console.error("DB Error in SSR:", e); }
     } else if (req.path.startsWith('/brands/')) {
       const parts = req.path.split('/');
       const slug = parts[2];
-      const categorySlug = parts[3];
+      const categorySlug = parts[3]; 
 
-      if (req.path.includes('electromenager-moulinex-algerie') && req.path.includes('bouilloires')) {
-        title = 'Bouilloires Moulinex en Algérie | Prix & Achat | ZORANDO';
-        description = 'Découvrez les bouilloires Moulinex disponibles chez ZORANDO : 0,8 L, 1,2 L, 1,7 L, 2000 W, 2400 W et plus. Prix compétitifs, livraison dans les 58 wilayas et paiement à la livraison.';
-        keywords = '';
-        ogUrl = `${baseUrl}${req.path}`;
-        
+      if (categorySlug) {
         try {
-          const products = await sql`
-            SELECT p.name, p.slug, p.price, p.promo_price, p.stock, p.sku, 
-            CASE WHEN p.image LIKE 'data:image/%' THEN '' ELSE p.image END as image
-            FROM products p
-            JOIN brands b ON p.brand_id = b.id
-            JOIN categories c ON p.category_id = c.id
-            WHERE b.slug = ${slug} AND c.slug = ${categorySlug} AND p.is_active = true
-            LIMIT 50
-          `;
+          const [brand] = await sql`SELECT id, name FROM brands WHERE slug = ${slug}`;
+          const [category] = await sql`SELECT id, name FROM categories WHERE slug = ${categorySlug}`;
           
-          let productsHtml = products.map((p: any) => `
-            <div>
-              <h3><a href="/product/${p.slug}">${p.name}</a></h3>
-              <p>Prix : ${p.promo_price || p.price} DZD</p>
-              ${p.stock > 0 ? '<p>En stock</p>' : '<p>Rupture de stock</p>'}
+          if (brand && category) {
+            title = `${category.name} ${brand.name} en Algérie | Prix & Achat | ZORANDO`;
+            description = `Découvrez les ${category.name.toLowerCase()} ${brand.name} disponibles en Algérie sur Zorando. Consultez les modèles, caractéristiques et prix des ${category.name.toLowerCase()} ${brand.name}.`;
+            ogUrl = `${baseUrl}${req.path}`;
+            
+            const products = await sql`
+              SELECT p.name, p.slug, p.price, p.promo_price, p.stock, p.sku, 
+              CASE WHEN p.image LIKE 'data:image/%' THEN '' ELSE p.image END as image
+              FROM products p
+              WHERE p.brand_id = ${brand.id} AND p.category_id = ${category.id} AND p.is_active = true
+              LIMIT 50
+            `;
+            
+            let productsHtml = products.map((p: any) => `
+              <div>
+                <h3><a href="/product/${p.slug}">${p.name}</a></h3>
+                <p>Prix : ${p.promo_price || p.price} DZD</p>
+                ${p.stock > 0 ? '<p>En stock</p>' : '<p>Rupture de stock</p>'}
+              </div>
+            `).join('');
+
+            let jsonLdProducts = products.map((p: any) => ({
+              "@context": "https://schema.org",
+              "@type": "Product",
+              "name": p.name,
+              "image": p.image ? (p.image.startsWith('/') ? `${baseUrl}${p.image}` : p.image) : undefined,
+              "brand": { "@type": "Brand", "name": brand.name },
+              "sku": p.sku || undefined,
+              "offers": {
+                "@type": "Offer",
+                "url": `${baseUrl}/product/${p.slug}`,
+                "priceCurrency": "DZD",
+                "price": p.promo_price || p.price,
+                "availability": p.stock > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock"
+              }
+            }));
+
+            let breadcrumbJson = {
+              "@context": "https://schema.org",
+              "@type": "BreadcrumbList",
+              "itemListElement": [
+                { "@type": "ListItem", "position": 1, "name": "Accueil", "item": `${baseUrl}/` },
+                { "@type": "ListItem", "position": 2, "name": "Marques", "item": `${baseUrl}/brands` },
+                { "@type": "ListItem", "position": 3, "name": brand.name, "item": `${baseUrl}/brands/${slug}` },
+                { "@type": "ListItem", "position": 4, "name": category.name, "item": `${baseUrl}${req.path}` }
+              ]
+            };
+
+            headHtml += `
+<script type="application/ld+json">${JSON.stringify(breadcrumbJson)}</script>`;
+            jsonLdProducts.forEach((p: any) => { 
+               headHtml += `
+<script type="application/ld+json">${JSON.stringify(p)}</script>`;
+            });
+
+            seoHtml = `
+            <div id="seo-static-content" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 prose prose-sm max-w-none text-gray-700">
+              <h1>${category.name} ${brand.name} en Algérie</h1>
+              <p>${description}</p>
+              ${productsHtml}
+              <h2>Les produits ${category.name} ${brand.name} disponibles chez ZORANDO</h2>
+              <p>Comparez les modèles pour trouver le bon équilibre entre capacité, puissance et prix. Profitez de la livraison dans les 58 wilayas d'Algérie.</p>
             </div>
-          `).join('');
-
-          let jsonLdProducts = products.map((p: any) => ({
-            "@context": "https://schema.org",
-            "@type": "Product",
-            "name": p.name,
-            "image": p.image ? `${baseUrl}${p.image}` : undefined,
-            "brand": { "@type": "Brand", "name": "Moulinex" },
-            "sku": p.sku || undefined,
-            "offers": {
-              "@type": "Offer",
-              "url": `${baseUrl}/product/${p.slug}`,
-              "priceCurrency": "DZD",
-              "price": p.promo_price || p.price,
-              "availability": p.stock > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock"
-            }
-          }));
-
-          let breadcrumbJson = {
-            "@context": "https://schema.org",
-            "@type": "BreadcrumbList",
-            "itemListElement": [
-              { "@type": "ListItem", "position": 1, "name": "Accueil", "item": `${baseUrl}/` },
-              { "@type": "ListItem", "position": 2, "name": "Marques", "item": `${baseUrl}/brands` },
-              { "@type": "ListItem", "position": 3, "name": "Moulinex", "item": `${baseUrl}/brands/electromenager-moulinex-algerie` },
-              { "@type": "ListItem", "position": 4, "name": "Bouilloires", "item": `${baseUrl}${req.path}` }
-            ]
-          };
-
-          headHtml += `\n<script type="application/ld+json">${JSON.stringify(breadcrumbJson)}</script>`;
-          jsonLdProducts.forEach((p: any) => { 
-             headHtml += `\n<script type="application/ld+json">${JSON.stringify(p)}</script>`;
-          });
-
-          seoHtml = `
-          <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 prose" id="seo-static-content">
-            <h1>Bouilloires Moulinex en Algérie</h1>
-            <p>Vous recherchez une bouilloire Moulinex en Algérie pour préparer rapidement votre thé, café ou infusion ? ZORANDO vous propose une sélection de bouilloires électriques Moulinex adaptées à différents besoins et budgets. Retrouvez des modèles compacts de 0,8 L, des capacités de 1,2 L et des bouilloires familiales de 1,7 L, avec différentes puissances comme 2000 W et 2400 W selon les modèles. Comparez facilement les bouilloires Moulinex disponibles : capacité, puissance, matière, filtre anticalcaire, socle 360°, arrêt automatique et autres caractéristiques techniques. Chaque fiche produit présente les informations essentielles pour vous aider à choisir le modèle adapté à votre utilisation. Commandez votre bouilloire Moulinex en ligne sur ZORANDO et profitez de prix compétitifs, de la livraison dans les 58 wilayas d'Algérie et du paiement à la livraison.</p>
-            ${productsHtml}
-            <h2>Quelle bouilloire Moulinex choisir ?</h2>
-            <p>Pour une utilisation familiale, une bouilloire Moulinex de 1,7 L offre une capacité adaptée pour chauffer davantage d'eau en une seule fois. Une capacité de 0,8 L convient notamment pour une utilisation individuelle ou lorsque peu d'eau est nécessaire.</p>
-            <h2>Les bouilloires Moulinex disponibles chez ZORANDO</h2>
-            <h2>FAQ – Bouilloires Moulinex</h2>
-            <h2>Pourquoi acheter une bouilloire Moulinex chez ZORANDO ?</h2>
-          </div>
-          `;
-        } catch(e) { console.error("DB Error in SSR custom page:", e); }
+            `;
+          } else {
+             isNotFound = true;
+          }
+        } catch(e) { console.error("DB Error in SSR generic brand cat:", e); }
       } else {
         try {
           const [brand] = await sql`SELECT id, name, description, seo_title, seo_description FROM brands WHERE slug = ${slug}`;
           if (brand) {
-            title = `${brand.name} | Zorando`;
-            description = brand.seo_description ? cleanForSEO(brand.seo_description) : (brand.description ? cleanForSEO(brand.description, 160) : `Découvrez tous les produits de la marque ${brand.name} sur ZORANDO.`);
-            const products = await sql`SELECT name, slug FROM products WHERE brand_id = ${brand.id}`;
-            seoHtml = '';
+            title = brand.seo_title ? `${brand.seo_title} | ZORANDO` : `${brand.name} en Algérie | Produits & Prix | ZORANDO`;
+            description = brand.seo_description ? cleanForSEO(brand.seo_description) : (brand.description ? cleanForSEO(brand.description, 160) : `Découvrez tous les produits de la marque ${brand.name} sur ZORANDO. Prix compétitifs et livraison dans les 58 wilayas.`);
+            const products = await sql`SELECT name, slug, price, promo_price, stock FROM products WHERE brand_id = ${brand.id} AND is_active = true LIMIT 50`;
+            
+            let productsHtml = products.map((p: any) => `
+              <li>
+                <a href="/product/${p.slug}">${p.name}</a> - ${p.promo_price || p.price} DZD
+                ${p.stock > 0 ? '(En stock)' : '(Rupture)'}
+              </li>
+            `).join('');
+
+            seoHtml = `
+            <div id="seo-static-content" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 prose prose-sm max-w-none text-gray-700">
+              <h1>${brand.name} en Algérie</h1>
+              <p>${description}</p>
+              <h2>Produits ${brand.name}</h2>
+              <ul>${productsHtml}</ul>
+            </div>
+            `;
           } else {
             isNotFound = true;
           }
@@ -306,46 +335,49 @@ app.get('*', async (req, res, next) => {
       if (slug === 'all') {
         title = 'Tous les produits | ZORANDO';
         description = 'Découvrez tous nos produits sur ZORANDO. Nouveautés, ventes flash et meilleures ventes. Achetez au meilleur prix.';
-        seoHtml = '';
+        seoHtml = `<div id="seo-static-content" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 prose prose-sm max-w-none text-gray-700"><h1>${title}</h1><p>${description}</p></div>`;
       } else if (categorySEOData && categorySEOData[slug]) {
-            title = categorySEOData[slug].title;
-            description = categorySEOData[slug].description;
-            if (categorySEOData[slug].keywords) keywords = categorySEOData[slug].keywords;
-            seoHtml = ''; // No hidden content
+        title = categorySEOData[slug].title;
+        description = categorySEOData[slug].description;
+        if (categorySEOData[slug].keywords) keywords = categorySEOData[slug].keywords;
+        seoHtml = `<div id="seo-static-content" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 prose prose-sm max-w-none text-gray-700"><h1>${title}</h1><p>${description}</p></div>`;
+      } else {
+        try {
+          const [category] = await sql`SELECT id, name FROM categories WHERE slug = ${slug}`;
+          let catName = '';
+          if (category) {
+            catName = category.name;
           } else {
-            try {
-              const [category] = await sql`SELECT id, name FROM categories WHERE slug = ${slug}`;
-              if (category) {
-                title = `${category.name} | ZORANDO`;
-                description = `Découvrez notre sélection de produits dans la catégorie ${category.name}. Achetez au meilleur prix sur ZORANDO.`;
-                seoHtml = '';
-              } else {
-                const [subcat] = await sql`SELECT id, name FROM subcategories WHERE slug = ${slug}`;
-                if (subcat) {
-                  title = `${subcat.name} | ZORANDO`;
-                  description = `Découvrez notre sélection de produits dans la catégorie ${subcat.name}. Achetez au meilleur prix sur ZORANDO.`;
-                  seoHtml = '';
-                } else {
-                  const [subSubcat] = await sql`SELECT id, name FROM sub_subcategories WHERE slug = ${slug}`;
-                  if (subSubcat) {
-                    title = `${subSubcat.name} | ZORANDO`;
-                    description = `Découvrez notre sélection de produits dans la catégorie ${subSubcat.name}. Achetez au meilleur prix sur ZORANDO.`;
-                    seoHtml = '';
-                  } else {
-                    isNotFound = true;
-                  }
-                }
-              }
-            } catch (err) {
-              console.error("DB error for category fallback:", err);
+            const [subcat] = await sql`SELECT id, name FROM subcategories WHERE slug = ${slug}`;
+            if (subcat) catName = subcat.name;
+            else {
+              const [subSubcat] = await sql`SELECT id, name FROM sub_subcategories WHERE slug = ${slug}`;
+              if (subSubcat) catName = subSubcat.name;
+              else isNotFound = true;
             }
           }
-        } else if (req.path.startsWith('/product/')) {
+          
+          if (catName && !isNotFound) {
+            title = `${catName} | ZORANDO`;
+            description = `Découvrez notre sélection de produits dans la catégorie ${catName}. Achetez au meilleur prix sur ZORANDO.`;
+            
+            seoHtml = `
+            <div id="seo-static-content" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 prose prose-sm max-w-none text-gray-700">
+              <h1>${catName}</h1>
+              <p>${description}</p>
+            </div>
+            `;
+          }
+        } catch (err) {
+          console.error("DB error for category fallback:", err);
+        }
+      }
+    } else if (req.path.startsWith('/product/')) {
       const slug = req.path.split('/')[2];
       try {
         const [product] = await sql`
-          SELECT p.id, p.name, p.description, p.seo_title, p.seo_description, p.seo_keywords, p.price, p.promo_price, p.promo_price_start_date, p.promo_price_end_date, p.sku, p.stock, p.is_active, 
-             CASE WHEN p.image LIKE 'data:image/%' THEN '/api/images/products/' || p.id || '/image/' || p.slug || '.webp' ELSE p.image END as image,
+          SELECT p.id, p.name, p.description, p.seo_title, p.seo_description, p.seo_keywords, p.price, p.promo_price, p.promo_price_start_date, p.promo_price_end_date, p.sku, p.stock, p.is_active,
+              CASE WHEN p.image LIKE 'data:image/%' THEN '/api/images/products/' || p.id || '/image/' || p.slug || '.webp' ELSE p.image END as image,
             COALESCE(p.brand_name, b.name) as brand_name,
             c.name as category_name,
             c.slug as category_slug,
@@ -366,10 +398,13 @@ app.get('*', async (req, res, next) => {
         if (product) {
           if (product.is_active === false) {
             const redirectUrl = product.category_slug ? `/category/${product.category_slug}` : '/';
-            res.redirect(301, redirectUrl);
-            return;
+            // Important: we don't have res in some contexts, but actually this script runs in the Express request handler, so `res` IS available here.
+            // Wait, let's just make sure res.redirect is valid. Yes, it's express.
+            return res.redirect(301, redirectUrl);
           }
-          title = product.seo_title || `${product.name} | Zorando`;
+
+          title = product.seo_title || `${product.name} | Prix & Achat | ZORANDO`;
+          
           if (product.seo_description) {
             description = cleanForSEO(product.seo_description);
           } else if (product.description) {
@@ -384,11 +419,9 @@ app.get('*', async (req, res, next) => {
           if (product.seo_keywords) keywords = product.seo_keywords;
           
           if (product.image) {
-            // Handle image format: Could be an external URL, base64 data, or an internal path
             if (product.image.startsWith('http')) {
               ogImage = product.image;
             } else if (product.image.startsWith('data:image')) {
-              // For data URIs from the DB, we generate the API endpoint URL for the seo image
               ogImage = `${baseUrl}/api/images/products/${product.id}/image/${slug}.webp?v=${product.image.length}`;
             } else {
               ogImage = product.image.startsWith('/') ? `${baseUrl}${product.image}` : `${baseUrl}/${product.image}`;
@@ -432,17 +465,25 @@ app.get('*', async (req, res, next) => {
           delete breadcrumbSchema["@context"];
           const schemaData = { "@context": "https://schema.org", "@graph": [productSchema, breadcrumbSchema].filter(Boolean) };
           
-          headHtml += `\n<script type="application/ld+json">\n${JSON.stringify(schemaData)}\n</script>\n`;
+          headHtml += `
+<script type="application/ld+json">
+${JSON.stringify(schemaData)}
+</script>
+`;
           
-          headHtml += `<meta property="og:type" content="product" />\n`;
-          headHtml += `<meta name="twitter:card" content="summary_large_image" />\n`;
-          headHtml += `<meta property="product:price:amount" content="${currentPrice.toFixed(2)}" />\n`;
-          headHtml += `<meta property="product:price:currency" content="DZD" />\n`;
-          headHtml += `<meta property="product:availability" content="${product.stock > 0 ? 'in stock' : 'out of stock'}" />\n`;
+          headHtml += `<meta property="og:type" content="product" />
+`;
+          headHtml += `<meta name="twitter:card" content="summary_large_image" />
+`;
+          headHtml += `<meta property="product:price:amount" content="${currentPrice.toFixed(2)}" />
+`;
+          headHtml += `<meta property="product:price:currency" content="DZD" />
+`;
+          headHtml += `<meta property="product:availability" content="${product.stock > 0 ? 'in stock' : 'out of stock'}" />
+`;
           
-          // Inject static HTML for Googlebot in the root div (Point 1, 4, 6)
           const staticBody = `
-            <div style="position:absolute; left:-9999px; top:auto; width:1px; height:1px; overflow:hidden;" id="seo-static-content" aria-hidden="true">
+            <div id="seo-static-content" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 prose prose-sm max-w-none text-gray-700">
               <h1>${product.name}</h1>
               <img src="${ogImage}" alt="${product.name}" />
               <p><strong>Prix:</strong> ${currentPrice.toFixed(2)} DZD</p>
@@ -473,6 +514,10 @@ app.get('*', async (req, res, next) => {
           if (post.main_image) {
             ogImage = post.main_image.startsWith('/') ? `${baseUrl}${post.main_image}` : `${baseUrl}/${post.main_image}`;
           }
+          seoHtml = `<div id="seo-static-content" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 prose prose-sm max-w-none text-gray-700">
+            <h1>${post.title}</h1>
+            <p>${post.excerpt}</p>
+          </div>`;
         } else {
           isNotFound = true;
         }
@@ -480,6 +525,14 @@ app.get('*', async (req, res, next) => {
     } else if (req.path === '/blog') {
       title = 'Blog & Actualités | Zorando';
       description = 'Découvrez les dernières tendances, astuces et actualités sur le blog ZORANDO.';
+      try {
+        const posts = await sql`SELECT title, slug, excerpt FROM blog_posts WHERE status = 'published' ORDER BY created_at DESC LIMIT 20`;
+        seoHtml = `<div id="seo-static-content" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 prose prose-sm max-w-none text-gray-700">
+          <h1>${title}</h1>
+          <p>${description}</p>
+          <ul>${posts.map((p: any) => `<li><h2><a href="/blog/${p.slug}">${p.title}</a></h2><p>${p.excerpt}</p></li>`).join('')}</ul>
+        </div>`;
+      } catch (e) { console.error("DB error in blog SSR", e); }
     } else if (req.path === '/about') {
       title = 'À propos de nous | Zorando';
       description = 'Découvrez l\'histoire de ZORANDO, votre boutique en ligne de confiance en Algérie.';

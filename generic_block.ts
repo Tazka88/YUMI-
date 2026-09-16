@@ -1,190 +1,4 @@
-import express from 'express';
-import cors from 'cors';
-import helmet from 'helmet';
-import apiRoutes from './src/api/routes.js';
-import path from 'path';
-import fs from 'fs';
-import { sql } from './src/db/setup.js';
-import { categorySEOData } from './src/utils/seoData.js';
-import { buildProductSchema, buildBreadcrumbSchema } from './src/lib/schemaUtils.js';
-
-const app = express();
-
-app.set('trust proxy', 1);
-
-// Create uploads directory if it doesn't exist (ephemeral on Vercel)
-const isVercel = process.env.VERCEL === '1' || process.env.VERCEL_ENV || process.env.VERCEL_URL;
-const uploadsDir = isVercel 
-  ? path.join('/tmp', 'uploads') 
-  : path.join(process.cwd(), 'public', 'uploads');
-
-if (!fs.existsSync(uploadsDir)) {
-  try {
-    fs.mkdirSync(uploadsDir, { recursive: true });
-  } catch (err) {
-    console.error('Failed to create uploads directory:', err);
-  }
-}
-
-app.use(cors({
-  origin: true,
-  credentials: true
-}));
-
-app.use(helmet({
-  crossOriginResourcePolicy: false,
-  crossOriginEmbedderPolicy: false,
-  contentSecurityPolicy: false,
-}));
-
-// app.use(compression()); // Removed to prevent double-compression in Vercel
-app.use(express.json({ limit: '5mb' }));
-app.use(express.urlencoded({ limit: '5mb', extended: true }));
-
-// Serve uploads statically
-app.use('/uploads', express.static(uploadsDir, { maxAge: '1y' }));
-
-// API Routes
-app.get('/api/sitemap.xml', (req, res, next) => {
-  req.url = '/sitemap.xml';
-  apiRoutes(req, res, next);
-});
-
-app.get('/api/robots.txt', (req, res, next) => {
-  req.url = '/robots.txt';
-  apiRoutes(req, res, next);
-});
-
-app.use('/api', apiRoutes);
-
-// SEO Routes (passed to apiRoutes)
-app.use((req, res, next) => {
-  if (req.query.seo === 'sitemap') {
-    req.url = '/sitemap.xml';
-    return apiRoutes(req, res, next);
-  }
-  
-  if (req.query.seo === 'robots') {
-    req.url = '/robots.txt';
-    return apiRoutes(req, res, next);
-  }
-  
-// If it's just /api and no other route matched, return 404 JSON instead of HTML
-  if (req.url === '/api' || req.path === '/api' || req.path.startsWith('/api/')) {
-    return res.status(404).json({ error: 'Not found API endpoint' });
-  }
-  
-  next();
-});
-
-// Numeric Category redirect for old indexed IDs
-app.use(async (req, res, next) => {
-  // Dynamic redirects for numeric category IDs
-  if (req.path.match(/^\/category\/\d+$/)) {
-    const id = parseInt(req.path.split('/')[2]);
-    try {
-      let [cat] = await sql`SELECT slug FROM categories WHERE id = ${id}`;
-      if (cat && cat.slug) return res.redirect(301, `/category/${cat.slug}`);
-
-      let [subcat] = await sql`SELECT slug FROM subcategories WHERE id = ${id}`;
-      if (subcat && subcat.slug) return res.redirect(301, `/category/${subcat.slug}?sub=true`);
-
-      let [subsub] = await sql`SELECT slug FROM sub_subcategories WHERE id = ${id}`;
-      if (subsub && subsub.slug) return res.redirect(301, `/category/${subsub.slug}?subsub=true`);
-    } catch (err) {
-      console.error('Error resolving numeric category ID:', err);
-    }
-  }
-  next();
-});
-
-// Serve frontend with SEO injection for non-asset routes
-const cleanForSEO = (text: any, truncateLength?: number) => {
-  if (!text) return '';
-  const maxLength = truncateLength || 155;
-  let cleanText = text.replace(/<[^>]+>/g, ' ')
-                    .replace(/(?:\*\*|\*|__|_|#|>|`|~)/g, '')
-                    .replace(/\s+/g, ' ')
-                    .trim();
-  
-  if (cleanText.length > maxLength) {
-    let lastPoint = cleanText.substring(0, maxLength).lastIndexOf('.');
-    if (lastPoint > maxLength * 0.7) {
-      return cleanText.substring(0, lastPoint + 1).replace(/\.{2,}$/, '').trim();
-    }
-    
-    let lastComma = cleanText.substring(0, maxLength).lastIndexOf(',');
-    if (lastComma > maxLength * 0.7) {
-      return cleanText.substring(0, lastComma).replace(/\.{2,}$/, '').trim();
-    }
-    
-    let lastSpace = cleanText.substring(0, maxLength).lastIndexOf(' ');
-    if (lastSpace > 0) {
-      return cleanText.substring(0, lastSpace).replace(/\.{2,}$/, '').trim();
-    }
-    
-    return cleanText.substring(0, maxLength).replace(/\.{2,}$/, '').trim();
-  }
-  
-  return cleanText.replace(/\.{2,}$/, '').trim();
-};
-
-  
-  const staticRedirects: Record<string, string> = {
-    '/product/hoco-casque-sans-w45': '/product/hoco-casque-sans-fil-bluetooth-5-3-400mah-w45',
-    '/product/mi-band-10-bracelet-inteligent-150-modes-sportifs-cran-amoled-1-72-pouces-bt5-4-endurance-21-jours-5atm-diffusion-de-frequence-cardiaque': '/product/mi-band-10-bracelet-inteligent-150-modes-sportifs-ecran-amoled-1-72-pouces-bt5-4-endurance-21-jours-5atm-diffusion-de-frequence-cardiaque',
-    '/product/mi-band-10-bracelet-inteligent-150-modes-sportifs-ecran-amoled-172-pouces-bt54-endurance-21-jours-5atm-diffusion-de-frequence-cardiaque': '/product/mi-band-10-bracelet-inteligent-150-modes-sportifs-ecran-amoled-1-72-pouces-bt5-4-endurance-21-jours-5atm-diffusion-de-frequence-cardiaque',
-    '/brands/bestway': '/brands/piscines-bestway-algerie',
-    '/brands/hoco': '/brands/accessoires-hoco-algerie',
-    '/brands/kemei': '/brands/tondeuses-kemei-algerie',
-    '/brands/moulinex': '/brands/electromenager-moulinex-algerie',
-    '/brands/philips': '/brands/electromenager-philips-algerie',
-    '/brands/robuste': '/brands/electromenager-robuste-algerie',
-    '/brands/sonashi': '/brands/electromenager-sonashi-algerie',
-    '/brands/anker': '/brands/accessoires-anker-algerie',
-    '/brands/enzo': '/brands/coiffure-enzo-algerie',
-    '/brands/karcher': '/brands/nettoyage-karcher-algerie',
-    '/blog/hoco-power-bank-en-algerie-guide-complet-prix-et-avis-2026': '/blog'
-  };
-
-  app.use((req, res, next) => {
-    const newUrl = staticRedirects[req.path];
-    if (newUrl) {
-      const qs = req.url.includes('?') ? req.url.substring(req.url.indexOf('?')) : '';
-      return res.redirect(301, newUrl + qs);
-    }
-    next();
-  });
-
-app.get('*', async (req, res, next) => {
-  // If it looks like a static file request (has extension dot), let it fall through
-  if (req.path.match(/\.[a-zA-Z0-9]+$/) && !req.path.endsWith('.html')) {
-    return next();
-  }
-
-  try {
-    // Use string literals to help Vercel NFT trace dependencies
-    const indexPath = path.join(process.cwd(), 'dist', 'template.html');
-    const publicPath = path.join(process.cwd(), 'public', 'index.html');
-    let template = '<html><head></head><body><h1>Missing template.html</h1></body></html>';
-    
-    if (fs.existsSync(indexPath)) {
-      template = fs.readFileSync(indexPath, 'utf-8');
-    } else if (fs.existsSync(publicPath)) {
-      template = fs.readFileSync(publicPath, 'utf-8');
-    }
-
-    let title = 'ZORANDO - Boutique en ligne';
-    let description = 'Découvrez ZORANDO, votre boutique en ligne de confiance en Algérie. Achetez des produits de qualité au meilleur prix.';
-    let keywords = 'boutique en ligne, e-commerce, Algérie, achat en ligne, électroménager, mode, beauté, maison, ZORANDO';
-    const baseUrl = 'https://www.zorando.com';
-    let headHtml = `<link rel="canonical" href="${baseUrl}${req.path}" />\n<link rel="preload" as="font" href="https://fonts.gstatic.com/s/roboto/v30/KFOmCnqEu92Fr1Mu4mxK.woff2" type="font/woff2" crossorigin="anonymous">`;
-    let seoHtml = '';
-    let isNotFound = false;
-    let ogImage = `${baseUrl}/og-image-fb.jpg`;
-    let ogUrl = `${baseUrl}${req.path}`;
-
-        if (req.path === '/' || req.path === '/index.html') {
+    if (req.path === '/' || req.path === '/index.html') {
       title = 'ZORANDO - Boutique en ligne en Algérie';
       description = 'Découvrez ZORANDO, votre boutique en ligne de confiance en Algérie. Achetez des produits de qualité au meilleur prix. Livraison 58 wilayas.';
       try {
@@ -196,8 +10,7 @@ app.get('*', async (req, res, next) => {
           desktopImage = hero.image_desktop.startsWith('/') ? `${baseUrl}${hero.image_desktop}` : `${baseUrl}/${hero.image_desktop}`;
           ogImage = desktopImage;
           if (desktopImage) {
-            headHtml += `
-          <link rel="preload" as="image" href="${desktopImage}" media="(min-width: 768px)" fetchpriority="high">`;
+            headHtml += `\n          <link rel="preload" as="image" href="${desktopImage}" media="(min-width: 768px)" fetchpriority="high">`;
           }
         }
         seoHtml = `
@@ -281,11 +94,9 @@ app.get('*', async (req, res, next) => {
               ]
             };
 
-            headHtml += `
-<script type="application/ld+json">${JSON.stringify(breadcrumbJson)}</script>`;
+            headHtml += `\n<script type="application/ld+json">${JSON.stringify(breadcrumbJson)}</script>`;
             jsonLdProducts.forEach((p: any) => { 
-               headHtml += `
-<script type="application/ld+json">${JSON.stringify(p)}</script>`;
+               headHtml += `\n<script type="application/ld+json">${JSON.stringify(p)}</script>`;
             });
 
             seoHtml = `
@@ -465,22 +276,13 @@ app.get('*', async (req, res, next) => {
           delete breadcrumbSchema["@context"];
           const schemaData = { "@context": "https://schema.org", "@graph": [productSchema, breadcrumbSchema].filter(Boolean) };
           
-          headHtml += `
-<script type="application/ld+json">
-${JSON.stringify(schemaData)}
-</script>
-`;
+          headHtml += `\n<script type="application/ld+json">\n${JSON.stringify(schemaData)}\n</script>\n`;
           
-          headHtml += `<meta property="og:type" content="product" />
-`;
-          headHtml += `<meta name="twitter:card" content="summary_large_image" />
-`;
-          headHtml += `<meta property="product:price:amount" content="${currentPrice.toFixed(2)}" />
-`;
-          headHtml += `<meta property="product:price:currency" content="DZD" />
-`;
-          headHtml += `<meta property="product:availability" content="${product.stock > 0 ? 'in stock' : 'out of stock'}" />
-`;
+          headHtml += `<meta property="og:type" content="product" />\n`;
+          headHtml += `<meta name="twitter:card" content="summary_large_image" />\n`;
+          headHtml += `<meta property="product:price:amount" content="${currentPrice.toFixed(2)}" />\n`;
+          headHtml += `<meta property="product:price:currency" content="DZD" />\n`;
+          headHtml += `<meta property="product:availability" content="${product.stock > 0 ? 'in stock' : 'out of stock'}" />\n`;
           
           const staticBody = `
             <div id="seo-static-content" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 prose prose-sm max-w-none text-gray-700">
@@ -550,110 +352,3 @@ ${JSON.stringify(schemaData)}
       description = 'Suivez l\'état de votre commande ZORANDO en temps réel.';
       seoHtml = '';
     }
-
-    const globalNav = `
-      <nav id="global-nav" class="sr-only">
-        <a href="/">Accueil</a>
-        <a href="/brands">Marques</a>
-        <a href="/about">À propos</a>
-        <a href="/programme-fidelite">Programme de fidélité</a>
-        <a href="/retours">Retours</a>
-        <a href="/track-order">Suivi de commande</a>
-      </nav>
-    `;
-
-    
-    if (isNotFound) {
-      title = 'Page Introuvable | Zorando';
-      description = 'La page que vous recherchez n\'existe pas ou a été supprimée.';
-    }
-
-    
-    // Nettoyage robuste du titre
-    let cleanTitle = title.replace(/\s*[-–—|]\s*ZORANDO\s*$/i, '');
-    cleanTitle = cleanTitle.replace(/[-–—\s]+$/, '');
-    title = cleanTitle + ' | Zorando';
-    
-    let seoTags = `
-      <title data-rh="true">${title}</title>
-      <meta data-rh="true" name="description" content="${description}" />
-      ${keywords ? `` : ''}
-      <meta data-rh="true" property="og:title" content="${title}" />
-      <meta data-rh="true" property="og:description" content="${description}" />
-      <meta data-rh="true" property="og:image" content="${ogImage}" />
-      <meta data-rh="true" property="og:url" content="${ogUrl}" />
-      <meta data-rh="true" name="twitter:title" content="${title}" />
-      <meta data-rh="true" name="twitter:description" content="${description}" />
-      <meta data-rh="true" name="twitter:image" content="${ogImage}" />
-    
-      <meta data-rh="true" name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />`;
-    
-    let finalHtml = template.replace('<!--seo-injection-->', globalNav);
-    finalHtml = finalHtml.replace('<div id="root"></div>', `<div id="root">${seoHtml || ''}</div>`);
-    finalHtml = finalHtml.replace('<!--head-injection-->', headHtml + seoTags);
-    
-    if (isNotFound) {
-      res.header('X-Robots-Tag', 'noindex, follow');
-      res.setHeader('Cache-Control', 'no-cache');
-      res.status(404).send(finalHtml);
-    } else {
-      res.header('X-Robots-Tag', 'all');
-      res.header('Content-Type', 'text/html; charset=utf-8');
-      
-      // Add Vercel Edge Cache Control for Public HTML
-      if (req.method === 'GET' && (!req.headers.cookie || !req.headers.cookie.match(/session|token|auth|user/i))) {
-        res.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate=300');
-      } else {
-        res.setHeader('Cache-Control', 'no-cache');
-      }
-      
-      res.status(200).send(finalHtml);
-    }
-
-  } catch (err) {
-    console.error('SEO Injection Error:', err);
-    res.status(500).send('Erreur lors du rendu de la page SEO');
-  }
-});
-
-// Global error handler for debugging
-app.use((err: any, req: any, res: any, next: any) => {
-  console.error('Global error:', err);
-  res.status(500).json({ 
-    error: 'Internal Server Error', 
-    message: err.message,
-    stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
-  });
-});
-
-// Export the Express API for Vercel Serverless Functions
-
-async function startServer() {
-  const PORT = Number(process.env.PORT || 3000);
-  
-  if (process.env.NODE_ENV !== 'production') {
-    const { createServer: createViteServer } = await import('vite');
-    const vite = await createViteServer({
-      server: { middlewareMode: true },
-      appType: 'spa',
-    });
-    // Add vite middleware right before the SEO wildcard handler
-    const getStarIndex = app._router.stack.findIndex(layer => layer.route && layer.route.path === '*');
-    if (getStarIndex !== -1) {
-      const starLayer = app._router.stack.splice(getStarIndex, 1)[0];
-      app.use(vite.middlewares);
-      app._router.stack.push(starLayer);
-    } else {
-      app.use(vite.middlewares);
-    }
-  } else {
-    app.use(express.static(path.join(process.cwd(), 'dist')));
-  }
-
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Server running on http://localhost:${PORT}`);
-  });
-}
-
-startServer();
-

@@ -246,152 +246,86 @@ app.get('*', async (req, res, next) => {
           }
           
           if (brand && cat) {
-            if (brand.slug === 'electromenager-moulinex-algerie') {
-              const catName = cat.name;
-              title = `${catName} Moulinex en Algérie | Prix & Achat | ZORANDO`;
-              description = `Découvrez la gamme de ${catName.toLowerCase()} Moulinex disponibles chez ZORANDO. Prix compétitifs, livraison dans les 58 wilayas et paiement à la livraison.`;
-              ogUrl = `${baseUrl}${req.path}`;
-              
-              const products = catLevel === 'category_id' 
-                ? await sql`SELECT p.name, p.slug, p.price, p.promo_price, p.stock, p.sku, CASE WHEN p.image LIKE 'data:image/%' THEN '' ELSE p.image END as image FROM products p WHERE p.brand_id = ${brand.id} AND p.category_id = ${cat.id} AND p.is_active = true LIMIT 50`
-                : catLevel === 'subcategory_id' 
-                ? await sql`SELECT p.name, p.slug, p.price, p.promo_price, p.stock, p.sku, CASE WHEN p.image LIKE 'data:image/%' THEN '' ELSE p.image END as image FROM products p WHERE p.brand_id = ${brand.id} AND p.subcategory_id = ${cat.id} AND p.is_active = true LIMIT 50`
-                : await sql`SELECT p.name, p.slug, p.price, p.promo_price, p.stock, p.sku, CASE WHEN p.image LIKE 'data:image/%' THEN '' ELSE p.image END as image FROM products p WHERE p.brand_id = ${brand.id} AND p.sub_subcategory_id = ${cat.id} AND p.is_active = true LIMIT 50`;
-              
-              let productsHtml = products.map((p: any) => `
-                <div>
-                  <h3><a href="/product/${p.slug}">${p.name}</a></h3>
-                  <p>Prix : ${p.promo_price || p.price} DZD</p>
-                  ${p.stock > 0 ? '<p>En stock</p>' : '<p>Rupture de stock</p>'}
-                </div>
-              `).join('');
-
-              let jsonLdProducts = products.map((p: any) => ({
-                "@context": "https://schema.org",
-                "@type": "Product",
-                "name": p.name,
-                "image": p.image ? (p.image.startsWith('/') ? `${baseUrl}${p.image}` : p.image) : undefined,
-                "brand": { "@type": "Brand", "name": brand.name },
-                "sku": p.sku || undefined,
-                "offers": {
-                  "@type": "Offer",
-                  "url": `${baseUrl}/product/${p.slug}`,
-                  "priceCurrency": "DZD",
-                  "price": p.promo_price || p.price,
-                  "availability": p.stock > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock"
-                }
-              }));
-
-              let breadcrumbJson = {
-                "@context": "https://schema.org",
-                "@type": "BreadcrumbList",
-                "itemListElement": [
-                  { "@type": "ListItem", "position": 1, "name": "Accueil", "item": `${baseUrl}/` },
-                  { "@type": "ListItem", "position": 2, "name": "Marques", "item": `${baseUrl}/brands` },
-                  { "@type": "ListItem", "position": 3, "name": brand.name, "item": `${baseUrl}/brands/${slug}` },
-                  { "@type": "ListItem", "position": 4, "name": cat.name, "item": `${baseUrl}${req.path}` }
-                ]
-              };
-
-              headHtml += `
-<script type="application/ld+json">${JSON.stringify(breadcrumbJson)}</script>`;
-              jsonLdProducts.forEach((p: any) => { 
-                 headHtml += `
-<script type="application/ld+json">${JSON.stringify(p)}</script>`;
-              });
-
-              seoHtml = `
-              <div id="seo-static-content" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 prose prose-sm max-w-none text-gray-700">
-                <h1>${catName} Moulinex en Algérie</h1>
-                <p>Vous recherchez un(e) ${catName.toLowerCase()} Moulinex en Algérie ? ZORANDO vous propose une sélection de ${catName.toLowerCase()} électriques Moulinex adaptées à différents besoins et budgets. Retrouvez des modèles variés et performants selon vos attentes.</p>
-                <p>Comparez facilement les ${catName.toLowerCase()} Moulinex disponibles : capacité, puissance, fonctionnalités et autres caractéristiques techniques. Chaque fiche produit présente les informations essentielles pour vous aider à choisir le modèle adapté à votre utilisation.</p>
-                <p>Commandez votre ${catName.toLowerCase()} Moulinex en ligne sur ZORANDO et profitez de prix compétitifs, de la livraison dans les 58 wilayas d'Algérie et du paiement à la livraison.</p>
-                
-                ${productsHtml}
-                
-                <h2>Quel(le) ${catName.toLowerCase()} Moulinex choisir ?</h2>
-                <p>Le choix dépend avant tout de votre utilisation quotidienne. Pour une utilisation familiale, une grande capacité sera idéale. Si vous avez peu de place ou une utilisation individuelle, des capacités plus réduites sont très pratiques.</p>
-                
-                <h2>Les ${catName.toLowerCase()} Moulinex disponibles chez ZORANDO</h2>
-                <p>Comparer les modèles est essentiel pour trouver le bon équilibre entre capacité, puissance, et prix. Parcourez les fiches produits ci-dessus pour découvrir les détails techniques de chaque modèle.</p>
-                
-                <h2>FAQ – ${catName} Moulinex</h2>
-                <h3>Quel(le) ${catName.toLowerCase()} Moulinex choisir pour une famille ?</h3>
-                <p>Pour une utilisation familiale, un(e) ${catName.toLowerCase()} Moulinex de grande capacité offre une solution adaptée pour répondre aux besoins de plusieurs personnes.</p>
-                
-                <h3>Quel est le prix d'un(e) ${catName.toLowerCase()} Moulinex en Algérie ?</h3>
-                <p>Le prix dépend du modèle, de sa capacité, de sa puissance et de ses fonctionnalités. ZORANDO affiche le prix actuel directement sur chaque fiche produit afin de permettre de comparer les modèles Moulinex disponibles.</p>
-                
-                <h3>Les ${catName.toLowerCase()} Moulinex sont-ils/elles disponibles avec livraison en Algérie ?</h3>
-                <p>Oui. Les ${catName.toLowerCase()} Moulinex disponibles sur ZORANDO peuvent être commandées en ligne avec livraison dans les 58 wilayas d'Algérie et paiement à la livraison, selon les conditions affichées sur la fiche du produit.</p>
-                
-                <h2>Pourquoi acheter un(e) ${catName.toLowerCase()} Moulinex chez ZORANDO ?</h2>
-                <p>ZORANDO vous permet de comparer plusieurs modèles de ${catName.toLowerCase()} Moulinex selon leur capacité, leur puissance, leur design et leurs fonctionnalités. Consultez les caractéristiques et le prix de chaque modèle avant de passer commande. La livraison est disponible dans les 58 wilayas d'Algérie avec paiement à la livraison.</p>
+            const catName = cat.name;
+            title = `${catName} ${brand.name} en Algérie | Prix & Achat | ZORANDO`;
+            description = `Découvrez la gamme de ${catName.toLowerCase()} ${brand.name} disponibles chez ZORANDO. Prix compétitifs, livraison dans les 58 wilayas et paiement à la livraison.`;
+            ogUrl = `${baseUrl}${req.path}`;
+            
+            const products = catLevel === 'category_id' 
+              ? await sql`SELECT p.name, p.slug, p.price, p.promo_price, p.stock, p.sku, CASE WHEN p.image LIKE 'data:image/%' THEN '' ELSE p.image END as image FROM products p WHERE p.brand_id = ${brand.id} AND p.category_id = ${cat.id} AND p.is_active = true LIMIT 50`
+              : catLevel === 'subcategory_id' 
+              ? await sql`SELECT p.name, p.slug, p.price, p.promo_price, p.stock, p.sku, CASE WHEN p.image LIKE 'data:image/%' THEN '' ELSE p.image END as image FROM products p WHERE p.brand_id = ${brand.id} AND p.subcategory_id = ${cat.id} AND p.is_active = true LIMIT 50`
+              : await sql`SELECT p.name, p.slug, p.price, p.promo_price, p.stock, p.sku, CASE WHEN p.image LIKE 'data:image/%' THEN '' ELSE p.image END as image FROM products p WHERE p.brand_id = ${brand.id} AND p.sub_subcategory_id = ${cat.id} AND p.is_active = true LIMIT 50`;
+            
+            let productsHtml = products.map((p: any) => `
+              <div>
+                <h3><a href="/product/${p.slug}">${p.name}</a></h3>
+                <p>Prix : ${p.promo_price || p.price} DZD</p>
+                ${p.stock > 0 ? '<p>En stock</p>' : '<p>Rupture de stock</p>'}
               </div>
-              `;
-            } else {
-              title = `${cat.name} ${brand.name} en Algérie | Prix & Achat | ZORANDO`;
-              description = `Découvrez les ${cat.name.toLowerCase()} ${brand.name} disponibles en Algérie sur Zorando. Consultez les modèles, caractéristiques et prix des ${cat.name.toLowerCase()} ${brand.name}.`;
-              ogUrl = `${baseUrl}${req.path}`;
+            `).join('');
+
+            let jsonLdProducts = products.map((p: any) => ({
+              "@context": "https://schema.org",
+              "@type": "Product",
+              "name": p.name,
+              "image": p.image ? (p.image.startsWith('/') ? `${baseUrl}${p.image}` : p.image) : undefined,
+              "brand": { "@type": "Brand", "name": brand.name },
+              "sku": p.sku || undefined,
+              "offers": {
+                "@type": "Offer",
+                "url": `${baseUrl}/product/${p.slug}`,
+                "priceCurrency": "DZD",
+                "price": p.promo_price || p.price,
+                "availability": p.stock > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock"
+              }
+            }));
+
+            let breadcrumbJson = {
+              "@context": "https://schema.org",
+              "@type": "BreadcrumbList",
+              "itemListElement": [
+                { "@type": "ListItem", "position": 1, "name": "Accueil", "item": `${baseUrl}/` },
+                { "@type": "ListItem", "position": 2, "name": "Marques", "item": `${baseUrl}/brands` },
+                { "@type": "ListItem", "position": 3, "name": brand.name, "item": `${baseUrl}/brands/${slug}` },
+                { "@type": "ListItem", "position": 4, "name": cat.name, "item": `${baseUrl}${req.path}` }
+              ]
+            };
+
+            headHtml += `\n<script type="application/ld+json">${JSON.stringify(breadcrumbJson)}</script>`;
+            jsonLdProducts.forEach((p: any) => { 
+               headHtml += `\n<script type="application/ld+json">${JSON.stringify(p)}</script>`;
+            });
+
+            seoHtml = `
+            <div id="seo-static-content" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 prose prose-sm max-w-none text-gray-700">
+              <h1>${catName} ${brand.name} en Algérie</h1>
+              <p>Vous recherchez un(e) ${catName.toLowerCase()} ${brand.name} en Algérie ? ZORANDO vous propose une sélection de ${catName.toLowerCase()} ${brand.name} pour répondre à différents besoins et budgets. Retrouvez des modèles variés et performants selon vos attentes.</p>
+              <p>Comparez facilement les ${catName.toLowerCase()} ${brand.name} disponibles : caractéristiques, fonctionnalités et spécificités techniques. Chaque fiche produit présente les informations essentielles pour vous aider à choisir le modèle adapté à votre utilisation.</p>
+              <p>Commandez votre ${catName.toLowerCase()} ${brand.name} en ligne sur ZORANDO et profitez de prix compétitifs, de la livraison dans les 58 wilayas d'Algérie et du paiement à la livraison.</p>
               
-              const products = catLevel === 'category_id' 
-                ? await sql`SELECT p.name, p.slug, p.price, p.promo_price, p.stock, p.sku, CASE WHEN p.image LIKE 'data:image/%' THEN '' ELSE p.image END as image FROM products p WHERE p.brand_id = ${brand.id} AND p.category_id = ${cat.id} AND p.is_active = true LIMIT 50`
-                : catLevel === 'subcategory_id' 
-                ? await sql`SELECT p.name, p.slug, p.price, p.promo_price, p.stock, p.sku, CASE WHEN p.image LIKE 'data:image/%' THEN '' ELSE p.image END as image FROM products p WHERE p.brand_id = ${brand.id} AND p.subcategory_id = ${cat.id} AND p.is_active = true LIMIT 50`
-                : await sql`SELECT p.name, p.slug, p.price, p.promo_price, p.stock, p.sku, CASE WHEN p.image LIKE 'data:image/%' THEN '' ELSE p.image END as image FROM products p WHERE p.brand_id = ${brand.id} AND p.sub_subcategory_id = ${cat.id} AND p.is_active = true LIMIT 50`;
+              ${productsHtml}
               
-              let productsHtml = products.map((p: any) => `
-                <div>
-                  <h3><a href="/product/${p.slug}">${p.name}</a></h3>
-                  <p>Prix : ${p.promo_price || p.price} DZD</p>
-                  ${p.stock > 0 ? '<p>En stock</p>' : '<p>Rupture de stock</p>'}
-                </div>
-              `).join('');
-
-              let jsonLdProducts = products.map((p: any) => ({
-                "@context": "https://schema.org",
-                "@type": "Product",
-                "name": p.name,
-                "image": p.image ? (p.image.startsWith('/') ? `${baseUrl}${p.image}` : p.image) : undefined,
-                "brand": { "@type": "Brand", "name": brand.name },
-                "sku": p.sku || undefined,
-                "offers": {
-                  "@type": "Offer",
-                  "url": `${baseUrl}/product/${p.slug}`,
-                  "priceCurrency": "DZD",
-                  "price": p.promo_price || p.price,
-                  "availability": p.stock > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock"
-                }
-              }));
-
-              let breadcrumbJson = {
-                "@context": "https://schema.org",
-                "@type": "BreadcrumbList",
-                "itemListElement": [
-                  { "@type": "ListItem", "position": 1, "name": "Accueil", "item": `${baseUrl}/` },
-                  { "@type": "ListItem", "position": 2, "name": "Marques", "item": `${baseUrl}/brands` },
-                  { "@type": "ListItem", "position": 3, "name": brand.name, "item": `${baseUrl}/brands/${slug}` },
-                  { "@type": "ListItem", "position": 4, "name": cat.name, "item": `${baseUrl}${req.path}` }
-                ]
-              };
-
-              headHtml += `
-<script type="application/ld+json">${JSON.stringify(breadcrumbJson)}</script>`;
-              jsonLdProducts.forEach((p: any) => { 
-                 headHtml += `
-<script type="application/ld+json">${JSON.stringify(p)}</script>`;
-              });
-
-              seoHtml = `
-              <div id="seo-static-content" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 prose prose-sm max-w-none text-gray-700">
-                <h1>${cat.name} ${brand.name} en Algérie</h1>
-                <p>${description}</p>
-                ${productsHtml}
-                <h2>Les produits ${cat.name} ${brand.name} disponibles chez ZORANDO</h2>
-                <p>Comparez les modèles pour trouver le bon équilibre entre capacité, puissance et prix. Profitez de la livraison dans les 58 wilayas d'Algérie.</p>
-              </div>
-              `;
-            }
+              <h2>Quel(le) ${catName.toLowerCase()} ${brand.name} choisir ?</h2>
+              <p>Le choix dépend avant tout de votre utilisation quotidienne. Selon vos besoins spécifiques et votre budget, vous trouverez le modèle idéal parmi notre sélection.</p>
+              
+              <h2>Les ${catName.toLowerCase()} ${brand.name} disponibles chez ZORANDO</h2>
+              <p>Comparer les modèles est essentiel pour trouver le bon équilibre entre performances et prix. Parcourez les fiches produits ci-dessus pour découvrir les détails techniques de chaque modèle.</p>
+              
+              <h2>FAQ – ${catName} ${brand.name}</h2>
+              <h3>Quel est le meilleur choix de ${catName.toLowerCase()} ${brand.name} ?</h3>
+              <p>Le meilleur choix dépend de l'utilisation que vous souhaitez en faire. Nous vous recommandons de consulter les caractéristiques détaillées sur chaque fiche produit pour faire un choix éclairé.</p>
+              
+              <h3>Quel est le prix d'un(e) ${catName.toLowerCase()} ${brand.name} en Algérie ?</h3>
+              <p>Le prix varie selon le modèle et ses fonctionnalités. ZORANDO affiche le prix actuel et promotionnel directement sur chaque fiche produit afin de vous permettre de comparer facilement les modèles ${brand.name} disponibles.</p>
+              
+              <h3>Les ${catName.toLowerCase()} ${brand.name} sont-ils/elles disponibles avec livraison en Algérie ?</h3>
+              <p>Oui. Les ${catName.toLowerCase()} ${brand.name} disponibles sur ZORANDO peuvent être commandés en ligne avec livraison à domicile ou en point relais dans les 58 wilayas d'Algérie avec paiement à la livraison.</p>
+              
+              <h2>Pourquoi acheter un(e) ${catName.toLowerCase()} ${brand.name} chez ZORANDO ?</h2>
+              <p>ZORANDO vous permet de comparer plusieurs modèles de ${catName.toLowerCase()} ${brand.name} selon leurs spécificités. Consultez les caractéristiques et le prix de chaque modèle avant de passer commande. La livraison est disponible dans les 58 wilayas d'Algérie avec paiement à la livraison.</p>
+            </div>
+            `;
           } else {
              isNotFound = true;
           }

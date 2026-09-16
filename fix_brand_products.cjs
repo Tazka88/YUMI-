@@ -1,42 +1,49 @@
 const fs = require('fs');
-let code = fs.readFileSync('src/pages/BrandProducts.tsx', 'utf8');
+let content = fs.readFileSync('src/pages/BrandProducts.tsx', 'utf8');
 
-// Fix category seoIntro
-code = code.replace(
-  '<strong>${currentCategory.name.toLowerCase()} ${brand.name}</strong>',
-  '<strong>{currentCategory.name.toLowerCase()} {brand.name}</strong>'
-);
-code = code.replace(
-  'les produits de la gamme ${currentCategory.name.toLowerCase()} ${brand.name} répondront à vos besoins.',
-  'les produits de la gamme {currentCategory.name.toLowerCase()} {brand.name} répondront à vos besoins.'
-);
-code = code.replace(
-  'Profitez de la qualité ${brand.name} avec la garantie et le service Zorando.',
-  'Profitez de la qualité {brand.name} avec la garantie et le service Zorando.'
+content = content.replace(
+  "if (brand.slug === 'electromenager-moulinex-algerie' && currentCategory) {",
+  "if (currentCategory) {"
 );
 
-// Fix brand seoIntro
-code = code.replace(
-  '<strong>${brand.name} Algérie</strong>',
-  '<strong>{brand.name} Algérie</strong>'
-);
-code = code.replace(
-  'd\'<strong>électroménager ${brand.name}</strong>',
-  'd\'<strong>électroménager {brand.name}</strong>'
-);
-code = code.replace(
-  '<strong>catégories d\'appareils ${brand.name}</strong>',
-  '<strong>catégories d\'appareils {brand.name}</strong>'
-);
-code = code.replace(
-  'vos produits ${brand.name} en toute sécurité',
-  'vos produits {brand.name} en toute sécurité'
+content = content.replace(
+  /h1Title = `\$\{catName\} Moulinex en Algérie`;/g,
+  "h1Title = `${catName} ${brand.name} en Algérie`;"
 );
 
-// We need to also check the categories grid
-code = code.replace(
-  '<h2 className="text-2xl font-bold text-gray-900 mb-6">Catégories {brand.name}</h2>',
-  '<h2 className="text-2xl font-bold text-gray-900 mb-6">Catégories {brand.name}</h2>'
-); // Was it $ ? Let's check. 
+content = content.replace(
+  /pageTitle = `\$\{catName\} Moulinex en Algérie \| Prix & Achat \| ZORANDO`;/g,
+  "pageTitle = `${catName} ${brand.name} en Algérie | Prix & Achat | ZORANDO`;"
+);
 
-fs.writeFileSync('src/pages/BrandProducts.tsx', code);
+content = content.replace(
+  /metaDescription = `Découvrez la gamme de \$\{catName\.toLowerCase\(\)\} Moulinex disponibles chez ZORANDO\. Prix compétitifs, livraison dans les 58 wilayas et paiement à la livraison\.`;/g,
+  "metaDescription = `Découvrez la gamme de ${catName.toLowerCase()} ${brand.name} disponibles chez ZORANDO. Prix compétitifs, livraison dans les 58 wilayas et paiement à la livraison.`;"
+);
+
+content = content.replace(/Moulinex/g, "${brand.name}");
+
+// Fix the "électriques ${brand.name}" 
+content = content.replace(/électriques \$\{brand\.name\}/g, "${brand.name}");
+
+content = content.replace(
+  `{ "@type": "ListItem", "position": 3, "name": "\${brand.name}", "item": "https://www.zorando.com/brands/electromenager-moulinex-algerie" }`,
+  `{ "@type": "ListItem", "position": 3, "name": brand.name, "item": \`https://www.zorando.com/brands/\${brand.slug}\` }`
+);
+
+content = content.replace(
+  `"item": \`https://www.zorando.com/brands/electromenager-moulinex-algerie/\${categorySlug}\``,
+  `"item": \`https://www.zorando.com/brands/\${brand.slug}/\${categorySlug}\``
+);
+
+content = content.replace(
+  `"brand": { "@type": "Brand", "name": "\${brand.name}" }`,
+  `"brand": { "@type": "Brand", "name": brand.name }`
+);
+
+content = content.replace(
+  `} else if (isCategoryPage) {`,
+  `} else if (false) {` // Disable the fallback since currentCategory takes precedence
+);
+
+fs.writeFileSync('src/pages/BrandProducts.tsx', content);

@@ -1031,6 +1031,56 @@ router.post('/products/:slug/reviews', async (req, res) => {
   }
 });
 
+// --- MOBILE PUSH NOTIFICATIONS ---
+router.post('/mobile/push-token', async (req, res) => {
+  const { token, platform, user_id } = req.body;
+  if (!token) return res.status(400).json({ error: 'Push token is required' });
+  try {
+    await sql`
+      CREATE TABLE IF NOT EXISTS push_tokens (
+        id SERIAL PRIMARY KEY,
+        token TEXT UNIQUE NOT NULL,
+        platform VARCHAR(50) DEFAULT 'android',
+        user_id VARCHAR(255),
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      )
+    `;
+    await sql`
+      INSERT INTO push_tokens (token, platform, user_id, updated_at)
+      VALUES (${token}, ${platform || 'android'}, ${user_id || null}, CURRENT_TIMESTAMP)
+      ON CONFLICT (token) DO UPDATE SET
+        user_id = EXCLUDED.user_id,
+        platform = EXCLUDED.platform,
+        updated_at = CURRENT_TIMESTAMP
+    `;
+    res.json({ success: true, message: 'Push token registered' });
+  } catch (err) {
+    console.error('Push token error:', err);
+    res.status(500).json({ error: 'Failed to register push token' });
+  }
+});
+
+// --- CUSTOMER ACCOUNT DELETION (Google Play / App Store Requirement) ---
+router.post('/users/delete-account', authenticate, async (req: any, res) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ error: 'Non autorisé' });
+    
+    // Anonymize user reference on orders for accounting compliance
+    await sql`UPDATE orders SET customer_user_id = NULL WHERE customer_user_id = ${userId}`;
+    // Delete profile
+    await sql`DELETE FROM profiles WHERE id = ${userId}`;
+    // Delete push tokens
+    await sql`DELETE FROM push_tokens WHERE user_id = ${userId}`;
+    
+    res.json({ success: true, message: 'Compte supprimé avec succès' });
+  } catch (err: any) {
+    console.error('Delete account error:', err);
+    res.status(500).json({ error: 'Erreur lors de la suppression du compte' });
+  }
+});
+
 // --- CUSTOMER ORDERS ---
 router.get('/orders/user/:userId', async (req, res) => {
   const { userId } = req.params;
@@ -1758,7 +1808,8 @@ router.get('/admin/products', authenticate, async (req, res) => {
     let conditions = [];
     
     if (search) {
-      const searchWords = search.trim().split(/\s+/).filter(word => word.length > 0);
+      const searchStr = String(search);
+      const searchWords = searchStr.trim().split(/\s+/).filter(word => word.length > 0);
       if (searchWords.length > 0) {
         const wordConditions = searchWords.map(word => {
            const searchTerm = `%${word}%`;

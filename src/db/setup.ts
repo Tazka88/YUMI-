@@ -26,7 +26,7 @@ if (process.env.NODE_ENV !== 'production') {
 
 export async function setupDb() {
   try {
-    let timer: NodeJS.Timeout;
+    let timer: any;
     const timeoutPromise = new Promise((_, reject) => {
       timer = setTimeout(() => reject(new Error('Database connection timeout')), 10000);
     });

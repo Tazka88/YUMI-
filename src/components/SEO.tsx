@@ -5,6 +5,7 @@ interface SEOProps {
   description: string;
   image?: string;
   url?: string;
+  canonical?: string;
   type?: string;
   schema?: any;
   exactTitle?: boolean;
@@ -38,13 +39,13 @@ export function getCanonicalUrl(url?: string) {
   return baseUrl;
 }
 
-export default function SEO({ title, description, image, url, type = 'website', schema, exactTitle = false, keywords, noindex = false }: SEOProps) {
+export default function SEO({ title, description, image, url, canonical, type = 'website', schema, exactTitle = false, keywords, noindex = false }: SEOProps) {
   const siteName = 'ZORANDO';
   const cleanTitle = title.replace(/[-–—\s]+$/, '');
   const fullTitle = exactTitle ? cleanTitle : `${cleanTitle} | ${siteName}`;
   const defaultImage = 'https://www.zorando.com/og-image-fb.jpg';
   const finalImage = image || defaultImage;
-  const currentUrl = getCanonicalUrl(url);
+  const currentUrl = getCanonicalUrl(url || canonical);
   
   return (
     <Helmet>

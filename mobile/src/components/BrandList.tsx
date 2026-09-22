@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, FlatList, TouchableOpacity, Image, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { Brand } from '../types';
 import { COLORS, RADIUS, SPACING } from '../constants/theme';
 import { getImageUrl } from '../services/api';
@@ -15,6 +16,16 @@ export const BrandList: React.FC<BrandListProps> = ({
   selectedBrand,
   onSelectBrand,
 }) => {
+  const [failedImages, setFailedImages] = useState<Record<string, boolean>>({});
+
+  const handleImageError = (id: string | number) => {
+    setFailedImages((prev) => ({ ...prev, [String(id)]: true }));
+  };
+
+  if (!brands || brands.length === 0) {
+    return null;
+  }
+
   return (
     <View style={styles.container}>
       <FlatList
@@ -25,22 +36,30 @@ export const BrandList: React.FC<BrandListProps> = ({
         keyExtractor={(item) => String(item.id)}
         renderItem={({ item }) => {
           const isSelected = selectedBrand === item.id;
+          const hasImageFailed = failedImages[String(item.id)];
+          const hasValidImage = !!item.image && !hasImageFailed;
+          const brandName = item.name ? item.name.toUpperCase() : 'MARQUE';
+
           return (
             <TouchableOpacity
               style={[styles.item, isSelected && styles.itemSelected]}
               onPress={() => onSelectBrand(item)}
-              activeOpacity={0.8}
+              activeOpacity={0.75}
             >
-              {item.image ? (
+              {hasValidImage ? (
                 <Image
                   source={{ uri: getImageUrl(item.image) }}
                   style={styles.image}
                   resizeMode="contain"
+                  onError={() => handleImageError(item.id)}
                 />
               ) : (
-                <Text style={[styles.name, isSelected && styles.nameSelected]}>
-                  {item.name}
-                </Text>
+                <View style={styles.textFallback}>
+                  <Ionicons name="pricetag" size={12} color={isSelected ? COLORS.primary : COLORS.textMuted} style={styles.fallbackIcon} />
+                  <Text style={[styles.name, isSelected && styles.nameSelected]} numberOfLines={1}>
+                    {brandName}
+                  </Text>
+                </View>
               )}
             </TouchableOpacity>
           );
@@ -58,15 +77,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.lg,
   },
   item: {
-    backgroundColor: COLORS.card,
+    backgroundColor: COLORS.white,
     borderRadius: RADIUS.md,
-    borderWidth: 1,
-    borderColor: COLORS.border,
+    borderWidth: 1.5,
+    borderColor: COLORS.borderLight,
     paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
+    paddingVertical: SPACING.xs,
     marginRight: SPACING.sm,
-    height: 44,
-    minWidth: 80,
+    height: 48,
+    minWidth: 90,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -75,8 +94,16 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.primaryLight,
   },
   image: {
-    width: 65,
-    height: 28,
+    width: 75,
+    height: 32,
+  },
+  textFallback: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  fallbackIcon: {
+    marginRight: 4,
   },
   name: {
     fontSize: 12,
@@ -87,3 +114,4 @@ const styles = StyleSheet.create({
     color: COLORS.primary,
   },
 });
+

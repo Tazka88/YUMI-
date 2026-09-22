@@ -20,16 +20,24 @@ import { COLORS, RADIUS, SHADOWS, SPACING } from '../constants/theme';
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = (width - SPACING.lg * 2 - SPACING.md) / 2;
 
-export const BrandsScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
-  const [brands, setBrands] = useState<Brand[]>([]);
+export const BrandsScreen: React.FC<{ route?: any; navigation: any }> = ({ route, navigation }) => {
+  const initialBrands: Brand[] = route?.params?.initialBrands || [];
+  const [brands, setBrands] = useState<Brand[]>(initialBrands);
   const [searchQuery, setSearchQuery] = useState('');
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(initialBrands.length === 0);
   const [refreshing, setRefreshing] = useState(false);
+  const [failedImages, setFailedImages] = useState<Record<string, boolean>>({});
+
+  const handleImageError = (id: string | number) => {
+    setFailedImages((prev) => ({ ...prev, [String(id)]: true }));
+  };
 
   const fetchBrands = async () => {
     try {
       const data = await getBrands();
-      setBrands(data);
+      if (Array.isArray(data) && data.length > 0) {
+        setBrands(data);
+      }
     } catch (err) {
       console.warn('Error fetching brands:', err);
     } finally {
@@ -140,38 +148,46 @@ export const BrandsScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
               </Text>
             </View>
           }
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              style={styles.brandCard}
-              onPress={() => handleBrandPress(item)}
-              activeOpacity={0.85}
-            >
-              <View style={styles.logoContainer}>
-                {item.image ? (
-                  <Image
-                    source={{ uri: getImageUrl(item.image) }}
-                    style={styles.brandLogo}
-                    resizeMode="contain"
-                  />
-                ) : (
-                  <View style={styles.placeholderLogo}>
-                    <Text style={styles.placeholderText}>
-                      {item.name ? item.name.substring(0, 2).toUpperCase() : 'Z'}
-                    </Text>
-                  </View>
-                )}
-              </View>
-              <View style={styles.brandInfo}>
-                <Text style={styles.brandName} numberOfLines={1}>
-                  {item.name ? item.name.toUpperCase() : 'MARQUE'}
-                </Text>
-                <View style={styles.viewProductsBadge}>
-                  <Text style={styles.viewProductsText}>Voir les produits</Text>
-                  <Ionicons name="chevron-forward" size={12} color={COLORS.primary} />
+          renderItem={({ item }) => {
+            const hasFailed = failedImages[String(item.id)];
+            const hasValidImage = !!item.image && !hasFailed;
+            const displayName = item.name ? item.name.toUpperCase() : 'MARQUE';
+            const initials = item.name ? item.name.substring(0, 2).toUpperCase() : 'ZR';
+
+            return (
+              <TouchableOpacity
+                style={styles.brandCard}
+                onPress={() => handleBrandPress(item)}
+                activeOpacity={0.85}
+              >
+                <View style={styles.logoContainer}>
+                  {hasValidImage ? (
+                    <Image
+                      source={{ uri: getImageUrl(item.image) }}
+                      style={styles.brandLogo}
+                      resizeMode="contain"
+                      onError={() => handleImageError(item.id)}
+                    />
+                  ) : (
+                    <View style={styles.placeholderLogo}>
+                      <Text style={styles.placeholderText}>
+                        {initials}
+                      </Text>
+                    </View>
+                  )}
                 </View>
-              </View>
-            </TouchableOpacity>
-          )}
+                <View style={styles.brandInfo}>
+                  <Text style={styles.brandName} numberOfLines={1}>
+                    {displayName}
+                  </Text>
+                  <View style={styles.viewProductsBadge}>
+                    <Text style={styles.viewProductsText}>Voir les produits</Text>
+                    <Ionicons name="chevron-forward" size={12} color={COLORS.primary} />
+                  </View>
+                </View>
+              </TouchableOpacity>
+            );
+          }}
         />
       )}
     </SafeAreaView>

@@ -232,19 +232,44 @@ router.get(['/images/:table/:id/:field', '/images/:table/:id/:field/:seoSlug'], 
   }
 
   try {
-    let query;
-    if (table === 'settings') {
-      query = `SELECT ${field} FROM ${table} WHERE key = '${id}'`;
-    } else {
-      query = `SELECT ${field} FROM ${table} WHERE id = ${id}`;
+    let imageData: string | null = null;
+
+    // Try direct SQL query first
+    try {
+      let query;
+      if (table === 'settings') {
+        query = `SELECT ${field} FROM ${table} WHERE key = '${id}'`;
+      } else {
+        query = `SELECT ${field} FROM ${table} WHERE id = ${id}`;
+      }
+      const result = await sql.unsafe(query);
+      if (result && result.length > 0 && result[0][field]) {
+        imageData = result[0][field];
+      }
+    } catch (sqlErr) {
+      console.warn('Direct SQL query for image failed, falling back to Supabase client:', sqlErr);
     }
-    const result = await sql.unsafe(query);
+
+    // Fallback to Supabase client if not found or SQL failed
+    if (!imageData) {
+      const supabase = getSupabase();
+      if (supabase) {
+        const idCol = table === 'settings' ? 'key' : 'id';
+        const { data } = await supabase
+          .from(table)
+          .select(field)
+          .eq(idCol, id)
+          .maybeSingle();
+        if (data && (data as any)[field]) {
+          imageData = (data as any)[field];
+        }
+      }
+    }
     
-    if (!result || result.length === 0 || !result[0][field]) {
+    if (!imageData) {
       return res.status(404).json({ error: 'Image not found' });
     }
     
-    const imageData = result[0][field];
     const width = parseInt(req.query.w as string);
     
     await serveImageData(req, res, imageData, width);
@@ -260,12 +285,38 @@ router.get('/hero-banners/first-image/:type', async (req, res) => {
   res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=60, stale-while-revalidate=300');
   const { type } = req.params;
   try {
-    const sliderImages = await sql`SELECT image_url, mobile_image_url FROM slider_images WHERE is_active = true AND category_id IS NULL ORDER BY position ASC, id ASC LIMIT 1`;
-    if (!sliderImages || sliderImages.length === 0) {
+    let firstSlide: any = null;
+
+    try {
+      const sliderImages = await sql`SELECT image_url, mobile_image_url FROM slider_images WHERE is_active = true AND category_id IS NULL ORDER BY position ASC, id ASC LIMIT 1`;
+      if (sliderImages && sliderImages.length > 0) {
+        firstSlide = sliderImages[0];
+      }
+    } catch (sqlErr) {
+      console.warn('Direct SQL query for hero banner failed, falling back to Supabase client:', sqlErr);
+    }
+
+    if (!firstSlide) {
+      const supabase = getSupabase();
+      if (supabase) {
+        const { data } = await supabase
+          .from('slider_images')
+          .select('image_url, mobile_image_url')
+          .eq('is_active', true)
+          .is('category_id', null)
+          .order('position', { ascending: true })
+          .order('id', { ascending: true })
+          .limit(1);
+        if (data && data.length > 0) {
+          firstSlide = data[0];
+        }
+      }
+    }
+
+    if (!firstSlide) {
       return res.status(404).send('Not found');
     }
     
-    const firstSlide = sliderImages[0];
     const field = type === 'mobile' && firstSlide.mobile_image_url ? 'mobile_image_url' : 'image_url';
     const imageData = firstSlide[field];
     
@@ -1808,7 +1859,7 @@ router.get('/admin/products', authenticate, async (req, res) => {
     let conditions = [];
     
     if (search) {
-      const searchStr = String(search);
+      const searchStr = typeof search === 'string' ? search : Array.isArray(search) ? String(search[0] || '') : '';
       const searchWords = searchStr.trim().split(/\s+/).filter(word => word.length > 0);
       if (searchWords.length > 0) {
         const wordConditions = searchWords.map(word => {

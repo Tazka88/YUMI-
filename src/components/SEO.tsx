@@ -45,7 +45,7 @@ export default function SEO({ title, description, image, url, canonical, type = 
   const fullTitle = exactTitle ? cleanTitle : `${cleanTitle} | ${siteName}`;
   const defaultImage = 'https://www.zorando.com/og-image-fb.jpg';
   const finalImage = image || defaultImage;
-  const currentUrl = getCanonicalUrl(url || canonical);
+  const currentUrl = getCanonicalUrl(canonical || url);
   
   return (
     <Helmet>

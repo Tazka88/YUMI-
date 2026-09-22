@@ -38,14 +38,7 @@ export const HomeScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
 
   const loadData = useCallback(async () => {
     try {
-      const [
-        bannersData,
-        categoriesData,
-        brandsData,
-        promosData,
-        bestSellersData,
-        newsData,
-      ] = await Promise.all([
+      const results = await Promise.allSettled([
         getHeroBanners(),
         getCategories(),
         getBrands(),
@@ -54,12 +47,12 @@ export const HomeScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
         getProducts({ sort: 'newest', limit: 6 }),
       ]);
 
-      setBanners(bannersData);
-      setCategories(categoriesData);
-      setBrands(brandsData);
-      setPromotions(promosData);
-      setBestSellers(bestSellersData);
-      setNewProducts(newsData);
+      if (results[0].status === 'fulfilled') setBanners(results[0].value || []);
+      if (results[1].status === 'fulfilled') setCategories(results[1].value || []);
+      if (results[2].status === 'fulfilled') setBrands(results[2].value || []);
+      if (results[3].status === 'fulfilled') setPromotions(results[3].value || []);
+      if (results[4].status === 'fulfilled') setBestSellers(results[4].value || []);
+      if (results[5].status === 'fulfilled') setNewProducts(results[5].value || []);
     } catch (err) {
       console.warn('Error loading home data:', err);
     } finally {
@@ -150,12 +143,20 @@ export const HomeScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
         />
 
         {/* Marques officielles */}
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Nos Marques Partenaires</Text>
-          <TouchableOpacity onPress={() => navigation.navigate('Brands')}>
-            <Text style={styles.seeAllText}>Toutes</Text>
-          </TouchableOpacity>
-        </View>
+        <TouchableOpacity 
+          style={styles.sectionHeader}
+          onPress={() => navigation.navigate('Brands', { initialBrands: brands })}
+          activeOpacity={0.7}
+        >
+          <View style={styles.titleWithIcon}>
+            <Ionicons name="ribbon-outline" size={20} color={COLORS.primary} />
+            <Text style={[styles.sectionTitle, { marginLeft: 6 }]}>Nos Marques Partenaires</Text>
+          </View>
+          <View style={styles.seeAllContainer}>
+            <Text style={styles.seeAllText}>Voir tout</Text>
+            <Ionicons name="chevron-forward" size={14} color={COLORS.primary} style={{ marginLeft: 2 }} />
+          </View>
+        </TouchableOpacity>
         <BrandList
           brands={brands}
           onSelectBrand={navigateToBrand}
@@ -300,6 +301,10 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: COLORS.text,
     letterSpacing: -0.2,
+  },
+  seeAllContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   seeAllText: {
     fontSize: 13,

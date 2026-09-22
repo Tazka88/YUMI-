@@ -28,6 +28,8 @@ export const ProductDetailScreen: React.FC<{ route: any; navigation: any }> = ({
   const [quantity, setQuantity] = useState<number>(1);
   const [activeImageIndex, setActiveImageIndex] = useState<number>(0);
   const [isLoading, setIsLoading] = useState<boolean>(!initialProduct);
+  const [imageLoading, setImageLoading] = useState<boolean>(false);
+  const [hasImageError, setHasImageError] = useState<boolean>(false);
   const galleryScrollRef = React.useRef<ScrollView>(null);
   const { addToCart } = useCart();
 
@@ -162,44 +164,68 @@ export const ProductDetailScreen: React.FC<{ route: any; navigation: any }> = ({
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-        {/* Galerie photos */}
-        <View style={styles.galleryContainer}>
-          <ScrollView
-            ref={galleryScrollRef}
-            horizontal
-            pagingEnabled
-            showsHorizontalScrollIndicator={false}
-            onMomentumScrollEnd={(e) => {
-              const index = Math.round(e.nativeEvent.contentOffset.x / width);
-              setActiveImageIndex(index);
-            }}
-          >
-            {imagesList.map((img, index) => (
-              <View key={index} style={styles.imageSlide}>
-                <Image
-                  source={{ uri: getImageUrl(img) }}
-                  style={styles.mainImage}
-                  resizeMode="contain"
-                />
+        {/* Galerie photos principale */}
+        <View style={styles.galleryStage}>
+          {/* Conteneur image active */}
+          <View style={styles.mainImageWrapper}>
+            {imageLoading && (
+              <View style={styles.imageLoader}>
+                <ActivityIndicator size="small" color={COLORS.primary} />
               </View>
-            ))}
-          </ScrollView>
+            )}
+            <Image
+              key={`main-img-${activeImageIndex}-${imagesList[activeImageIndex] || ''}`}
+              source={{ 
+                uri: hasImageError 
+                  ? getImageUrl(product.image) 
+                  : getImageUrl(imagesList[activeImageIndex] || product.image) 
+              }}
+              style={styles.mainImage}
+              resizeMode="contain"
+              onLoadStart={() => setImageLoading(true)}
+              onLoadEnd={() => setImageLoading(false)}
+              onError={() => {
+                setImageLoading(false);
+                setHasImageError(true);
+              }}
+            />
+          </View>
 
-          {/* Points de pagination galerie */}
+          {/* Boutons Suivant / Précédent flottants si plusieurs images */}
           {imagesList.length > 1 && (
-            <View style={styles.galleryDots}>
-              {imagesList.map((_, index) => (
-                <View
-                  key={index}
-                  style={[
-                    styles.galleryDot,
-                    index === activeImageIndex && styles.galleryDotActive,
-                  ]}
-                />
-              ))}
+            <>
+              <TouchableOpacity
+                style={[styles.arrowButton, styles.leftArrow]}
+                onPress={() => {
+                  setHasImageError(false);
+                  setActiveImageIndex((prev) => (prev > 0 ? prev - 1 : imagesList.length - 1));
+                }}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="chevron-back" size={20} color={COLORS.text} />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.arrowButton, styles.rightArrow]}
+                onPress={() => {
+                  setHasImageError(false);
+                  setActiveImageIndex((prev) => (prev < imagesList.length - 1 ? prev + 1 : 0));
+                }}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="chevron-forward" size={20} color={COLORS.text} />
+              </TouchableOpacity>
+            </>
+          )}
+
+          {/* Badge compteur photos (ex: 1 / 5) */}
+          {imagesList.length > 1 && (
+            <View style={styles.indexBadge}>
+              <Text style={styles.indexBadgeText}>{activeImageIndex + 1} / {imagesList.length}</Text>
             </View>
           )}
 
+          {/* Badge promo */}
           {hasPromo && (
             <View style={styles.promoBadge}>
               <Text style={styles.promoBadgeText}>
@@ -212,7 +238,11 @@ export const ProductDetailScreen: React.FC<{ route: any; navigation: any }> = ({
         {/* Miniatures de la galerie */}
         {imagesList.length > 1 && (
           <View style={styles.thumbnailContainer}>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.thumbnailScroll}>
+            <ScrollView 
+              horizontal 
+              showsHorizontalScrollIndicator={false} 
+              contentContainerStyle={styles.thumbnailScroll}
+            >
               {imagesList.map((img, idx) => (
                 <TouchableOpacity
                   key={idx}
@@ -221,9 +251,10 @@ export const ProductDetailScreen: React.FC<{ route: any; navigation: any }> = ({
                     idx === activeImageIndex && styles.thumbnailItemActive,
                   ]}
                   onPress={() => {
+                    setHasImageError(false);
                     setActiveImageIndex(idx);
-                    galleryScrollRef.current?.scrollTo({ x: idx * width, animated: true });
                   }}
+                  activeOpacity={0.75}
                 >
                   <Image
                     source={{ uri: getImageUrl(img) }}
@@ -459,22 +490,71 @@ const styles = StyleSheet.create({
     paddingBottom: 100,
     backgroundColor: COLORS.background,
   },
-  galleryContainer: {
-    width: width,
-    height: 320,
+  galleryStage: {
+    width: '100%',
+    height: 330,
     backgroundColor: COLORS.white,
     position: 'relative',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.borderLight,
   },
-  imageSlide: {
-    width: width,
-    height: 320,
+  mainImageWrapper: {
+    width: '100%',
+    height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
     padding: SPACING.md,
   },
+  imageLoader: {
+    position: 'absolute',
+    zIndex: 2,
+    alignSelf: 'center',
+  },
   mainImage: {
-    width: width - SPACING.md * 2,
-    height: 290,
+    width: '100%',
+    height: '100%',
+    maxWidth: width - 32,
+    maxHeight: 290,
+  },
+  arrowButton: {
+    position: 'absolute',
+    top: '50%',
+    marginTop: -20,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  leftArrow: {
+    left: SPACING.md,
+  },
+  rightArrow: {
+    right: SPACING.md,
+  },
+  indexBadge: {
+    position: 'absolute',
+    bottom: SPACING.md,
+    right: SPACING.md,
+    backgroundColor: 'rgba(0, 0, 0, 0.65)',
+    paddingHorizontal: SPACING.sm + 2,
+    paddingVertical: 3,
+    borderRadius: RADIUS.full,
+    zIndex: 5,
+  },
+  indexBadgeText: {
+    color: COLORS.white,
+    fontSize: 11,
+    fontWeight: '700',
   },
   thumbnailContainer: {
     backgroundColor: COLORS.white,
@@ -501,25 +581,6 @@ const styles = StyleSheet.create({
   thumbnailImage: {
     width: '100%',
     height: '100%',
-  },
-  galleryDots: {
-    position: 'absolute',
-    bottom: SPACING.sm,
-    left: 0,
-    right: 0,
-    flexDirection: 'row',
-    justifyContent: 'center',
-  },
-  galleryDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: COLORS.border,
-    marginHorizontal: 3,
-  },
-  galleryDotActive: {
-    width: 16,
-    backgroundColor: COLORS.primary,
   },
   promoBadge: {
     position: 'absolute',

@@ -6,10 +6,26 @@ const globalForPostgres = globalThis as unknown as {
   sql: postgres.Sql | undefined;
 };
 
-let connectionString = process.env.DATABASE_URL || 'postgresql://postgres:Lifebook88855@db.evvbhalgyffagsesmvhu.supabase.co:6543/postgres';
-if (connectionString.includes(':5432')) {
-  connectionString = connectionString.replace(':5432', ':6543');
+function resolveConnectionString(rawUrl?: string): string {
+  let url = rawUrl || 'postgresql://postgres:Lifebook88855@db.evvbhalgyffagsesmvhu.supabase.co:5432/postgres';
+
+  // If URL uses the Supabase pooler host pattern (which may fail with :nxdomain or tenant not found)
+  // or contains postgres.<project_ref>, resolve it directly to the Supabase host on port 5432
+  const poolerMatch = url.match(/postgres\.([a-zA-Z0-9_-]+):([^@]+)@[^:]+:(\d+)\/([a-zA-Z0-9_]+)/);
+  if (poolerMatch) {
+    const [, ref, pass, , db] = poolerMatch;
+    url = `postgresql://postgres:${pass}@db.${ref}.supabase.co:5432/${db}`;
+  }
+
+  // Ensure port 5432 is used for direct db.<ref>.supabase.co connections (port 6543 is pooler only)
+  if (url.includes('.supabase.co:6543')) {
+    url = url.replace('.supabase.co:6543', '.supabase.co:5432');
+  }
+
+  return url;
 }
+
+let connectionString = resolveConnectionString(process.env.DATABASE_URL);
 
 export const sql = globalForPostgres.sql ?? postgres(connectionString, {
   ssl: connectionString.includes('localhost') || connectionString.includes('127.0.0.1') ? false : 'require',
@@ -26,7 +42,7 @@ if (process.env.NODE_ENV !== 'production') {
 
 export async function setupDb() {
   try {
-    let timer: any;
+    let timer: NodeJS.Timeout;
     const timeoutPromise = new Promise((_, reject) => {
       timer = setTimeout(() => reject(new Error('Database connection timeout')), 10000);
     });

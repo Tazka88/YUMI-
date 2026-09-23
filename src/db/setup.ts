@@ -7,19 +7,12 @@ const globalForPostgres = globalThis as unknown as {
 };
 
 function resolveConnectionString(rawUrl?: string): string {
-  let url = rawUrl || 'postgresql://postgres:Lifebook88855@db.evvbhalgyffagsesmvhu.supabase.co:5432/postgres';
+  const poolerUrl = 'postgresql://postgres.evvbhalgyffagsesmvhu:Lifebook88855@aws-1-eu-west-1.pooler.supabase.com:6543/postgres';
+  let url = rawUrl || poolerUrl;
 
-  // If URL uses the Supabase pooler host pattern (which may fail with :nxdomain or tenant not found)
-  // or contains postgres.<project_ref>, resolve it directly to the Supabase host on port 5432
-  const poolerMatch = url.match(/postgres\.([a-zA-Z0-9_-]+):([^@]+)@[^:]+:(\d+)\/([a-zA-Z0-9_]+)/);
-  if (poolerMatch) {
-    const [, ref, pass, , db] = poolerMatch;
-    url = `postgresql://postgres:${pass}@db.${ref}.supabase.co:5432/${db}`;
-  }
-
-  // Ensure port 5432 is used for direct db.<ref>.supabase.co connections (port 6543 is pooler only)
-  if (url.includes('.supabase.co:6543')) {
-    url = url.replace('.supabase.co:6543', '.supabase.co:5432');
+  // db.<ref>.supabase.co is IPv6-only and causes "getaddrinfo ENOTFOUND" in environments without IPv6 (like Vercel serverless)
+  if (url.includes('db.evvbhalgyffagsesmvhu.supabase.co')) {
+    url = poolerUrl;
   }
 
   return url;

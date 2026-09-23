@@ -6,6 +6,29 @@ import './index.css';
 import {toast} from 'react-hot-toast';
 
 if (typeof window !== 'undefined') {
+  // Capacitor safety guard if loaded in Android WebView
+  const win = window as any;
+  if (!win.Capacitor) {
+    win.Capacitor = {
+      triggerEvent: (eventName: string, target?: string, data?: any) => {
+        try {
+          const targetObj = target === 'document' ? document : window;
+          targetObj.dispatchEvent(new CustomEvent(eventName, { detail: data }));
+        } catch {}
+      },
+      isPluginAvailable: () => false,
+      getPlatform: () => 'android',
+      isNativePlatform: () => true
+    };
+  } else if (typeof win.Capacitor.triggerEvent !== 'function') {
+    win.Capacitor.triggerEvent = (eventName: string, target?: string, data?: any) => {
+      try {
+        const targetObj = target === 'document' ? document : window;
+        targetObj.dispatchEvent(new CustomEvent(eventName, { detail: data }));
+      } catch {}
+    };
+  }
+
   window.onunhandledrejection = (event) => {
     // Specifically catch "Failed to fetch" errors which are often network-related
     if (event.reason && (event.reason.message === 'Failed to fetch' || event.reason.name === 'TypeError')) {
@@ -16,8 +39,9 @@ if (typeof window !== 'undefined') {
   
   window.onerror = (message, source, lineno, colno, error) => {
     console.error('Global error caught:', message, error);
-    if (message.toString().includes('Script error')) {
-      // Ignore cross-origin script errors which are usually benign
+    const msgStr = message ? message.toString() : '';
+    if (msgStr.includes('Script error') || msgStr.includes('triggerEvent')) {
+      // Ignore cross-origin script errors or native WebView bridge triggerEvent calls
       return;
     }
     // Only Toast once to avoid spam

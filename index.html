@@ -4,32 +4,6 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>ZORANDO</title>
-    <!-- Capacitor Android WebView bridge safety polyfill -->
-    <script>
-      (function() {
-        if (typeof window !== 'undefined') {
-          function createSafeTrigger() {
-            return function(eventName, target, data) {
-              try {
-                var targetObj = (target === 'document') ? document : window;
-                var customEvt = new CustomEvent(eventName, { detail: data });
-                targetObj.dispatchEvent(customEvt);
-              } catch (e) {}
-            };
-          }
-          if (!window.Capacitor) {
-            window.Capacitor = {
-              triggerEvent: createSafeTrigger(),
-              isPluginAvailable: function() { return false; },
-              getPlatform: function() { return 'android'; },
-              isNativePlatform: function() { return true; }
-            };
-          } else if (typeof window.Capacitor.triggerEvent !== 'function') {
-            window.Capacitor.triggerEvent = createSafeTrigger();
-          }
-        }
-      })();
-    </script>
     <meta name="description" content="ZORANDO - Votre boutique en ligne de confiance en Algérie. Mode, Électroménager, Beauté et plus encore." />
     <meta property="og:title" content="ZORANDO" />
     <meta property="og:description" content="ZORANDO - Votre boutique en ligne de confiance en Algérie. Mode, Électroménager, Beauté et plus encore." />

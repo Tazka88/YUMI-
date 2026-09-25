@@ -1,0 +1,27 @@
+{
+  "name": "Zorando",
+  "short_name": "Zorando",
+  "description": "Votre boutique en ligne en Algérie - Livraison 58 wilayas",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#FFFFFF",
+  "theme_color": "#FF6B00",
+  "lang": "fr",
+  "dir": "ltr",
+  "icons": [
+    {
+      "src": "https://www.zorando.com/logo-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "https://www.zorando.com/logo-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

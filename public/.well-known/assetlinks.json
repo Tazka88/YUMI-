@@ -1,0 +1,8 @@
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "com.zorando.app",
+    "sha256_cert_fingerprints": ["9A:33:F3:7D:B6:DB:99:40:75:0A:63:17:98:A1:31:96:16:6A:76:61:8E:C9:C4:99:CF:0C:45:CB:E3:07:B8:9B"]
+  }
+}]

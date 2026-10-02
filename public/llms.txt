@@ -1,0 +1,18 @@
+# Zorando
+
+> Zorando est une boutique en ligne de confiance en Algérie, proposant une large gamme de produits.
+
+## À propos
+Zorando offre des vêtements, chaussures, accessoires et autres produits de consommation à destination du marché algérien.
+
+## Structure du site
+- Accueil : `/`
+- Marques : `/brands`
+- À propos : `/about`
+- Blog : `/blog`
+- Suivi de commande : `/track-order`
+- Programme de fidélité : `/programme-fidelite`
+- Retours : `/retours`
+
+## Notes pour les LLMs
+Ce fichier fournit un contexte sur la structure du site Zorando pour faciliter l'analyse par les modèles d'intelligence artificielle.

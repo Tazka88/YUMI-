@@ -1,0 +1,99 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 0. Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // 0.1 Context-Aware Helpers
+    function isSignedIn() { return request.auth != null; }
+    function isOwner(userId) { return isSignedIn() && request.auth.uid == userId; }
+    function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+    
+    // User email runtime admin check placeholder (can be updated with actual email)
+    function isAdmin() { 
+      return isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid)); 
+    }
+
+    // 1. Profiles
+    match /profiles/{userId} {
+      function isValidProfile(data) {
+        return data.firstName is string && data.firstName.size() <= 100 &&
+               data.lastName is string && data.lastName.size() <= 100 &&
+               data.email is string && data.email.size() <= 255 &&
+               (data.phone == null || (data.phone is string && data.phone.size() <= 20));
+      }
+
+      allow get: if isOwner(userId) || isAdmin();
+      allow create: if isOwner(userId) && isValidProfile(incoming());
+      allow update: if isOwner(userId) && isValidProfile(incoming()) && (
+        incoming().diff(existing()).affectedKeys().hasOnly(['firstName', 'lastName', 'phone', 'wilaya', 'fullAddress', 'updatedAt'])
+      );
+
+      // Addresses subcollection
+      match /addresses/{addressId} {
+        function isValidAddress(data) {
+          return data.title is string && data.title.size() <= 50 &&
+                 data.wilaya is string && data.wilaya.size() <= 100 &&
+                 data.address is string && data.address.size() <= 500;
+        }
+
+        allow list, get: if isOwner(userId) || isAdmin();
+        allow create, update: if isOwner(userId) && isValidAddress(incoming());
+        allow delete: if isOwner(userId);
+      }
+    }
+
+    // 2. Orders
+    match /orders/{orderId} {
+      function isValidOrder(data) {
+        return data.userId is string && 
+               data.total is number && 
+               data.status in ['pending', 'confirmed', 'shipped', 'delivered', 'cancelled'] &&
+               data.items is list;
+      }
+
+      // Users can see their own orders, admins see all
+      allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow get: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      
+      // Temporary: Allow creation during migration, later restrict to authenticated or specific logic
+      allow create: if isSignedIn() && incoming().userId == request.auth.uid && isValidOrder(incoming());
+      
+      // Only admins can update order status
+      allow update: if isAdmin() && isValidOrder(incoming()) && (
+        incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt'])
+      );
+    }
+
+    // 3. Wishlists
+    match /wishlists/{wishlistId} {
+      function isValidWishlist(data) {
+        return data.userId is string && data.productId is string;
+      }
+
+      allow list, get: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && incoming().userId == request.auth.uid && isValidWishlist(incoming());
+      allow delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+    }
+    
+    // 4. System Settings (Global Read-Only for clients)
+    match /settings/{settingId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    
+    match /categories/{catId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    
+    match /products/{prodId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+  }
+}

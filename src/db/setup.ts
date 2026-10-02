@@ -8,14 +8,11 @@ const globalForPostgres = globalThis as unknown as {
 
 function resolveConnectionString(rawUrl?: string): string {
   const poolerUrl = 'postgresql://postgres.evvbhalgyffagsesmvhu:Lifebook88855@aws-1-eu-west-1.pooler.supabase.com:6543/postgres';
-  let url = rawUrl || poolerUrl;
-
-  // db.<ref>.supabase.co is IPv6-only and causes "getaddrinfo ENOTFOUND" in environments without IPv6 (like Vercel serverless)
-  if (url.includes('db.evvbhalgyffagsesmvhu.supabase.co')) {
-    url = poolerUrl;
+  if (!rawUrl || rawUrl.includes('YOUR_PROJECT_ID') || rawUrl.includes('YOUR_PASSWORD') || rawUrl.includes('db.evvbhalgyffagsesmvhu.supabase.co')) {
+    return poolerUrl;
   }
 
-  return url;
+  return rawUrl;
 }
 
 let connectionString = resolveConnectionString(process.env.DATABASE_URL);

@@ -1507,7 +1507,7 @@ router.delete('/admin/footer-links/:id', authenticate, async (req, res) => {
   }
 });
 
-router.post('/reviews/upload', upload.single('image'), async (req, res) => {
+router.post('/reviews/upload', upload.single('image') as any, async (req, res) => {
   if (!req.file) {
     return res.status(400).json({ error: 'No file uploaded' });
   }
@@ -1571,7 +1571,7 @@ router.post('/reviews/upload', upload.single('image'), async (req, res) => {
   }
 });
 
-router.post('/admin/upload', authenticate, upload.single('image'), async (req, res) => {
+router.post('/admin/upload', authenticate, upload.single('image') as any, async (req, res) => {
   
   if (!req.file) {
     return res.status(400).json({ error: 'No file uploaded' });

@@ -9,6 +9,7 @@ import { categorySEOData } from './src/utils/seoData.js';
 import { buildProductSchema, buildBreadcrumbSchema } from './src/lib/schemaUtils.js';
 
 const app = express();
+let vite: any = null;
 
 app.set('trust proxy', 1);
 
@@ -165,13 +166,23 @@ app.get('*', async (req, res, next) => {
   try {
     // Use string literals to help Vercel NFT trace dependencies
     const indexPath = path.join(process.cwd(), 'dist', 'template.html');
+    const rootPath = path.join(process.cwd(), 'index.html');
     const publicPath = path.join(process.cwd(), 'public', 'index.html');
-    let template = '<html><head></head><body><h1>Missing template.html</h1></body></html>';
+    let template = '';
     
-    if (fs.existsSync(indexPath)) {
+    if (process.env.NODE_ENV === 'production' && fs.existsSync(indexPath)) {
+      template = fs.readFileSync(indexPath, 'utf-8');
+    } else if (fs.existsSync(rootPath)) {
+      template = fs.readFileSync(rootPath, 'utf-8');
+      if (vite) {
+        template = await vite.transformIndexHtml(req.originalUrl, template);
+      }
+    } else if (fs.existsSync(indexPath)) {
       template = fs.readFileSync(indexPath, 'utf-8');
     } else if (fs.existsSync(publicPath)) {
       template = fs.readFileSync(publicPath, 'utf-8');
+    } else {
+      template = '<html><head></head><body><h1>Missing template.html</h1></body></html>';
     }
 
     let title = 'ZORANDO - Boutique en ligne';
@@ -664,16 +675,16 @@ app.use((err: any, req: any, res: any, next: any) => {
 // Export the Express API for Vercel Serverless Functions
 
 async function startServer() {
-  const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
+  const PORT = 3000;
   
   if (process.env.NODE_ENV !== 'production') {
     const { createServer: createViteServer } = await import('vite');
-    const vite = await createViteServer({
-      server: { middlewareMode: true },
-      appType: 'spa',
+    vite = await createViteServer({
+      server: { middlewareMode: true, hmr: false },
+      appType: 'custom',
     });
     // Add vite middleware right before the SEO wildcard handler
-    const getStarIndex = app._router.stack.findIndex(layer => layer.route && layer.route.path === '*');
+    const getStarIndex = app._router.stack.findIndex((layer: any) => layer.route && layer.route.path === '*');
     if (getStarIndex !== -1) {
       const starLayer = app._router.stack.splice(getStarIndex, 1)[0];
       app.use(vite.middlewares);
@@ -686,7 +697,7 @@ async function startServer() {
   }
 
   app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Server running on http://localhost:${PORT}`);
+    console.log(`Server running on http://0.0.0.0:${PORT}`);
   });
 }
 

@@ -619,6 +619,13 @@ ${JSON.stringify(schemaData)}
     
     let finalHtml = template.replace('<!--seo-injection-->', globalNav);
     finalHtml = finalHtml.replace('<div id="root"></div>', `<div id="root">${seoHtml || ''}</div>`);
+
+    // Supprimer les balises title et meta par défaut du template pour éliminer TOUT doublon SEO
+    finalHtml = finalHtml.replace(/<title[\s\S]*?<\/title>/gi, '');
+    finalHtml = finalHtml.replace(/<meta\s+name="description"\s+content="[^"]*"\s*\/?>/gi, '');
+    finalHtml = finalHtml.replace(/<meta\s+property="og:title"\s+content="[^"]*"\s*\/?>/gi, '');
+    finalHtml = finalHtml.replace(/<meta\s+property="og:description"\s+content="[^"]*"\s*\/?>/gi, '');
+
     finalHtml = finalHtml.replace('<!--head-injection-->', headHtml + seoTags);
 
     const sUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '';

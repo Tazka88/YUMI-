@@ -342,19 +342,19 @@ export default function Category() {
           {!loading && currentSubcategories.length > 0 && (
             <div className="mb-8">
               <h2 className="text-lg font-bold text-gray-800 mb-4">Sous-catégories</h2>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                 {currentSubcategories.map(sub => (
                   <Link 
                     key={sub.id} 
                     to={`/category/${sub.slug}?sub=true`}
-                    className="bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-md hover:border-orange-200 transition-all flex flex-col items-center justify-center group overflow-hidden"
+                    className="bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-md hover:border-orange-200 transition-all flex flex-col items-center justify-center group overflow-hidden"
                   >
-                    <div className="w-full aspect-video bg-gray-50 flex items-center justify-center overflow-hidden relative">
+                    <div className="w-full aspect-square bg-gray-50 flex items-center justify-center overflow-hidden relative">
                       {sub.image ? (
                         <img 
-                          src={getResizedImageUrl(sub.image, 400)} 
+                          src={getResizedImageUrl(sub.image, 600)} 
                           alt={sub.name} 
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
+                          className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500" 
                           referrerPolicy="no-referrer"
                           loading="lazy"
                           decoding="async"
@@ -363,8 +363,8 @@ export default function Category() {
                         <span className="text-4xl">{getCategoryWithEmoji(sub.name).split(' ')[0]}</span>
                       )}
                     </div>
-                    <div className="p-3 w-full text-center border-t border-gray-50">
-                      <span className="font-medium text-gray-800 text-sm group-hover:text-orange-500 transition-colors line-clamp-1">{sub.name}</span>
+                    <div className="p-3 w-full text-center border-t border-gray-50 bg-white">
+                      <span className="font-semibold text-gray-800 text-sm group-hover:text-orange-500 transition-colors line-clamp-1">{sub.name}</span>
                     </div>
                   </Link>
                 ))}
@@ -375,19 +375,19 @@ export default function Category() {
           {!loading && currentSubSubcategories.length > 0 && (
             <div className="mb-8">
               <h2 className="text-lg font-bold text-gray-800 mb-4">Sous-sous-catégories</h2>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                 {currentSubSubcategories.map(subsub => (
                   <Link 
                     key={subsub.id} 
                     to={`/category/${subsub.slug}?subsub=true`}
-                    className="bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-md hover:border-orange-200 transition-all flex flex-col items-center justify-center group overflow-hidden"
+                    className="bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-md hover:border-orange-200 transition-all flex flex-col items-center justify-center group overflow-hidden"
                   >
-                    <div className="w-full aspect-video bg-gray-50 flex items-center justify-center overflow-hidden relative">
+                    <div className="w-full aspect-square bg-gray-50 flex items-center justify-center overflow-hidden relative">
                       {subsub.image ? (
                         <img 
-                          src={getResizedImageUrl(subsub.image, 400)} 
+                          src={getResizedImageUrl(subsub.image, 600)} 
                           alt={subsub.name} 
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
+                          className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500" 
                           referrerPolicy="no-referrer"
                           loading="lazy"
                           decoding="async"
@@ -396,8 +396,8 @@ export default function Category() {
                         <span className="text-4xl">{getCategoryWithEmoji(subsub.name).split(' ')[0]}</span>
                       )}
                     </div>
-                    <div className="p-3 w-full text-center border-t border-gray-50">
-                      <span className="font-medium text-gray-800 text-sm group-hover:text-orange-500 transition-colors line-clamp-1">{subsub.name}</span>
+                    <div className="p-3 w-full text-center border-t border-gray-50 bg-white">
+                      <span className="font-semibold text-gray-800 text-sm group-hover:text-orange-500 transition-colors line-clamp-1">{subsub.name}</span>
                     </div>
                   </Link>
                 ))}

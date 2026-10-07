@@ -402,7 +402,24 @@ app.get('*', async (req, res, next) => {
         }
       }
     } else if (req.path.startsWith('/product/')) {
-      const slug = req.path.split('/')[2];
+      let slug = req.path.split('/')[2];
+      if (slug && (slug.endsWith('-') || slug.endsWith('/'))) {
+        const cleanSlug = slug.replace(/[-/]+$/, '');
+        return res.redirect(301, `/product/${cleanSlug}`);
+      }
+
+      const PRODUCT_REDIRECTS: Record<string, string> = {
+        'sonashi-sb-161-blender-electrique-2-en-1-400w': 'blender-electrique-sonashi-sb-161-2-en-1-400w-4-vitesses-mixeur-de-cuisine-compact',
+        'sonashi-sfp-918-robot-multifonction-de-cuisine-600w': 'robot-multifonction-de-cuisine-sonashi-sfp-918-600w-hachoir-et-mixeur-polyvalent',
+        'sonashi-saf-920-air-fryer-9-2l-2000w': 'air-fryer-sonashi-saf-920-92l-2000w-friteuse-sans-huile-numerique-grande-capacite',
+        'sonashi-robot-petrin-multifonctions-en-acier-inoxydable-2000w-12l-6kg-ecran-lcd': 'sonashi-robot-petrin-multifonctions-en-acier-inoxydable-2000w-12-l-6-kg-ecran-lcd',
+        'sonashi-svc-9033-aspirateur-sans-fil-180w': 'aspirateur-balai-sans-fil-3-en-1-180w-sonashi-svc-9033-12-kpa-batterie-2600mah',
+        'sonashi-saf-115-10l-double-bac-2600w-friteuse-sans-huile': 'air-fryer-sonashi-saf-115-10l-double-bac-2600w-friteuse-sans-huile-numerique-en-inox',
+      };
+      if (slug && PRODUCT_REDIRECTS[slug]) {
+        return res.redirect(301, `/product/${PRODUCT_REDIRECTS[slug]}`);
+      }
+
       try {
         const [product] = await sql`
           SELECT p.id, p.name, p.description, p.seo_title, p.seo_description, p.seo_keywords, p.price, p.promo_price, p.promo_price_start_date, p.promo_price_end_date, p.sku, p.stock, p.is_active,

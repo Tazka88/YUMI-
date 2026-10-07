@@ -56,7 +56,14 @@
     { "source": "/brands/proficook", "destination": "/brands/cuisine-proficook-algerie", "permanent": true },
     { "source": "/brands/nardi", "destination": "/brands/electromenager-nardi-algerie", "permanent": true },
     { "source": "/brands/nike", "destination": "/brands/mode-nike-algerie", "permanent": true },
-    { "source": "/brands/lg", "destination": "/brands/high-tech-lg-algerie", "permanent": true }
+    { "source": "/brands/lg", "destination": "/brands/high-tech-lg-algerie", "permanent": true },
+    { "source": "/product/sonashi-sb-161-blender-electrique-2-en-1-400w", "destination": "/product/blender-electrique-sonashi-sb-161-2-en-1-400w-4-vitesses-mixeur-de-cuisine-compact", "permanent": true },
+    { "source": "/product/sonashi-sfp-918-robot-multifonction-de-cuisine-600w", "destination": "/product/robot-multifonction-de-cuisine-sonashi-sfp-918-600w-hachoir-et-mixeur-polyvalent", "permanent": true },
+    { "source": "/product/sonashi-saf-920-air-fryer-9-2l-2000w", "destination": "/product/air-fryer-sonashi-saf-920-92l-2000w-friteuse-sans-huile-numerique-grande-capacite", "permanent": true },
+    { "source": "/product/sonashi-robot-petrin-multifonctions-en-acier-inoxydable-2000w-12l-6kg-ecran-lcd", "destination": "/product/sonashi-robot-petrin-multifonctions-en-acier-inoxydable-2000w-12-l-6-kg-ecran-lcd", "permanent": true },
+    { "source": "/product/sonashi-svc-9033-aspirateur-sans-fil-180w", "destination": "/product/aspirateur-balai-sans-fil-3-en-1-180w-sonashi-svc-9033-12-kpa-batterie-2600mah", "permanent": true },
+    { "source": "/product/sonashi-saf-115-10l-double-bac-2600w-friteuse-sans-huile", "destination": "/product/air-fryer-sonashi-saf-115-10l-double-bac-2600w-friteuse-sans-huile-numerique-en-inox", "permanent": true },
+    { "source": "/product/tondeuse-professionnelle-kemei-km-2261-sans-fil-t-blade-ecran-lcd-usb-c-", "destination": "/product/tondeuse-professionnelle-kemei-km-2261-sans-fil-t-blade-ecran-lcd-usb-c", "permanent": true }
   ],
   "headers": [
     {

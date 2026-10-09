@@ -552,6 +552,13 @@ ${JSON.stringify(schemaData)}
       } catch(e) { console.error("DB Error in SSR:", e); }
     } else if (req.path.startsWith('/blog/')) {
       const slug = req.path.split('/')[2];
+      const BLOG_REDIRECTS: Record<string, string> = {
+        'hoco-j101a-power-bank-20000mah-avis-test-et-guide-d-achat-2026-algerie': 'power-bank-en-algerie-comment-choisir-la-meilleure-batterie-externe-en-2026',
+      };
+      if (slug && BLOG_REDIRECTS[slug]) {
+        return res.redirect(301, `/blog/${BLOG_REDIRECTS[slug]}`);
+      }
+
       try {
         const [post] = await sql`SELECT title, excerpt, seo_title, seo_description, main_image FROM blog_posts WHERE slug = ${slug} AND status = 'published'`;
         if (post) {

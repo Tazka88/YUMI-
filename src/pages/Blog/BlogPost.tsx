@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import SEO from '../../components/SEO';
 import { buildBlogSchema, buildBreadcrumbSchema } from '../../lib/schemaUtils';
 import { Calendar, Tag, ChevronRight, Facebook, Twitter, Linkedin, Share2 } from 'lucide-react';
@@ -7,10 +7,19 @@ import DOMPurify from 'dompurify';
 
 export default function BlogPost() {
   const { slug } = useParams();
+  const navigate = useNavigate();
   const [post, setPost] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const BLOG_REDIRECTS: Record<string, string> = {
+      'hoco-j101a-power-bank-20000mah-avis-test-et-guide-d-achat-2026-algerie': 'power-bank-en-algerie-comment-choisir-la-meilleure-batterie-externe-en-2026',
+    };
+    if (slug && BLOG_REDIRECTS[slug]) {
+      navigate(`/blog/${BLOG_REDIRECTS[slug]}`, { replace: true });
+      return;
+    }
+
     fetchPost();
     window.scrollTo(0, 0);
   }, [slug]);

@@ -219,7 +219,9 @@ export default function BrandProducts() {
       }
     }));
     
-    schemaData = [breadcrumbSchema, ...productSchemas];
+    // Le serveur SSR (server.ts et api/index.ts) injecte déjà les données structurées Product complètes dans le HTML initial.
+    // Côté client React, on ne passe que le fil d'Ariane pour éviter de dupliquer les schémas dans le DOM inspecté par Google.
+    schemaData = [breadcrumbSchema];
   }
 
   return (

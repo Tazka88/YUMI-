@@ -56,24 +56,59 @@ export function buildProductSchema(product: any, reviews: any[], currentUrl: str
 
   
 
-  if (product.brand_name) {
-    schema.brand = {
-      "@type": "Brand",
-      "name": product.brand_name
-    };
-  }
+  schema.brand = {
+    "@type": "Brand",
+    "name": product.brand_name || "Zorando"
+  };
+
+  const isStockAvailable = product.stock !== undefined && product.stock !== null && (Number(product.stock) > 0 || product.stock === true);
 
   const offer: any = {
     "@type": "Offer",
     "url": currentUrl,
     "priceCurrency": "DZD",
     "price": currentPrice,
-    "availability": product.stock > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+    "availability": isStockAvailable ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
     "itemCondition": "https://schema.org/NewCondition",
     "seller": {
       "@type": "Organization",
       "name": "Zorando",
       "url": "https://www.zorando.com"
+    },
+    "hasMerchantReturnPolicy": {
+      "@type": "MerchantReturnPolicy",
+      "applicableCountry": "DZ",
+      "returnPolicyCategory": "https://schema.org/MerchantReturnFiniteReturnWindow",
+      "merchantReturnDays": 7,
+      "returnMethod": "https://schema.org/ReturnByMail",
+      "returnFees": "https://schema.org/FreeReturn"
+    },
+    "shippingDetails": {
+      "@type": "OfferShippingDetails",
+      "shippingRate": {
+        "@type": "MonetaryAmount",
+        "value": "600",
+        "currency": "DZD"
+      },
+      "shippingDestination": {
+        "@type": "DefinedRegion",
+        "addressCountry": "DZ"
+      },
+      "deliveryTime": {
+        "@type": "ShippingDeliveryTime",
+        "handlingTime": {
+          "@type": "QuantitativeValue",
+          "minValue": 0,
+          "maxValue": 1,
+          "unitCode": "DAY"
+        },
+        "transitTime": {
+          "@type": "QuantitativeValue",
+          "minValue": 1,
+          "maxValue": 3,
+          "unitCode": "DAY"
+        }
+      }
     }
   };
 

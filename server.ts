@@ -346,7 +346,7 @@ app.get('*', async (req, res, next) => {
         try {
           const [brand] = await sql`SELECT id, name, description, seo_title, seo_description FROM brands WHERE slug = ${slug}`;
           if (brand) {
-            title = brand.seo_title ? `${brand.seo_title} | ZORANDO` : `${brand.name} en Algérie | Produits & Prix | ZORANDO`;
+            title = brand.seo_title || `${brand.name} en Algérie | Produits & Prix | ZORANDO`;
             description = brand.seo_description ? cleanForSEO(brand.seo_description) : (brand.description ? cleanForSEO(brand.description, 160) : `Découvrez tous les produits de la marque ${brand.name} sur ZORANDO. Prix compétitifs et livraison dans les 58 wilayas.`);
             const products = await sql`SELECT name, slug, price, promo_price, stock FROM products WHERE brand_id = ${brand.id} AND is_active = true LIMIT 50`;
             
@@ -572,7 +572,7 @@ ${JSON.stringify(schemaData)}
       }
 
       try {
-        const [post] = await sql`SELECT title, excerpt, seo_title, seo_description, main_image FROM blog_posts WHERE slug = ${slug} AND status = 'published'`;
+        const [post] = await sql`SELECT title, excerpt, seo_title, seo_description, image_url as main_image FROM blog_posts WHERE slug = ${slug} AND status = 'published'`;
         if (post) {
           title = post.seo_title || post.title || 'ZORANDO Blog';
           description = post.seo_description ? cleanForSEO(post.seo_description) : (post.excerpt ? cleanForSEO(post.excerpt, 160) : `Lisez notre article : ${post.title}`);

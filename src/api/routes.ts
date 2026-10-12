@@ -8,6 +8,7 @@ import multer from 'multer';
 import path from 'path';
 import rateLimit from 'express-rate-limit';
 import fs from 'fs';
+import crypto from 'crypto';
 import capiRoutes from './capi.js';
 import ecomdzRoutes, { fetchEcomdzStopdesks } from './ecomdz.js';
 import { getPushDashboardData, broadcastPushCampaign } from '../lib/push.js';
@@ -427,6 +428,163 @@ router.post('/admin/login', loginLimiter, async (req, res) => {
     res.json({ token });
   } catch (err) {
     res.status(500).json({ error: 'Login failed' });
+  }
+});
+
+// Client registration route: creates user in auth.users with verified email and profile, bypassing broken SMTP
+router.post('/auth/register', async (req, res) => {
+  try {
+    const { email, password, firstName, lastName, phone, wilaya, commune } = req.body;
+
+    if (!email || typeof email !== 'string') {
+      return res.status(400).json({ error: 'Une adresse email valide est requise.' });
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(cleanEmail)) {
+      return res.status(400).json({ error: 'Le format de l\'adresse email est invalide.' });
+    }
+
+    if (!password || typeof password !== 'string' || password.length < 6) {
+      return res.status(400).json({ error: 'Le mot de passe doit comporter au moins 6 caractères.' });
+    }
+
+    const cleanFirstName = (firstName || '').toString().trim();
+    const cleanLastName = (lastName || '').toString().trim();
+    const cleanPhone = (phone || '').toString().trim();
+    const cleanWilaya = (wilaya || '').toString().trim();
+    const cleanCommune = (commune || '').toString().trim();
+
+    // Check if user already exists in auth.users
+    const [existingUser] = await sql`SELECT id FROM auth.users WHERE lower(email) = ${cleanEmail} LIMIT 1`;
+    if (existingUser) {
+      return res.status(400).json({
+        error: 'Cette adresse email est déjà associée à un compte. Veuillez vous connecter.'
+      });
+    }
+
+    const userId = crypto.randomUUID();
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Insert into auth.users with email_confirmed_at set (no email sending error, immediate account access)
+    await sql`
+      INSERT INTO auth.users (
+        instance_id,
+        id,
+        aud,
+        role,
+        email,
+        encrypted_password,
+        email_confirmed_at,
+        confirmation_token,
+        recovery_token,
+        email_change_token_new,
+        email_change,
+        raw_app_meta_data,
+        raw_user_meta_data,
+        created_at,
+        updated_at,
+        phone_change,
+        phone_change_token,
+        email_change_token_current,
+        email_change_confirm_status,
+        reauthentication_token,
+        is_sso_user,
+        is_anonymous
+      ) VALUES (
+        '00000000-0000-0000-0000-000000000000',
+        ${userId},
+        'authenticated',
+        'authenticated',
+        ${cleanEmail},
+        ${hashedPassword},
+        NOW(),
+        '',
+        '',
+        '',
+        '',
+        '{"provider":"email","providers":["email"]}'::jsonb,
+        ${sql.json({
+          sub: userId,
+          email: cleanEmail,
+          first_name: cleanFirstName,
+          last_name: cleanLastName,
+          phone: cleanPhone,
+          email_verified: true,
+          phone_verified: false
+        })},
+        NOW(),
+        NOW(),
+        '',
+        '',
+        '',
+        0,
+        '',
+        false,
+        false
+      )
+    `;
+
+    // Insert into auth.identities
+    await sql`
+      INSERT INTO auth.identities (
+        provider_id,
+        user_id,
+        identity_data,
+        provider,
+        last_sign_in_at,
+        created_at,
+        updated_at
+      ) VALUES (
+        ${userId},
+        ${userId},
+        ${sql.json({
+          sub: userId,
+          email: cleanEmail,
+          first_name: cleanFirstName,
+          last_name: cleanLastName,
+          phone: cleanPhone,
+          email_verified: true,
+          phone_verified: false
+        })},
+        'email',
+        NOW(),
+        NOW(),
+        NOW()
+      )
+    `;
+
+    // Insert / upsert into public profiles
+    await sql`
+      INSERT INTO profiles (
+        id, first_name, last_name, email, phone, wilaya, commune, created_at, updated_at
+      ) VALUES (
+        ${userId}, ${cleanFirstName}, ${cleanLastName}, ${cleanEmail}, ${cleanPhone}, ${cleanWilaya}, ${cleanCommune}, NOW(), NOW()
+      )
+      ON CONFLICT (id) DO UPDATE SET
+        first_name = EXCLUDED.first_name,
+        last_name = EXCLUDED.last_name,
+        phone = EXCLUDED.phone,
+        wilaya = EXCLUDED.wilaya,
+        commune = EXCLUDED.commune,
+        updated_at = NOW()
+    `;
+
+    return res.json({
+      success: true,
+      user: {
+        id: userId,
+        email: cleanEmail,
+        first_name: cleanFirstName,
+        last_name: cleanLastName
+      }
+    });
+  } catch (err: any) {
+    console.error('Registration API error:', err);
+    return res.status(500).json({
+      error: 'Une erreur est survenue lors de l\'enregistrement de votre compte. Veuillez réessayer.'
+    });
   }
 });
 
@@ -2624,34 +2782,47 @@ router.get('/all-stopdesks', async (req, res) => {
   const cached = getCache(cacheKey);
   if (cached) return res.json(cached);
 
-  res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=86400, stale-while-revalidate=86400');
+  res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=300, stale-while-revalidate=300');
   try {
-    // 2. Ecom-DZ offices
-    const ecomdzData = await fetchEcomdzStopdesks();
-    
-    const mergedOffices = [];
-    
+    // 1. Local database offices (configured in admin)
+    const localOffices = await sql`SELECT * FROM offices ORDER BY wilaya ASC, name ASC`;
+    const mergedOffices: any[] = localOffices.map((o: any) => ({
+      id: o.id,
+      original_id: String(o.id),
+      company: 'local',
+      name: o.name,
+      address: o.address,
+      wilaya: o.wilaya,
+      commune: o.commune,
+      phone: o.phone || ''
+    }));
 
-    if (ecomdzData && ecomdzData.Commune && Array.isArray(ecomdzData.Commune)) {
-      ecomdzData.Commune.forEach((o: any) => {
-        mergedOffices.push({
-          id: `ecomdz-${o.Code}`,
-          original_id: o.Code, // CodeStopdesk
-          company: 'ecomdz',
-          name: o.Libelle,
-          address: o.Adresse,
-          wilaya: o.Ville,
-          commune: o.Commune,
-          phone: ''
+    // 2. Optional Ecom-DZ external offices (if active and available)
+    try {
+      const ecomdzData = await fetchEcomdzStopdesks();
+      if (ecomdzData && ecomdzData.Commune && Array.isArray(ecomdzData.Commune)) {
+        ecomdzData.Commune.forEach((o: any) => {
+          mergedOffices.push({
+            id: `ecomdz-${o.Code}`,
+            original_id: o.Code, // CodeStopdesk
+            company: 'ecomdz',
+            name: o.Libelle,
+            address: o.Adresse,
+            wilaya: o.Ville,
+            commune: o.Commune,
+            phone: ''
+          });
         });
-      });
+      }
+    } catch {
+      // Ignore external sync error, local offices are available
     }
 
-    // Cache for 24 hours (86400 seconds)
-    setCache(cacheKey, mergedOffices, 86400);
+    // Cache for 5 minutes
+    setCache(cacheKey, mergedOffices, 5);
     res.json(mergedOffices);
   } catch (err) {
-    console.error('Failed to fetch merged stopdesks:', err);
+    console.warn('Failed to fetch merged stopdesks:', err);
     res.status(500).json({ error: 'Failed to fetch merged stopdesks' });
   }
 });

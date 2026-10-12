@@ -374,31 +374,31 @@ export default function Checkout() {
     setIsAuthSubmitting(true);
     try {
       if (authMode === 'register') {
-        const { data, error } = await supabase.auth.signUp({
-          email: authEmail,
-          password: authPassword,
-          options: {
-            data: {
-              first_name: authFirstName,
-              last_name: authLastName,
-            }
-          }
+        const regRes = await fetch('/api/auth/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: authEmail.trim(),
+            password: authPassword,
+            firstName: authFirstName.trim(),
+            lastName: authLastName.trim(),
+            phone: formData.phone || '',
+            wilaya: formData.wilaya || '',
+            commune: formData.commune || ''
+          })
         });
-        if (error) throw error;
-
-        if (data.user) {
-          // Create initial profile in profiles table
-          await supabase.from('profiles').upsert({
-            id: data.user.id,
-            first_name: authFirstName,
-            last_name: authLastName,
-            email: authEmail,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          });
-
-          await refreshProfile();
+        const regData = await regRes.json();
+        if (!regRes.ok) {
+          throw new Error(regData.error || 'Erreur lors de la création du compte');
         }
+
+        const { error: signInErr } = await supabase.auth.signInWithPassword({
+          email: authEmail.trim(),
+          password: authPassword,
+        });
+        if (signInErr) throw signInErr;
+
+        await refreshProfile();
         toast.success('Compte créé avec succès ! Bienvenue chez Zorando.');
       } else {
         const { error } = await supabase.auth.signInWithPassword({

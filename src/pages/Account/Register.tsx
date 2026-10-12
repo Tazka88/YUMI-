@@ -71,6 +71,10 @@ export default function Register() {
       toast.error('Erreur de configuration de la base de données.');
       return;
     }
+    if (formData.password.length < 6) {
+      toast.error('Le mot de passe doit comporter au moins 6 caractères.');
+      return;
+    }
     if (formData.password !== formData.confirmPassword) {
       toast.error('Les mots de passe ne correspondent pas.');
       return;
@@ -78,41 +82,26 @@ export default function Register() {
 
     setLoading(true);
     try {
-      const { data, error } = await supabase.auth.signUp({
-        email: formData.email,
-        password: formData.password,
-        options: {
-          data: {
-            first_name: formData.firstName,
-            last_name: formData.lastName,
-            phone: formData.phone,
-          }
-        }
+      // 1. Register through verified backend endpoint (bypasses Supabase SMTP rate limit / email errors)
+      const res = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Une erreur est survenue lors de l\'inscription.');
+      }
+
+      // 2. Automatically log the user in to establish active Supabase session
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: formData.email.trim(),
+        password: formData.password
       });
 
-      if (error) throw error;
-
-      if (data.user) {
-        // Create profile in profiles table
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .insert([
-            {
-              id: data.user.id,
-              first_name: formData.firstName,
-              last_name: formData.lastName,
-              email: formData.email,
-              phone: formData.phone,
-              wilaya: formData.wilaya,
-              commune: formData.commune,
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-            }
-          ]);
-        
-        if (profileError) {
-          console.error('Error creating profile:', profileError);
-        }
+      if (signInError) {
+        console.warn('Auto sign-in warning:', signInError);
       }
 
       toast.success('Compte créé avec succès ! Bienvenue chez Zorando.');

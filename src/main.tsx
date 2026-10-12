@@ -4,8 +4,12 @@ import App from './App.tsx';
 import './index.css';
 
 if (typeof window !== 'undefined') {
-  (window as any).__SUPABASE_URL__ = (window as any).__SUPABASE_URL__ || (import.meta as any).env?.VITE_SUPABASE_URL;
-  (window as any).__SUPABASE_KEY__ = (window as any).__SUPABASE_KEY__ || (import.meta as any).env?.VITE_SUPABASE_ANON_KEY;
+  const metaUrl = document.querySelector('meta[name="supabase-url"]')?.getAttribute('content');
+  const metaKey = document.querySelector('meta[name="supabase-key"]')?.getAttribute('content');
+  if (metaUrl && !metaUrl.includes('%VITE_')) (window as any).__SUPABASE_URL__ = metaUrl;
+  if (metaKey && !metaKey.includes('%VITE_')) (window as any).__SUPABASE_KEY__ = metaKey;
+  (window as any).__SUPABASE_URL__ = (window as any).__SUPABASE_URL__ || (import.meta as any).env?.VITE_SUPABASE_URL || 'https://evvbhalgyffagsesmvhu.supabase.co';
+  (window as any).__SUPABASE_KEY__ = (window as any).__SUPABASE_KEY__ || (import.meta as any).env?.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV2dmJoYWxneWZmYWdzZXNtdmh1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4Nzc2MDMsImV4cCI6MjA4OTQ1MzYwM30.gL5FtiWtgIDLWXQJZnWbaOK9XY4voUQrfFLf5EaA2v4';
 
   window.onunhandledrejection = (event) => {
     // Log network/unhandled errors for debugging without showing intrusive toasts to users

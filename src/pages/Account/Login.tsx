@@ -33,7 +33,14 @@ export default function Login() {
       navigate(from, { replace: true });
     } catch (error: any) {
       console.error("Login error:", error);
-      toast.error(error.message || 'Email ou mot de passe incorrect.');
+      const msg = error.message?.toLowerCase();
+      if (msg?.includes('invalid login credentials')) {
+        toast.error('Email ou mot de passe incorrect.');
+      } else if (msg?.includes('email not confirmed')) {
+        toast.error('Veuillez confirmer votre adresse email.');
+      } else {
+        toast.error(error.message || 'Email ou mot de passe incorrect.');
+      }
     } finally {
       setLoading(false);
     }

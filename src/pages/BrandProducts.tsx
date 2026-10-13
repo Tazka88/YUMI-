@@ -4,7 +4,7 @@ import { ProductCard } from '../components/ProductCard';
 import SEO from '../components/SEO';
 import { Product } from '../store/cartStore';
 import { fetchWithCache } from '../lib/utils';
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, BookOpen, ArrowRight } from 'lucide-react';
 
 interface ExtractedCategory {
   id: number;
@@ -194,6 +194,44 @@ const ROBUSTE_FAQ = [
       </div>
     );
 
+const ROBUSTE_BLOGS = [
+  {
+    title: "Robot Pétrin ROBUSTE : Idéal pour Kesra, Khobz Dar et Pâtes Lourdes ? (Test 2026)",
+    slug: "robot-petrin-robuste-algerie-kesra-khobz-dar-test-avis-prix-2026",
+    excerpt: "Le modèle PRO MAX résiste-t-il au pétrissage de la semoule compacte ? Analyse du moteur, transmission et avis pour les recettes algériennes.",
+    badge: "FAQ : Pain & Kesra",
+    image: "https://evvbhalgyffagsesmvhu.supabase.co/storage/v1/object/public/images/products/prod-13-1781268258569-9cr8i.webp"
+  },
+  {
+    title: "Nettoyeur de Taches ROBUSTE Proclean 4-en-1 : Test sur Canapés, Tapis & Matelas",
+    slug: "nettoyeur-de-taches-robuste-proclean-4en1-algerie-test-avis-prix-2026",
+    excerpt: "Détache-t-il en profondeur les salons algériens et sièges auto ? Découverte du cycle 4en1 vapeur 1650W, injection et extraction.",
+    badge: "FAQ : Taches & Salons",
+    image: "https://evvbhalgyffagsesmvhu.supabase.co/storage/v1/object/public/images/products/prod-446-1781268420974-wombji.webp"
+  },
+  {
+    title: "Électroménager ROBUSTE en Algérie 2026 : Prix en DZD, Garantie & Avis Clients",
+    slug: "electromenager-robuste-algerie-guide-prix-dzd-garantie-avis-2026",
+    excerpt: "Grille officielle des tarifs en Algérie, conseils pour reconnaître l'original et sélection des meilleurs appareils indispensables.",
+    badge: "FAQ : Prix & Garantie",
+    image: "https://evvbhalgyffagsesmvhu.supabase.co/storage/v1/object/public/images/uploads/friteuse-sans-huile-robuste-af10-10l-2850w-tactile-avec-fenetre-1-a5h7zj.webp"
+  },
+  {
+    title: "Air Fryer ROBUSTE : Comparatif AF10 10L vs 8L (Avis, Test & Prix DZD)",
+    slug: "air-fryer-robuste-algerie-comparatif-af10-10l-8l-avis-prix-2026",
+    excerpt: "Quelle friteuse sans huile choisir pour une cuisson saine en Algérie ? Test du modèle XXL AF10 10L à double résistance.",
+    badge: "Test Friteuse Sans Huile",
+    image: "https://evvbhalgyffagsesmvhu.supabase.co/storage/v1/object/public/images/products/prod-447-1781268441985-buy8au.webp"
+  },
+  {
+    title: "Machine à Café ROBUSTE : Expresso Roma vs Auto Italia (Guide & Prix 2026)",
+    slug: "machine-a-cafe-robuste-algerie-expresso-roma-auto-italia-avis-prix-2026",
+    excerpt: "Percolateur 15 bars ou machine à capsules ? Tout savoir pour préparer un café italien crémeux à la maison.",
+    badge: "Guide Expresso & Café",
+    image: "https://evvbhalgyffagsesmvhu.supabase.co/storage/v1/object/public/images/products/prod-480-1781268288522-oubtbt.webp"
+  }
+];
+
     bottomSeoContent = (
       <div className="mt-12 space-y-8">
         {brand.seo_content && (
@@ -201,6 +239,63 @@ const ROBUSTE_FAQ = [
             <div dangerouslySetInnerHTML={{ __html: brand.seo_content }} />
           </div>
         )}
+
+        {/* Guides & Réponses aux questions fréquentes (Blog) */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 md:p-10">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                <BookOpen className="w-6 h-6 text-orange-500" />
+                Guides d'Achat, Tests & Réponses aux Questions Fréquentes
+              </h2>
+              <p className="text-sm text-gray-500 mt-1">
+                Articles détaillés et tests en conditions réelles pour bien choisir vos appareils ROBUSTE en Algérie.
+              </p>
+            </div>
+            <Link
+              to="/blog"
+              className="inline-flex items-center gap-1.5 text-sm font-semibold text-orange-600 hover:text-orange-700 whitespace-nowrap"
+            >
+              Voir tout le blog <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {ROBUSTE_BLOGS.map((item, idx) => (
+              <Link
+                key={idx}
+                to={`/blog/${item.slug}`}
+                className="group flex flex-col bg-gray-50 rounded-xl overflow-hidden border border-gray-200 hover:border-orange-300 hover:shadow-md transition-all duration-200"
+              >
+                <div className="relative aspect-video w-full bg-white overflow-hidden">
+                  <img
+                    src={item.image}
+                    alt={item.title}
+                    className="w-full h-full object-contain p-2 group-hover:scale-105 transition-transform duration-300"
+                    loading="lazy"
+                  />
+                  <span className="absolute top-2 left-2 bg-orange-500 text-white text-xs font-bold px-2.5 py-1 rounded-full shadow-sm">
+                    {item.badge}
+                  </span>
+                </div>
+                <div className="p-4 flex-1 flex flex-col justify-between">
+                  <div>
+                    <h3 className="font-bold text-gray-900 text-base group-hover:text-orange-600 transition-colors line-clamp-2">
+                      {item.title}
+                    </h3>
+                    <p className="text-xs text-gray-600 mt-2 line-clamp-2 leading-relaxed">
+                      {item.excerpt}
+                    </p>
+                  </div>
+                  <div className="mt-4 pt-3 border-t border-gray-200/60 flex items-center justify-between text-xs font-semibold text-orange-600">
+                    <span>Lire l'article complet</span>
+                    <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
         
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 md:p-10">
           <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">

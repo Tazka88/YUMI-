@@ -619,14 +619,15 @@ router.get('/sitemap.xml', async (req, res) => {
   try {
     const baseUrl = 'https://www.zorando.com';
     
-    const [products, categories, subcategories, sub_subcategories, brands, pages, brandSubSubCategories] = await Promise.all([
+    const [products, categories, subcategories, sub_subcategories, brands, pages, brandSubSubCategories, blogPosts] = await Promise.all([
       sql`SELECT slug, created_at FROM products WHERE is_active = true`,
       sql`SELECT slug FROM categories`,
       sql`SELECT slug FROM subcategories`,
       sql`SELECT slug FROM sub_subcategories`,
       sql`SELECT slug FROM brands`,
       sql`SELECT slug, updated_at FROM pages`,
-      sql`SELECT DISTINCT b.slug as brand_slug, c.slug as category_slug FROM products p JOIN brands b ON p.brand_id = b.id JOIN sub_subcategories c ON p.sub_subcategory_id = c.id WHERE p.is_active = true AND p.sub_subcategory_id IS NOT NULL`
+      sql`SELECT DISTINCT b.slug as brand_slug, c.slug as category_slug FROM products p JOIN brands b ON p.brand_id = b.id JOIN sub_subcategories c ON p.sub_subcategory_id = c.id WHERE p.is_active = true AND p.sub_subcategory_id IS NOT NULL`,
+      sql`SELECT slug, updated_at FROM blog_posts WHERE status = 'published'`
     ]);
 
     let xml = `<?xml version="1.0" encoding="UTF-8"?>
@@ -712,6 +713,16 @@ router.get('/sitemap.xml', async (req, res) => {
     <lastmod>${new Date(p.updated_at || Date.now()).toISOString()}</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
+  </url>`;
+    });
+
+    blogPosts.forEach(bp => {
+      xml += `
+  <url>
+    <loc>${baseUrl}/blog/${bp.slug}</loc>
+    <lastmod>${new Date(bp.updated_at || Date.now()).toISOString()}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
   </url>`;
     });
 

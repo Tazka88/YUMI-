@@ -112,6 +112,25 @@ export default function BrandProducts() {
   let metaDescription = '';
   let seoIntro = null;
 
+const ROBUSTE_FAQ = [
+  {
+    q: "Quels sont les meilleurs appareils électroménagers ROBUSTE en Algérie ?",
+    a: "Parmi les appareils ROBUSTE les plus plébiscités en Algérie figurent la machine à café Expresso Roma (15 bars), la friteuse sans huile Airfryer AF10 10L à double résistance et fenêtre tactile, le robot pétrin PRO MAX pour les pâtes traditionnelles, et le nettoyeur de taches vapeur Proclean 4-en-1."
+  },
+  {
+    q: "Quel est le prix des appareils ROBUSTE chez ZORANDO en Algérie ?",
+    a: "Les prix des produits ROBUSTE débutent dès 3 300 DZD pour les petits appareils (cafetières compactes, batteurs, presse-agrumes) et vont jusqu'à 24 000 - 25 500 DZD pour les modèles professionnels comme l'Airfryer AF10 10L ou le nettoyeur vapeur Proclean. Tous les prix sont affichés en Dinars Algériens (DZD) avec promotions régulières."
+  },
+  {
+    q: "Le robot pétrin ROBUSTE est-il adapté pour le pain maison et la Kesra algérienne ?",
+    a: "Oui, le robot pétrin Robuste PRO MAX est équipé d'un moteur robuste à transmission renforcée et d'un bol inox grande capacité, spécialement adapté au pétrissage des pâtes lourdes traditionnelles comme la Kesra, le Khobz Dar et les pâtes à pizza."
+  },
+  {
+    q: "Les appareils ROBUSTE sont-ils garantis et livrés dans les 58 wilayas ?",
+    a: "Absolument. Tous les produits ROBUSTE commandés sur ZORANDO sont 100% originaux et couverts par une garantie officielle. La livraison est assurée rapidement à domicile ou en point relais dans les 58 wilayas d'Algérie avec paiement à la livraison après inspection de votre colis."
+  }
+];
+
   let bottomSeoContent = null;
   if (currentCategory) {
     const catName = currentCategory.name;
@@ -159,19 +178,48 @@ export default function BrandProducts() {
         </div>
       </div>
     );
-  } else if (false) {
-    h1Title = `${currentCategory.name} ${brand.name} Algérie`;
-    pageTitle = `${currentCategory.name} ${brand.name} Algérie – ${currentCategory.name} au meilleur prix | Zorando`;
-    metaDescription = `Découvrez les ${currentCategory.name.toLowerCase()} ${brand.name} disponibles en Algérie sur Zorando. Consultez les modèles, caractéristiques et prix des ${currentCategory.name.toLowerCase()} ${brand.name}.`;
+  } else if (brand.slug === 'electromenager-robuste-algerie') {
+    h1Title = brand.h1_title || 'Électroménager ROBUSTE en Algérie – Cafetières, Air Fryers, Pétrins & Maison';
+    pageTitle = brand.seo_title || 'Électroménager ROBUSTE Algérie : Cafetières, Air Fryers, Pétrins & Prix DZD';
+    metaDescription = brand.seo_description || 'Achetez vos appareils ROBUSTE en Algérie chez ZORANDO : cafetières, air fryers, robots pétrins & défroisseurs. Meilleurs prix et livraison 58 wilayas.';
     
     seoIntro = (
-      <div className="prose prose-sm max-w-none text-gray-600 mb-6">
+      <div className="prose prose-sm max-w-none text-gray-700 mb-6">
         <p>
-          Découvrez notre sélection de <strong>{currentCategory.name.toLowerCase()} {brand.name}</strong> en Algérie. 
-          Que vous cherchiez la performance, la durabilité ou le meilleur rapport qualité-prix, 
-          les produits de la gamme {currentCategory.name.toLowerCase()} {brand.name} répondront à vos besoins. 
-          Profitez de la qualité {brand.name} avec la garantie et le service Zorando.
+          Retrouvez toute la gamme officielle <strong>ROBUSTE en Algérie</strong> au meilleur prix sur ZORANDO. 
+          Des <strong>cafetières expresso</strong> haute pression aux <strong>air fryers sans huile</strong> grande capacité, 
+          en passant par le puissant <strong>robot pétrin PRO MAX</strong> et les <strong>défroisseurs vapeur</strong>, 
+          bénéficiez d'appareils fiables avec garantie et livraison rapide dans les 58 wilayas.
         </p>
+      </div>
+    );
+
+    bottomSeoContent = (
+      <div className="mt-12 space-y-8">
+        {brand.seo_content && (
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 md:p-10 prose prose-slate max-w-none text-gray-700 leading-relaxed">
+            <div dangerouslySetInnerHTML={{ __html: brand.seo_content }} />
+          </div>
+        )}
+        
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 md:p-10">
+          <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+            <span>❓</span> Foire Aux Questions – Marque ROBUSTE en Algérie
+          </h2>
+          <div className="space-y-4">
+            {ROBUSTE_FAQ.map((item, idx) => (
+              <details key={idx} className="group border border-gray-200 rounded-xl p-4 transition-colors hover:border-orange-200 bg-gray-50/50 open:bg-white" open={idx === 0}>
+                <summary className="font-bold text-gray-900 cursor-pointer list-none flex justify-between items-center select-none">
+                  <span>{item.q}</span>
+                  <span className="text-orange-500 font-bold text-xl ml-2 transition-transform group-open:rotate-45">+</span>
+                </summary>
+                <p className="mt-3 text-sm text-gray-700 leading-relaxed border-t border-gray-100 pt-3">
+                  {item.a}
+                </p>
+              </details>
+            ))}
+          </div>
+        </div>
       </div>
     );
   } else {
@@ -191,37 +239,43 @@ export default function BrandProducts() {
       </div>
     );
   }
-  let schemaData = [];
-  if (brand.slug === 'electromenager-moulinex-algerie' && currentCategory) {
-    const breadcrumbSchema = {
+
+  let schemaData: any[] = [];
+  const breadcrumbSchema = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      { "@type": "ListItem", "position": 1, "name": "Accueil", "item": "https://www.zorando.com/" },
+      { "@type": "ListItem", "position": 2, "name": "Marques", "item": "https://www.zorando.com/brands" },
+      { "@type": "ListItem", "position": 3, "name": brand.name, "item": `https://www.zorando.com/brands/${brand.slug}` },
+      ...(isCategoryPage && currentCategory ? [{ "@type": "ListItem", "position": 4, "name": currentCategory.name, "item": `https://www.zorando.com/brands/${brand.slug}/${categorySlug}` }] : [])
+    ]
+  };
+  schemaData.push(breadcrumbSchema);
+
+  if (!isCategoryPage) {
+    schemaData.push({
       "@context": "https://schema.org",
-      "@type": "BreadcrumbList",
-      "itemListElement": [
-        { "@type": "ListItem", "position": 1, "name": "Accueil", "item": "https://www.zorando.com/" },
-        { "@type": "ListItem", "position": 2, "name": "Marques", "item": "https://www.zorando.com/brands" },
-        { "@type": "ListItem", "position": 3, "name": brand.name, "item": `https://www.zorando.com/brands/${brand.slug}` },
-        { "@type": "ListItem", "position": 4, "name": currentCategory.name, "item": `https://www.zorando.com/brands/${brand.slug}/${categorySlug}` }
-      ]
-    };
-    
-    const productSchemas = displayedProducts.map(p => ({
-      "@type": "Product",
-      "name": p.name,
-      "image": p.image ? (p.image.startsWith('/') ? `https://www.zorando.com${p.image}` : p.image) : undefined,
-      "brand": { "@type": "Brand", "name": brand.name },
-      "sku": p.sku || undefined,
-      "offers": {
-        "@type": "Offer",
-        "url": `https://www.zorando.com/product/${p.slug}`,
-        "priceCurrency": "DZD",
-        "price": p.promo_price || p.price,
-        "availability": p.stock > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock"
-      }
-    }));
-    
-    // Le serveur SSR (server.ts et api/index.ts) injecte déjà les données structurées Product complètes dans le HTML initial.
-    // Côté client React, on ne passe que le fil d'Ariane pour éviter de dupliquer les schémas dans le DOM inspecté par Google.
-    schemaData = [breadcrumbSchema];
+      "@type": "Brand",
+      "name": brand.name,
+      "url": `https://www.zorando.com/brands/${brand.slug}`,
+      "logo": brand.image || undefined
+    });
+
+    if (brand.slug === 'electromenager-robuste-algerie') {
+      schemaData.push({
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": ROBUSTE_FAQ.map(item => ({
+          "@type": "Question",
+          "name": item.q,
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": item.a
+          }
+        }))
+      });
+    }
   }
 
   return (
@@ -330,7 +384,7 @@ export default function BrandProducts() {
         </div>
 
         {/* Existing SEO Sidebar Content (fallback if brand has custom HTML) */}
-        {!isCategoryPage && brand.seo_content && (
+        {!isCategoryPage && brand.seo_content && brand.slug !== 'electromenager-robuste-algerie' && (
           <div className="w-full lg:w-[320px] xl:w-[380px] shrink-0 mt-8 lg:mt-0">
             <div className="bg-gray-50 rounded-xl p-6 border border-gray-100 seo-description sticky top-24">
               <div dangerouslySetInnerHTML={{ __html: brand.seo_content }} />

@@ -344,12 +344,102 @@ app.get('*', async (req, res, next) => {
         } catch(e) { console.error("DB Error in SSR generic brand cat:", e); }
       } else {
         try {
-          const [brand] = await sql`SELECT id, name, description, seo_title, seo_description FROM brands WHERE slug = ${slug}`;
+          const [brand] = await sql`SELECT id, name, description, seo_title, seo_description, h1_title, seo_content, image FROM brands WHERE slug = ${slug}`;
           if (brand) {
             title = brand.seo_title || `${brand.name} en Algérie | Produits & Prix | ZORANDO`;
             description = brand.seo_description ? cleanForSEO(brand.seo_description) : (brand.description ? cleanForSEO(brand.description, 160) : `Découvrez tous les produits de la marque ${brand.name} sur ZORANDO. Prix compétitifs et livraison dans les 58 wilayas.`);
-            const products = await sql`SELECT name, slug, price, promo_price, stock FROM products WHERE brand_id = ${brand.id} AND is_active = true LIMIT 50`;
+            const products = await sql`SELECT name, slug, price, promo_price, stock FROM products WHERE brand_id = ${brand.id} AND is_active = true LIMIT 100`;
             
+            const breadcrumbJson = {
+              "@context": "https://schema.org",
+              "@type": "BreadcrumbList",
+              "itemListElement": [
+                { "@type": "ListItem", "position": 1, "name": "Accueil", "item": `${baseUrl}/` },
+                { "@type": "ListItem", "position": 2, "name": "Marques", "item": `${baseUrl}/brands` },
+                { "@type": "ListItem", "position": 3, "name": brand.name, "item": `${baseUrl}/brands/${slug}` }
+              ]
+            };
+
+            const brandJson = {
+              "@context": "https://schema.org",
+              "@type": "Brand",
+              "name": brand.name,
+              "url": `${baseUrl}/brands/${slug}`,
+              "logo": brand.image || undefined
+            };
+
+            const itemListJson = {
+              "@context": "https://schema.org",
+              "@type": "ItemList",
+              "name": `${brand.name} en Algérie`,
+              "numberOfItems": products.length,
+              "itemListElement": products.map((p: any, idx: number) => ({
+                "@type": "ListItem",
+                "position": idx + 1,
+                "item": {
+                  "@type": "Product",
+                  "name": p.name,
+                  "url": `${baseUrl}/product/${p.slug}`,
+                  "offers": {
+                    "@type": "Offer",
+                    "priceCurrency": "DZD",
+                    "price": p.promo_price || p.price,
+                    "availability": p.stock > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+                    "seller": {
+                      "@type": "Organization",
+                      "name": "ZORANDO"
+                    }
+                  }
+                }
+              }))
+            };
+
+            headHtml += `\n<script type="application/ld+json">${JSON.stringify(breadcrumbJson)}</script>`;
+            headHtml += `\n<script type="application/ld+json">${JSON.stringify(brandJson)}</script>`;
+            headHtml += `\n<script type="application/ld+json">${JSON.stringify(itemListJson)}</script>`;
+
+            if (slug === 'electromenager-robuste-algerie') {
+              const faqJson = {
+                "@context": "https://schema.org",
+                "@type": "FAQPage",
+                "mainEntity": [
+                  {
+                    "@type": "Question",
+                    "name": "Quels sont les meilleurs appareils électroménagers ROBUSTE en Algérie ?",
+                    "acceptedAnswer": {
+                      "@type": "Answer",
+                      "text": "Parmi les appareils ROBUSTE les plus plébiscités en Algérie figurent la machine à café Expresso Roma (15 bars), la friteuse sans huile Airfryer AF10 10L à double résistance et fenêtre tactile, le robot pétrin PRO MAX pour les pâtes traditionnelles, et le nettoyeur de taches vapeur Proclean 4-en-1."
+                    }
+                  },
+                  {
+                    "@type": "Question",
+                    "name": "Quel est le prix des appareils ROBUSTE chez ZORANDO en Algérie ?",
+                    "acceptedAnswer": {
+                      "@type": "Answer",
+                      "text": "Les prix des produits ROBUSTE débutent dès 3 300 DZD pour les petits appareils (cafetières compactes, batteurs, presse-agrumes) et vont jusqu'à 24 000 - 25 500 DZD pour les modèles professionnels comme l'Airfryer AF10 10L ou le nettoyeur vapeur Proclean. Tous les prix sont affichés en Dinars Algériens (DZD) avec promotions régulières."
+                    }
+                  },
+                  {
+                    "@type": "Question",
+                    "name": "Le robot pétrin ROBUSTE est-il adapté pour le pain maison et la Kesra algérienne ?",
+                    "acceptedAnswer": {
+                      "@type": "Answer",
+                      "text": "Oui, le robot pétrin Robuste PRO MAX est équipé d'un moteur robuste à transmission renforcée et d'un bol inox grande capacité, spécialement adapté au pétrissage des pâtes lourdes traditionnelles comme la Kesra, le Khobz Dar et les pâtes à pizza."
+                    }
+                  },
+                  {
+                    "@type": "Question",
+                    "name": "Les appareils ROBUSTE sont-ils garantis et livrés dans les 58 wilayas ?",
+                    "acceptedAnswer": {
+                      "@type": "Answer",
+                      "text": "Absolument. Tous les produits ROBUSTE commandés sur ZORANDO sont 100% originaux et couverts par une garantie officielle. La livraison est assurée rapidement à domicile ou en point relais dans les 58 wilayas d'Algérie avec paiement à la livraison après inspection de votre colis."
+                    }
+                  }
+                ]
+              };
+              headHtml += `\n<script type="application/ld+json">${JSON.stringify(faqJson)}</script>`;
+            }
+
             let productsHtml = products.map((p: any) => `
               <li>
                 <a href="/product/${p.slug}">${p.name}</a> - ${p.promo_price || p.price} DZD
@@ -357,11 +447,30 @@ app.get('*', async (req, res, next) => {
               </li>
             `).join('');
 
+            const brandH1 = brand.h1_title || `${brand.name} en Algérie`;
+            const brandContent = brand.seo_content || `<p>${description}</p>`;
+
+            let faqSectionHtml = '';
+            if (slug === 'electromenager-robuste-algerie') {
+              faqSectionHtml = `
+              <h2>Foire Aux Questions – Marque ROBUSTE en Algérie</h2>
+              <h3>Quels sont les meilleurs appareils électroménagers ROBUSTE en Algérie ?</h3>
+              <p>Parmi les appareils ROBUSTE les plus plébiscités en Algérie figurent la machine à café Expresso Roma (15 bars), la friteuse sans huile Airfryer AF10 10L à double résistance et fenêtre tactile, le robot pétrin PRO MAX pour les pâtes traditionnelles, et le nettoyeur de taches vapeur Proclean 4-en-1.</p>
+              <h3>Quel est le prix des appareils ROBUSTE chez ZORANDO en Algérie ?</h3>
+              <p>Les prix des produits ROBUSTE débutent dès 3 300 DZD pour les petits appareils (cafetières compactes, batteurs, presse-agrumes) et vont jusqu'à 24 000 - 25 500 DZD pour les modèles professionnels comme l'Airfryer AF10 10L ou le nettoyeur vapeur Proclean.</p>
+              <h3>Le robot pétrin ROBUSTE est-il adapté pour le pain maison et la Kesra algérienne ?</h3>
+              <p>Oui, le robot pétrin Robuste PRO MAX est équipé d'un moteur robuste à transmission renforcée et d'un bol inox grande capacité, spécialement adapté au pétrissage des pâtes lourdes traditionnelles comme la Kesra, le Khobz Dar et les pâtes à pizza.</p>
+              <h3>Les appareils ROBUSTE sont-ils garantis et livrés dans les 58 wilayas ?</h3>
+              <p>Absolument. Tous les produits ROBUSTE commandés sur ZORANDO sont 100% originaux et couverts par une garantie officielle. La livraison est assurée rapidement à domicile ou en point relais dans les 58 wilayas d'Algérie avec paiement à la livraison.</p>
+              `;
+            }
+
             seoHtml = `
             <div id="seo-static-content" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 prose prose-sm max-w-none text-gray-700">
-              <h1>${brand.name} en Algérie</h1>
-              <p>${description}</p>
-              <h2>Produits ${brand.name}</h2>
+              <h1>${brandH1}</h1>
+              ${brandContent}
+              ${faqSectionHtml}
+              <h2>Produits ${brand.name} en Stock chez ZORANDO</h2>
               <ul>${productsHtml}</ul>
             </div>
             `;

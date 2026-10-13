@@ -63,6 +63,25 @@ export default function BlogPost() {
     day: 'numeric', month: 'long', year: 'numeric'
   }) : '';
 
+  const handleContentClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    const target = (e.target as HTMLElement).closest('a');
+    if (!target) return;
+    const href = target.getAttribute('href');
+    if (!href) return;
+
+    if (href.startsWith('/')) {
+      e.preventDefault();
+      // Ensure /products/ is auto-mapped to /product/ as a fallback guard
+      const normalized = href.startsWith('/products/') ? href.replace('/products/', '/product/') : href;
+      navigate(normalized);
+    } else if (href.startsWith('https://www.zorando.com/') || href.startsWith('http://www.zorando.com/')) {
+      e.preventDefault();
+      const internalPath = href.replace(/^https?:\/\/(www\.)?zorando\.com/, '');
+      const normalized = internalPath.startsWith('/products/') ? internalPath.replace('/products/', '/product/') : internalPath;
+      navigate(normalized || '/');
+    }
+  };
+
   const getProcessedContent = (content: string, post: any) => {
     if (!content) return '';
     
@@ -160,7 +179,7 @@ export default function BlogPost() {
 
       {/* Content */}
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8 prose prose-emerald prose-lg">
-         <div dangerouslySetInnerHTML={{ __html: getProcessedContent(post.content, post) }} />
+         <div onClick={handleContentClick} dangerouslySetInnerHTML={{ __html: getProcessedContent(post.content, post) }} />
       </div>
 
       {/* Social Share */}

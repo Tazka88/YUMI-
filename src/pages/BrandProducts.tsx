@@ -131,6 +131,29 @@ const ROBUSTE_FAQ = [
   }
 ];
 
+const SONASHI_FAQ = [
+  {
+    q: "Quels sont les meilleurs appareils électroménagers SONASHI en Algérie ?",
+    a: "Parmi les appareils Sonashi les plus vendus et recommandés en Algérie figurent l'Air Fryer SAF-642G 1600W à double bac en verre (10,2L), la machine à café expresso SCM-4984 3-en-1 (20 bars, compatible capsules Nespresso, Dolce Gusto et café moulu), la cocotte minute autocuiseur Inox 6L SPC-021 avec minuterie, et l'aspirateur cuve inox 30L eau et poussière SVC-9030D (1600W avec souffleur)."
+  },
+  {
+    q: "Quelle est l'origine de la marque SONASHI et est-elle de bonne qualité ?",
+    a: "Sonashi est une marque internationale originaire de Dubaï (Émirats Arabes Unis), développée par le groupe Sonashi International FZE. En Algérie, elle est réputée pour sa durabilité (« Heavy Duty »), ses finitions en inox épais (cuves, bouilloires, autocuiseurs) et ses moteurs fiables, offrant un rapport qualité-prix remarquable nettement supérieur aux marques d'entrée de gamme."
+  },
+  {
+    q: "Quel est le prix des appareils SONASHI chez ZORANDO en Algérie ?",
+    a: "Les prix des produits Sonashi chez ZORANDO débutent dès 3 300 DZD pour les bras mixeurs plongeants et vont jusqu'à 25 900 DZD pour l'Air Fryer haute capacité SAF-642G 10,2L à double bac en verre. Les machines à expresso sont proposées entre 13 400 et 16 500 DZD, et les cocottes minutes inox 6L entre 18 200 et 21 200 DZD avec promotions régulières."
+  },
+  {
+    q: "La machine à café Sonashi SCM-4984 est-elle compatible Nespresso et Dolce Gusto ?",
+    a: "Oui, la machine Sonashi SCM-4984 20 bars est un modèle 3-en-1 équipé de 3 tiroirs adaptateurs interchangeables : un pour capsules type Nespresso Original, un pour capsules Dolce Gusto, et un porte-filtre pour café moulu classique."
+  },
+  {
+    q: "Les appareils SONASHI sont-ils authentiques et garantis avec livraison 58 wilayas ?",
+    a: "Absolument. Tous les produits Sonashi vendus par ZORANDO sont 100% authentiques avec garantie officielle constructeur. La livraison est assurée rapidement à domicile ou en point relais dans les 58 wilayas d'Algérie avec paiement à la livraison après inspection de votre colis."
+  }
+];
+
   let bottomSeoContent = null;
   if (currentCategory) {
     const catName = currentCategory.name;
@@ -317,6 +340,145 @@ const ROBUSTE_BLOGS = [
         </div>
       </div>
     );
+  } else if (brand.slug === 'electromenager-sonashi-algerie') {
+    h1Title = brand.h1_title || 'Électroménager SONASHI en Algérie – Tout le Catalogue au Meilleur Prix';
+    pageTitle = brand.seo_title || 'Électroménager SONASHI Algérie : Prix, Catalogue & Garantie | ZORANDO';
+    metaDescription = brand.seo_description || 'Achetez vos appareils électroménagers SONASHI en Algérie chez ZORANDO. Air fryers double bac verre, machines à café 20 bars, cocottes minute inox. Livraison 58 wilayas.';
+    
+    seoIntro = (
+      <div className="prose prose-sm max-w-none text-gray-700 mb-6">
+        <p>
+          Découvrez la gamme officielle <strong>SONASHI en Algérie</strong> au meilleur rapport qualité-prix sur ZORANDO. 
+          Des <strong>Air Fryers innovants à double bac en verre</strong> (SAF-642G) aux <strong>machines à café expresso 3-en-1</strong> (SCM-4984), 
+          en passant par les célèbres <strong>cocottes minute inox</strong> tous feux et <strong>aspirateurs cuve inox 30L</strong>, 
+          profitez d'équipements fiables, performants et garantis avec livraison express dans les 58 wilayas.
+        </p>
+      </div>
+    );
+
+    const SONASHI_BLOGS = [
+      {
+        title: "Air Fryer Sonashi SAF-642G (Double Bac Verre 10,2L) : Avis, Test & Prix en Algérie (2026)",
+        slug: "air-fryer-sonashi-saf-642g-double-bac-verre-avis-test-prix-algerie-2026",
+        excerpt: "Double bac en verre trempé 6L + 4,2L, 1600W : que vaut le nouveau modèle Sonashi pour des frites et viandes dorées sans huile ? Test et avis.",
+        badge: "Test Airfryer Verre",
+        image: "https://evvbhalgyffagsesmvhu.supabase.co/storage/v1/object/public/images/uploads/airfryer-sonashi-saf-642g-1600w-4-en-1-double-bac-6l-42l-en-verre-1-msn6b.webp"
+      },
+      {
+        title: "Machine à Café Expresso Sonashi SCM-4984 (3 en 1, 20 Bars) : Test, Compatibilité & Prix (2026)",
+        slug: "machine-a-cafe-sonashi-scm-4984-3en1-multi-capsules-test-avis-prix-algerie-2026",
+        excerpt: "20 Bars de pression, adaptateurs Nespresso, Dolce Gusto et café moulu : est-ce la machine expresso la plus rentable d'Algérie ? Notre test complet.",
+        badge: "Machine Café 20 Bars",
+        image: "https://evvbhalgyffagsesmvhu.supabase.co/storage/v1/object/public/images/uploads/machine-a-cafe-expresso-sonashi-scm-4984-3-en-1-20-bars-1400w-multi-capsules-1-hmk3n.webp"
+      },
+      {
+        title: "Électroménager SONASHI en Algérie : Origine, Fiabilité, Catalogue Prix DZD & Avis (2026)",
+        slug: "electromenager-sonashi-algerie-origine-fiabilite-catalogue-prix-dzd-avis-2026",
+        excerpt: "D'où vient Sonashi ? Est-ce une marque fiable ? Grille officielle des prix en Dinars (DZD), garantie et sélection des meilleurs appareils chez ZORANDO.",
+        badge: "Guide & Prix Sonashi 2026",
+        image: "https://evvbhalgyffagsesmvhu.supabase.co/storage/v1/object/public/images/products/prod-455-1781268269465-27gom.webp"
+      },
+      {
+        title: "Robot Pétrin Sonashi 12L 2000W en Algérie : Avis, Test et Meilleur Prix 2026",
+        slug: "robot-petrin-sonashi-12l-2000w-algerie-avis-test-prix-2026",
+        excerpt: "Besoin d'un robot pétrin puissant pour le pain, le matlouh ou la pâtisserie ? Test complet du robot pétrin Sonashi 2000W 12L avec écran LCD.",
+        badge: "Test Pétrin 12L 2000W",
+        image: "https://evvbhalgyffagsesmvhu.supabase.co/storage/v1/object/public/images/products/prod-216-1781268381531-bp8atm.webp"
+      },
+      {
+        title: "Air Fryer Sonashi en Algérie 2026 : Comparatif, Avis et Meilleurs Prix Sans Huile",
+        slug: "air-fryer-sonashi-algerie-comparatif-avis-prix-2026",
+        excerpt: "Comparatif complet des modèles SAF-110, SAF-115 et SAF-920 : puissance, capacité, double bac et prix en Algérie chez ZORANDO.",
+        badge: "Comparatif Air Fryers",
+        image: "https://evvbhalgyffagsesmvhu.supabase.co/storage/v1/object/public/images/products/prod-222-1781268381857-y173xo.webp"
+      }
+    ];
+
+    bottomSeoContent = (
+      <div className="mt-12 space-y-8">
+        {brand.seo_content && (
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 md:p-10 prose prose-slate max-w-none text-gray-700 leading-relaxed">
+            <div dangerouslySetInnerHTML={{ __html: brand.seo_content }} />
+          </div>
+        )}
+
+        {/* Guides & Réponses aux questions fréquentes (Blog) */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 md:p-10">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                <BookOpen className="w-6 h-6 text-orange-500" />
+                Guides d'Achat, Tests & Réponses aux Questions Fréquentes SONASHI
+              </h2>
+              <p className="text-sm text-gray-500 mt-1">
+                Articles comparatifs, fiches techniques et réponses détaillées pour choisir vos appareils SONASHI en Algérie.
+              </p>
+            </div>
+            <Link
+              to="/blog"
+              className="inline-flex items-center gap-1.5 text-sm font-semibold text-orange-600 hover:text-orange-700 whitespace-nowrap"
+            >
+              Voir tout le blog <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {SONASHI_BLOGS.map((item, idx) => (
+              <Link
+                key={idx}
+                to={`/blog/${item.slug}`}
+                className="group flex flex-col bg-gray-50 rounded-xl overflow-hidden border border-gray-200 hover:border-orange-300 hover:shadow-md transition-all duration-200"
+              >
+                <div className="relative aspect-video w-full bg-white overflow-hidden">
+                  <img
+                    src={item.image}
+                    alt={item.title}
+                    className="w-full h-full object-contain p-2 group-hover:scale-105 transition-transform duration-300"
+                    loading="lazy"
+                  />
+                  <span className="absolute top-2 left-2 bg-orange-500 text-white text-xs font-bold px-2.5 py-1 rounded-full shadow-sm">
+                    {item.badge}
+                  </span>
+                </div>
+                <div className="p-4 flex-1 flex flex-col justify-between">
+                  <div>
+                    <h3 className="font-bold text-gray-900 text-base group-hover:text-orange-600 transition-colors line-clamp-2">
+                      {item.title}
+                    </h3>
+                    <p className="text-xs text-gray-600 mt-2 line-clamp-2 leading-relaxed">
+                      {item.excerpt}
+                    </p>
+                  </div>
+                  <div className="mt-4 pt-3 border-t border-gray-200/60 flex items-center justify-between text-xs font-semibold text-orange-600">
+                    <span>Lire l'article complet</span>
+                    <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+        
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 md:p-10">
+          <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+            <span>❓</span> Foire Aux Questions – Marque SONASHI en Algérie
+          </h2>
+          <div className="space-y-4">
+            {SONASHI_FAQ.map((item, idx) => (
+              <details key={idx} className="group border border-gray-200 rounded-xl p-4 transition-colors hover:border-orange-200 bg-gray-50/50 open:bg-white" open={idx === 0}>
+                <summary className="font-bold text-gray-900 cursor-pointer list-none flex justify-between items-center select-none">
+                  <span>{item.q}</span>
+                  <span className="text-orange-500 font-bold text-xl ml-2 transition-transform group-open:rotate-45">+</span>
+                </summary>
+                <p className="mt-3 text-sm text-gray-700 leading-relaxed border-t border-gray-100 pt-3">
+                  {item.a}
+                </p>
+              </details>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
   } else {
     h1Title = brand.h1_title || `${brand.name} Algérie – Tous les produits ${brand.name}`;
     pageTitle = brand.seo_title || `${brand.name} Algérie – Catalogue de produits | Zorando`;
@@ -362,6 +524,19 @@ const ROBUSTE_BLOGS = [
         "@context": "https://schema.org",
         "@type": "FAQPage",
         "mainEntity": ROBUSTE_FAQ.map(item => ({
+          "@type": "Question",
+          "name": item.q,
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": item.a
+          }
+        }))
+      });
+    } else if (brand.slug === 'electromenager-sonashi-algerie') {
+      schemaData.push({
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": SONASHI_FAQ.map(item => ({
           "@type": "Question",
           "name": item.q,
           "acceptedAnswer": {

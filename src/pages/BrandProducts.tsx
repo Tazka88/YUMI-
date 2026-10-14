@@ -154,6 +154,30 @@ const SONASHI_FAQ = [
   }
 ];
 
+const SCHALLENGE_FAQ = [
+  {
+    q: "Quels sont les meilleurs appareils électroménagers SChallenge en Algérie ?",
+    a: "Parmi les appareils SChallenge les plus demandés en Algérie figurent l'Air Fryer AMB-31AF Double Vision 11L 2800W à double fenêtre transparente, l'Air Fryer AMB-35AF 11L Double Zone 1800W (2 tiroirs indépendants de 5,5L), la machine à café espresso 2-en-1 AMB-026CM 20 bars tout inox (moulu et capsules Nespresso), et la panineuse digitale tactile AMB-GT50E 2000W avec 5 programmes et ouverture à 180°."
+  },
+  {
+    q: "La machine à café SChallenge 20 bars est-elle compatible avec les capsules Nespresso ?",
+    a: "Oui ! Les machines espresso SChallenge 2-en-1 (notamment AMB-026CM et AMB-025CM) sont équipées d'un adaptateur amovible dédié aux capsules de type Nespresso Original (et compatibles) en plus de leur porte-filtre traditionnel pour café moulu."
+  },
+  {
+    q: "Quel est le prix moyen des produits SChallenge chez ZORANDO en Algérie ?",
+    a: "Les panineuses 2000W débutent dès 10 500 DZD (modèle AMB-GT31 à plaques amovibles en promotion) et 12 500 DZD pour les modèles digitaux tactiles. Les friteuses sans huile (Air Fryers) vont de 12 500 DZD (modèle 6,5L) à 26 500 DZD pour le très puissant 11L Double Vision 2800W. Les machines espresso 20 bars se situent entre 20 500 et 24 000 DZD."
+  },
+  {
+    q: "Quelle est la particularité des panineuses et grills SChallenge 2000W ?",
+    a: "Elles disposent d'une puissance réelle de 2000W pour griller sans ramollir le pain, d'un écran LED tactile sur les modèles GT50E et GT57E, d'une charnière flottante pour adapter l'épaisseur aux gros sandwichs ou tacos, et d'une ouverture à 180° pour se transformer en barbecue de table à double plaque."
+  },
+  {
+    q: "Les appareils SChallenge sont-ils garantis avec livraison 58 wilayas ?",
+    a: "Oui. Tous les produits SChallenge commandés sur ZORANDO sont 100% neufs, originaux et garantis. La livraison est rapide sur l'ensemble des 58 wilayas d'Algérie avec paiement sécurisé en espèces à la livraison."
+  }
+];
+
+
   let bottomSeoContent = null;
   if (currentCategory) {
     const catName = currentCategory.name;
@@ -465,6 +489,131 @@ const ROBUSTE_BLOGS = [
           </h2>
           <div className="space-y-4">
             {SONASHI_FAQ.map((item, idx) => (
+              <details key={idx} className="group border border-gray-200 rounded-xl p-4 transition-colors hover:border-orange-200 bg-gray-50/50 open:bg-white" open={idx === 0}>
+                <summary className="font-bold text-gray-900 cursor-pointer list-none flex justify-between items-center select-none">
+                  <span>{item.q}</span>
+                  <span className="text-orange-500 font-bold text-xl ml-2 transition-transform group-open:rotate-45">+</span>
+                </summary>
+                <p className="mt-3 text-sm text-gray-700 leading-relaxed border-t border-gray-100 pt-3">
+                  {item.a}
+                </p>
+              </details>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  } else if (brand.slug === 'schallenge-electromenager-algerie') {
+    h1Title = brand.h1_title || 'Électroménager SChallenge en Algérie – Air Fryers, Cafetières 20 Bars, Panineuses';
+    pageTitle = brand.seo_title || 'Électroménager SChallenge Algérie : Air Fryers, Cafetières & Panineuses | ZORANDO';
+    metaDescription = brand.seo_description || 'Achetez vos appareils SChallenge en Algérie chez ZORANDO. Air fryers double bac 11L, cafetières 20 bars 2-en-1, panineuses 2000W à écran digital. Livraison 58 wilayas.';
+    
+    seoIntro = (
+      <div className="prose prose-sm max-w-none text-gray-700 mb-6">
+        <p>
+          Découvrez la collection complète d'<strong>électroménager SChallenge en Algérie</strong> au meilleur prix sur ZORANDO. 
+          Des <strong>Air Fryers haute capacité à double bac (AMB-31AF / AMB-35AF)</strong> aux <strong>machines à café espresso 20 bars 2-en-1</strong> (compatibles café moulu et capsules Nespresso), 
+          en passant par les <strong>panineuses digitales tactiles 2000W</strong> et blenders haute résistance, 
+          profitez d'appareils modernes, innovants et garantis avec livraison rapide dans les 58 wilayas et paiement à la livraison.
+        </p>
+      </div>
+    );
+
+    const SCHALLENGE_BLOGS = [
+      {
+        title: "Air Fryer SChallenge en Algérie : Comparatif Double Bac 11L, 8L & 6.5L, Test, Avis & Prix 2026",
+        slug: "air-fryer-schallenge-algerie-comparatif-double-bac-11l-8l-avis-prix-2026",
+        excerpt: "Double bac 11L, fenêtres Double Vision, puissance jusqu'à 2800W : quel modèle SChallenge choisir pour votre cuisine ? Test, avis et prix en DZD.",
+        badge: "Comparatif Air Fryers",
+        image: "https://evvbhalgyffagsesmvhu.supabase.co/storage/v1/object/public/images/uploads/schallenge-amb-31af-air-fryer-double-vision-11l-2800w-friteuse-sans-huile-10-programmes-1-1wkzbq.webp"
+      },
+      {
+        title: "Machine à Café SChallenge 20 Bars en Algérie : Test & Avis 2-en-1 Café Moulu & Capsules (Guide 2026)",
+        slug: "machine-a-cafe-schallenge-20-bars-algerie-test-avis-moulu-capsules-prix-2026",
+        excerpt: "Pompe 20 bars, compatible café moulu et capsules Nespresso, buse vapeur inox : notre test complet de l'AMB-026CM et AMB-025CM.",
+        badge: "Machine Café 20 Bars",
+        image: "https://evvbhalgyffagsesmvhu.supabase.co/storage/v1/object/public/images/uploads/machine-a-cafe-schallenge-amb-026cm-2-en-1-1350w-20-bars-inox-cafe-moulu-et-capsules-1-1vyza.webp"
+      },
+      {
+        title: "Panineuse & Grill Digital SChallenge 2000W en Algérie : AMB-GT50E vs AMB-GT57E vs AMB-GT31 (Avis & Prix 2026)",
+        slug: "panineuse-grill-schallenge-algerie-amb-gt50e-gt57e-gt31-avis-prix-2026",
+        excerpt: "Écran digital tactile, ouverture 180° barbecue, plaques amovibles : comparatif des meilleures panineuses SChallenge en Algérie.",
+        badge: "Test Panineuse 2000W",
+        image: "https://evvbhalgyffagsesmvhu.supabase.co/storage/v1/object/public/images/uploads/schallenge-amb-gt50e-panineuse-digitale-2000w-ecran-led-commande-tactile-5-programmes-1-icjsxc.webp"
+      }
+    ];
+
+    bottomSeoContent = (
+      <div className="mt-12 space-y-8">
+        {brand.seo_content && (
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 md:p-10 prose prose-slate max-w-none text-gray-700 leading-relaxed">
+            <div dangerouslySetInnerHTML={{ __html: brand.seo_content }} />
+          </div>
+        )}
+
+        {/* Guides & Réponses aux questions fréquentes SChallenge */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 md:p-10">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                <BookOpen className="w-6 h-6 text-orange-500" />
+                Guides d'Achat, Tests & Réponses aux Questions Fréquentes SCHALLENGE
+              </h2>
+              <p className="text-sm text-gray-500 mt-1">
+                Articles comparatifs, fiches techniques et conseils pratiques pour choisir vos appareils SCHALLENGE en Algérie.
+              </p>
+            </div>
+            <Link
+              to="/blog"
+              className="inline-flex items-center gap-1.5 text-sm font-semibold text-orange-600 hover:text-orange-700 whitespace-nowrap"
+            >
+              Voir tout le blog <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {SCHALLENGE_BLOGS.map((item, idx) => (
+              <Link
+                key={idx}
+                to={`/blog/${item.slug}`}
+                className="group flex flex-col bg-gray-50 rounded-xl overflow-hidden border border-gray-200 hover:border-orange-300 hover:shadow-md transition-all duration-200"
+              >
+                <div className="relative h-48 bg-white border-b border-gray-100 overflow-hidden flex items-center justify-center">
+                  <img
+                    src={item.image}
+                    alt={item.title}
+                    className="w-full h-full object-contain p-2 group-hover:scale-105 transition-transform duration-300"
+                    loading="lazy"
+                  />
+                  <span className="absolute top-2 left-2 bg-orange-500 text-white text-xs font-bold px-2.5 py-1 rounded-full shadow-sm">
+                    {item.badge}
+                  </span>
+                </div>
+                <div className="p-4 flex-1 flex flex-col justify-between">
+                  <div>
+                    <h3 className="font-bold text-gray-900 text-base group-hover:text-orange-600 transition-colors line-clamp-2">
+                      {item.title}
+                    </h3>
+                    <p className="text-xs text-gray-600 mt-2 line-clamp-2 leading-relaxed">
+                      {item.excerpt}
+                    </p>
+                  </div>
+                  <div className="mt-4 pt-3 border-t border-gray-200/60 flex items-center justify-between text-xs font-semibold text-orange-600">
+                    <span>Lire l'article complet</span>
+                    <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+        
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 md:p-10">
+          <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+            <span>❓</span> Foire Aux Questions – Marque SCHALLENGE en Algérie
+          </h2>
+          <div className="space-y-4">
+            {SCHALLENGE_FAQ.map((item, idx) => (
               <details key={idx} className="group border border-gray-200 rounded-xl p-4 transition-colors hover:border-orange-200 bg-gray-50/50 open:bg-white" open={idx === 0}>
                 <summary className="font-bold text-gray-900 cursor-pointer list-none flex justify-between items-center select-none">
                   <span>{item.q}</span>

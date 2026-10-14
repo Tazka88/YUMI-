@@ -46,12 +46,12 @@ app.use(express.urlencoded({ limit: '5mb', extended: true }));
 app.use('/uploads', express.static(uploadsDir, { maxAge: '1y' }));
 
 // API Routes
-app.get('/api/sitemap.xml', (req, res, next) => {
+app.get(['/sitemap.xml', '/api/sitemap.xml'], (req, res, next) => {
   req.url = '/sitemap.xml';
   apiRoutes(req, res, next);
 });
 
-app.get('/api/robots.txt', (req, res, next) => {
+app.get(['/robots.txt', '/api/robots.txt'], (req, res, next) => {
   req.url = '/robots.txt';
   apiRoutes(req, res, next);
 });
@@ -484,6 +484,15 @@ app.get('*', async (req, res, next) => {
                 <li><a href="/blog/air-fryer-sonashi-saf-642g-double-bac-verre-avis-test-prix-algerie-2026">Air Fryer Sonashi SAF-642G (Double Bac Verre 10,2L) : Avis, Test & Prix en Algérie (2026)</a></li>
                 <li><a href="/blog/machine-a-cafe-sonashi-scm-4984-3en1-multi-capsules-test-avis-prix-algerie-2026">Machine à Café Expresso Sonashi SCM-4984 (3 en 1, 20 Bars) : Test, Compatibilité & Prix (2026)</a></li>
                 <li><a href="/blog/electromenager-sonashi-algerie-avis-qualite-prix-catalogue-officiel-2026">Électroménager SONASHI en Algérie (2026) : Avis sur la Qualité, Catalogue Officiel & Prix</a></li>
+              </ul>
+              `;
+            } else if (slug === 'schallenge-electromenager-algerie') {
+              brandBlogsHtml = `
+              <h2>Guides d'Achat, Tests & Réponses aux Questions Fréquentes SCHALLENGE</h2>
+              <ul>
+                <li><a href="/blog/air-fryer-schallenge-algerie-comparatif-double-bac-11l-8l-avis-prix-2026">Air Fryer SChallenge en Algérie : Comparatif Double Bac 11L, 8L & 6.5L, Test, Avis & Prix 2026</a></li>
+                <li><a href="/blog/machine-a-cafe-schallenge-20-bars-algerie-test-avis-moulu-capsules-prix-2026">Machine à Café SChallenge 20 Bars en Algérie : Test & Avis 2-en-1 Café Moulu & Capsules (Guide 2026)</a></li>
+                <li><a href="/blog/panineuse-grill-schallenge-algerie-amb-gt50e-gt57e-gt31-avis-prix-2026">Panineuse & Grill Digital SChallenge 2000W en Algérie : AMB-GT50E vs AMB-GT57E vs AMB-GT31 (Avis & Prix 2026)</a></li>
               </ul>
               `;
             }

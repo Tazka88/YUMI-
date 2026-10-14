@@ -6,7 +6,7 @@ import path from 'path';
 import fs from 'fs';
 import { sql } from './src/db/setup.js';
 import { categorySEOData } from './src/utils/seoData.js';
-import { buildProductSchema, buildBreadcrumbSchema } from './src/lib/schemaUtils.js';
+import { buildProductSchema, buildBreadcrumbSchema, buildBlogSchema } from './src/lib/schemaUtils.js';
 
 const app = express();
 let vite: any = null;
@@ -465,11 +465,35 @@ app.get('*', async (req, res, next) => {
               `;
             }
 
+            let brandBlogsHtml = '';
+            if (slug === 'electromenager-robuste-algerie') {
+              brandBlogsHtml = `
+              <h2>Guides d'Achat, Tests & Réponses aux Questions Fréquentes ROBUSTE</h2>
+              <ul>
+                <li><a href="/blog/robot-petrin-robuste-algerie-kesra-khobz-dar-test-avis-prix-2026">Robot Pétrin ROBUSTE en Algérie : Idéal pour Kesra, Khobz Dar et Pâtes Lourdes ? (Test 2026)</a></li>
+                <li><a href="/blog/nettoyeur-de-taches-robuste-proclean-4en1-algerie-test-avis-prix-2026">Nettoyeur de Taches ROBUSTE Proclean 4-en-1 en Algérie : Test sur Canapés, Tapis et Matelas (2026)</a></li>
+                <li><a href="/blog/electromenager-robuste-algerie-guide-prix-dzd-garantie-avis-2026">Électroménager ROBUSTE en Algérie 2026 : Prix en DZD, Garantie & Avis Clients</a></li>
+                <li><a href="/blog/air-fryer-robuste-algerie-comparatif-af10-10l-8l-avis-prix-2026">Air Fryer ROBUSTE : Comparatif AF10 10L vs 8L (Avis, Test & Prix DZD)</a></li>
+                <li><a href="/blog/machine-a-cafe-robuste-algerie-expresso-roma-auto-italia-avis-prix-2026">Machine à Café ROBUSTE : Expresso Roma vs Auto Italia (Guide & Prix 2026)</a></li>
+              </ul>
+              `;
+            } else if (slug === 'electromenager-sonashi-algerie') {
+              brandBlogsHtml = `
+              <h2>Guides d'Achat, Tests & Réponses aux Questions Fréquentes SONASHI</h2>
+              <ul>
+                <li><a href="/blog/air-fryer-sonashi-saf-642g-double-bac-verre-avis-test-prix-algerie-2026">Air Fryer Sonashi SAF-642G (Double Bac Verre 10,2L) : Avis, Test & Prix en Algérie (2026)</a></li>
+                <li><a href="/blog/machine-a-cafe-sonashi-scm-4984-3en1-multi-capsules-test-avis-prix-algerie-2026">Machine à Café Expresso Sonashi SCM-4984 (3 en 1, 20 Bars) : Test, Compatibilité & Prix (2026)</a></li>
+                <li><a href="/blog/electromenager-sonashi-algerie-avis-qualite-prix-catalogue-officiel-2026">Électroménager SONASHI en Algérie (2026) : Avis sur la Qualité, Catalogue Officiel & Prix</a></li>
+              </ul>
+              `;
+            }
+
             seoHtml = `
             <div id="seo-static-content" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 prose prose-sm max-w-none text-gray-700">
               <h1>${brandH1}</h1>
               ${brandContent}
               ${faqSectionHtml}
+              ${brandBlogsHtml}
               <h2>Produits ${brand.name} en Stock chez ZORANDO</h2>
               <ul>${productsHtml}</ul>
             </div>
@@ -681,17 +705,59 @@ ${JSON.stringify(schemaData)}
       }
 
       try {
-        const [post] = await sql`SELECT title, excerpt, seo_title, seo_description, image_url as main_image FROM blog_posts WHERE slug = ${slug} AND status = 'published'`;
+        const [post] = await sql`SELECT * FROM blog_posts WHERE slug = ${slug} AND status = 'published'`;
         if (post) {
           title = post.seo_title || post.title || 'ZORANDO Blog';
           description = post.seo_description ? cleanForSEO(post.seo_description) : (post.excerpt ? cleanForSEO(post.excerpt, 160) : `Lisez notre article : ${post.title}`);
-          if (post.main_image) {
-            ogImage = post.main_image.startsWith('/') ? `${baseUrl}${post.main_image}` : `${baseUrl}/${post.main_image}`;
+          const postImage = post.image_url || post.main_image;
+          if (postImage) {
+            ogImage = postImage.startsWith('/') ? `${baseUrl}${postImage}` : (postImage.startsWith('http') ? postImage : `${baseUrl}/${postImage}`);
           }
-          seoHtml = `<div id="seo-static-content" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 prose prose-sm max-w-none text-gray-700">
-            <h1>${post.title}</h1>
-            <p>${post.excerpt}</p>
-          </div>`;
+
+          const currentUrl = `${baseUrl}${req.path}`;
+          const blogSchema = buildBlogSchema(post, currentUrl, baseUrl);
+          const breadcrumbSchema = buildBreadcrumbSchema([
+            { name: 'Accueil', item: `${baseUrl}/` },
+            { name: 'Blog', item: `${baseUrl}/blog` },
+            { name: post.title, item: currentUrl }
+          ]);
+
+          if (blogSchema && breadcrumbSchema) {
+            delete (blogSchema as any)["@context"];
+            delete (breadcrumbSchema as any)["@context"];
+            const graphSchema = {
+              "@context": "https://schema.org",
+              "@graph": [blogSchema, breadcrumbSchema]
+            };
+            headHtml += `
+<script type="application/ld+json">
+${JSON.stringify(graphSchema)}
+</script>
+`;
+          }
+
+          headHtml += `<meta property="og:type" content="article" />\n`;
+          headHtml += `<meta name="twitter:card" content="summary_large_image" />\n`;
+          if (post.published_at || post.created_at) {
+            headHtml += `<meta property="article:published_time" content="${new Date(post.published_at || post.created_at).toISOString()}" />\n`;
+          }
+          if (post.updated_at) {
+            headHtml += `<meta property="article:modified_time" content="${new Date(post.updated_at).toISOString()}" />\n`;
+          }
+
+          seoHtml = `
+            <div id="seo-static-content" class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 prose prose-emerald max-w-none text-gray-800">
+              <nav aria-label="Fil d'Ariane" class="text-sm text-gray-500 mb-4">
+                <a href="/">Accueil</a> &gt; <a href="/blog">Blog</a> &gt; <span>${post.title}</span>
+              </nav>
+              <h1>${post.title}</h1>
+              ${postImage ? `<img src="${ogImage}" alt="${post.main_image_alt || post.title}" class="w-full rounded-xl my-6" />` : ''}
+              ${post.excerpt ? `<p class="lead text-lg font-medium text-gray-600 mb-6">${post.excerpt}</p>` : ''}
+              <div class="article-content leading-relaxed">
+                ${post.content || ''}
+              </div>
+            </div>
+          `;
         } else {
           isNotFound = true;
         }
@@ -700,7 +766,7 @@ ${JSON.stringify(schemaData)}
       title = 'Blog & Actualités | Zorando';
       description = 'Découvrez les dernières tendances, astuces et actualités sur le blog ZORANDO.';
       try {
-        const posts = await sql`SELECT title, slug, excerpt FROM blog_posts WHERE status = 'published' ORDER BY created_at DESC LIMIT 20`;
+        const posts = await sql`SELECT title, slug, excerpt FROM blog_posts WHERE status = 'published' ORDER BY created_at DESC LIMIT 50`;
         seoHtml = `<div id="seo-static-content" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 prose prose-sm max-w-none text-gray-700">
           <h1>${title}</h1>
           <p>${description}</p>

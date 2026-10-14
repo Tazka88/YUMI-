@@ -711,6 +711,7 @@ ${JSON.stringify(schemaData)}
       const slug = req.path.split('/')[2];
       const BLOG_REDIRECTS: Record<string, string> = {
         'hoco-j101a-power-bank-20000mah-avis-test-et-guide-d-achat-2026-algerie': 'power-bank-en-algerie-comment-choisir-la-meilleure-batterie-externe-en-2026',
+        'quel-est-le-meilleur-aspirateur-algerie-guide-complet-2024': 'quel-est-le-meilleur-aspirateur-algerie-guide-complet-2026',
       };
       if (slug && BLOG_REDIRECTS[slug]) {
         return res.redirect(301, `/blog/${BLOG_REDIRECTS[slug]}`);

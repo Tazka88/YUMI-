@@ -555,6 +555,9 @@ app.get('*', async (req, res, next) => {
           console.error("DB error for category fallback:", err);
         }
       }
+    } else if (req.path.startsWith('/produit/')) {
+      const slug = req.path.replace(/^\/produit\//, '');
+      return res.redirect(301, `/product/${slug}`);
     } else if (req.path.startsWith('/product/')) {
       let slug = req.path.split('/')[2];
       if (slug && (slug.endsWith('-') || slug.endsWith('/'))) {

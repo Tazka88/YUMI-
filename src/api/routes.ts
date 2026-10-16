@@ -12,6 +12,7 @@ import crypto from 'crypto';
 import capiRoutes from './capi.js';
 import ecomdzRoutes, { fetchEcomdzStopdesks } from './ecomdz.js';
 import { getPushDashboardData, broadcastPushCampaign } from '../lib/push.js';
+import { invalidateProductCache } from '../lib/cacheInvalidation.js';
 
 // Ensure profiles table has commune column
 
@@ -71,6 +72,30 @@ router.use((req, res, next) => {
 // Mount CAPI routes (renamed to app-events to bypass adblockers)
 router.use('/ui-sync', capiRoutes);
 
+// Public route to serve product images (converts base64 data:image into binary webp with permanent caching for Googlebot & browsers)
+router.get(['/images/products/:id/image', '/images/products/:id/image/:filename'], async (req, res) => {
+  const { id } = req.params;
+  try {
+    const [prod] = await sql`SELECT image FROM products WHERE id = ${id}`;
+    if (!prod || !prod.image) return res.status(404).send('Image not found');
+    
+    if (prod.image.startsWith('data:image/')) {
+      const matches = prod.image.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+      if (matches && matches.length === 3) {
+        const contentType = matches[1];
+        const buffer = Buffer.from(matches[2], 'base64');
+        res.setHeader('Content-Type', contentType);
+        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+        return res.send(buffer);
+      }
+    } else if (prod.image.startsWith('http')) {
+      return res.redirect(302, prod.image);
+    }
+    return res.status(404).send('Not found');
+  } catch (e) {
+    return res.status(500).send('Error loading image');
+  }
+});
 
 // Mount Ecom-DZ routes
 router.use('/ecomdz', ecomdzRoutes);
@@ -1496,6 +1521,22 @@ router.post('/orders', orderLimiter, async (req, res) => {
       }
       return { id: order.id, order_id: generatedOrderId };
     });
+
+    // Invalidation immédiate du cache si un produit commandé passe en rupture de stock
+    for (const item of validatedItems) {
+      if (item.product_id) {
+        sql`SELECT slug, stock FROM products WHERE id = ${item.product_id}`.then(([p]) => {
+          if (p && Number(p.stock) <= 0) {
+            invalidateProductCache({
+              productId: item.product_id,
+              slug: p.slug,
+              reason: 'out_of_stock',
+              newValue: 0
+            }).catch(() => {});
+          }
+        }).catch(() => {});
+      }
+    }
     
     const [adminEmailSetting] = await sql`SELECT value FROM settings WHERE key = 'admin_email'`;
     if (adminEmailSetting && adminEmailSetting.value) {
@@ -2029,6 +2070,20 @@ router.put('/admin/orders/:orderId/items/:itemId/status', authenticate, async (r
       }
     });
 
+    if (item && item.product_id) {
+      sql`SELECT slug, stock FROM products WHERE id = ${item.product_id}`.then(([p]) => {
+        if (p) {
+          const reason = status === 'cancelled' ? 'restock' : (Number(p.stock) <= 0 ? 'out_of_stock' : 'product_update');
+          invalidateProductCache({
+            productId: item.product_id,
+            slug: p.slug,
+            reason,
+            newValue: p.stock
+          }).catch(() => {});
+        }
+      }).catch(() => {});
+    }
+
     res.json({ message: 'Order item status updated' });
   } catch (err) {
     console.error('Failed to update order item status:', err);
@@ -2476,17 +2531,23 @@ router.put('/admin/products/:id', authenticate, async (req, res) => {
   const { category_id, subcategory_id, sub_subcategory_id, brand_id, brand_name, name, slug, description, price, promo_price, stock, image, main_image_alt, video_url, is_popular, is_best_seller, is_new, is_recommended, is_fast_delivery, weight, is_active, images, features, key_points, faq_q1, faq_a1, faq_q2, faq_a2, variations, seo_title, seo_description, seo_keywords, promo_price_start_date, promo_price_end_date } = req.body;
   
   try {
+    const [oldProd] = await sql`
+      SELECT id, name, slug, price, promo_price, promo_price_start_date, promo_price_end_date, stock 
+      FROM products 
+      WHERE id = ${req.params.id}
+    `;
+
     await sql.begin(async (sql: any) => {
       if (image && image.startsWith('/api/images/')) {
         await sql`
           UPDATE products 
-          SET category_id = ${category_id || null}, subcategory_id = ${subcategory_id || null}, sub_subcategory_id = ${sub_subcategory_id || null}, brand_id = ${brand_id || null}, brand_name = ${brand_name || null}, name = ${name || ''}, slug = ${slug || ''}, description = ${description || null}, price = ${price || 0}, promo_price = ${promo_price || null}, promo_price_start_date = ${promo_price_start_date || null}, promo_price_end_date = ${promo_price_end_date || null}, stock = ${stock || 0}, video_url = ${video_url || null}, is_popular = ${is_popular ? true : false}, is_best_seller = ${is_best_seller ? true : false}, is_new = ${is_new ? true : false}, is_recommended = ${is_recommended ? true : false}, is_fast_delivery = ${is_fast_delivery ? true : false}, weight = ${weight || null}, is_active = ${is_active !== undefined ? is_active : true}, features = ${features ? sql.json(features) : null}, key_points = ${key_points ? sql.json(key_points) : null}, faq_q1 = ${faq_q1 || null}, faq_a1 = ${faq_a1 || null}, faq_q2 = ${faq_q2 || null}, faq_a2 = ${faq_a2 || null}, variations = ${variations ? sql.json(variations) : null}, seo_title = ${seo_title || null}, seo_description = ${seo_description || null}, seo_keywords = ${seo_keywords || null}, main_image_alt = ${main_image_alt || null}
+          SET category_id = ${category_id || null}, subcategory_id = ${subcategory_id || null}, sub_subcategory_id = ${sub_subcategory_id || null}, brand_id = ${brand_id || null}, brand_name = ${brand_name || null}, name = ${name || ''}, slug = ${slug || ''}, description = ${description || null}, price = ${price || 0}, promo_price = ${promo_price || null}, promo_price_start_date = ${promo_price_start_date || null}, promo_price_end_date = ${promo_price_end_date || null}, stock = ${stock || 0}, video_url = ${video_url || null}, is_popular = ${is_popular ? true : false}, is_best_seller = ${is_best_seller ? true : false}, is_new = ${is_new ? true : false}, is_recommended = ${is_recommended ? true : false}, is_fast_delivery = ${is_fast_delivery ? true : false}, weight = ${weight || null}, is_active = ${is_active !== undefined ? is_active : true}, features = ${features ? sql.json(features) : null}, key_points = ${key_points ? sql.json(key_points) : null}, faq_q1 = ${faq_q1 || null}, faq_a1 = ${faq_a1 || null}, faq_q2 = ${faq_q2 || null}, faq_a2 = ${faq_a2 || null}, variations = ${variations ? sql.json(variations) : null}, seo_title = ${seo_title || null}, seo_description = ${seo_description || null}, seo_keywords = ${seo_keywords || null}, main_image_alt = ${main_image_alt || null}, updated_at = NOW()
           WHERE id = ${req.params.id}
         `;
       } else {
         await sql`
           UPDATE products 
-          SET category_id = ${category_id || null}, subcategory_id = ${subcategory_id || null}, sub_subcategory_id = ${sub_subcategory_id || null}, brand_id = ${brand_id || null}, brand_name = ${brand_name || null}, name = ${name || ''}, slug = ${slug || ''}, description = ${description || null}, price = ${price || 0}, promo_price = ${promo_price || null}, promo_price_start_date = ${promo_price_start_date || null}, promo_price_end_date = ${promo_price_end_date || null}, stock = ${stock || 0}, image = ${image || null}, video_url = ${video_url || null}, is_popular = ${is_popular ? true : false}, is_best_seller = ${is_best_seller ? true : false}, is_new = ${is_new ? true : false}, is_recommended = ${is_recommended ? true : false}, is_fast_delivery = ${is_fast_delivery ? true : false}, weight = ${weight || null}, is_active = ${is_active !== undefined ? is_active : true}, features = ${features ? sql.json(features) : null}, key_points = ${key_points ? sql.json(key_points) : null}, faq_q1 = ${faq_q1 || null}, faq_a1 = ${faq_a1 || null}, faq_q2 = ${faq_q2 || null}, faq_a2 = ${faq_a2 || null}, variations = ${variations ? sql.json(variations) : null}, seo_title = ${seo_title || null}, seo_description = ${seo_description || null}, seo_keywords = ${seo_keywords || null}, main_image_alt = ${main_image_alt || null}
+          SET category_id = ${category_id || null}, subcategory_id = ${subcategory_id || null}, sub_subcategory_id = ${sub_subcategory_id || null}, brand_id = ${brand_id || null}, brand_name = ${brand_name || null}, name = ${name || ''}, slug = ${slug || ''}, description = ${description || null}, price = ${price || 0}, promo_price = ${promo_price || null}, promo_price_start_date = ${promo_price_start_date || null}, promo_price_end_date = ${promo_price_end_date || null}, stock = ${stock || 0}, image = ${image || null}, video_url = ${video_url || null}, is_popular = ${is_popular ? true : false}, is_best_seller = ${is_best_seller ? true : false}, is_new = ${is_new ? true : false}, is_recommended = ${is_recommended ? true : false}, is_fast_delivery = ${is_fast_delivery ? true : false}, weight = ${weight || null}, is_active = ${is_active !== undefined ? is_active : true}, features = ${features ? sql.json(features) : null}, key_points = ${key_points ? sql.json(key_points) : null}, faq_q1 = ${faq_q1 || null}, faq_a1 = ${faq_a1 || null}, faq_q2 = ${faq_q2 || null}, faq_a2 = ${faq_a2 || null}, variations = ${variations ? sql.json(variations) : null}, seo_title = ${seo_title || null}, seo_description = ${seo_description || null}, seo_keywords = ${seo_keywords || null}, main_image_alt = ${main_image_alt || null}, updated_at = NOW()
           WHERE id = ${req.params.id}
         `;
       }
@@ -2527,10 +2588,49 @@ router.put('/admin/products/:id', authenticate, async (req, res) => {
         }
       }
     });
-    res.json({ message: 'Product updated' });
+
+    // Invalidation immédiate du cache Vercel & Edge
+    if (oldProd) {
+      const priceChanged = Number(oldProd.price) !== Number(price);
+      const promoChanged = Number(oldProd.promo_price || 0) !== Number(promo_price || 0) ||
+                           String(oldProd.promo_price_start_date || '') !== String(promo_price_start_date || '') ||
+                           String(oldProd.promo_price_end_date || '') !== String(promo_price_end_date || '');
+      const wasInStock = Number(oldProd.stock) > 0;
+      const isNowInStock = Number(stock) > 0;
+      const wentOutOfStock = wasInStock && !isNowInStock;
+      const wasRestocked = !wasInStock && isNowInStock;
+
+      let reason: 'price_change' | 'promo_change' | 'out_of_stock' | 'restock' | 'product_update' = 'product_update';
+      if (priceChanged) reason = 'price_change';
+      else if (promoChanged) reason = 'promo_change';
+      else if (wentOutOfStock) reason = 'out_of_stock';
+      else if (wasRestocked) reason = 'restock';
+
+      await invalidateProductCache({
+        productId: req.params.id,
+        slug: slug || oldProd.slug,
+        reason,
+        oldValue: { price: oldProd.price, promo_price: oldProd.promo_price, stock: oldProd.stock },
+        newValue: { price, promo_price, stock }
+      });
+    }
+
+    res.json({ message: 'Product updated and cache invalidated' });
   } catch (err) {
     console.error('Failed to update product:', err);
     res.status(500).json({ error: 'Failed to update product', details: err instanceof Error ? err.message : String(err) });
+  }
+});
+
+// Endpoint dédié à l'invalidation manuelle ou webhook du cache d'un produit
+router.post('/admin/products/:id/invalidate-cache', authenticate, async (req, res) => {
+  try {
+    const [prod] = await sql`SELECT id, slug FROM products WHERE id = ${req.params.id}`;
+    if (!prod) return res.status(404).json({ error: 'Product not found' });
+    const result = await invalidateProductCache({ productId: prod.id, slug: prod.slug, reason: 'product_update' });
+    res.json(result);
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to invalidate cache' });
   }
 });
 

@@ -13,8 +13,16 @@ export function buildBreadcrumbSchema(items: { name: string; item: string }[]) {
 }
 
 export function buildProductSchema(product: any, reviews: any[], currentUrl: string, baseUrl: string = 'https://www.zorando.com') {
-  const isPromo = product.promo_price !== null && product.promo_price !== undefined && !isNaN(Number(product.promo_price)) && Number(product.promo_price) > 0 && Number(product.promo_price) < Number(product.price);
-  const currentPrice = isPromo ? Number(product.promo_price).toFixed(2) : (!isNaN(Number(product.price)) ? Number(product.price).toFixed(2) : "0.00");
+  const now = new Date();
+  let isPromoValid = false;
+  if (product.promo_price !== null && product.promo_price !== undefined && !isNaN(Number(product.promo_price)) && Number(product.promo_price) > 0 && Number(product.promo_price) < Number(product.price)) {
+    isPromoValid = true;
+    if (product.promo_price_start_date && new Date(product.promo_price_start_date) > now) isPromoValid = false;
+    if (product.promo_price_end_date && new Date(product.promo_price_end_date) < now) isPromoValid = false;
+  }
+
+  const basePriceNum = isPromoValid ? Number(product.promo_price) : Number(product.price);
+  const currentPrice = !isNaN(basePriceNum) && basePriceNum > 0 ? basePriceNum.toFixed(2) : "0.00";
 
   let imageUrl = product.image;
   if (imageUrl && imageUrl.startsWith('/')) {
@@ -54,21 +62,37 @@ export function buildProductSchema(product: any, reviews: any[], currentUrl: str
     schema.sku = product.sku;
   }
 
-  
-
+  const brandName = product.brand_name || (product.brand && product.brand.name) || "Zorando";
   schema.brand = {
     "@type": "Brand",
-    "name": product.brand_name || "Zorando"
+    "name": brandName
   };
 
   const isStockAvailable = product.stock !== undefined && product.stock !== null && (Number(product.stock) > 0 || product.stock === true);
+  const cleanOfferUrl = currentUrl.split('?')[0];
 
-  const offer: any = {
-    "@type": "Offer",
-    "url": currentUrl,
-    "priceCurrency": "DZD",
-    "price": currentPrice,
-    "availability": isStockAvailable ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+  // Parse variations if present
+  let variationsList: any[] = [];
+  if (typeof product.variations === 'string' && product.variations.trim().length > 2) {
+    try {
+      variationsList = JSON.parse(product.variations);
+    } catch (e) {
+      variationsList = [];
+    }
+  } else if (Array.isArray(product.variations)) {
+    variationsList = product.variations;
+  }
+
+  const variationPrices = variationsList
+    .map((v: any) => v && v.price ? Number(v.price) : null)
+    .filter((p): p is number => p !== null && !isNaN(p) && p > 0);
+
+  const hasMultiplePrices = variationPrices.length > 0 && (
+    Math.min(...variationPrices) !== Math.max(...variationPrices) ||
+    variationPrices.some(p => p !== basePriceNum)
+  );
+
+  const commonShippingAndReturns = {
     "itemCondition": "https://schema.org/NewCondition",
     "seller": {
       "@type": "Organization",
@@ -112,18 +136,43 @@ export function buildProductSchema(product: any, reviews: any[], currentUrl: str
     }
   };
 
-  if (isPromo && product.promo_price_end_date) {
-    const endDate = new Date(product.promo_price_end_date);
-    if (endDate > new Date()) {
-      offer.priceValidUntil = endDate.toISOString().split('T')[0];
-    } else {
-      offer.priceValidUntil = "2027-12-31";
+  const getPriceValidUntil = () => {
+    if (isPromoValid && product.promo_price_end_date) {
+      const endDate = new Date(product.promo_price_end_date);
+      if (endDate > now) {
+        return endDate.toISOString().split('T')[0];
+      }
     }
-  } else {
-    offer.priceValidUntil = "2027-12-31";
-  }
+    return "2027-12-31";
+  };
 
-  schema.offers = offer;
+  if (hasMultiplePrices) {
+    const allPrices = [basePriceNum, ...variationPrices].filter(p => !isNaN(p) && p > 0);
+    const minPrice = Math.min(...allPrices);
+    const maxPrice = Math.max(...allPrices);
+
+    schema.offers = {
+      "@type": "AggregateOffer",
+      "url": cleanOfferUrl,
+      "priceCurrency": "DZD",
+      "lowPrice": minPrice.toFixed(2),
+      "highPrice": maxPrice.toFixed(2),
+      "offerCount": variationsList.length || 1,
+      "priceValidUntil": getPriceValidUntil(),
+      "availability": isStockAvailable ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+      ...commonShippingAndReturns
+    };
+  } else {
+    schema.offers = {
+      "@type": "Offer",
+      "url": cleanOfferUrl,
+      "priceCurrency": "DZD",
+      "price": currentPrice,
+      "priceValidUntil": getPriceValidUntil(),
+      "availability": isStockAvailable ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+      ...commonShippingAndReturns
+    };
+  }
 
   const reviewCount = reviews?.length > 0 ? reviews.length : Number(product.reviews_count || 0);
 

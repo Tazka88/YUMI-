@@ -7,6 +7,7 @@ import { useWishlistStore } from '../store/wishlistStore';
 import { useAuth } from '../lib/AuthContext';
 import { getSupabase } from '../lib/supabase';
 import { formatPrice } from '../utils/formatPrice';
+import { isPromoActive, getEffectivePrice } from '../utils/promo';
 import { ProductCard } from '../components/ProductCard';
 import SEO, { getCanonicalUrl } from '../components/SEO';
 import { buildProductSchema, buildBreadcrumbSchema, smartTruncate } from '../lib/schemaUtils';
@@ -298,16 +299,10 @@ export default function Product() {
     );
   }
 
-  const isPromo = (() => {
-    if (product.promo_price === null) return false;
-    const now = new Date();
-    if (product.promo_price_start_date && new Date(product.promo_price_start_date) > now) return false;
-    if (product.promo_price_end_date && new Date(product.promo_price_end_date) < now) return false;
-    return true;
-  })();
-  const discount = isPromo ? Math.round(((product.price - product.promo_price!) / product.price) * 100) : 0;
-  const currentPrice = isPromo ? product.promo_price! : product.price;
-  const activePriceForDisplay = selectedVariation?.price || currentPrice;
+  const isPromo = isPromoActive(product);
+  const discount = isPromo ? Math.round(((Number(product.price) - Number(product.promo_price)) / Number(product.price)) * 100) : 0;
+  const currentPrice = isPromo ? Number(product.promo_price) : Number(product.price);
+  const activePriceForDisplay = getEffectivePrice(product, selectedVariation);
   const hasVariationPrice = !!selectedVariation?.price;
 
   const handleAddToCart = () => {

@@ -1122,8 +1122,13 @@ router.get('/products', async (req, res) => {
         AND (${popular === 'true' ? true : null}::boolean IS NULL OR p.is_popular = true)
         AND (${best_seller === 'true' ? true : null}::boolean IS NULL OR p.is_best_seller = true)
         AND (${isNew === 'true' ? true : null}::boolean IS NULL OR p.is_new = true)
-        AND (${recommended === 'true' ? true : null}::boolean IS NULL OR p.is_recommended = true)
-        AND (${special_offers === 'true' ? true : null}::boolean IS NULL OR p.promo_price IS NOT NULL)
+        AND (${special_offers === 'true' ? true : null}::boolean IS NULL OR (
+          p.promo_price IS NOT NULL 
+          AND p.promo_price > 0 
+          AND p.promo_price < p.price 
+          AND (p.promo_price_start_date IS NULL OR p.promo_price_start_date <= NOW()) 
+          AND (p.promo_price_end_date IS NULL OR p.promo_price_end_date >= NOW())
+        ))
         AND (${idArray.length > 0 ? sql`p.id = ANY(${idArray})` : sql`true`})
       ${orderClause}
       LIMIT ${limit} OFFSET ${offset}
@@ -1404,13 +1409,22 @@ router.post('/orders', orderLimiter, async (req, res) => {
       }
       
       let isPromoValid = (() => {
-        if (!product.promo_price) return false;
+        if (product.promo_price === null || product.promo_price === undefined || product.promo_price === '') return false;
+        const promo = Number(product.promo_price);
+        const regular = Number(product.price);
+        if (isNaN(promo) || isNaN(regular) || promo <= 0 || promo >= regular) return false;
         const now = new Date();
-        if (product.promo_price_start_date && new Date(product.promo_price_start_date) > now) return false;
-        if (product.promo_price_end_date && new Date(product.promo_price_end_date) < now) return false;
+        if (product.promo_price_start_date) {
+          const start = new Date(product.promo_price_start_date);
+          if (!isNaN(start.getTime()) && start > now) return false;
+        }
+        if (product.promo_price_end_date) {
+          const end = new Date(product.promo_price_end_date);
+          if (!isNaN(end.getTime()) && end < now) return false;
+        }
         return true;
       })();
-      let actualPrice = isPromoValid ? product.promo_price : product.price;
+      let actualPrice = isPromoValid ? Number(product.promo_price) : Number(product.price);
       
       // Calculate active variation price if selected
       if (item.variation && parsedVariations.length > 0) {

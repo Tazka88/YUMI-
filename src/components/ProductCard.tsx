@@ -5,6 +5,7 @@ import { useCartStore } from '../store/cartStore';
 import { useWishlistStore } from '../store/wishlistStore';
 import { useAuth } from '../lib/AuthContext';
 import { formatPrice } from '../utils/formatPrice';
+import { isPromoActive } from '../utils/promo';
 import { getResizedImageUrl } from '../lib/utils';
 
 interface Product {
@@ -26,13 +27,7 @@ interface Product {
 export const ProductCard: React.FC<{ product: Product; priority?: boolean; isFlashSale?: boolean }> = ({ product, priority = false, isFlashSale = false }) => {
   const addItem = useCartStore((state) => state.addItem);
   const navigate = useNavigate();
-  const isPromo = (() => {
-    if (product.promo_price === null) return false;
-    const now = new Date();
-    if (product.promo_price_start_date && new Date(product.promo_price_start_date) > now) return false;
-    if (product.promo_price_end_date && new Date(product.promo_price_end_date) < now) return false;
-    return true;
-  })();
+  const isPromo = isPromoActive(product);
   const discount = isPromo ? Math.round(((product.price - product.promo_price!) / product.price) * 100) : 0;
   const isOutOfStock = product.stock <= 0;
   const avgRating = product.avg_rating ? Number(product.avg_rating) : 0;

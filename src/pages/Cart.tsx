@@ -3,7 +3,6 @@ import { Trash2, ArrowRight, ShoppingBag } from 'lucide-react';
 import { useCartStore } from '../store/cartStore';
 import React, { useEffect, useRef } from 'react';
 import { formatPrice } from '../utils/formatPrice';
-import { getEffectivePrice } from '../utils/promo';
 import SEO from '../components/SEO';
 
 export default function Cart() {
@@ -22,7 +21,7 @@ export default function Cart() {
             items: items.map(item => ({
               item_id: item.id.toString(),
               item_name: item.name,
-              price: getEffectivePrice(item, item.selectedVariation),
+              price: item.selectedVariation?.price || item.promo_price || item.price,
               quantity: item.quantity,
               item_category: item.category_name || undefined
             }))
@@ -37,7 +36,7 @@ export default function Cart() {
   const handleRemoveItem = (item) => {
     if (typeof window !== 'undefined' && typeof window.gtag === 'function') {
       try {
-        const itemPrice = getEffectivePrice(item, item.selectedVariation);
+        const itemPrice = item.selectedVariation?.price || item.promo_price || item.price;
         const safeValue = isNaN(itemPrice * item.quantity) || itemPrice * item.quantity <= 0 ? 1 : Number(Number(itemPrice * item.quantity).toFixed(2));
         window.gtag("event", "remove_from_cart", {
           currency: "DZD",
@@ -85,7 +84,7 @@ export default function Cart() {
         {/* Cart Items */}
         <div className="w-full lg:w-2/3 space-y-4">
           {items.map((item) => {
-            const currentPrice = getEffectivePrice(item, item.selectedVariation);
+            const currentPrice = item.selectedVariation?.price || item.promo_price || item.price;
             const itemImage = item.selectedVariation?.image ? (item.selectedVariation.image.startsWith('http') || item.selectedVariation.image.startsWith('/api') ? item.selectedVariation.image : '/api/images/' + item.selectedVariation.image) : item.image;
             return (
               <div key={item.cartItemId || item.id} className="bg-white p-4 rounded-lg shadow-sm flex flex-col sm:flex-row items-start sm:items-center gap-4 relative">

@@ -129,91 +129,8 @@ const cleanForSEO = (text: any, truncateLength?: number) => {
   return cleanText.replace(/\.{2,}$/, '').trim();
 };
 
-const escapeHtml = (unsafe: any): string => {
-  if (unsafe === null || unsafe === undefined) return '';
-  return String(unsafe)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
-};
-
-const parseFeatures = (features: any): Array<{ key: string; value: string }> => {
-  if (!features) return [];
-  let parsed = features;
-  if (typeof features === 'string') {
-    try {
-      parsed = JSON.parse(features);
-    } catch {
-      return features
-        .split(/\r?\n/)
-        .map(line => line.trim())
-        .filter(Boolean)
-        .map(line => {
-          if (line.includes('\t')) {
-            const parts = line.split('\t');
-            return { key: parts[0].trim(), value: parts.slice(1).join('\t').trim() };
-          }
-          if (line.includes(':')) {
-            const parts = line.split(':');
-            return { key: parts[0].trim(), value: parts.slice(1).join(':').trim() };
-          }
-          return null;
-        })
-        .filter((f): f is { key: string; value: string } => 
-          Boolean(f && f.key && f.value && !(f.key.toLowerCase().includes('caractéristique') && (f.value.toLowerCase().includes('spécification') || f.value.toLowerCase().includes('détail'))))
-        );
-    }
-  }
-  if (Array.isArray(parsed)) {
-    return parsed
-      .map((item: any) => {
-        if (!item) return null;
-        if (typeof item === 'object') {
-          const key = item.key || item.name || Object.keys(item)[0];
-          const value = item.value !== undefined ? item.value : item[key];
-          return key && value !== undefined ? { key: String(key).trim(), value: String(value).trim() } : null;
-        }
-        return null;
-      })
-      .filter((f): f is { key: string; value: string } => 
-        Boolean(f && f.key && f.value && !(f.key.toLowerCase().includes('caractéristique') && (f.value.toLowerCase().includes('spécification') || f.value.toLowerCase().includes('détail'))))
-      );
-  }
-  return [];
-};
-
-const parseKeyPoints = (keyPoints: any): Array<string> => {
-  if (!keyPoints) return [];
-  let parsed = keyPoints;
-  if (typeof keyPoints === 'string') {
-    try {
-      parsed = JSON.parse(keyPoints);
-    } catch {
-      return keyPoints
-        .split(/\r?\n/)
-        .map(l => l.replace(/^[-*•]\s*/, '').trim())
-        .filter(Boolean);
-    }
-  }
-  if (Array.isArray(parsed)) {
-    return parsed.map((p: any) => String(p).trim()).filter(Boolean);
-  }
-  return [];
-};
-
-const parseProductFaqs = (product: any): Array<{ q: string; a: string }> => {
-  const faqs: Array<{ q: string; a: string }> = [];
-  if (product.faq_q1 && product.faq_a1 && typeof product.faq_q1 === 'string' && typeof product.faq_a1 === 'string' && product.faq_q1.trim() && product.faq_a1.trim()) {
-    faqs.push({ q: product.faq_q1.trim(), a: product.faq_a1.trim() });
-  }
-  if (product.faq_q2 && product.faq_a2 && typeof product.faq_q2 === 'string' && typeof product.faq_a2 === 'string' && product.faq_q2.trim() && product.faq_a2.trim()) {
-    faqs.push({ q: product.faq_q2.trim(), a: product.faq_a2.trim() });
-  }
-  return faqs;
-};
-
+  
+  const staticRedirects: Record<string, string> = {
     '/product/hoco-casque-sans-w45': '/product/hoco-casque-sans-fil-bluetooth-5-3-400mah-w45',
     '/product/mi-band-10-bracelet-inteligent-150-modes-sportifs-cran-amoled-1-72-pouces-bt5-4-endurance-21-jours-5atm-diffusion-de-frequence-cardiaque': '/product/mi-band-10-bracelet-inteligent-150-modes-sportifs-ecran-amoled-1-72-pouces-bt5-4-endurance-21-jours-5atm-diffusion-de-frequence-cardiaque',
     '/product/mi-band-10-bracelet-inteligent-150-modes-sportifs-ecran-amoled-172-pouces-bt54-endurance-21-jours-5atm-diffusion-de-frequence-cardiaque': '/product/mi-band-10-bracelet-inteligent-150-modes-sportifs-ecran-amoled-1-72-pouces-bt5-4-endurance-21-jours-5atm-diffusion-de-frequence-cardiaque',
@@ -610,8 +527,7 @@ app.get('*', async (req, res, next) => {
       try {
         const [product] = await sql`
           SELECT p.id, p.name, p.description, p.seo_title, p.seo_description, p.seo_keywords, p.price, p.promo_price, p.promo_price_start_date, p.promo_price_end_date, p.sku, p.stock, p.is_active, p.variations, p.updated_at, p.created_at,
-            p.features, p.key_points, p.faq_q1, p.faq_a1, p.faq_q2, p.faq_a2,
-            CASE WHEN p.image LIKE 'data:image/%' THEN '/api/images/products/' || p.id || '/image/' || p.slug || '.webp' ELSE p.image END as image,
+              CASE WHEN p.image LIKE 'data:image/%' THEN '/api/images/products/' || p.id || '/image/' || p.slug || '.webp' ELSE p.image END as image,
             COALESCE(b.name, p.brand_name, 'Zorando') as brand_name,
             c.name as category_name,
             c.slug as category_slug,
@@ -722,58 +638,20 @@ ${JSON.stringify(schemaData)}
           headHtml += `<meta property="product:availability" content="${product.stock > 0 ? 'in stock' : 'out of stock'}" />
 `;
           
-          const featuresList = parseFeatures(product.features);
-          const keyPointsList = parseKeyPoints(product.key_points);
-          const productFaqsList = parseProductFaqs(product);
-
-          const keyPointsSection = keyPointsList.length > 0 ? `
-              <div>
-                <h2>Points forts & Caractéristiques clés</h2>
-                <ul>
-                  ${keyPointsList.map(pt => `<li>${escapeHtml(pt)}</li>`).join('\n                  ')}
-                </ul>
-              </div>` : '';
-
-          const featuresSection = featuresList.length > 0 ? `
-              <div>
-                <h2>Caractéristiques techniques</h2>
-                <table>
-                  <thead>
-                    <tr>
-                      <th scope="col">Caractéristique</th>
-                      <th scope="col">Spécification</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    ${featuresList.map(f => `<tr><th scope="row">${escapeHtml(f.key)}</th><td>${escapeHtml(f.value)}</td></tr>`).join('\n                    ')}
-                  </tbody>
-                </table>
-              </div>` : '';
-
-          const faqsSection = productFaqsList.length > 0 ? `
-              <div>
-                <h2>Questions fréquentes sur ce produit</h2>
-                ${productFaqsList.map(faq => `
-                <div>
-                  <h3>${escapeHtml(faq.q)}</h3>
-                  <p>${escapeHtml(faq.a)}</p>
-                </div>`).join('')}
-              </div>` : '';
-
           const staticBody = `
             <div id="seo-static-content" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 prose prose-sm max-w-none text-gray-700">
-              <h1>${escapeHtml(product.name)}</h1>
-              <img src="${escapeHtml(ogImage)}" alt="${escapeHtml(product.name)}" />
-              <p><strong>Prix :</strong> ${escapeHtml(currentPrice.toFixed(2))} DZD</p>
+              <h1>${product.name}</h1>
+              <img src="${ogImage}" alt="${product.name}" />
+              <p><strong>Prix :</strong> ${currentPrice.toFixed(2)} DZD</p>
               <p><strong>Disponibilité :</strong> ${product.stock > 0 ? 'En stock' : 'Rupture de stock'}</p>
               <div>
                 <h2>Description</h2>
-                <div>${escapeHtml(product.description || description || '').replace(/\r?\n/g, '<br />')}</div>
-              </div>${keyPointsSection}${featuresSection}${faqsSection}
+                <div>${(product.description || description || '').replace(/\n/g, '<br />')}</div>
+              </div>
               <div>
                 <h2>Catégories</h2>
                 <ul>
-                  <li><a href="${baseUrl}/category/${escapeHtml(product.category_slug)}">${escapeHtml(product.category_name)}</a></li>
+                  <li><a href="${baseUrl}/category/${product.category_slug}">${product.category_name}</a></li>
                 </ul>
               </div>
             </div>

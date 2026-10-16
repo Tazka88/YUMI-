@@ -11,7 +11,6 @@ import {
 } from 'lucide-react';
 import { getSupabase } from '../lib/supabase';
 import { formatPrice } from '../utils/formatPrice';
-import { getEffectivePrice } from '../utils/promo';
 import { fetchWithCache } from '../lib/utils';
 import { sendCapiEvent, generateEventId } from '../lib/capi';
 import { useCommunesStore } from '../store/useCommunesStore';
@@ -35,7 +34,7 @@ export default function Checkout() {
 
   const directBuyItem = location.state?.directBuyItem;
   const checkoutItems = directBuyItem ? [directBuyItem] : items;
-  const checkoutTotal = directBuyItem ? getEffectivePrice(directBuyItem, directBuyItem.selectedVariation) * directBuyItem.quantity : total();
+  const checkoutTotal = directBuyItem ? (directBuyItem.selectedVariation?.price || directBuyItem.promo_price || directBuyItem.price) * directBuyItem.quantity : total();
   
   // Delivery form state
   const [formData, setFormData] = useState({
@@ -272,7 +271,7 @@ export default function Checkout() {
             items: checkoutItems.map(item => ({
               item_id: item.id.toString(),
               item_name: item.name,
-              price: getEffectivePrice(item, item.selectedVariation),
+              price: item.selectedVariation?.price || item.promo_price || item.price,
               quantity: item.quantity,
               item_category: item.category_name || undefined
             }))
@@ -547,7 +546,7 @@ export default function Checkout() {
       items: checkoutItems.map(item => ({
         product_id: item.id,
         quantity: item.quantity,
-        price: getEffectivePrice(item, item.selectedVariation),
+        price: item.selectedVariation?.price || item.promo_price || item.price,
         variation: item.selectedVariation ? `${item.selectedVariation.attribute} : ${item.selectedVariation.value}` : null
       }))
     };
@@ -581,7 +580,7 @@ export default function Checkout() {
               items: checkoutItems.map(item => ({
                 item_id: item.id.toString(),
                 item_name: item.name,
-                price: getEffectivePrice(item, item.selectedVariation),
+                price: item.selectedVariation?.price || item.promo_price || item.price,
                 quantity: item.quantity,
                 item_category: item.category_name || undefined
               }))
@@ -747,7 +746,7 @@ export default function Checkout() {
                     <span className="font-bold text-gray-500">{item.quantity}x</span>
                     <span className="text-gray-800 line-clamp-1">{item.name}</span>
                   </div>
-                  <span className="font-semibold">{formatPrice(getEffectivePrice(item, item.selectedVariation) * item.quantity)}</span>
+                  <span className="font-semibold">{formatPrice((item.selectedVariation?.price || item.promo_price || item.price) * item.quantity)}</span>
                 </div>
               ))}
               <div className="pt-2 flex justify-between text-xs text-gray-500">
@@ -1395,7 +1394,7 @@ export default function Checkout() {
               {/* Items List */}
               <div className="space-y-3 max-h-64 overflow-y-auto pr-1">
                 {checkoutItems.map(item => {
-                  const currentPrice = getEffectivePrice(item, item.selectedVariation);
+                  const currentPrice = item.selectedVariation?.price || item.promo_price || item.price;
                   const itemImg = item.selectedVariation?.image 
                     ? (item.selectedVariation.image.startsWith('http') || item.selectedVariation.image.startsWith('/api') ? item.selectedVariation.image : '/api/images/' + item.selectedVariation.image) 
                     : item.image;

@@ -129,6 +129,16 @@ const cleanForSEO = (text: any, truncateLength?: number) => {
   return cleanText.replace(/\.{2,}$/, '').trim();
 };
 
+const escapeHtml = (str: any): string => {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+};
+
   
   const staticRedirects: Record<string, string> = {
     '/product/hoco-casque-sans-w45': '/product/hoco-casque-sans-fil-bluetooth-5-3-400mah-w45',
@@ -526,9 +536,16 @@ app.get('*', async (req, res, next) => {
 
       try {
         const [product] = await sql`
-          SELECT p.id, p.name, p.description, p.seo_title, p.seo_description, p.seo_keywords, p.price, p.promo_price, p.promo_price_start_date, p.promo_price_end_date, p.sku, p.stock, p.is_active, p.variations, p.updated_at, p.created_at,
-              CASE WHEN p.image LIKE 'data:image/%' THEN '/api/images/products/' || p.id || '/image/' || p.slug || '.webp' ELSE p.image END as image,
+          SELECT p.id, p.slug, p.sku, p.name, p.description, p.seo_title, p.seo_description, p.seo_keywords,
+            p.price, p.promo_price, p.promo_price_start_date, p.promo_price_end_date, p.stock, p.weight,
+            p.is_active, p.is_popular, p.is_best_seller, p.is_new, p.is_recommended, p.is_fast_delivery,
+            p.video_url, p.main_image_alt, p.features, p.key_points, p.faq_q1, p.faq_a1, p.faq_q2, p.faq_a2,
+            p.variations, p.updated_at, p.created_at,
+            p.category_id, p.subcategory_id, p.sub_subcategory_id, p.brand_id,
+            CASE WHEN p.image LIKE 'data:image/%' THEN '/api/images/products/' || p.id || '/image/' || p.slug || '.webp' ELSE p.image END as image,
             COALESCE(b.name, p.brand_name, 'Zorando') as brand_name,
+            b.slug as brand_slug,
+            CASE WHEN b.image LIKE 'data:image/%' THEN '/api/images/brands/' || b.id || '/image?v=' || LENGTH(b.image) ELSE b.image END as brand_image,
             c.name as category_name,
             c.slug as category_slug,
             sub.name as subcategory_name,
@@ -537,12 +554,12 @@ app.get('*', async (req, res, next) => {
             subsub.slug as sub_subcategory_slug,
             (SELECT COUNT(*) FROM reviews r WHERE r.product_id = p.id) as reviews_count,
             (SELECT COALESCE(AVG(rating), 0) FROM reviews r WHERE r.product_id = p.id) as avg_rating
-            FROM products p
-            LEFT JOIN brands b ON p.brand_id = b.id
-            LEFT JOIN categories c ON p.category_id = c.id
-            LEFT JOIN subcategories sub ON p.subcategory_id = sub.id
-            LEFT JOIN sub_subcategories subsub ON p.sub_subcategory_id = subsub.id
-            WHERE p.slug = ${slug}
+          FROM products p
+          LEFT JOIN brands b ON p.brand_id = b.id
+          LEFT JOIN categories c ON p.category_id = c.id
+          LEFT JOIN subcategories sub ON p.subcategory_id = sub.id
+          LEFT JOIN sub_subcategories subsub ON p.sub_subcategory_id = subsub.id
+          WHERE p.slug = ${slug}
         `;
         if (product) {
           if (product.is_active === false) {
@@ -596,8 +613,96 @@ app.get('*', async (req, res, next) => {
           
           const allReviews = await sql`SELECT customer_name, rating, comment, created_at FROM reviews WHERE product_id = ${product.id} ORDER BY created_at DESC`;
           
-          const extraImages = await sql`SELECT image FROM product_images WHERE product_id = ${product.id} ORDER BY id ASC`;
-          product.images = extraImages.map((img: any) => img.image);
+          const extraImages = await sql`
+            SELECT id, product_id, is_main, alt_text,
+            CASE WHEN image LIKE 'data:image/%' THEN '/api/images/product_images/' || id || '/image?v=' || LENGTH(image) ELSE image END as image
+            FROM product_images
+            WHERE product_id = ${product.id}
+            ORDER BY is_main DESC, id ASC
+          `;
+          product.images = extraImages.filter((img: any) => !img.is_main);
+          const mainImgRow = extraImages.find((img: any) => img.is_main);
+          if (!product.main_image_alt && mainImgRow && mainImgRow.alt_text) {
+            product.main_image_alt = mainImgRow.alt_text;
+          }
+
+          // Parse variations
+          if (typeof product.variations === 'string') {
+            try {
+              product.variations = JSON.parse(product.variations);
+            } catch (e) {
+              product.variations = [];
+            }
+          }
+          if (!Array.isArray(product.variations)) {
+            product.variations = [];
+          }
+          product.variations.forEach((v: any) => {
+            if (v && v.stock !== undefined) v.stock = Number(v.stock) || 0;
+          });
+
+          // Parse key_points
+          let keyPointsList: string[] = [];
+          if (Array.isArray(product.key_points)) {
+            keyPointsList = product.key_points.filter((k: any) => typeof k === 'string' && k.trim());
+          } else if (typeof product.key_points === 'string') {
+            try {
+              const parsedKp = JSON.parse(product.key_points);
+              if (Array.isArray(parsedKp)) {
+                keyPointsList = parsedKp.filter((k: any) => typeof k === 'string' && k.trim());
+              }
+            } catch (e) {
+              keyPointsList = product.key_points.split('\n').map((s: string) => s.trim()).filter(Boolean);
+            }
+          }
+          product.key_points = keyPointsList;
+
+          // Parse features
+          let featureList: Array<{ key: string, value: string }> = [];
+          if (Array.isArray(product.features)) {
+            for (const item of product.features) {
+              if (item && typeof item === 'object') {
+                if ('key' in item && 'value' in item) {
+                  featureList.push({ key: String(item.key), value: String(item.value) });
+                } else {
+                  const entries = Object.entries(item);
+                  if (entries.length > 0) {
+                    featureList.push({ key: String(entries[0][0]), value: String(entries[0][1]) });
+                  }
+                }
+              }
+            }
+          } else if (typeof product.features === 'string' && product.features.trim().length > 0) {
+            try {
+              const parsedF = JSON.parse(product.features);
+              if (Array.isArray(parsedF)) {
+                for (const item of parsedF) {
+                  if (item && typeof item === 'object') {
+                    if ('key' in item && 'value' in item) {
+                      featureList.push({ key: String(item.key), value: String(item.value) });
+                    } else {
+                      const entries = Object.entries(item);
+                      if (entries.length > 0) {
+                        featureList.push({ key: String(entries[0][0]), value: String(entries[0][1]) });
+                      }
+                    }
+                  }
+                }
+              }
+            } catch (e) {
+              const lines = product.features.split('\n');
+              for (const line of lines) {
+                if (line.includes(':')) {
+                  const idx = line.indexOf(':');
+                  const k = line.substring(0, idx).trim();
+                  const v = line.substring(idx + 1).trim();
+                  if (k && v) featureList.push({ key: k, value: v });
+                }
+              }
+            }
+          }
+          const filteredFeatures = featureList.filter(f => !(f.key.toLowerCase().trim() === 'caractéristique' && f.value.toLowerCase().trim() === 'spécification'));
+          product.features = featureList;
           
           const productSchema = buildProductSchema(product, allReviews, `${baseUrl}${req.path}`, baseUrl);
           
@@ -637,21 +742,76 @@ ${JSON.stringify(schemaData)}
 `;
           headHtml += `<meta property="product:availability" content="${product.stock > 0 ? 'in stock' : 'out of stock'}" />
 `;
+
+          // Priority 2: Transmit product & review data in initial HTML for immediate React hydration without spinner
+          const safeInitialProduct = JSON.stringify(product).replace(/</g, '\\u003c');
+          const safeInitialReviews = JSON.stringify(allReviews || []).replace(/</g, '\\u003c');
+          headHtml += `
+<script id="__INITIAL_PRODUCT__" type="application/json">
+${safeInitialProduct}
+</script>
+<script>
+try {
+  window.__INITIAL_PRODUCT__ = JSON.parse(document.getElementById('__INITIAL_PRODUCT__').textContent);
+  window.__INITIAL_REVIEWS__ = ${safeInitialReviews};
+} catch (e) {}
+</script>
+`;
           
+          // Priority 1: Inject features table & key_points into #seo-static-content for instant Google indexing
+          const featuresHtml = filteredFeatures.length > 0 ? `
+              <div class="mt-6">
+                <h2>Caractéristiques techniques</h2>
+                <table class="w-full text-left border-collapse border border-gray-200" style="width: 100%; border-collapse: collapse; margin-top: 1rem;">
+                  <thead>
+                    <tr style="background-color: #f3f4f6;">
+                      <th style="border: 1px solid #e5e7eb; padding: 8px 12px; font-weight: 600; text-align: left; width: 35%;">Caractéristique</th>
+                      <th style="border: 1px solid #e5e7eb; padding: 8px 12px; font-weight: 600; text-align: left;">Détails / Spécification</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${filteredFeatures.map(f => `
+                    <tr>
+                      <td style="border: 1px solid #e5e7eb; padding: 8px 12px; font-weight: 500; background-color: #f9fafb;">${escapeHtml(f.key)}</td>
+                      <td style="border: 1px solid #e5e7eb; padding: 8px 12px;">${escapeHtml(f.value)}</td>
+                    </tr>`).join('')}
+                  </tbody>
+                </table>
+              </div>` : '';
+
+          const keyPointsHtml = keyPointsList.length > 0 ? `
+              <div class="mt-6">
+                <h2>Points forts & Caractéristiques clés</h2>
+                <ul>
+                  ${keyPointsList.map(kp => `<li>${escapeHtml(kp)}</li>`).join('')}
+                </ul>
+              </div>` : '';
+
+          const faqHtml = ((product.faq_q1 && product.faq_a1) || (product.faq_q2 && product.faq_a2)) ? `
+              <div class="mt-6">
+                <h2>Questions Fréquentes</h2>
+                ${product.faq_q1 && product.faq_a1 ? `<h3>${escapeHtml(product.faq_q1)}</h3><p>${escapeHtml(product.faq_a1)}</p>` : ''}
+                ${product.faq_q2 && product.faq_a2 ? `<h3>${escapeHtml(product.faq_q2)}</h3><p>${escapeHtml(product.faq_a2)}</p>` : ''}
+              </div>` : '';
+
           const staticBody = `
             <div id="seo-static-content" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 prose prose-sm max-w-none text-gray-700">
-              <h1>${product.name}</h1>
-              <img src="${ogImage}" alt="${product.name}" />
+              <h1>${escapeHtml(product.name)}</h1>
+              <img src="${escapeHtml(ogImage)}" alt="${escapeHtml(product.main_image_alt || product.name)}" />
               <p><strong>Prix :</strong> ${currentPrice.toFixed(2)} DZD</p>
               <p><strong>Disponibilité :</strong> ${product.stock > 0 ? 'En stock' : 'Rupture de stock'}</p>
+              ${product.brand_name ? `<p><strong>Marque :</strong> ${escapeHtml(product.brand_name)}</p>` : ''}
+              ${keyPointsHtml}
               <div>
-                <h2>Description</h2>
+                <h2>Description du produit</h2>
                 <div>${(product.description || description || '').replace(/\n/g, '<br />')}</div>
               </div>
+              ${featuresHtml}
+              ${faqHtml}
               <div>
                 <h2>Catégories</h2>
                 <ul>
-                  <li><a href="${baseUrl}/category/${product.category_slug}">${product.category_name}</a></li>
+                  <li><a href="${baseUrl}/category/${escapeHtml(product.category_slug)}">${escapeHtml(product.category_name)}</a></li>
                 </ul>
               </div>
             </div>

@@ -2035,10 +2035,12 @@ router.put('/admin/orders/:orderId/items/:itemId/status', authenticate, async (r
   const { status } = req.body;
   if (!status) return res.status(400).json({ error: 'Status is required' });
 
+  let updatedItem: any = null;
   try {
     await sql.begin(async (sql: any) => {
       const [item] = await sql`SELECT * FROM order_items WHERE id = ${req.params.itemId} AND order_id = ${req.params.orderId}`;
       if (!item) throw new Error('Order item not found');
+      updatedItem = item;
       
       const oldStatus = item.status || 'active';
       if (oldStatus === status) return; // No change
@@ -2070,12 +2072,12 @@ router.put('/admin/orders/:orderId/items/:itemId/status', authenticate, async (r
       }
     });
 
-    if (item && item.product_id) {
-      sql`SELECT slug, stock FROM products WHERE id = ${item.product_id}`.then(([p]) => {
+    if (updatedItem && updatedItem.product_id) {
+      sql`SELECT slug, stock FROM products WHERE id = ${updatedItem.product_id}`.then(([p]: any[]) => {
         if (p) {
           const reason = status === 'cancelled' ? 'restock' : (Number(p.stock) <= 0 ? 'out_of_stock' : 'product_update');
           invalidateProductCache({
-            productId: item.product_id,
+            productId: updatedItem.product_id,
             slug: p.slug,
             reason,
             newValue: p.stock

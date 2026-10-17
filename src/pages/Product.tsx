@@ -50,13 +50,50 @@ const COLOR_MAP: Record<string, string> = {
 
 export default function Product() {
   const { slug } = useParams();
-  const [product, setProduct] = useState<any>(null);
+
+  const getInitialProduct = () => {
+    if (typeof window !== 'undefined') {
+      const init = (window as any).__INITIAL_PRODUCT__;
+      if (init && (init.slug === slug || String(init.id) === slug)) {
+        return init;
+      }
+      try {
+        const el = document.getElementById('__INITIAL_PRODUCT__');
+        if (el && el.textContent) {
+          const parsed = JSON.parse(el.textContent);
+          if (parsed && (parsed.slug === slug || String(parsed.id) === slug)) {
+            return parsed;
+          }
+        }
+      } catch (e) {}
+    }
+    return null;
+  };
+
+  const initialProduct = getInitialProduct();
+  const [product, setProduct] = useState<any>(initialProduct);
   const [error, setError] = useState<string | null>(null);
-  const [selectedImage, setSelectedImage] = useState<string>('');
-  const [selectedMedia, setSelectedMedia] = useState<{type: 'image' | 'video', url: string, alt_text?: string}>({type: 'image', url: '', alt_text: ''});
+  const [selectedImage, setSelectedImage] = useState<string>(() => {
+    if (initialProduct?.image) return initialProduct.image;
+    return '';
+  });
+  const [selectedMedia, setSelectedMedia] = useState<{type: 'image' | 'video', url: string, alt_text?: string}>(() => {
+    if (initialProduct?.image) {
+      return { type: 'image', url: initialProduct.image, alt_text: initialProduct.main_image_alt || initialProduct.name };
+    }
+    return { type: 'image', url: '', alt_text: '' };
+  });
   const [selectedVariation, setSelectedVariation] = useState<any>(null);
   const [relatedProducts, setRelatedProducts] = useState<ProductType[]>([]);
-  const [reviews, setReviews] = useState<any[]>([]);
+  const [reviews, setReviews] = useState<any[]>(() => {
+    if (typeof window !== 'undefined') {
+      const initReviews = (window as any).__INITIAL_REVIEWS__;
+      if (Array.isArray(initReviews) && initReviews.length > 0) {
+        return initReviews;
+      }
+    }
+    return [];
+  });
   const [quantity, setQuantity] = useState(1);
   const optionsRef = useRef<HTMLDivElement>(null);
   const relatedSectionRef = useRef<HTMLDivElement>(null);
@@ -80,6 +117,16 @@ export default function Product() {
   const supabase = getSupabase();
 
   useEffect(() => {
+    // Clean up initial SSR payload from window after hydration
+    if (typeof window !== 'undefined') {
+      setTimeout(() => {
+        (window as any).__INITIAL_PRODUCT__ = null;
+        (window as any).__INITIAL_REVIEWS__ = null;
+      }, 500);
+    }
+  }, []);
+
+  useEffect(() => {
     const controller = new AbortController();
     fetchWithCache('/api/settings', { signal: controller.signal })
       .then(data => {
@@ -100,6 +147,20 @@ export default function Product() {
     const controller = new AbortController();
     const signal = controller.signal;
 
+    // Check if product is already set for this slug (from SSR or previous fetch)
+    const hasCurrentProduct = Boolean(product && (product.slug === slug || String(product.id) === slug));
+    if (!hasCurrentProduct) {
+      const init = getInitialProduct();
+      if (init) {
+        setProduct(init);
+        const mainImg = init.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(init.name)}&background=random&size=800`;
+        setSelectedImage(mainImg);
+        setSelectedMedia({ type: 'image', url: mainImg, alt_text: init.main_image_alt || init.name });
+      } else {
+        setProduct(null);
+      }
+    }
+
     setError(null);
     fetch(`/api/products/${slug}`, { signal, priority: 'high', cache: 'no-store' } as any)
       .then(res => {
@@ -119,8 +180,8 @@ export default function Product() {
         }
         setProduct(data);
         const mainImage = data.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(data.name)}&background=random&size=800`;
-        setSelectedImage(mainImage);
-        setSelectedMedia({type: 'image', url: mainImage, alt_text: data.main_image_alt || data.name});
+        setSelectedImage(prev => prev || mainImage);
+        setSelectedMedia(prev => prev.url ? prev : {type: 'image', url: mainImage, alt_text: data.main_image_alt || data.name});
         
         // Increment view count
         fetch(`/api/products/${data.id}/view`, { method: 'POST', signal }).catch(() => {});
@@ -140,7 +201,9 @@ export default function Product() {
       .catch(err => {
         if (err.name !== 'AbortError' && !err.message?.includes('aborted')) {
           console.error(err);
-          setError(err.message);
+          if (!hasCurrentProduct) {
+            setError(err.message);
+          }
         }
       });
       

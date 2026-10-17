@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { getEffectivePrice } from '../utils/promo';
 
 export interface Product {
   id: number;
@@ -86,7 +87,7 @@ export const useCartStore = create<CartStore>()(
       clearCart: () => set({ items: [] }),
       total: () => {
         return get().items.reduce((sum, item) => {
-          const price = item.selectedVariation?.price || item.promo_price || item.price;
+          const price = getEffectivePrice(item, item.selectedVariation);
           return sum + price * item.quantity;
         }, 0);
       },

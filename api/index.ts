@@ -6,7 +6,7 @@ import path from 'path';
 import fs from 'fs';
 import { sql } from '../src/db/setup.js';
 import { categorySEOData } from '../src/utils/seoData.js';
-import { buildProductSchema, buildBreadcrumbSchema } from '../src/lib/schemaUtils.js';
+import { buildProductSchema, buildBreadcrumbSchema, buildBlogSchema } from '../src/lib/schemaUtils.js';
 
 const app = express();
 
@@ -201,9 +201,9 @@ app.get('*', async (req, res, next) => {
         const categories = await sql`SELECT name, slug FROM categories ORDER BY name ASC`;
         const brands = await sql`SELECT name, slug FROM brands ORDER BY name ASC`;
         let desktopImage = '';
-        const [hero] = await sql`SELECT image_desktop FROM hero_slides WHERE is_active = true ORDER BY order_index ASC LIMIT 1`;
-        if (hero) {
-          desktopImage = hero.image_desktop.startsWith('/') ? `${baseUrl}${hero.image_desktop}` : `${baseUrl}/${hero.image_desktop}`;
+        const [hero] = await sql`SELECT image_url FROM slider_images WHERE is_active = true AND category_id IS NULL ORDER BY position ASC, id ASC LIMIT 1`;
+        if (hero && hero.image_url) {
+          desktopImage = hero.image_url.startsWith('/') ? `${baseUrl}${hero.image_url}` : `${baseUrl}/${hero.image_url}`;
           ogImage = desktopImage;
           if (desktopImage) {
             headHtml += `
@@ -831,17 +831,59 @@ try {
       }
 
       try {
-        const [post] = await sql`SELECT title, excerpt, seo_title, seo_description, image_url as main_image FROM blog_posts WHERE slug = ${slug} AND status = 'published'`;
+        const [post] = await sql`SELECT * FROM blog_posts WHERE slug = ${slug} AND status = 'published'`;
         if (post) {
           title = post.seo_title || post.title || 'ZORANDO Blog';
           description = post.seo_description ? cleanForSEO(post.seo_description) : (post.excerpt ? cleanForSEO(post.excerpt, 160) : `Lisez notre article : ${post.title}`);
-          if (post.main_image) {
-            ogImage = post.main_image.startsWith('/') ? `${baseUrl}${post.main_image}` : `${baseUrl}/${post.main_image}`;
+          const postImage = post.image_url || post.main_image;
+          if (postImage) {
+            ogImage = postImage.startsWith('/') ? `${baseUrl}${postImage}` : (postImage.startsWith('http') ? postImage : `${baseUrl}/${postImage}`);
           }
-          seoHtml = `<div id="seo-static-content" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 prose prose-sm max-w-none text-gray-700">
-            <h1>${post.title}</h1>
-            <p>${post.excerpt}</p>
-          </div>`;
+
+          const currentUrl = `${baseUrl}${req.path}`;
+          const blogSchema = buildBlogSchema(post, currentUrl, baseUrl);
+          const breadcrumbSchema = buildBreadcrumbSchema([
+            { name: 'Accueil', item: `${baseUrl}/` },
+            { name: 'Blog', item: `${baseUrl}/blog` },
+            { name: post.title, item: currentUrl }
+          ]);
+
+          if (blogSchema && breadcrumbSchema) {
+            delete (blogSchema as any)["@context"];
+            delete (breadcrumbSchema as any)["@context"];
+            const graphSchema = {
+              "@context": "https://schema.org",
+              "@graph": [blogSchema, breadcrumbSchema]
+            };
+            headHtml += `
+<script type="application/ld+json">
+${JSON.stringify(graphSchema)}
+</script>
+`;
+          }
+
+          headHtml += `<meta property="og:type" content="article" />\n`;
+          headHtml += `<meta name="twitter:card" content="summary_large_image" />\n`;
+          if (post.published_at || post.created_at) {
+            headHtml += `<meta property="article:published_time" content="${new Date(post.published_at || post.created_at).toISOString()}" />\n`;
+          }
+          if (post.updated_at) {
+            headHtml += `<meta property="article:modified_time" content="${new Date(post.updated_at).toISOString()}" />\n`;
+          }
+
+          seoHtml = `
+            <div id="seo-static-content" class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 prose prose-emerald max-w-none text-gray-800">
+              <nav aria-label="Fil d'Ariane" class="text-sm text-gray-500 mb-4">
+                <a href="/">Accueil</a> &gt; <a href="/blog">Blog</a> &gt; <span>${post.title}</span>
+              </nav>
+              <h1>${post.title}</h1>
+              ${postImage ? `<img src="${ogImage}" alt="${post.main_image_alt || post.title}" class="w-full rounded-xl my-6" />` : ''}
+              ${post.excerpt ? `<p class="lead text-lg font-medium text-gray-600 mb-6">${post.excerpt}</p>` : ''}
+              <div class="article-content leading-relaxed">
+                ${post.content || ''}
+              </div>
+            </div>
+          `;
         } else {
           isNotFound = true;
         }
@@ -850,7 +892,7 @@ try {
       title = 'Blog & Actualités | Zorando';
       description = 'Découvrez les dernières tendances, astuces et actualités sur le blog ZORANDO.';
       try {
-        const posts = await sql`SELECT title, slug, excerpt FROM blog_posts WHERE status = 'published' ORDER BY created_at DESC LIMIT 20`;
+        const posts = await sql`SELECT title, slug, excerpt FROM blog_posts WHERE status = 'published' ORDER BY created_at DESC LIMIT 50`;
         seoHtml = `<div id="seo-static-content" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 prose prose-sm max-w-none text-gray-700">
           <h1>${title}</h1>
           <p>${description}</p>

@@ -4,7 +4,6 @@ import useSWR from 'swr';
 import { useNavigate } from 'react-router-dom';
 import { LayoutDashboard, ShoppingBag, Users, Settings, LogOut, TrendingUp, AlertCircle, Package, Plus, Edit, Trash2, X, Image as ImageIcon, Upload, User, Bell, Menu } from 'lucide-react';
 import { formatPrice } from '../../utils/formatPrice';
-import { formatForDateTimeLocal } from '../../utils/promo';
 import FooterSettings from './FooterSettings';
 import PageSettings from './PageSettings';
 import WilayasSettings from './WilayasSettings';
@@ -1048,12 +1047,20 @@ const handleBulkDelivery = async () => {
           try { parsedKeyPoints = JSON.parse(parsedKeyPoints); } catch(e) {}
         }
         
+        const toDatetimeLocal = (val: any) => {
+          if (!val) return '';
+          const d = new Date(val);
+          if (isNaN(d.getTime())) return '';
+          const pad = (n: number) => String(n).padStart(2, '0');
+          return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+        };
+
         setProductForm({
           name: fullProduct.name, slug: fullProduct.slug, sku: fullProduct.sku || '', category_id: fullProduct.category_id, subcategory_id: fullProduct.subcategory_id || '', sub_subcategory_id: fullProduct.sub_subcategory_id || '', brand_id: fullProduct.brand_id || '', brand_name: fullProduct.brand_name || '',
           price: fullProduct.price, 
           promo_price: (fullProduct.promo_price !== null && fullProduct.promo_price !== undefined) ? fullProduct.promo_price : '', 
-          promo_price_start_date: formatForDateTimeLocal(fullProduct.promo_price_start_date), 
-          promo_price_end_date: formatForDateTimeLocal(fullProduct.promo_price_end_date), 
+          promo_price_start_date: toDatetimeLocal(fullProduct.promo_price_start_date), 
+          promo_price_end_date: toDatetimeLocal(fullProduct.promo_price_end_date), 
           stock: fullProduct.stock, 
           weight: (fullProduct.weight !== null && fullProduct.weight !== undefined) ? fullProduct.weight : '',
           description: fullProduct.description || '', image: fullProduct.image || '', video_url: fullProduct.video_url || '',
@@ -1193,39 +1200,15 @@ const handleBulkDelivery = async () => {
       }
     }
 
-    const regularPrice = parseFloat(productForm.price.toString().replace(',', '.'));
-    const parsedPromoPrice = (productForm.promo_price !== '' && productForm.promo_price !== null && !isNaN(Number(productForm.promo_price.toString().replace(',', '.')))) 
-      ? parseFloat(productForm.promo_price.toString().replace(',', '.')) 
-      : null;
-
-    if (parsedPromoPrice !== null) {
-      if (parsedPromoPrice <= 0) {
-        toast.error('Le prix promo doit être supérieur à 0');
-        return;
-      }
-      if (!isNaN(regularPrice) && parsedPromoPrice >= regularPrice) {
-        toast.error('Le prix promo doit être strictement inférieur au prix normal');
-        return;
-      }
-      if (productForm.promo_price_start_date && productForm.promo_price_end_date) {
-        const start = new Date(productForm.promo_price_start_date);
-        const end = new Date(productForm.promo_price_end_date);
-        if (!isNaN(start.getTime()) && !isNaN(end.getTime()) && end < start) {
-          toast.error('La date de fin de promo doit être postérieure à la date de début');
-          return;
-        }
-      }
-    }
-
     const payload = {
       ...productForm,
       subcategory_id: productForm.subcategory_id || null,
       sub_subcategory_id: productForm.sub_subcategory_id || null,
       brand_id: productForm.brand_id || null,
-      price: regularPrice,
-      promo_price: parsedPromoPrice,
-      promo_price_start_date: parsedPromoPrice !== null ? (productForm.promo_price_start_date || null) : null,
-      promo_price_end_date: parsedPromoPrice !== null ? (productForm.promo_price_end_date || null) : null,
+      price: parseFloat(productForm.price.toString().replace(',', '.')),
+      promo_price: (productForm.promo_price !== '' && productForm.promo_price !== null) ? parseFloat(productForm.promo_price.toString().replace(',', '.')) : null,
+      promo_price_start_date: productForm.promo_price_start_date || null,
+      promo_price_end_date: productForm.promo_price_end_date || null,
       stock: parseInt(productForm.stock as string, 10),
       weight: (productForm.weight !== '' && productForm.weight !== null) ? parseFloat(productForm.weight.toString().replace(',', '.')) : null,
       features: parsedFeatures,

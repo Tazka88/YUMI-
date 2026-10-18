@@ -6,6 +6,7 @@ import path from 'path';
 import fs from 'fs';
 import { sql } from '../src/db/setup.js';
 import { categorySEOData } from '../src/utils/seoData.js';
+import { formatSeoTitle } from '../src/utils/seoTitle.js';
 import { buildProductSchema, buildBreadcrumbSchema, buildBlogSchema } from '../src/lib/schemaUtils.js';
 
 const app = express();
@@ -233,6 +234,19 @@ app.get('*', async (req, res, next) => {
           </div>
         `;
       } catch(e) { console.error("DB Error in SSR:", e); }
+    } else if (req.path === '/categories') {
+      title = 'Toutes nos catégories | Zorando';
+      description = 'Découvrez l\'ensemble des catégories de produits disponibles sur ZORANDO en Algérie.';
+      try {
+        const categories = await sql`SELECT name, slug FROM categories ORDER BY name ASC`;
+        seoHtml = `
+          <div id="seo-static-content" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 prose prose-sm max-w-none text-gray-700">
+            <h1>${title}</h1>
+            <p>${description}</p>
+            <ul>${categories.map((c: any) => `<li><a href="/category/${c.slug}">${c.name}</a></li>`).join('')}</ul>
+          </div>
+        `;
+      } catch(e) { console.error("DB Error in SSR:", e); }
     } else if (req.path.startsWith('/brands/')) {
       const parts = req.path.split('/');
       const slug = parts[2];
@@ -257,7 +271,7 @@ app.get('*', async (req, res, next) => {
           
           if (brand && cat) {
             const catName = cat.name;
-            title = `${catName} ${brand.name} en Algérie | Prix & Achat | ZORANDO`;
+            title = `${catName} ${brand.name} en Algérie`;
             description = `Découvrez la gamme de ${catName.toLowerCase()} ${brand.name} disponibles chez ZORANDO. Prix compétitifs, livraison dans les 58 wilayas et paiement à la livraison.`;
             ogUrl = `${baseUrl}${req.path}`;
             
@@ -576,7 +590,7 @@ app.get('*', async (req, res, next) => {
           res.setHeader('ETag', `W/"prod-${product.id}-${product.stock}-${lastModified.getTime()}"`);
           res.setHeader('Last-Modified', lastModified.toUTCString());
 
-          title = product.seo_title || `${product.name} | Prix & Achat | ZORANDO`;
+          title = product.seo_title || product.name;
           
           if (product.seo_description) {
             description = cleanForSEO(product.seo_description);
@@ -899,28 +913,93 @@ ${JSON.stringify(graphSchema)}
           <ul>${posts.map((p: any) => `<li><h2><a href="/blog/${p.slug}">${p.title}</a></h2><p>${p.excerpt}</p></li>`).join('')}</ul>
         </div>`;
       } catch (e) { console.error("DB error in blog SSR", e); }
-    } else if (req.path === '/about') {
-      title = 'À propos de nous | Zorando';
-      description = 'Découvrez l\'histoire de ZORANDO, votre boutique en ligne de confiance en Algérie.';
-      seoHtml = '';
+    } else if (req.path === '/about' || req.path === '/qui-sommes-nous') {
+      title = 'À propos de nous - Qui sommes-nous ?';
+      description = 'Découvrez l\'histoire de ZORANDO, votre boutique en ligne de confiance en Algérie. Engagement qualité, produits garantis et service client.';
+      let aboutContent = '<p>Découvrez l\'histoire de ZORANDO, votre boutique en ligne de confiance en Algérie. Nous proposons un large choix de produits certifiés au meilleur prix avec livraison express dans les 58 wilayas.</p>';
+      try {
+        const [page] = await sql`SELECT title, content FROM pages WHERE slug = 'about' LIMIT 1`;
+        if (page && page.content) aboutContent = page.content;
+      } catch (e) {}
+      seoHtml = `
+        <div id="seo-static-content" class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 prose prose-orange max-w-none text-gray-800">
+          <h1>À propos de nous - Qui sommes-nous ?</h1>
+          <div>${aboutContent}</div>
+        </div>
+      `;
     } else if (req.path === '/programme-fidelite') {
-      title = 'Programme de fidélité | Zorando';
-      description = 'Rejoignez le programme de fidélité ZORANDO et profitez de récompenses exclusives.';
-      seoHtml = '';
-    } else if (req.path === '/retours') {
-      title = 'Politique de retours | Zorando';
-      description = 'Consultez notre politique de retours et remboursements.';
-      seoHtml = '';
-    } else if (req.path === '/track-order') {
-      title = 'Suivre ma commande | Zorando';
-      description = 'Suivez l\'état de votre commande ZORANDO en temps réel.';
-      seoHtml = '';
+      title = 'Programme de fidélité ZORANDO';
+      description = 'Rejoignez le programme de fidélité ZORANDO et profitez de récompenses exclusives, réductions et avantages sur tous vos achats en Algérie.';
+      let fideliteContent = '<p>Rejoignez le programme de fidélité ZORANDO et profitez de récompenses exclusives sur chaque commande passée sur notre boutique.</p>';
+      try {
+        const [page] = await sql`SELECT title, content FROM pages WHERE slug = 'programme-fidelite' LIMIT 1`;
+        if (page && page.content) fideliteContent = page.content;
+      } catch (e) {}
+      seoHtml = `
+        <div id="seo-static-content" class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 prose prose-orange max-w-none text-gray-800">
+          <h1>Programme de Fidélité ZORANDO</h1>
+          <div>${fideliteContent}</div>
+        </div>
+      `;
+    } else if (req.path === '/retours' || req.path === '/retours-echanges') {
+      title = 'Politique de retours & échanges';
+      description = 'Consultez la politique officielle de retours, échanges et remboursements chez ZORANDO en Algérie.';
+      let retoursContent = '<p>Consultez notre politique de retours, échanges et remboursements. Vos achats chez ZORANDO sont garantis et sécurisés.</p>';
+      try {
+        const [page] = await sql`SELECT title, content FROM pages WHERE slug = 'retours' LIMIT 1`;
+        if (page && page.content) retoursContent = page.content;
+      } catch (e) {}
+      seoHtml = `
+        <div id="seo-static-content" class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 prose prose-orange max-w-none text-gray-800">
+          <h1>Politique de Retours et Échanges</h1>
+          <div>${retoursContent}</div>
+        </div>
+      `;
+    } else if (req.path === '/track-order' || req.path === '/suivi-commande') {
+      title = 'Suivre ma commande en temps réel';
+      description = 'Suivez l\'état de livraison de votre commande ZORANDO en temps réel dans les 58 wilayas d\'Algérie.';
+      let trackContent = '<p>Suivez l\'état de votre commande ZORANDO en temps réel grâce à votre numéro de suivi de colis.</p>';
+      try {
+        const [page] = await sql`SELECT title, content FROM pages WHERE slug = 'track-order' LIMIT 1`;
+        if (page && page.content) trackContent = page.content;
+      } catch (e) {}
+      seoHtml = `
+        <div id="seo-static-content" class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 prose prose-orange max-w-none text-gray-800">
+          <h1>Suivre ma commande ZORANDO</h1>
+          <div>${trackContent}</div>
+        </div>
+      `;
+    } else {
+      // Dynamic fallback for any other custom page from the 'pages' table (cgv, faq, contact, privacy, etc.)
+      const pageSlug = req.path.replace(/^\//, '').split('/')[0];
+      if (pageSlug && !pageSlug.includes('.')) {
+        try {
+          const [customPage] = await sql`SELECT title, content FROM pages WHERE slug = ${pageSlug} LIMIT 1`;
+          if (customPage) {
+            title = customPage.title;
+            description = `Consultez notre page ${customPage.title} sur ZORANDO en Algérie.`;
+            seoHtml = `
+              <div id="seo-static-content" class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 prose prose-orange max-w-none text-gray-800">
+                <h1>${escapeHtml(customPage.title)}</h1>
+                <div>${customPage.content || ''}</div>
+              </div>
+            `;
+          } else {
+            isNotFound = true;
+          }
+        } catch (e) {
+          isNotFound = true;
+        }
+      } else {
+        isNotFound = true;
+      }
     }
 
     const globalNav = `
       <nav id="global-nav" class="sr-only">
         <a href="/">Accueil</a>
         <a href="/brands">Marques</a>
+        <a href="/categories">Catégories</a>
         <a href="/about">À propos</a>
         <a href="/programme-fidelite">Programme de fidélité</a>
         <a href="/retours">Retours</a>
@@ -928,17 +1007,13 @@ ${JSON.stringify(graphSchema)}
       </nav>
     `;
 
-    
     if (isNotFound) {
-      title = 'Page Introuvable | Zorando';
+      title = 'Page Introuvable';
       description = 'La page que vous recherchez n\'existe pas ou a été supprimée.';
     }
 
-    
-    // Nettoyage robuste du titre
-    let cleanTitle = title.replace(/\s*[-–—|]\s*ZORANDO\s*$/i, '');
-    cleanTitle = cleanTitle.replace(/[-–—\s]+$/, '');
-    title = cleanTitle + ' | Zorando';
+    // Formatage strict du titre selon les standards SEO Bing & Google (<= 60 caractères, sans doublons de marque)
+    title = formatSeoTitle(title, 'Zorando', 60);
     
     let seoTags = `
       <title data-rh="true">${title}</title>

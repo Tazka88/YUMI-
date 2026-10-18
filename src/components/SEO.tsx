@@ -1,4 +1,5 @@
 import { Helmet } from 'react-helmet-async';
+import { formatSeoTitle } from '../utils/seoTitle';
 
 interface SEOProps {
   title: string;
@@ -40,9 +41,8 @@ export function getCanonicalUrl(url?: string) {
 }
 
 export default function SEO({ title, description, image, url, canonical, type = 'website', schema, exactTitle = false, keywords, noindex = false }: SEOProps) {
-  const siteName = 'ZORANDO';
-  const cleanTitle = title.replace(/[-–—\s]+$/, '');
-  const fullTitle = exactTitle ? cleanTitle : `${cleanTitle} | ${siteName}`;
+  const siteName = 'Zorando';
+  const fullTitle = formatSeoTitle(title, siteName, 60);
   const defaultImage = 'https://www.zorando.com/og-image-fb.jpg';
   const finalImage = image || defaultImage;
   const currentUrl = getCanonicalUrl(canonical || url);

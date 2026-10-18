@@ -6,35 +6,52 @@ const globalForPostgres = globalThis as unknown as {
   sql: postgres.Sql | undefined;
 };
 
+const isServerless = Boolean(
+  process.env.VERCEL ||
+  process.env.VERCEL_ENV ||
+  process.env.VERCEL_URL ||
+  process.env.AWS_LAMBDA_FUNCTION_NAME
+);
+
 function resolveConnectionString(rawUrl?: string): string {
   const poolerUrl = 'postgresql://postgres.evvbhalgyffagsesmvhu:Lifebook88855@aws-1-eu-west-1.pooler.supabase.com:6543/postgres';
-  if (!rawUrl || rawUrl.includes('YOUR_PROJECT_ID') || rawUrl.includes('YOUR_PASSWORD') || rawUrl.includes('db.evvbhalgyffagsesmvhu.supabase.co')) {
+  if (
+    !rawUrl ||
+    typeof rawUrl !== 'string' ||
+    rawUrl.trim() === '' ||
+    rawUrl.trim() === 'undefined' ||
+    rawUrl.trim() === 'null' ||
+    !rawUrl.trim().startsWith('postgres') ||
+    rawUrl.includes('YOUR_PROJECT_ID') ||
+    rawUrl.includes('YOUR_PASSWORD') ||
+    rawUrl.includes('db.evvbhalgyffagsesmvhu.supabase.co')
+  ) {
     return poolerUrl;
   }
 
-  return rawUrl;
+  return rawUrl.trim();
 }
 
 let connectionString = resolveConnectionString(process.env.DATABASE_URL);
 
 export const sql = globalForPostgres.sql ?? postgres(connectionString, {
   ssl: connectionString.includes('localhost') || connectionString.includes('127.0.0.1') ? false : 'require',
-  max: 30, // Higher max for local development to handle many concurrent image requests
-  idle_timeout: 5, // Fast idle timeout to avoid stale connections
-  connect_timeout: 15,
-  prepare: false, // Required for PgBouncer transaction mode
-  max_lifetime: 60 * 10,
+  max: isServerless ? 5 : 20, // Low max connections in serverless to prevent Supabase pooler exhaustion
+  idle_timeout: isServerless ? 10 : 20, // Proactively close idle sockets before AWS NAT / Supabase pooler drops them
+  connect_timeout: 5, // 5s connection timeout so cold starts / network hiccups fail fast
+  prepare: false, // Required for PgBouncer / Supavisor transaction mode
+  max_lifetime: 60 * 3, // Recycle connections every 3 minutes
+  backoff: (attempts) => Math.min(0.1 * Math.pow(2, attempts), 1),
 });
 
-if (process.env.NODE_ENV !== 'production') {
-  globalForPostgres.sql = sql;
-}
+// Cache on globalThis across all environments (including production serverless lambdas)
+globalForPostgres.sql = sql;
 
 export async function setupDb() {
   try {
     let timer: NodeJS.Timeout;
     const timeoutPromise = new Promise((_, reject) => {
-      timer = setTimeout(() => reject(new Error('Database connection timeout')), 10000);
+      timer = setTimeout(() => reject(new Error('Database connection timeout')), 5000);
     });
     
     await Promise.race([

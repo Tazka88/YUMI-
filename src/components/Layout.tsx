@@ -5,6 +5,7 @@ import { useAuth } from '../lib/AuthContext';
 import React, { useState, useEffect } from 'react';
 import { fetchWithCache } from '../lib/utils';
 import TopBar from './TopBar';
+import AppDownloadModal from './AppDownloadModal';
 import { toast } from 'react-hot-toast';
 
 const categoryEmojis: Record<string, string> = {
@@ -794,6 +795,7 @@ export default function Layout() {
         {settings.copyright_text || `© ${new Date().getFullYear()} ZORANDO Algérie. Tous droits réservés.`}
       </div>
     </footer>
+    <AppDownloadModal />
     </div>
   );
 }

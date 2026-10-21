@@ -198,8 +198,8 @@ export default function AppDownloadBanner() {
                 </div>
               </div>
 
-              {/* Floating notification badge on top corner */}
-              <div className="absolute -bottom-3 -right-2 sm:-right-4 bg-gray-900/95 backdrop-blur-md border border-orange-500/40 text-white p-2.5 rounded-2xl shadow-xl flex items-center gap-2.5">
+              {/* Floating notification badge (Desktop/Tablet only, positioned at top to avoid any overlap with button) */}
+              <div className="hidden sm:flex absolute -top-3 -right-4 bg-gray-900/95 backdrop-blur-md border border-orange-500/40 text-white p-2.5 rounded-2xl shadow-xl items-center gap-2.5 pointer-events-none z-20">
                 <div className="w-8 h-8 rounded-xl bg-orange-500 flex items-center justify-center text-white shrink-0 shadow-sm">
                   <Smartphone size={16} />
                 </div>

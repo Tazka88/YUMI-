@@ -1,5 +1,5 @@
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
-import { ShoppingCart, Search, Menu, User, MessageCircle, X, Phone, LayoutDashboard, Facebook, Instagram, Youtube, Truck, MapPin, ChevronRight, HelpCircle, Package, ClipboardList, Heart, LogOut, LifeBuoy, RotateCcw, CreditCard, FileText } from 'lucide-react';
+import { ShoppingCart, Search, Menu, User, MessageCircle, X, Phone, LayoutDashboard, Facebook, Instagram, Youtube, Truck, MapPin, ChevronRight, HelpCircle, Package, ClipboardList, Heart, LogOut, LifeBuoy, RotateCcw, CreditCard, FileText, Smartphone } from 'lucide-react';
 import { useCartStore } from '../store/cartStore';
 import { useAuth } from '../lib/AuthContext';
 import React, { useState, useEffect } from 'react';
@@ -330,6 +330,23 @@ export default function Layout() {
                   )}
               </div>
 
+              {/* App Mobile */}
+              <a 
+                href="https://play.google.com/store/apps/details?id=com.zorando.app" 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="hidden xl:flex items-center gap-2 group transition-all p-1 text-gray-800 hover:text-orange-600"
+                title="Télécharger l'application ZORANDO sur Google Play"
+              >
+                <div className="w-8 h-8 rounded-full bg-orange-50 border border-orange-200/80 flex items-center justify-center text-orange-500 group-hover:bg-orange-500 group-hover:text-white transition-colors">
+                  <Smartphone size={16} />
+                </div>
+                <div className="flex flex-col text-left">
+                  <span className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider">Application</span>
+                  <span className="text-xs font-bold text-gray-800 group-hover:text-orange-600 leading-tight">Android</span>
+                </div>
+              </a>
+
               {/* Blog */}
               <Link to="/blog" className="hidden lg:flex items-center gap-2 group transition-all p-1">
                 <FileText size={24} className="text-gray-800 group-hover:text-orange-600 transition-colors" />
@@ -528,6 +545,27 @@ export default function Layout() {
               </Link>
             </div>
 
+            <div className="mb-4">
+              <a 
+                href="https://play.google.com/store/apps/details?id=com.zorando.app" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="flex items-center justify-between p-3 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-xl shadow-sm hover:from-orange-600 hover:to-orange-700 transition-all"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center shrink-0">
+                    <Smartphone size={18} className="text-white" />
+                  </div>
+                  <div className="text-left">
+                    <div className="text-[10px] font-medium text-orange-100 uppercase tracking-wider">Application Android</div>
+                    <div className="text-xs font-bold leading-tight">Télécharger ZORANDO</div>
+                  </div>
+                </div>
+                <ChevronRight size={16} className="text-white/80 shrink-0" />
+              </a>
+            </div>
+
             <ul className="space-y-4">
               {categories.map(cat => (
                 <li key={cat.id}>
@@ -659,6 +697,17 @@ export default function Layout() {
             <li>
               <Link to="/blog" className="hover:text-orange-500 transition-colors">Notre Blog</Link>
             </li>
+            <li>
+              <a 
+                href="https://play.google.com/store/apps/details?id=com.zorando.app" 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="hover:text-orange-500 transition-colors flex items-center gap-1.5 text-orange-400 font-medium"
+              >
+                <Smartphone size={14} />
+                <span>Application Android</span>
+              </a>
+            </li>
             {footerLinks.filter(l => l.column_id === 2).map(link => (
               <li key={link.id}>
                 {link.url.startsWith('http') ? (
@@ -684,6 +733,26 @@ export default function Layout() {
                 <MapPin size={20} />
               </div>
               <span className="text-sm font-medium text-white">Livraison sur 58 wilayas</span>
+            </div>
+            <div className="pt-2">
+              <h5 className="text-white font-bold mb-2 uppercase text-xs tracking-wider">Application mobile</h5>
+              <a 
+                href="https://play.google.com/store/apps/details?id=com.zorando.app"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-3 bg-gray-800 hover:bg-orange-600 p-2.5 rounded-xl border border-gray-700 hover:border-orange-500 transition-all text-white group shadow-sm"
+              >
+                <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none">
+                  <path d="M3.609 1.814L13.793 12 3.61 22.186c-.378-.403-.61-.958-.61-1.586V3.4c0-.628.232-1.183.61-1.586z" fill="#4285F4"/>
+                  <path d="M17.18 8.613L13.793 12l3.387 3.387 3.826-2.18c.904-.516.904-1.878 0-2.394l-3.826-2.2z" fill="#FBBC04"/>
+                  <path d="M13.793 12L3.609 1.814c.266-.285.642-.464 1.066-.464.398 0 .762.158 1.042.318l11.463 6.945L13.793 12z" fill="#00E676"/>
+                  <path d="M13.793 12l3.387 3.387-11.463 6.945c-.28.16-.644.318-1.042.318-.424 0-.8-.179-1.066-.464L13.793 12z" fill="#FF3D00"/>
+                </svg>
+                <div className="text-left leading-tight">
+                  <div className="text-[9px] uppercase tracking-wider text-gray-400 group-hover:text-white transition-colors">Télécharger sur</div>
+                  <div className="text-xs font-bold">Google Play Store</div>
+                </div>
+              </a>
             </div>
           </div>
         </div>

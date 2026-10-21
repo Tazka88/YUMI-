@@ -10,6 +10,7 @@ import { buildOrganizationSchema, buildWebSiteSchema } from '../lib/schemaUtils'
 import { getCategoryWithEmoji, CategoryNameDisplay } from '../components/Layout';
 import Slider from '../components/Slider';
 import { fetchWithCache } from '../lib/utils';
+import AppDownloadBanner from '../components/AppDownloadBanner';
 
 
 const GridSkeleton = () => (
@@ -797,6 +798,9 @@ export default function Home() {
           </div>
         </div>
       )}
+
+      {/* App Download Banner */}
+      <AppDownloadBanner />
 
       {/* Dynamic Sections */}
       {isInitialLoading ? (

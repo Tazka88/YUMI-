@@ -9,7 +9,12 @@
     <meta property="og:description" content="ZORANDO - Votre boutique en ligne de confiance en Algérie. Mode, Électroménager, Beauté et plus encore." />
     <!-- Favicons -->
     <link rel="icon" type="image/svg+xml" href="/favicon-zorando.svg">
-    <!-- PWA meta tags removed -->
+    <!-- Web Manifest (requis pour la détection de l'application Android com.zorando.app) -->
+    <link rel="manifest" href="/manifest.json">
+    <script>
+      // Empêche l'affichage automatique de la mini-barre d'installation PWA du navigateur
+      window.addEventListener('beforeinstallprompt', function(e) { e.preventDefault(); });
+    </script>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

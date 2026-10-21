@@ -10,6 +10,14 @@
   "theme_color": "#FF6B00",
   "lang": "fr",
   "dir": "ltr",
+  "prefer_related_applications": false,
+  "related_applications": [
+    {
+      "platform": "play",
+      "id": "com.zorando.app",
+      "url": "https://play.google.com/store/apps/details?id=com.zorando.app"
+    }
+  ],
   "icons": [
     {
       "src": "https://www.zorando.com/icon-512.png",

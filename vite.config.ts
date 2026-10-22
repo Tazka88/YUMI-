@@ -4,6 +4,11 @@ import tailwindcss from '@tailwindcss/vite';
 import path from 'path';
 
 export default defineConfig({
+  server: {
+    watch: {
+      ignored: ['**/dist/**', '**/*.html', '**/*.txt', '**/*.xml', '**/*.cjs', '**/*.py', '**/temp*/**', '**/node_modules/**']
+    }
+  },
   plugins: [react(), tailwindcss()],
   define: {
     'import.meta.env.VITE_SUPABASE_URL': JSON.stringify(process.env.VITE_SUPABASE_URL || 'https://evvbhalgyffagsesmvhu.supabase.co'),

@@ -2,7 +2,7 @@ import toast from 'react-hot-toast';
 import React, { useState, useEffect } from 'react';
 import SEO from '../components/SEO';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
-import { useCartStore } from '../store/cartStore';
+import { useCartStore, getOrCreateCartSessionId } from '../store/cartStore';
 import { useAuth } from '../lib/AuthContext';
 import { 
   CheckCircle, Truck, MapPin, Phone, User as UserIcon, Navigation, 
@@ -25,7 +25,7 @@ interface Wilaya {
 }
 
 export default function Checkout() {
-  const { items, total, clearCart } = useCartStore();
+  const { items, total, clearCart, syncCustomerInfo } = useCartStore();
   const { user, profile, loading: authLoading, refreshProfile } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -46,6 +46,32 @@ export default function Checkout() {
     address: '',
     note: ''
   });
+
+  // Keep abandoned cart updated with customer contact details if entered
+  useEffect(() => {
+    if (formData.name || formData.phone || formData.email || formData.wilaya) {
+      syncCustomerInfo({
+        name: formData.name,
+        phone: formData.phone,
+        email: formData.email,
+        wilaya: formData.wilaya,
+        commune: formData.commune
+      });
+    }
+  }, [formData.name, formData.phone, formData.email, formData.wilaya, formData.commune, syncCustomerInfo]);
+
+  useEffect(() => {
+    if (profile) {
+      const fullName = [profile.first_name, profile.last_name].filter(Boolean).join(' ');
+      syncCustomerInfo({
+        name: fullName || undefined,
+        phone: profile.phone || undefined,
+        email: profile.email || undefined,
+        wilaya: profile.wilaya || undefined,
+        commune: profile.commune || undefined
+      });
+    }
+  }, [profile, syncCustomerInfo]);
 
   // Auth form state (for unauthenticated checkout)
   const [authMode, setAuthMode] = useState<'register' | 'login'>('register');
@@ -543,6 +569,7 @@ export default function Checkout() {
       office_name: deliveryMode === 'bureau' && selectedOffice ? selectedOffice.name : null,
       delivery_company: deliveryMode === 'bureau' && selectedOffice ? selectedOffice.company : 'ecomdz',
       customer_user_id: user?.id || null,
+      cart_session_id: getOrCreateCartSessionId(),
       items: checkoutItems.map(item => ({
         product_id: item.id,
         quantity: item.quantity,

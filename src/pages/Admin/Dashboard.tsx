@@ -14,6 +14,7 @@ import OrderKanban from './OrderKanban';
 import SliderImagesAdmin from './SliderImagesAdmin';
 import BlogAdmin from './BlogAdmin';
 import PushNotificationAdmin from './PushNotificationAdmin';
+import AbandonedCartsAdmin from './AbandonedCartsAdmin';
 
 export interface HomeSection {
   id: string;
@@ -1765,6 +1766,13 @@ const handleBulkDelivery = async () => {
               )}
             </button>
             <button
+              onClick={() => { setActiveTab('abandoned-carts'); setIsMobileNavOpen(false); }}
+              className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition ${activeTab === 'abandoned-carts' ? 'bg-orange-500 text-white font-semibold shadow-md shadow-orange-500/20' : 'text-gray-400 hover:bg-gray-800 hover:text-white'}`}
+            >
+              <ShoppingBag size={18} />
+              <span className="flex-1 text-left">Paniers abandonnés</span>
+            </button>
+            <button
               onClick={() => { setActiveTab('push-notifications'); setIsMobileNavOpen(false); }}
               className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition ${activeTab === 'push-notifications' ? 'bg-orange-500 text-white font-semibold shadow-md shadow-orange-500/20' : 'text-gray-400 hover:bg-gray-800 hover:text-white'}`}
             >
@@ -1959,6 +1967,13 @@ const handleBulkDelivery = async () => {
                   {orders.filter(o => o.status === 'nouvelle').length}
                 </span>
               )}
+            </button>
+            <button 
+              onClick={() => setActiveTab('abandoned-carts')}
+              className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition ${activeTab === 'abandoned-carts' ? 'bg-orange-500 text-white font-semibold shadow-md shadow-orange-500/20' : 'text-gray-400 hover:bg-gray-800 hover:text-white'}`}
+            >
+              <ShoppingBag size={18} />
+              <span className="flex-1 text-left">Paniers abandonnés</span>
             </button>
             <button 
               onClick={() => setActiveTab('push-notifications')}
@@ -4375,6 +4390,9 @@ const handleBulkDelivery = async () => {
         )}
         {activeTab === 'push-notifications' && (
           <PushNotificationAdmin />
+        )}
+        {activeTab === 'abandoned-carts' && (
+          <AbandonedCartsAdmin />
         )}
 
       </main>

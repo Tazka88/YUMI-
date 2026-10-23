@@ -1378,7 +1378,7 @@ router.get('/orders/user/:userId', async (req, res) => {
 });
 
 router.post('/orders', orderLimiter, async (req, res) => {
-  const { customer_name, customer_email, customer_phone, wilaya, commune, address, note, items, delivery_cost: clientDeliveryCost, customer_user_id, stop_desk, office_id, delivery_company, office_name } = req.body;
+  const { customer_name, customer_email, customer_phone, wilaya, commune, address, note, items, delivery_cost: clientDeliveryCost, customer_user_id, stop_desk, office_id, delivery_company, office_name, cart_session_id } = req.body;
   
   if (!items || !Array.isArray(items) || items.length === 0) {
     return res.status(400).json({ error: 'La commande doit contenir au moins un article' });
@@ -1461,6 +1461,22 @@ router.post('/orders', orderLimiter, async (req, res) => {
       
       const generatedOrderId = `CMD-${1000 + order.id}`;
       await sql`UPDATE orders SET order_id = ${generatedOrderId} WHERE id = ${order.id}`;
+
+      // Convert associated cart if applicable
+      if (cart_session_id || customer_user_id) {
+        try {
+          await sql`
+            UPDATE carts 
+            SET status = 'converted', order_id = ${generatedOrderId}, updated_at = NOW() 
+            WHERE (
+              (${cart_session_id || ''}::text != '' AND session_id = ${cart_session_id || ''})
+              OR (${customer_user_id || null}::uuid IS NOT NULL AND user_id = ${customer_user_id || null})
+            ) AND status != 'converted'
+          `;
+        } catch (cartConvErr) {
+          console.error('Error marking cart converted:', cartConvErr);
+        }
+      }
       
       // Persist customer email in subscribers table if provided
       if (customer_email) {
@@ -3376,4 +3392,234 @@ router.post('/admin/push/clear-subscriptions', authenticate, async (req, res) =>
   }
 });
 
+// ==========================================
+// CART SYNCHRONIZATION & ABANDONED CART TRACKING
+// ==========================================
+
+router.post('/cart/sync', async (req, res) => {
+  try {
+    const { session_id, items, user_id, customer_name, customer_phone, customer_email, wilaya, commune } = req.body;
+
+    if (!session_id || typeof session_id !== 'string' || session_id.length > 100) {
+      return res.status(400).json({ error: 'Session ID requis' });
+    }
+
+    const safeItems = Array.isArray(items) ? items.slice(0, 50).map((it: any) => ({
+      id: Number(it.id) || 0,
+      name: String(it.name || '').substring(0, 200),
+      slug: String(it.slug || '').substring(0, 200),
+      price: Number(it.price) || 0,
+      promo_price: it.promo_price ? Number(it.promo_price) : null,
+      quantity: Math.max(1, Math.min(999, parseInt(it.quantity, 10) || 1)),
+      image: String(it.image || '').substring(0, 500),
+      selectedVariation: it.selectedVariation || null,
+      cartItemId: String(it.cartItemId || it.id || '')
+    })) : [];
+
+    let totalEstimated = 0;
+    let itemCount = 0;
+    for (const it of safeItems) {
+      const unitPrice = (it.promo_price && it.promo_price > 0 && it.promo_price < it.price) ? it.promo_price : it.price;
+      totalEstimated += unitPrice * it.quantity;
+      itemCount += it.quantity;
+    }
+
+    // Check if an existing unconverted cart exists for this session
+    const [existing] = await sql`
+      SELECT id, status, user_id, customer_name, customer_phone, customer_email, wilaya, commune 
+      FROM carts 
+      WHERE session_id = ${session_id} AND status != 'converted' 
+      ORDER BY created_at DESC 
+      LIMIT 1
+    `;
+
+    // Validate user_id if provided
+    let validUserId: string | null = null;
+    if (user_id && typeof user_id === 'string' && user_id.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+      validUserId = user_id;
+    }
+
+    if (existing) {
+      const mergedName = customer_name || existing.customer_name || null;
+      const mergedPhone = customer_phone || existing.customer_phone || null;
+      const mergedEmail = customer_email || existing.customer_email || null;
+      const mergedWilaya = wilaya || existing.wilaya || null;
+      const mergedCommune = commune || existing.commune || null;
+      const mergedUserId = validUserId || existing.user_id || null;
+
+      await sql`
+        UPDATE carts SET
+          items = ${sql.json(safeItems)},
+          total_estimated = ${totalEstimated},
+          item_count = ${itemCount},
+          user_id = ${mergedUserId},
+          customer_name = ${mergedName},
+          customer_phone = ${mergedPhone},
+          customer_email = ${mergedEmail},
+          wilaya = ${mergedWilaya},
+          commune = ${mergedCommune},
+          status = 'active',
+          last_activity_at = NOW(),
+          updated_at = NOW()
+        WHERE id = ${existing.id}
+      `;
+      return res.json({ success: true, cart_id: existing.id });
+    } else {
+      if (safeItems.length === 0) {
+        return res.json({ success: true, cart_id: null });
+      }
+
+      const [newCart] = await sql`
+        INSERT INTO carts (
+          session_id, user_id, customer_name, customer_phone, customer_email,
+          wilaya, commune, items, total_estimated, item_count, status,
+          created_at, updated_at, last_activity_at
+        ) VALUES (
+          ${session_id}, ${validUserId}, ${customer_name || null}, ${customer_phone || null}, ${customer_email || null},
+          ${wilaya || null}, ${commune || null}, ${sql.json(safeItems)}, ${totalEstimated}, ${itemCount}, 'active',
+          NOW(), NOW(), NOW()
+        )
+        RETURNING id
+      `;
+      return res.json({ success: true, cart_id: newCart.id });
+    }
+  } catch (err: any) {
+    console.error('Error syncing cart:', err);
+    res.status(500).json({ error: 'Failed to sync cart' });
+  }
+});
+
+router.get('/admin/carts', authenticate, async (req, res) => {
+  try {
+    // 1. Automatically update active carts that have been inactive for > 60 minutes to 'abandoned'
+    await sql`
+      UPDATE carts 
+      SET status = 'abandoned', updated_at = NOW() 
+      WHERE status = 'active' 
+        AND last_activity_at < NOW() - INTERVAL '60 minutes'
+        AND item_count > 0
+    `;
+
+    const { status, search, page = '1', limit = '20', date_from, date_to } = req.query;
+    const pageNum = Math.max(1, parseInt(page as string, 10) || 1);
+    const limitNum = Math.max(1, Math.min(100, parseInt(limit as string, 10) || 20));
+    const offset = (pageNum - 1) * limitNum;
+
+    // 2. Compute KPI stats
+    const [stats] = await sql`
+      SELECT 
+        COUNT(*) FILTER (WHERE status = 'active' AND last_activity_at >= NOW() - INTERVAL '60 minutes' AND item_count > 0) as active_count,
+        COUNT(*) FILTER (WHERE (status = 'abandoned' OR (status = 'active' AND last_activity_at < NOW() - INTERVAL '60 minutes')) AND item_count > 0) as abandoned_count,
+        COALESCE(SUM(total_estimated) FILTER (WHERE (status = 'abandoned' OR (status = 'active' AND last_activity_at < NOW() - INTERVAL '60 minutes')) AND item_count > 0), 0) as abandoned_total_value,
+        COUNT(*) FILTER (WHERE status = 'converted') as converted_count
+      FROM carts
+      WHERE item_count > 0 OR status = 'converted'
+    `;
+
+    // 3. Build query filters
+    const conditions: any[] = [sql`item_count > 0 OR status = 'converted'`];
+
+    if (status && status !== 'all') {
+      if (status === 'abandoned') {
+        conditions.push(sql`(status = 'abandoned' OR (status = 'active' AND last_activity_at < NOW() - INTERVAL '60 minutes'))`);
+      } else if (status === 'active') {
+        conditions.push(sql`status = 'active' AND last_activity_at >= NOW() - INTERVAL '60 minutes'`);
+      } else if (status === 'converted') {
+        conditions.push(sql`status = 'converted'`);
+      }
+    }
+
+    if (search && typeof search === 'string' && search.trim()) {
+      const q = `%${search.trim()}%`;
+      conditions.push(sql`(
+        c.customer_name ILIKE ${q} 
+        OR c.customer_phone ILIKE ${q} 
+        OR c.customer_email ILIKE ${q}
+        OR c.session_id ILIKE ${q}
+        OR c.order_id ILIKE ${q}
+        OR EXISTS (
+          SELECT 1 FROM jsonb_array_elements(c.items) elem 
+          WHERE elem->>'name' ILIKE ${q}
+        )
+      )`);
+    }
+
+    if (date_from && typeof date_from === 'string') {
+      conditions.push(sql`c.last_activity_at >= ${new Date(date_from).toISOString()}`);
+    }
+    if (date_to && typeof date_to === 'string') {
+      conditions.push(sql`c.last_activity_at <= ${new Date(date_to).toISOString()}`);
+    }
+
+    const whereClause = conditions.reduce((acc, curr, idx) => idx === 0 ? curr : sql`${acc} AND ${curr}`, sql``);
+
+    const [countResult] = await sql`
+      SELECT COUNT(*) as count 
+      FROM carts c 
+      LEFT JOIN profiles p ON c.user_id = p.id 
+      WHERE ${whereClause}
+    `;
+    const totalCount = parseInt(countResult.count, 10) || 0;
+
+    const carts = await sql`
+      SELECT 
+        c.id, c.session_id, c.user_id, c.customer_name, c.customer_phone, c.customer_email,
+        c.wilaya, c.commune, c.items, c.total_estimated, c.item_count,
+        CASE 
+          WHEN c.status = 'active' AND c.last_activity_at < NOW() - INTERVAL '60 minutes' THEN 'abandoned'
+          ELSE c.status
+        END as status,
+        c.order_id, c.created_at, c.updated_at, c.last_activity_at,
+        p.first_name as profile_first_name, p.last_name as profile_last_name, 
+        p.phone as profile_phone, p.email as profile_email, p.wilaya as profile_wilaya
+      FROM carts c
+      LEFT JOIN profiles p ON c.user_id = p.id
+      WHERE ${whereClause}
+      ORDER BY c.last_activity_at DESC
+      LIMIT ${limitNum} OFFSET ${offset}
+    `;
+
+    res.json({
+      carts,
+      totalCount,
+      page: pageNum,
+      totalPages: Math.ceil(totalCount / limitNum),
+      stats: {
+        activeCount: parseInt(stats.active_count, 10) || 0,
+        abandonedCount: parseInt(stats.abandoned_count, 10) || 0,
+        abandonedTotalValue: parseFloat(stats.abandoned_total_value) || 0,
+        convertedCount: parseInt(stats.converted_count, 10) || 0,
+      }
+    });
+  } catch (err) {
+    console.error('Error fetching admin carts:', err);
+    res.status(500).json({ error: 'Failed to fetch carts' });
+  }
+});
+
+router.get('/admin/carts/:id', authenticate, async (req, res) => {
+  try {
+    const [cart] = await sql`
+      SELECT c.*, p.first_name, p.last_name, p.phone as profile_phone, p.email as profile_email, p.wilaya as profile_wilaya
+      FROM carts c
+      LEFT JOIN profiles p ON c.user_id = p.id
+      WHERE c.id = ${req.params.id}
+    `;
+    if (!cart) return res.status(404).json({ error: 'Cart not found' });
+    res.json(cart);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch cart' });
+  }
+});
+
+router.delete('/admin/carts/:id', authenticate, async (req, res) => {
+  try {
+    await sql`DELETE FROM carts WHERE id = ${req.params.id}`;
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to delete cart' });
+  }
+});
+
 export default router;
+

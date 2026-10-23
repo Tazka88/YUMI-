@@ -1,6 +1,10 @@
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
 
+html, body {
+  touch-action: pan-x pan-y;
+}
+
 @theme {
   --color-orange-50: #fff4eb;
   --color-orange-100: #ffecd6;

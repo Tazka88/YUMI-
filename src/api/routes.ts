@@ -3621,5 +3621,416 @@ router.delete('/admin/carts/:id', authenticate, async (req, res) => {
   }
 });
 
+// ==========================================
+// LIVE CHAT SYSTEM (CLIENT & ADMIN)
+// ==========================================
+
+// Client: Get chat service availability status
+router.get('/chat/status', async (req, res) => {
+  try {
+    const [statusRow] = await sql`SELECT value FROM settings WHERE key = 'chat_availability_status' LIMIT 1`;
+    const [msgRow] = await sql`SELECT value FROM settings WHERE key = 'chat_auto_reply_message' LIMIT 1`;
+    
+    const status = statusRow?.value || 'online_fast';
+    const autoReply = msgRow?.value || 'Bonjour et bienvenue sur ZORANDO ! Un conseiller va vous répondre dans un instant.';
+    
+    res.json({
+      status, // 'online_fast' | 'online' | 'offline'
+      message: autoReply
+    });
+  } catch (err) {
+    console.error('Error fetching chat status:', err);
+    res.json({ status: 'online_fast', message: 'Bienvenue sur ZORANDO !' });
+  }
+});
+
+// Client: Get conversation & message history for current session
+router.get('/chat/messages', async (req, res) => {
+  try {
+    const { session_id } = req.query;
+    if (!session_id || typeof session_id !== 'string') {
+      return res.status(400).json({ error: 'Session ID requis' });
+    }
+
+    const [conv] = await sql`
+      SELECT id, session_id, customer_name, status, unread_client_count, created_at, last_message_at
+      FROM chat_conversations
+      WHERE session_id = ${session_id}
+      LIMIT 1
+    `;
+
+    if (!conv) {
+      return res.json({ conversation: null, messages: [] });
+    }
+
+    // Mark admin messages as read by client
+    await sql`
+      UPDATE chat_messages 
+      SET is_read = true 
+      WHERE conversation_id = ${conv.id} AND sender != 'client' AND is_read = false
+    `;
+    await sql`
+      UPDATE chat_conversations 
+      SET unread_client_count = 0 
+      WHERE id = ${conv.id}
+    `;
+
+    const messages = await sql`
+      SELECT id, sender, sender_name, message, is_read, created_at
+      FROM chat_messages
+      WHERE conversation_id = ${conv.id}
+      ORDER BY created_at ASC
+    `;
+
+    res.json({
+      conversation: { ...conv, unread_client_count: 0 },
+      messages
+    });
+  } catch (err) {
+    console.error('Error fetching chat messages:', err);
+    res.status(500).json({ error: 'Failed to fetch messages' });
+  }
+});
+
+// Client: Send a new chat message
+router.post('/chat/message', async (req, res) => {
+  try {
+    const session_id = req.body.session_id || req.body.sessionId;
+    const message = req.body.message;
+    const customer_name = req.body.customer_name || req.body.customerName || req.body.senderName;
+    const customer_email = req.body.customer_email || req.body.customerEmail || req.body.email;
+    const customer_phone = req.body.customer_phone || req.body.customerPhone || req.body.phone;
+    const user_id = req.body.user_id || req.body.userId;
+
+    if (!session_id || typeof session_id !== 'string' || session_id.length > 100) {
+      return res.status(400).json({ error: 'Session ID invalide' });
+    }
+
+    const cleanMsg = typeof message === 'string' ? message.trim() : '';
+    if (!cleanMsg || cleanMsg.length === 0) {
+      return res.status(400).json({ error: 'Le message ne peut pas être vide' });
+    }
+    if (cleanMsg.length > 1500) {
+      return res.status(400).json({ error: 'Le message est trop long (max 1500 caractères)' });
+    }
+
+    const cleanName = typeof customer_name === 'string' && customer_name.trim().length > 0 
+      ? customer_name.trim().substring(0, 80) 
+      : 'Client';
+
+    let validUserId: string | null = null;
+    if (user_id && typeof user_id === 'string' && user_id.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+      validUserId = user_id;
+    }
+
+    // Find existing conversation or create new
+    let [conv] = await sql`
+      SELECT id, status, waiting_since, first_client_message_at, customer_name
+      FROM chat_conversations
+      WHERE session_id = ${session_id}
+      LIMIT 1
+    `;
+
+    let isNewConv = false;
+    if (!conv) {
+      isNewConv = true;
+      const [newConv] = await sql`
+        INSERT INTO chat_conversations (
+          session_id, user_id, customer_name, customer_email, customer_phone,
+          status, unread_admin_count, unread_client_count,
+          first_client_message_at, waiting_since, last_message_text, last_message_at
+        ) VALUES (
+          ${session_id}, ${validUserId}, ${cleanName}, ${customer_email || null}, ${customer_phone || null},
+          'waiting_admin', 1, 0,
+          NOW(), NOW(), ${cleanMsg}, NOW()
+        )
+        RETURNING id, status, waiting_since, first_client_message_at, customer_name
+      `;
+      conv = newConv;
+    } else {
+      await sql`
+        UPDATE chat_conversations SET
+          status = 'waiting_admin',
+          unread_admin_count = unread_admin_count + 1,
+          last_message_text = ${cleanMsg},
+          last_message_at = NOW(),
+          updated_at = NOW(),
+          waiting_since = COALESCE(waiting_since, NOW()),
+          first_client_message_at = COALESCE(first_client_message_at, NOW()),
+          customer_name = CASE WHEN customer_name = 'Client' AND ${cleanName} != 'Client' THEN ${cleanName} ELSE customer_name END,
+          customer_email = COALESCE(customer_email, ${customer_email || null}),
+          customer_phone = COALESCE(customer_phone, ${customer_phone || null}),
+          user_id = COALESCE(user_id, ${validUserId})
+        WHERE id = ${conv.id}
+      `;
+    }
+
+    // Insert client message
+    const [insertedMsg] = await sql`
+      INSERT INTO chat_messages (conversation_id, sender, sender_name, message, is_read, created_at)
+      VALUES (${conv.id}, 'client', ${cleanName}, ${cleanMsg}, false, NOW())
+      RETURNING id, sender, sender_name, message, is_read, created_at
+    `;
+
+    // If new conversation, optionally insert automated welcome message
+    if (isNewConv) {
+      const [welcomeRow] = await sql`SELECT value FROM settings WHERE key = 'chat_auto_reply_message' LIMIT 1`;
+      const welcomeText = welcomeRow?.value || 'Bonjour et bienvenue sur ZORANDO ! Un conseiller va vous répondre dans un instant.';
+      if (welcomeText.trim()) {
+        await sql`
+          INSERT INTO chat_messages (conversation_id, sender, sender_name, message, is_read, created_at)
+          VALUES (${conv.id}, 'system', 'ZORANDO Assistant', ${welcomeText}, true, NOW() + INTERVAL '50 milliseconds')
+        `;
+      }
+    }
+
+    res.json({
+      success: true,
+      message: insertedMsg,
+      conversationId: conv.id
+    });
+  } catch (err) {
+    console.error('Error sending chat message:', err);
+    res.status(500).json({ error: 'Failed to send message' });
+  }
+});
+
+// Admin: List all conversations with filters, waiting times, and statistics
+router.get('/admin/chat/conversations', authenticate, async (req, res) => {
+  try {
+    const { filter = 'all', search } = req.query;
+
+    const conditions: any[] = [];
+    if (filter === 'unanswered') {
+      conditions.push(sql`status = 'waiting_admin'`);
+    } else if (filter === 'waiting_over_3min') {
+      conditions.push(sql`status = 'waiting_admin' AND waiting_since <= NOW() - INTERVAL '3 minutes'`);
+    } else if (filter === 'resolved') {
+      conditions.push(sql`status = 'resolved'`);
+    }
+
+    if (search && typeof search === 'string' && search.trim()) {
+      const q = `%${search.trim()}%`;
+      conditions.push(sql`(
+        c.customer_name ILIKE ${q}
+        OR c.customer_phone ILIKE ${q}
+        OR c.customer_email ILIKE ${q}
+        OR c.last_message_text ILIKE ${q}
+      )`);
+    }
+
+    const whereClause = conditions.length > 0 
+      ? sql`WHERE ${conditions.reduce((acc, curr, idx) => idx === 0 ? curr : sql`${acc} AND ${curr}`, sql``)}`
+      : sql``;
+
+    const conversations = await sql`
+      SELECT 
+        c.id, c.session_id, c.user_id, c.customer_name, c.customer_email, c.customer_phone,
+        c.status, c.unread_admin_count, c.first_client_message_at, c.waiting_since,
+        c.first_admin_reply_at, c.first_response_time_seconds, c.last_message_text,
+        c.last_message_at, c.created_at,
+        EXTRACT(EPOCH FROM (NOW() - c.waiting_since))::integer as wait_seconds_raw,
+        p.first_name as profile_first_name, p.last_name as profile_last_name, 
+        p.phone as profile_phone, p.email as profile_email
+      FROM chat_conversations c
+      LEFT JOIN profiles p ON c.user_id = p.id
+      ${whereClause}
+      ORDER BY 
+        CASE WHEN c.status = 'waiting_admin' THEN 0 ELSE 1 END,
+        c.waiting_since ASC NULLS LAST,
+        c.last_message_at DESC
+      LIMIT 100
+    `;
+
+    // Compute metrics
+    const [stats] = await sql`
+      SELECT 
+        COUNT(*) as total_count,
+        COUNT(*) FILTER (WHERE status = 'waiting_admin') as unanswered_count,
+        COUNT(*) FILTER (WHERE status = 'waiting_admin' AND waiting_since <= NOW() - INTERVAL '3 minutes' AND waiting_since > NOW() - INTERVAL '5 minutes') as warning_3min_count,
+        COUNT(*) FILTER (WHERE status = 'waiting_admin' AND waiting_since <= NOW() - INTERVAL '5 minutes') as alert_5min_count,
+        COUNT(*) FILTER (WHERE status = 'resolved' AND updated_at >= CURRENT_DATE) as resolved_today_count,
+        ROUND(AVG(first_response_time_seconds) FILTER (WHERE first_response_time_seconds IS NOT NULL)) as avg_response_seconds
+      FROM chat_conversations
+    `;
+
+    const [statusRow] = await sql`SELECT value FROM settings WHERE key = 'chat_availability_status' LIMIT 1`;
+
+    res.json({
+      conversations,
+      stats: {
+        totalCount: parseInt(stats.total_count, 10) || 0,
+        unansweredCount: parseInt(stats.unanswered_count, 10) || 0,
+        warning3minCount: parseInt(stats.warning_3min_count, 10) || 0,
+        alert5minCount: parseInt(stats.alert_5min_count, 10) || 0,
+        resolvedTodayCount: parseInt(stats.resolved_today_count, 10) || 0,
+        avgResponseSeconds: parseInt(stats.avg_response_seconds, 10) || null,
+        availabilityStatus: statusRow?.value || 'online_fast'
+      }
+    });
+  } catch (err) {
+    console.error('Error fetching admin chat conversations:', err);
+    res.status(500).json({ error: 'Failed to fetch conversations' });
+  }
+});
+
+// Admin: Get all messages for a specific conversation
+router.get('/admin/chat/conversations/:id/messages', authenticate, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const [conv] = await sql`
+      SELECT c.*, p.first_name as profile_first_name, p.last_name as profile_last_name, p.phone as profile_phone
+      FROM chat_conversations c
+      LEFT JOIN profiles p ON c.user_id = p.id
+      WHERE c.id = ${id}
+      LIMIT 1
+    `;
+    if (!conv) return res.status(404).json({ error: 'Conversation non trouvée' });
+
+    // Mark client messages as read by admin
+    await sql`
+      UPDATE chat_messages 
+      SET is_read = true 
+      WHERE conversation_id = ${id} AND sender = 'client' AND is_read = false
+    `;
+    await sql`
+      UPDATE chat_conversations 
+      SET unread_admin_count = 0 
+      WHERE id = ${id}
+    `;
+
+    const messages = await sql`
+      SELECT id, sender, sender_name, message, is_read, created_at
+      FROM chat_messages
+      WHERE conversation_id = ${id}
+      ORDER BY created_at ASC
+    `;
+
+    res.json({
+      conversation: { ...conv, unread_admin_count: 0 },
+      messages
+    });
+  } catch (err) {
+    console.error('Error fetching conversation messages:', err);
+    res.status(500).json({ error: 'Failed to fetch messages' });
+  }
+});
+
+// Admin: Reply to a conversation
+router.post('/admin/chat/conversations/:id/reply', authenticate, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { message } = req.body;
+
+    const cleanMsg = typeof message === 'string' ? message.trim() : '';
+    if (!cleanMsg) {
+      return res.status(400).json({ error: 'Le message ne peut pas être vide' });
+    }
+
+    const [conv] = await sql`
+      SELECT id, first_client_message_at, first_admin_reply_at, waiting_since
+      FROM chat_conversations
+      WHERE id = ${id}
+    `;
+    if (!conv) return res.status(404).json({ error: 'Conversation non trouvée' });
+
+    // Calculate response time if first human admin response
+    let responseSecondsUpdate = sql``;
+    if (!conv.first_admin_reply_at && conv.first_client_message_at) {
+      const firstClientTime = new Date(conv.first_client_message_at).getTime();
+      const nowTime = Date.now();
+      const diffSec = Math.max(1, Math.round((nowTime - firstClientTime) / 1000));
+      responseSecondsUpdate = sql`, first_admin_reply_at = NOW(), first_response_time_seconds = ${diffSec}`;
+    }
+
+    // Insert admin message
+    const [insertedMsg] = await sql`
+      INSERT INTO chat_messages (conversation_id, sender, sender_name, message, is_read, created_at)
+      VALUES (${id}, 'admin', 'Conseiller ZORANDO', ${cleanMsg}, false, NOW())
+      RETURNING id, sender, sender_name, message, is_read, created_at
+    `;
+
+    // Update conversation: client is no longer waiting, status set to waiting_client
+    await sql`
+      UPDATE chat_conversations SET
+        status = 'waiting_client',
+        unread_client_count = unread_client_count + 1,
+        waiting_since = NULL,
+        last_message_text = ${cleanMsg},
+        last_message_at = NOW(),
+        updated_at = NOW()
+        ${responseSecondsUpdate}
+      WHERE id = ${id}
+    `;
+
+    res.json({ success: true, message: insertedMsg });
+  } catch (err) {
+    console.error('Error sending admin reply:', err);
+    res.status(500).json({ error: 'Failed to send reply' });
+  }
+});
+
+// Admin: Update conversation status (resolve / reopen)
+router.patch('/admin/chat/conversations/:id/status', authenticate, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    if (!['open', 'waiting_admin', 'waiting_client', 'resolved'].includes(status)) {
+      return res.status(400).json({ error: 'Statut invalide' });
+    }
+
+    await sql`
+      UPDATE chat_conversations SET
+        status = ${status},
+        waiting_since = CASE WHEN ${status} = 'resolved' THEN NULL ELSE waiting_since END,
+        updated_at = NOW()
+      WHERE id = ${id}
+    `;
+
+    res.json({ success: true, status });
+  } catch (err) {
+    console.error('Error updating conversation status:', err);
+    res.status(500).json({ error: 'Failed to update status' });
+  }
+});
+
+// Admin: Chat settings
+router.get('/admin/chat/settings', authenticate, async (req, res) => {
+  try {
+    const [statusRow] = await sql`SELECT value FROM settings WHERE key = 'chat_availability_status' LIMIT 1`;
+    const [msgRow] = await sql`SELECT value FROM settings WHERE key = 'chat_auto_reply_message' LIMIT 1`;
+    res.json({
+      availability_status: statusRow?.value || 'online_fast',
+      auto_reply_message: msgRow?.value || ''
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch chat settings' });
+  }
+});
+
+router.post('/admin/chat/settings', authenticate, async (req, res) => {
+  try {
+    const { availability_status, auto_reply_message } = req.body;
+    if (availability_status) {
+      await sql`
+        INSERT INTO settings (key, value) VALUES ('chat_availability_status', ${availability_status})
+        ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value
+      `;
+    }
+    if (auto_reply_message !== undefined) {
+      await sql`
+        INSERT INTO settings (key, value) VALUES ('chat_auto_reply_message', ${auto_reply_message})
+        ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value
+      `;
+    }
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to update chat settings' });
+  }
+});
+
 export default router;
+
 

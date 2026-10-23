@@ -7,7 +7,8 @@ import { useAuth } from '../lib/AuthContext';
 import { 
   CheckCircle, Truck, MapPin, Phone, User as UserIcon, Navigation, 
   ChevronDown, ChevronUp, Plus, Building2, Lock, Mail, ArrowRight, 
-  Edit3, ShieldCheck, Sparkles, AlertCircle, Eye, EyeOff, Check, ShoppingBag
+  Edit3, ShieldCheck, Sparkles, AlertCircle, Eye, EyeOff, Check, ShoppingBag,
+  MessageCircle
 } from 'lucide-react';
 import { getSupabase } from '../lib/supabase';
 import { formatPrice, getProductEffectivePrice } from '../utils/formatPrice';

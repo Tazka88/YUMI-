@@ -6,6 +6,7 @@ import React, { useState, useEffect } from 'react';
 import { fetchWithCache } from '../lib/utils';
 import TopBar from './TopBar';
 import AppDownloadModal from './AppDownloadModal';
+import LiveChatWidget from './LiveChatWidget';
 import { toast } from 'react-hot-toast';
 
 const categoryEmojis: Record<string, string> = {
@@ -390,7 +391,13 @@ export default function Layout() {
                         </Link>
                       </div>
                       <div className="p-4 bg-orange-50 border-t border-orange-100">
-                        <button className="w-full flex items-center justify-center gap-2 py-2 bg-orange-600 text-white text-xs font-bold rounded-lg shadow-sm">
+                        <button 
+                          onClick={() => {
+                            setShowHelpDropdown(false);
+                            window.dispatchEvent(new CustomEvent('open-live-chat'));
+                          }}
+                          className="w-full flex items-center justify-center gap-2 py-2 bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold rounded-lg shadow-sm transition"
+                        >
                           <MessageCircle size={14} />
                           CHAT EN DIRECT
                         </button>
@@ -796,6 +803,7 @@ export default function Layout() {
       </div>
     </footer>
     <AppDownloadModal />
+    <LiveChatWidget />
     </div>
   );
 }

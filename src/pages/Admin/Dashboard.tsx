@@ -2,7 +2,7 @@ import toast from 'react-hot-toast';
 import React, { useState, useEffect } from 'react';
 import useSWR from 'swr';
 import { useNavigate } from 'react-router-dom';
-import { LayoutDashboard, ShoppingBag, Users, Settings, LogOut, TrendingUp, AlertCircle, Package, Plus, Edit, Trash2, X, Image as ImageIcon, Upload, User, Bell, Menu } from 'lucide-react';
+import { LayoutDashboard, ShoppingBag, Users, Settings, LogOut, TrendingUp, AlertCircle, Package, Plus, Edit, Trash2, X, Image as ImageIcon, Upload, User, Bell, Menu, MessageCircle } from 'lucide-react';
 import { formatPrice } from '../../utils/formatPrice';
 import FooterSettings from './FooterSettings';
 import PageSettings from './PageSettings';
@@ -15,6 +15,8 @@ import SliderImagesAdmin from './SliderImagesAdmin';
 import BlogAdmin from './BlogAdmin';
 import PushNotificationAdmin from './PushNotificationAdmin';
 import AbandonedCartsAdmin from './AbandonedCartsAdmin';
+import LiveChatAdmin from './LiveChatAdmin';
+
 
 export interface HomeSection {
   id: string;
@@ -1773,6 +1775,13 @@ const handleBulkDelivery = async () => {
               <span className="flex-1 text-left">Paniers abandonnés</span>
             </button>
             <button
+              onClick={() => { setActiveTab('live-chat'); setIsMobileNavOpen(false); }}
+              className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition ${activeTab === 'live-chat' ? 'bg-orange-500 text-white font-semibold shadow-md shadow-orange-500/20' : 'text-gray-400 hover:bg-gray-800 hover:text-white'}`}
+            >
+              <MessageCircle size={18} />
+              <span className="flex-1 text-left">Chat en direct</span>
+            </button>
+            <button
               onClick={() => { setActiveTab('push-notifications'); setIsMobileNavOpen(false); }}
               className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition ${activeTab === 'push-notifications' ? 'bg-orange-500 text-white font-semibold shadow-md shadow-orange-500/20' : 'text-gray-400 hover:bg-gray-800 hover:text-white'}`}
             >
@@ -1974,6 +1983,13 @@ const handleBulkDelivery = async () => {
             >
               <ShoppingBag size={18} />
               <span className="flex-1 text-left">Paniers abandonnés</span>
+            </button>
+            <button 
+              onClick={() => setActiveTab('live-chat')}
+              className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition ${activeTab === 'live-chat' ? 'bg-orange-500 text-white font-semibold shadow-md shadow-orange-500/20' : 'text-gray-400 hover:bg-gray-800 hover:text-white'}`}
+            >
+              <MessageCircle size={18} />
+              <span className="flex-1 text-left">Chat en direct</span>
             </button>
             <button 
               onClick={() => setActiveTab('push-notifications')}
@@ -4393,6 +4409,9 @@ const handleBulkDelivery = async () => {
         )}
         {activeTab === 'abandoned-carts' && (
           <AbandonedCartsAdmin />
+        )}
+        {activeTab === 'live-chat' && (
+          <LiveChatAdmin />
         )}
 
       </main>

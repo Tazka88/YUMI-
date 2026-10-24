@@ -67,16 +67,43 @@ export default function LiveChatWidget() {
       .catch(() => {});
   }, []);
 
-  // Fetch messages function
+  const prevMsgCountRef = useRef<number>(0);
+
+  // Play subtle chime on client side when admin replies
+  const playClientChime = () => {
+    try {
+      const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(659.25, audioCtx.currentTime); // E5
+      osc.frequency.setValueAtTime(987.77, audioCtx.currentTime + 0.1); // B5
+      gain.gain.setValueAtTime(0.12, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.35);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.35);
+    } catch {}
+  };
+
+  // Fetch messages function with cache-busting
   const fetchMessages = async () => {
     const sessionId = getOrCreateChatSessionId();
     if (!sessionId) return;
 
     try {
-      const res = await fetch(`/api/chat/messages?session_id=${sessionId}`);
+      const res = await fetch(`/api/chat/messages?session_id=${sessionId}&_t=${Date.now()}`, {
+        cache: 'no-store'
+      });
       if (!res.ok) return;
       const data = await res.json();
       if (data.messages) {
+        const adminMsgs = data.messages.filter((m: ChatMessage) => m.sender === 'admin');
+        if (adminMsgs.length > prevMsgCountRef.current && prevMsgCountRef.current > 0) {
+          playClientChime();
+        }
+        prevMsgCountRef.current = adminMsgs.length;
         setMessages(data.messages);
       }
       if (data.conversation) {
@@ -91,10 +118,10 @@ export default function LiveChatWidget() {
     }
   };
 
-  // Polling for new messages
+  // Ultra-fast live polling for instant real-time feel (1.5s when open, 4s when closed)
   useEffect(() => {
     fetchMessages();
-    const intervalTime = isOpen ? 3500 : 15000;
+    const intervalTime = isOpen ? 1500 : 4000;
     const interval = setInterval(fetchMessages, intervalTime);
     return () => clearInterval(interval);
   }, [isOpen]);

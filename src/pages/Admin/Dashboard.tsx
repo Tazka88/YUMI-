@@ -151,8 +151,9 @@ export default function AdminDashboard() {
       try {
         const token = localStorage.getItem('adminToken');
         if (!token) return;
-        const res = await fetch('/api/admin/chat/conversations?filter=unanswered', {
-          headers: { 'Authorization': `Bearer ${token}` }
+        const res = await fetch(`/api/admin/chat/conversations?filter=unanswered&_t=${Date.now()}`, {
+          headers: { 'Authorization': `Bearer ${token}` },
+          cache: 'no-store'
         });
         if (res.ok) {
           const data = await res.json();
@@ -161,7 +162,7 @@ export default function AdminDashboard() {
       } catch {}
     };
     fetchChatUnread();
-    const timer = setInterval(fetchChatUnread, 15000);
+    const timer = setInterval(fetchChatUnread, 5000);
     return () => clearInterval(timer);
   }, [activeTab]);
 

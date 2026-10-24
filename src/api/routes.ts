@@ -47,6 +47,15 @@ export const clearCache = (prefix?: string) => {
 // Cache Control Middleware for Public Data (Vercel CDN)
 router.use((req, res, next) => {
   if (req.method === 'GET') {
+    const isChat = req.path.startsWith('/chat') || req.path.startsWith('/admin/chat');
+    if (isChat) {
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+      res.setHeader('Surrogate-Control', 'no-store');
+      return next();
+    }
+
     const isPrivate = req.path.startsWith('/admin') || 
                       req.path.startsWith('/orders') || 
                       req.path.startsWith('/user') || 
@@ -3646,6 +3655,9 @@ router.get('/chat/status', async (req, res) => {
 
 // Client: Get conversation & message history for current session
 router.get('/chat/messages', async (req, res) => {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
   try {
     const { session_id } = req.query;
     if (!session_id || typeof session_id !== 'string') {
@@ -3797,6 +3809,9 @@ router.post('/chat/message', async (req, res) => {
 
 // Admin: List all conversations with filters, waiting times, and statistics
 router.get('/admin/chat/conversations', authenticate, async (req, res) => {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
   try {
     const { filter = 'all', search } = req.query;
 
@@ -3876,6 +3891,9 @@ router.get('/admin/chat/conversations', authenticate, async (req, res) => {
 
 // Admin: Get all messages for a specific conversation
 router.get('/admin/chat/conversations/:id/messages', authenticate, async (req, res) => {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
   try {
     const { id } = req.params;
 

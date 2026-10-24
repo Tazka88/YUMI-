@@ -129,9 +129,11 @@ export default function LiveChatAdmin() {
       const params = new URLSearchParams();
       if (filter !== 'all') params.set('filter', filter);
       if (debouncedSearch.trim()) params.set('search', debouncedSearch.trim());
+      params.set('_t', String(Date.now()));
 
       const res = await fetch(`/api/admin/chat/conversations?${params.toString()}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers: { 'Authorization': `Bearer ${token}` },
+        cache: 'no-store'
       });
       if (!res.ok) throw new Error('Erreur de chargement');
 
@@ -163,8 +165,9 @@ export default function LiveChatAdmin() {
   const fetchMessages = async (convId: string) => {
     try {
       const token = localStorage.getItem('adminToken');
-      const res = await fetch(`/api/admin/chat/conversations/${convId}/messages`, {
-        headers: { 'Authorization': `Bearer ${token}` }
+      const res = await fetch(`/api/admin/chat/conversations/${convId}/messages?_t=${Date.now()}`, {
+        headers: { 'Authorization': `Bearer ${token}` },
+        cache: 'no-store'
       });
       if (!res.ok) return;
       const data = await res.json();
@@ -181,15 +184,23 @@ export default function LiveChatAdmin() {
     fetchConversations();
   }, [filter, debouncedSearch]);
 
-  // Periodic silent polling
+  // Ultra-fast live polling: active conversation messages polled every 1.5s, list every 2.5s
   useEffect(() => {
-    const interval = setInterval(() => {
+    const convTimer = setInterval(() => {
       fetchConversations(true);
-      if (selectedConv) {
+    }, 2500);
+
+    let msgTimer: NodeJS.Timeout | null = null;
+    if (selectedConv?.id) {
+      msgTimer = setInterval(() => {
         fetchMessages(selectedConv.id);
-      }
-    }, 4000);
-    return () => clearInterval(interval);
+      }, 1500);
+    }
+
+    return () => {
+      clearInterval(convTimer);
+      if (msgTimer) clearInterval(msgTimer);
+    };
   }, [filter, debouncedSearch, selectedConv?.id]);
 
   // When conversation selection changes, fetch its messages

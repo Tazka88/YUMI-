@@ -4,7 +4,7 @@ import {
   MessageCircle, Search, RefreshCw, Send, CheckCheck, 
   CheckCircle2, Clock, AlertTriangle, AlertCircle, Phone, 
   Mail, User, Volume2, VolumeX, Sparkles, Filter, 
-  ChevronRight, ArrowLeft, ShieldCheck, Flame, X
+  ChevronRight, ArrowLeft, ShieldCheck, Flame, X, Trash2
 } from 'lucide-react';
 
 interface ChatMessage {
@@ -75,11 +75,27 @@ export default function LiveChatAdmin() {
   const [sendingReply, setSendingReply] = useState(false);
   const [filter, setFilter] = useState<'all' | 'unanswered' | 'waiting_over_3min' | 'resolved'>('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [now, setNow] = useState(Date.now());
+  const [deleteConfirm, setDeleteConfirm] = useState<{
+    isOpen: boolean;
+    convId: string;
+    customerName: string;
+    isPurge?: boolean;
+  } | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const prevUnreadRef = useRef<number>(0);
+
+  // Debounce search term to prevent UI lag and unnecessary requests
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(searchTerm);
+    }, 300);
+    return () => clearTimeout(handler);
+  }, [searchTerm]);
 
   // Live timer tick every 5 seconds to update waiting elapsed time in real time
   useEffect(() => {
@@ -112,7 +128,7 @@ export default function LiveChatAdmin() {
       const token = localStorage.getItem('adminToken');
       const params = new URLSearchParams();
       if (filter !== 'all') params.set('filter', filter);
-      if (searchTerm.trim()) params.set('search', searchTerm.trim());
+      if (debouncedSearch.trim()) params.set('search', debouncedSearch.trim());
 
       const res = await fetch(`/api/admin/chat/conversations?${params.toString()}`, {
         headers: { 'Authorization': `Bearer ${token}` }
@@ -160,9 +176,13 @@ export default function LiveChatAdmin() {
     }
   };
 
-  // Initial fetch and auto-polling every 4s
+  // Initial and search/filter fetch
   useEffect(() => {
     fetchConversations();
+  }, [filter, debouncedSearch]);
+
+  // Periodic silent polling
+  useEffect(() => {
     const interval = setInterval(() => {
       fetchConversations(true);
       if (selectedConv) {
@@ -170,7 +190,7 @@ export default function LiveChatAdmin() {
       }
     }, 4000);
     return () => clearInterval(interval);
-  }, [filter, searchTerm, selectedConv?.id]);
+  }, [filter, debouncedSearch, selectedConv?.id]);
 
   // When conversation selection changes, fetch its messages
   useEffect(() => {
@@ -240,6 +260,61 @@ export default function LiveChatAdmin() {
     }
   };
 
+  const handleDeleteConversation = async (convId: string) => {
+    setDeleting(true);
+    try {
+      const token = localStorage.getItem('adminToken');
+      const res = await fetch(`/api/admin/chat/conversations/${convId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!res.ok) throw new Error('Erreur lors de la suppression');
+
+      // Optimistic state update
+      setConversations(prev => prev.filter(c => c.id !== convId));
+      if (selectedConv?.id === convId) {
+        setSelectedConv(null);
+        setMessages([]);
+      }
+      setDeleteConfirm(null);
+      toast.success('Conversation supprimée avec succès');
+      fetchConversations(true);
+    } catch (err: any) {
+      toast.error(err.message || 'Impossible de supprimer la conversation');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const handlePurgeResolved = async () => {
+    setDeleting(true);
+    try {
+      const token = localStorage.getItem('adminToken');
+      const res = await fetch('/api/admin/chat/conversations', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ purgeResolved: true })
+      });
+      if (!res.ok) throw new Error('Erreur lors de la purge');
+      const data = await res.json();
+      setConversations(prev => prev.filter(c => c.status !== 'resolved'));
+      if (selectedConv?.status === 'resolved') {
+        setSelectedConv(null);
+        setMessages([]);
+      }
+      setDeleteConfirm(null);
+      toast.success(`${data.deletedCount || 0} conversation(s) résolue(s) purgée(s)`);
+      fetchConversations(true);
+    } catch (err: any) {
+      toast.error(err.message || 'Impossible de purger les conversations');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   const handleUpdateAvailability = async (newStatus: string) => {
     try {
       const token = localStorage.getItem('adminToken');
@@ -261,15 +336,16 @@ export default function LiveChatAdmin() {
     }
   };
 
-  // Calculate wait time in minutes from waiting_since
+  // Calculate wait time in minutes from waiting_since or fallback to last_message_at
   const getWaitMinutes = (conv: Conversation) => {
-    if (!conv.waiting_since) return 0;
-    const waitMs = now - new Date(conv.waiting_since).getTime();
+    const refTime = conv.waiting_since || conv.last_message_at || conv.created_at;
+    if (!refTime) return 0;
+    const waitMs = now - new Date(refTime).getTime();
     return Math.max(0, Math.floor(waitMs / 60000));
   };
 
   const formatWaitBadge = (conv: Conversation) => {
-    if (conv.status !== 'waiting_admin' || !conv.waiting_since) return null;
+    if (conv.status !== 'waiting_admin') return null;
     const mins = getWaitMinutes(conv);
 
     if (mins >= 5) {
@@ -328,7 +404,7 @@ export default function LiveChatAdmin() {
           </div>
         </div>
 
-        {/* Availability Controls & Sound Toggle */}
+        {/* Availability Controls, Purge & Sound Toggle */}
         <div className="flex flex-wrap items-center gap-3">
           {/* Sound Toggle */}
           <button
@@ -467,40 +543,59 @@ export default function LiveChatAdmin() {
               <Search className="w-3.5 h-3.5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
             </div>
 
-            {/* Filter Tabs */}
-            <div className="flex items-center gap-1 p-1 bg-gray-100 rounded-xl text-xs font-bold overflow-x-auto">
-              <button
-                onClick={() => setFilter('all')}
-                className={`px-3 py-1 rounded-lg whitespace-nowrap transition ${
-                  filter === 'all' ? 'bg-white text-gray-900 shadow-xs' : 'text-gray-500 hover:text-gray-900'
-                }`}
-              >
-                Toutes ({stats.totalCount})
-              </button>
-              <button
-                onClick={() => setFilter('unanswered')}
-                className={`px-3 py-1 rounded-lg whitespace-nowrap transition ${
-                  filter === 'unanswered' ? 'bg-orange-500 text-white shadow-xs' : 'text-gray-500 hover:text-gray-900'
-                }`}
-              >
-                À répondre ({stats.unansweredCount})
-              </button>
-              <button
-                onClick={() => setFilter('waiting_over_3min')}
-                className={`px-3 py-1 rounded-lg whitespace-nowrap transition ${
-                  filter === 'waiting_over_3min' ? 'bg-red-600 text-white shadow-xs' : 'text-gray-500 hover:text-gray-900'
-                }`}
-              >
-                Urgents ({stats.warning3minCount + stats.alert5minCount})
-              </button>
-              <button
-                onClick={() => setFilter('resolved')}
-                className={`px-3 py-1 rounded-lg whitespace-nowrap transition ${
-                  filter === 'resolved' ? 'bg-emerald-600 text-white shadow-xs' : 'text-gray-500 hover:text-gray-900'
-                }`}
-              >
-                Résolus
-              </button>
+            {/* Filter Tabs & Purge Resolved Button */}
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-1 p-1 bg-gray-100 rounded-xl text-xs font-bold overflow-x-auto flex-1">
+                <button
+                  onClick={() => setFilter('all')}
+                  className={`px-3 py-1 rounded-lg whitespace-nowrap transition ${
+                    filter === 'all' ? 'bg-white text-gray-900 shadow-xs' : 'text-gray-500 hover:text-gray-900'
+                  }`}
+                >
+                  Toutes ({stats.totalCount})
+                </button>
+                <button
+                  onClick={() => setFilter('unanswered')}
+                  className={`px-3 py-1 rounded-lg whitespace-nowrap transition ${
+                    filter === 'unanswered' ? 'bg-orange-500 text-white shadow-xs' : 'text-gray-500 hover:text-gray-900'
+                  }`}
+                >
+                  À répondre ({stats.unansweredCount})
+                </button>
+                <button
+                  onClick={() => setFilter('waiting_over_3min')}
+                  className={`px-3 py-1 rounded-lg whitespace-nowrap transition ${
+                    filter === 'waiting_over_3min' ? 'bg-red-600 text-white shadow-xs' : 'text-gray-500 hover:text-gray-900'
+                  }`}
+                >
+                  Urgents ({stats.warning3minCount + stats.alert5minCount})
+                </button>
+                <button
+                  onClick={() => setFilter('resolved')}
+                  className={`px-3 py-1 rounded-lg whitespace-nowrap transition ${
+                    filter === 'resolved' ? 'bg-emerald-600 text-white shadow-xs' : 'text-gray-500 hover:text-gray-900'
+                  }`}
+                >
+                  Résolus
+                </button>
+              </div>
+
+              {/* Purge resolved button */}
+              {conversations.some(c => c.status === 'resolved') && (
+                <button
+                  onClick={() => setDeleteConfirm({
+                    isOpen: true,
+                    convId: '',
+                    customerName: '',
+                    isPurge: true
+                  })}
+                  className="px-2.5 py-1.5 text-[11px] font-bold text-red-600 hover:bg-red-50 rounded-xl transition flex items-center gap-1 border border-red-200 shrink-0"
+                  title="Supprimer toutes les conversations résolues"
+                >
+                  <Trash2 className="w-3 h-3" />
+                  <span className="hidden sm:inline">Purger</span>
+                </button>
+              )}
             </div>
           </div>
 
@@ -516,13 +611,12 @@ export default function LiveChatAdmin() {
               conversations.map((conv) => {
                 const isSelected = selectedConv?.id === conv.id;
                 const isUnanswered = conv.status === 'waiting_admin';
-                const waitMins = getWaitMinutes(conv);
 
                 return (
                   <div
                     key={conv.id}
                     onClick={() => setSelectedConv(conv)}
-                    className={`p-4 cursor-pointer transition flex items-start gap-3 relative ${
+                    className={`p-4 cursor-pointer transition flex items-start gap-3 relative group ${
                       isSelected ? 'bg-orange-50/60 border-l-4 border-orange-500' : 'hover:bg-gray-50'
                     }`}
                   >
@@ -540,9 +634,25 @@ export default function LiveChatAdmin() {
                         <h4 className="text-xs font-bold text-gray-900 truncate">
                           {conv.customer_name || 'Client ZORANDO'}
                         </h4>
-                        <span className="text-[10px] text-gray-400 whitespace-nowrap">
-                          {new Date(conv.last_message_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
-                        </span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[10px] text-gray-400 whitespace-nowrap">
+                            {new Date(conv.last_message_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setDeleteConfirm({
+                                isOpen: true,
+                                convId: conv.id,
+                                customerName: conv.customer_name || 'ce client'
+                              });
+                            }}
+                            className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition"
+                            title="Supprimer la conversation"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       </div>
 
                       <p className="text-xs text-gray-600 truncate mb-1.5 font-medium">
@@ -624,7 +734,7 @@ export default function LiveChatAdmin() {
                   {selectedConv.status === 'resolved' ? (
                     <button
                       onClick={() => handleStatusChange('waiting_admin')}
-                      className="px-3 py-1.5 rounded-xl border border-gray-200 text-xs font-bold text-gray-700 hover:bg-gray-50"
+                      className="px-3 py-1.5 rounded-xl border border-gray-200 text-xs font-bold text-gray-700 hover:bg-gray-50 transition"
                     >
                       Réouvrir
                     </button>
@@ -637,6 +747,19 @@ export default function LiveChatAdmin() {
                       Marquer résolu
                     </button>
                   )}
+
+                  {/* Delete Conversation Button */}
+                  <button
+                    onClick={() => setDeleteConfirm({
+                      isOpen: true,
+                      convId: selectedConv.id,
+                      customerName: selectedConv.customer_name || 'ce client'
+                    })}
+                    className="p-2 rounded-xl border border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 transition"
+                    title="Supprimer définitivement cette conversation"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
                 </div>
               </div>
 
@@ -726,13 +849,56 @@ export default function LiveChatAdmin() {
               <div>
                 <h3 className="font-extrabold text-sm text-gray-800">Sélectionnez une conversation</h3>
                 <p className="text-xs text-gray-500 mt-1 max-w-[280px]">
-                  Cliquez sur un message à gauche pour lire l'historique et répondre directement au client.
+                  Cliquez sur un message à gauche pour lire l'historique, répondre directement au client ou supprimer la discussion.
                 </p>
               </div>
             </div>
           )}
         </div>
       </div>
+
+      {/* Confirmation Modal for Deletion / Purge */}
+      {deleteConfirm?.isOpen && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl border border-gray-100 animate-in fade-in zoom-in-95 duration-200">
+            <div className="w-12 h-12 rounded-2xl bg-red-50 text-red-600 flex items-center justify-center mx-auto mb-4">
+              <Trash2 className="w-6 h-6" />
+            </div>
+            <h3 className="text-base font-extrabold text-gray-900 text-center mb-1">
+              {deleteConfirm.isPurge ? 'Purger les conversations résolues ?' : 'Supprimer la conversation ?'}
+            </h3>
+            <p className="text-xs text-gray-500 text-center mb-6 leading-relaxed">
+              {deleteConfirm.isPurge
+                ? 'Toutes les conversations marquées comme résolues ainsi que leurs messages seront définitivement supprimés.'
+                : `Êtes-vous sûr de vouloir supprimer la conversation avec ${deleteConfirm.customerName} ? Tous les messages seront définitivement effacés.`}
+            </p>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setDeleteConfirm(null)}
+                disabled={deleting}
+                className="flex-1 py-2.5 px-4 rounded-xl border border-gray-200 text-gray-700 font-bold text-xs hover:bg-gray-50 transition"
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  if (deleteConfirm.isPurge) {
+                    await handlePurgeResolved();
+                  } else if (deleteConfirm.convId) {
+                    await handleDeleteConversation(deleteConfirm.convId);
+                  }
+                }}
+                disabled={deleting}
+                className="flex-1 py-2.5 px-4 rounded-xl bg-red-600 text-white font-bold text-xs hover:bg-red-700 transition shadow-md flex items-center justify-center gap-1.5 disabled:opacity-50"
+              >
+                {deleting ? 'Suppression...' : 'Supprimer'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

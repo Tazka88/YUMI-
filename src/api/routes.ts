@@ -3984,7 +3984,11 @@ router.patch('/admin/chat/conversations/:id/status', authenticate, async (req, r
     await sql`
       UPDATE chat_conversations SET
         status = ${status},
-        waiting_since = CASE WHEN ${status} = 'resolved' THEN NULL ELSE waiting_since END,
+        waiting_since = CASE 
+          WHEN ${status} = 'resolved' THEN NULL 
+          WHEN ${status} = 'waiting_admin' THEN COALESCE(waiting_since, NOW()) 
+          ELSE waiting_since 
+        END,
         updated_at = NOW()
       WHERE id = ${id}
     `;
@@ -3993,6 +3997,51 @@ router.patch('/admin/chat/conversations/:id/status', authenticate, async (req, r
   } catch (err) {
     console.error('Error updating conversation status:', err);
     res.status(500).json({ error: 'Failed to update status' });
+  }
+});
+
+// Admin: Delete a single conversation
+router.delete('/admin/chat/conversations/:id', authenticate, async (req, res) => {
+  try {
+    const { id } = req.params;
+    await sql`DELETE FROM chat_messages WHERE conversation_id = ${id}`;
+    const result = await sql`DELETE FROM chat_conversations WHERE id = ${id} RETURNING id`;
+    if (result.length === 0) {
+      return res.status(404).json({ error: 'Conversation non trouvée' });
+    }
+    res.json({ success: true, message: 'Conversation supprimée avec succès' });
+  } catch (err) {
+    console.error('Error deleting conversation:', err);
+    res.status(500).json({ error: 'Failed to delete conversation' });
+  }
+});
+
+// Admin: Bulk delete conversations (or purge resolved)
+router.delete('/admin/chat/conversations', authenticate, async (req, res) => {
+  try {
+    const { purgeResolved, ids } = req.body || {};
+    let deletedCount = 0;
+
+    if (purgeResolved) {
+      const resolved = await sql`SELECT id FROM chat_conversations WHERE status = 'resolved'`;
+      if (resolved.length > 0) {
+        const resolvedIds = resolved.map((r: any) => r.id);
+        await sql`DELETE FROM chat_messages WHERE conversation_id = ANY(${resolvedIds})`;
+        const delRes = await sql`DELETE FROM chat_conversations WHERE id = ANY(${resolvedIds}) RETURNING id`;
+        deletedCount = delRes.length;
+      }
+    } else if (Array.isArray(ids) && ids.length > 0) {
+      await sql`DELETE FROM chat_messages WHERE conversation_id = ANY(${ids})`;
+      const delRes = await sql`DELETE FROM chat_conversations WHERE id = ANY(${ids}) RETURNING id`;
+      deletedCount = delRes.length;
+    } else {
+      return res.status(400).json({ error: 'Paramètre purgeResolved ou ids requis' });
+    }
+
+    res.json({ success: true, deletedCount });
+  } catch (err) {
+    console.error('Error bulk deleting conversations:', err);
+    res.status(500).json({ error: 'Failed to delete conversations' });
   }
 });
 

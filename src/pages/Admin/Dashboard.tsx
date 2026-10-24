@@ -144,6 +144,26 @@ export default function AdminDashboard() {
   const [modalProducts, setModalProducts] = useState<any[]>([]);
   const [loadingModalProducts, setLoadingModalProducts] = useState(false);
   const [emails, setEmails] = useState<any[]>([]);
+  const [chatUnreadCount, setChatUnreadCount] = useState<number>(0);
+
+  useEffect(() => {
+    const fetchChatUnread = async () => {
+      try {
+        const token = localStorage.getItem('adminToken');
+        if (!token) return;
+        const res = await fetch('/api/admin/chat/conversations?filter=unanswered', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setChatUnreadCount(data.stats?.unansweredCount || 0);
+        }
+      } catch {}
+    };
+    fetchChatUnread();
+    const timer = setInterval(fetchChatUnread, 15000);
+    return () => clearInterval(timer);
+  }, [activeTab]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -1780,6 +1800,11 @@ const handleBulkDelivery = async () => {
             >
               <MessageCircle size={18} />
               <span className="flex-1 text-left">Chat en direct</span>
+              {chatUnreadCount > 0 && (
+                <span className="bg-red-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full animate-pulse shadow-xs">
+                  {chatUnreadCount}
+                </span>
+              )}
             </button>
             <button
               onClick={() => { setActiveTab('push-notifications'); setIsMobileNavOpen(false); }}
@@ -1990,6 +2015,11 @@ const handleBulkDelivery = async () => {
             >
               <MessageCircle size={18} />
               <span className="flex-1 text-left">Chat en direct</span>
+              {chatUnreadCount > 0 && (
+                <span className="bg-red-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full animate-pulse shadow-xs">
+                  {chatUnreadCount}
+                </span>
+              )}
             </button>
             <button 
               onClick={() => setActiveTab('push-notifications')}

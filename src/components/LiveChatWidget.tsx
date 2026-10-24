@@ -87,11 +87,15 @@ export default function LiveChatWidget() {
     } catch {}
   };
 
-  // Fetch messages function with cache-busting
+  const isFetchingRef = useRef<boolean>(false);
+
+  // Fetch messages function with cache-busting and overlap guard
   const fetchMessages = async () => {
+    if (isFetchingRef.current) return;
     const sessionId = getOrCreateChatSessionId();
     if (!sessionId) return;
 
+    isFetchingRef.current = true;
     try {
       const res = await fetch(`/api/chat/messages?session_id=${sessionId}&_t=${Date.now()}`, {
         cache: 'no-store'
@@ -115,15 +119,30 @@ export default function LiveChatWidget() {
       }
     } catch (e) {
       // Background silent catch
+    } finally {
+      isFetchingRef.current = false;
     }
   };
 
-  // Ultra-fast live polling for instant real-time feel (1.5s when open, 4s when closed)
+  // Visibility-aware live polling: 2.5s when open, 10s when closed, paused when tab hidden
   useEffect(() => {
     fetchMessages();
-    const intervalTime = isOpen ? 1500 : 4000;
-    const interval = setInterval(fetchMessages, intervalTime);
-    return () => clearInterval(interval);
+
+    const intervalTime = isOpen ? 2500 : 10000;
+    const interval = setInterval(() => {
+      if (typeof document !== 'undefined' && document.hidden) return;
+      fetchMessages();
+    }, intervalTime);
+
+    const handleVisibility = () => {
+      if (!document.hidden) fetchMessages();
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
   }, [isOpen]);
 
   // Auto-scroll on new messages

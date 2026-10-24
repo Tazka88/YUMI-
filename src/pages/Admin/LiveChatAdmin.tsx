@@ -122,7 +122,12 @@ export default function LiveChatAdmin() {
     } catch {}
   };
 
+  const isFetchingConvsRef = useRef<boolean>(false);
+  const isFetchingMsgsRef = useRef<boolean>(false);
+
   const fetchConversations = async (silent = false) => {
+    if (isFetchingConvsRef.current) return;
+    isFetchingConvsRef.current = true;
     if (!silent) setLoading(true);
     try {
       const token = localStorage.getItem('adminToken');
@@ -158,11 +163,14 @@ export default function LiveChatAdmin() {
     } catch (err: any) {
       console.error(err);
     } finally {
+      isFetchingConvsRef.current = false;
       if (!silent) setLoading(false);
     }
   };
 
   const fetchMessages = async (convId: string) => {
+    if (isFetchingMsgsRef.current) return;
+    isFetchingMsgsRef.current = true;
     try {
       const token = localStorage.getItem('adminToken');
       const res = await fetch(`/api/admin/chat/conversations/${convId}/messages?_t=${Date.now()}`, {
@@ -176,6 +184,8 @@ export default function LiveChatAdmin() {
       setConversations(prev => prev.map(c => c.id === convId ? { ...c, unread_admin_count: 0 } : c));
     } catch (err) {
       console.error(err);
+    } finally {
+      isFetchingMsgsRef.current = false;
     }
   };
 
@@ -184,22 +194,33 @@ export default function LiveChatAdmin() {
     fetchConversations();
   }, [filter, debouncedSearch]);
 
-  // Ultra-fast live polling: active conversation messages polled every 1.5s, list every 2.5s
+  // Robust visibility-aware polling: active messages every 2.5s, list every 4s
   useEffect(() => {
     const convTimer = setInterval(() => {
+      if (typeof document !== 'undefined' && document.hidden) return;
       fetchConversations(true);
-    }, 2500);
+    }, 4000);
 
     let msgTimer: NodeJS.Timeout | null = null;
     if (selectedConv?.id) {
       msgTimer = setInterval(() => {
+        if (typeof document !== 'undefined' && document.hidden) return;
         fetchMessages(selectedConv.id);
-      }, 1500);
+      }, 2500);
     }
+
+    const handleVisibility = () => {
+      if (!document.hidden) {
+        fetchConversations(true);
+        if (selectedConv?.id) fetchMessages(selectedConv.id);
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
 
     return () => {
       clearInterval(convTimer);
       if (msgTimer) clearInterval(msgTimer);
+      document.removeEventListener('visibilitychange', handleVisibility);
     };
   }, [filter, debouncedSearch, selectedConv?.id]);
 

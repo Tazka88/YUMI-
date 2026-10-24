@@ -36,12 +36,12 @@ let connectionString = resolveConnectionString(process.env.DATABASE_URL);
 
 export const sql = globalForPostgres.sql ?? postgres(connectionString, {
   ssl: connectionString.includes('localhost') || connectionString.includes('127.0.0.1') ? false : 'require',
-  max: isServerless ? 5 : 20, // Low max connections in serverless to prevent Supabase pooler exhaustion
-  idle_timeout: isServerless ? 10 : 20, // Proactively close idle sockets before AWS NAT / Supabase pooler drops them
-  connect_timeout: 5, // 5s connection timeout so cold starts / network hiccups fail fast
+  max: isServerless ? 5 : 10, // Prevent Supabase pooler exhaustion
+  idle_timeout: isServerless ? 15 : 30, // Proactively close idle sockets
+  connect_timeout: 20, // 20s connection timeout to accommodate PgBouncer/Supavisor latency spikes
   prepare: false, // Required for PgBouncer / Supavisor transaction mode
   max_lifetime: 60 * 3, // Recycle connections every 3 minutes
-  backoff: (attempts) => Math.min(0.1 * Math.pow(2, attempts), 1),
+  backoff: (attempts) => Math.min(0.2 * Math.pow(2, attempts), 2),
 });
 
 // Cache on globalThis across all environments (including production serverless lambdas)

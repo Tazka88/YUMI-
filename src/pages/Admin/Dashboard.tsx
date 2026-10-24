@@ -162,7 +162,7 @@ export default function AdminDashboard() {
       } catch {}
     };
     fetchChatUnread();
-    const timer = setInterval(fetchChatUnread, 5000);
+    const timer = setInterval(fetchChatUnread, 20000);
     return () => clearInterval(timer);
   }, [activeTab]);
 

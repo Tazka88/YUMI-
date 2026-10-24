@@ -3675,17 +3675,19 @@ router.get('/chat/messages', async (req, res) => {
       return res.json({ conversation: null, messages: [] });
     }
 
-    // Mark admin messages as read by client
-    await sql`
-      UPDATE chat_messages 
-      SET is_read = true 
-      WHERE conversation_id = ${conv.id} AND sender != 'client' AND is_read = false
-    `;
-    await sql`
-      UPDATE chat_conversations 
-      SET unread_client_count = 0 
-      WHERE id = ${conv.id}
-    `;
+    // Mark admin messages as read by client only if there are unread messages
+    if (conv.unread_client_count > 0) {
+      await sql`
+        UPDATE chat_messages 
+        SET is_read = true 
+        WHERE conversation_id = ${conv.id} AND sender != 'client' AND is_read = false
+      `;
+      await sql`
+        UPDATE chat_conversations 
+        SET unread_client_count = 0 
+        WHERE id = ${conv.id}
+      `;
+    }
 
     const messages = await sql`
       SELECT id, sender, sender_name, message, is_read, created_at
@@ -3906,17 +3908,19 @@ router.get('/admin/chat/conversations/:id/messages', authenticate, async (req, r
     `;
     if (!conv) return res.status(404).json({ error: 'Conversation non trouvée' });
 
-    // Mark client messages as read by admin
-    await sql`
-      UPDATE chat_messages 
-      SET is_read = true 
-      WHERE conversation_id = ${id} AND sender = 'client' AND is_read = false
-    `;
-    await sql`
-      UPDATE chat_conversations 
-      SET unread_admin_count = 0 
-      WHERE id = ${id}
-    `;
+    // Mark client messages as read by admin only if there are unread messages
+    if (conv.unread_admin_count > 0) {
+      await sql`
+        UPDATE chat_messages 
+        SET is_read = true 
+        WHERE conversation_id = ${id} AND sender = 'client' AND is_read = false
+      `;
+      await sql`
+        UPDATE chat_conversations 
+        SET unread_admin_count = 0 
+        WHERE id = ${id}
+      `;
+    }
 
     const messages = await sql`
       SELECT id, sender, sender_name, message, is_read, created_at

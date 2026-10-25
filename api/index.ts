@@ -7,7 +7,7 @@ import fs from 'fs';
 import { sql } from '../src/db/setup.js';
 import { categorySEOData } from '../src/utils/seoData.js';
 import { formatSeoTitle } from '../src/utils/seoTitle.js';
-import { buildProductSchema, buildBreadcrumbSchema, buildBlogSchema, buildItemListSchema } from '../src/lib/schemaUtils.js';
+import { buildProductSchema, buildBreadcrumbSchema, buildBlogSchema } from '../src/lib/schemaUtils.js';
 
 const app = express();
 
@@ -300,20 +300,7 @@ app.get('*', async (req, res, next) => {
               ]
             };
 
-            const itemListJson = {
-              "@context": "https://schema.org",
-              "@type": "ItemList",
-              "name": `${catName} ${brand.name} en Algérie`,
-              "numberOfItems": products.length,
-              "itemListElement": products.map((p: any, idx: number) => ({
-                "@type": "ListItem",
-                "position": idx + 1,
-                "url": `${baseUrl}/product/${p.slug}`
-              }))
-            };
-
             headHtml += `\n<script type="application/ld+json">${JSON.stringify(breadcrumbJson)}</script>`;
-            headHtml += `\n<script type="application/ld+json">${JSON.stringify(itemListJson)}</script>`;
 
             seoHtml = `
             <div id="seo-static-content" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 prose prose-sm max-w-none text-gray-700">
@@ -374,21 +361,8 @@ app.get('*', async (req, res, next) => {
               "logo": brand.image || undefined
             };
 
-            const itemListJson = {
-              "@context": "https://schema.org",
-              "@type": "ItemList",
-              "name": `${brand.name} en Algérie`,
-              "numberOfItems": products.length,
-              "itemListElement": products.map((p: any, idx: number) => ({
-                "@type": "ListItem",
-                "position": idx + 1,
-                "url": `${baseUrl}/product/${p.slug}`
-              }))
-            };
-
             headHtml += `\n<script type="application/ld+json">${JSON.stringify(breadcrumbJson)}</script>`;
             headHtml += `\n<script type="application/ld+json">${JSON.stringify(brandJson)}</script>`;
-            headHtml += `\n<script type="application/ld+json">${JSON.stringify(itemListJson)}</script>`;
 
             if (slug === 'electromenager-robuste-algerie') {
               const faqJson = {

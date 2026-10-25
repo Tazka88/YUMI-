@@ -9,7 +9,6 @@ import { getCategoryWithEmoji, CategoryNameDisplay } from '../components/Layout'
 import Slider from '../components/Slider';
 import { fetchWithCache } from '../lib/utils';
 import { categorySEOData } from '../utils/seoData';
-import { buildItemListSchema } from '../lib/schemaUtils';
 
 export default function Category() {
   const { slug } = useParams();
@@ -203,11 +202,19 @@ export default function Category() {
     setShowMobileFilters(false);
   }, [slug, searchParams]);
 
-  const categoryItemListSchema = React.useMemo(() => {
-    if (!products || products.length === 0 || searchQuery || searchParams.get('ids')) return undefined;
-    const title = slug && categorySEOData[slug] ? categorySEOData[slug].title : categoryName;
-    return buildItemListSchema(title, products);
-  }, [products, slug, categoryName, searchQuery, searchParams]);
+  const categoryBreadcrumbSchema = React.useMemo(() => {
+    if (!slug || slug === 'all' || searchQuery || searchParams.get('ids')) return undefined;
+    const name = slug && categorySEOData[slug] ? categorySEOData[slug].title : categoryName;
+    return {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "Accueil", "item": "https://www.zorando.com/" },
+        { "@type": "ListItem", "position": 2, "name": "Catégories", "item": "https://www.zorando.com/categories" },
+        { "@type": "ListItem", "position": 3, "name": name, "item": `https://www.zorando.com/category/${slug}` }
+      ]
+    };
+  }, [categoryName, slug, searchQuery, searchParams]);
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -218,7 +225,7 @@ export default function Category() {
         keywords={slug && categorySEOData[slug]?.keywords ? categorySEOData[slug].keywords : undefined} 
         url={window.location.href}
         noindex={!!searchQuery || !!searchParams.get('ids')}
-        schema={categoryItemListSchema}
+        schema={categoryBreadcrumbSchema}
       />
 
       <div className="flex flex-col md:flex-row gap-6">

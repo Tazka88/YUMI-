@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
-import { MessageCircle, X, Send, User, Clock, Check, CheckCheck, Sparkles, Shield, AlertCircle } from 'lucide-react';
+import { MessageCircle, X, Send, User, Clock, Check, CheckCheck, Sparkles, Shield, AlertCircle, Phone, PhoneCall } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 import { useAuth } from '../lib/AuthContext';
 
 interface ChatMessage {
@@ -26,8 +27,13 @@ export default function LiveChatWidget() {
   const { user, profile } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [conversation, setConversation] = useState<any>(null);
   const [inputText, setInputText] = useState('');
   const [customerName, setCustomerName] = useState('');
+  const [phoneInput, setPhoneInput] = useState('');
+  const [submittingPhone, setSubmittingPhone] = useState(false);
+  const [phoneError, setPhoneError] = useState('');
+  const [callbackDismissed, setCallbackDismissed] = useState(false);
   const [availability, setAvailability] = useState<{ status: string; message: string }>({
     status: 'online_fast',
     message: 'Bonjour et bienvenue sur ZORANDO ! Un conseiller va vous répondre dans un instant.'
@@ -111,6 +117,7 @@ export default function LiveChatWidget() {
         setMessages(data.messages);
       }
       if (data.conversation) {
+        setConversation(data.conversation);
         if (!isOpen) {
           setUnreadCount(data.conversation.unread_client_count || 0);
         } else {
@@ -121,6 +128,41 @@ export default function LiveChatWidget() {
       // Background silent catch
     } finally {
       isFetchingRef.current = false;
+    }
+  };
+
+  const handleRequestCallback = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const digits = phoneInput.replace(/\D/g, '');
+    if (!digits || digits.length < 8) {
+      setPhoneError('Veuillez entrer un numéro valide (ex: 07 81 95 59 25)');
+      return;
+    }
+    setSubmittingPhone(true);
+    setPhoneError('');
+    try {
+      const sessionId = getOrCreateChatSessionId();
+      const res = await fetch('/api/chat/callback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          session_id: sessionId,
+          phone: phoneInput
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setPhoneError(data.error || 'Erreur lors de l\'envoi');
+        return;
+      }
+      toast.success('Merci ! Notre équipe ZORANDO vous contactera dès que possible.', { duration: 5000 });
+      localStorage.setItem('zorando_chat_callback_sent', sessionId);
+      setPhoneInput('');
+      fetchMessages();
+    } catch (err) {
+      setPhoneError('Erreur de connexion. Veuillez réessayer.');
+    } finally {
+      setSubmittingPhone(false);
     }
   };
 
@@ -208,6 +250,14 @@ export default function LiveChatWidget() {
       return '';
     }
   };
+
+  const hasClientMessage = messages.some(m => m.sender === 'client');
+  const alreadyHasPhone = !!(
+    conversation?.customer_phone || 
+    conversation?.callback_requested || 
+    (typeof window !== 'undefined' && localStorage.getItem('zorando_chat_callback_sent') === getOrCreateChatSessionId())
+  );
+  const shouldShowCallbackPrompt = hasClientMessage && !alreadyHasPhone && !callbackDismissed;
 
   const location = useLocation();
   const pathname = location.pathname || '';
@@ -389,6 +439,78 @@ export default function LiveChatWidget() {
                 );
               })
             )}
+
+            {/* Rapid Callback Request Card */}
+            {shouldShowCallbackPrompt && (
+              <div className="mx-1 my-2.5 bg-gradient-to-br from-orange-50 via-amber-50/60 to-white border border-orange-200/90 rounded-2xl p-3.5 shadow-sm animate-in fade-in slide-in-from-bottom-2 duration-300">
+                <div className="flex items-start justify-between gap-2 mb-1.5">
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-xl bg-orange-600 text-white flex items-center justify-center shadow-xs shrink-0">
+                      <Phone className="w-3.5 h-3.5" />
+                    </div>
+                    <h4 className="font-extrabold text-xs text-gray-900 leading-tight">
+                      Vous souhaitez une réponse rapide ?
+                    </h4>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setCallbackDismissed(true)}
+                    className="text-gray-400 hover:text-gray-600 p-1 rounded-lg hover:bg-black/5 transition"
+                    aria-label="Ignorer"
+                    title="Continuer par écrit"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+
+                <p className="text-[11px] text-gray-600 mb-2.5 leading-snug">
+                  Laissez votre numéro de téléphone et notre équipe ZORANDO vous rappellera rapidement pour répondre à vos questions.
+                </p>
+
+                <form onSubmit={handleRequestCallback} className="space-y-2">
+                  <div className="flex items-center gap-1.5 bg-white border border-orange-200 rounded-xl px-2.5 py-1.5 focus-within:ring-2 focus-within:ring-orange-500 shadow-2xs">
+                    <span className="text-xs font-bold text-gray-700 font-mono select-none flex items-center gap-1">
+                      🇩🇿 +213
+                    </span>
+                    <div className="w-px h-4 bg-gray-200" />
+                    <input
+                      type="tel"
+                      inputMode="numeric"
+                      placeholder="Ex : 07 81 95 59 25"
+                      value={phoneInput}
+                      onChange={(e) => {
+                        setPhoneInput(e.target.value);
+                        setPhoneError('');
+                      }}
+                      className="flex-1 bg-transparent text-xs text-gray-900 placeholder:text-gray-400 focus:outline-none font-medium"
+                      disabled={submittingPhone}
+                    />
+                  </div>
+
+                  {phoneError && (
+                    <p className="text-[10px] text-red-600 font-semibold px-1">{phoneError}</p>
+                  )}
+
+                  <button
+                    type="submit"
+                    disabled={submittingPhone || !phoneInput.trim()}
+                    className="w-full bg-orange-600 hover:bg-orange-700 disabled:opacity-50 text-white font-bold text-xs py-2 px-3 rounded-xl shadow-xs transition flex items-center justify-center gap-1.5 cursor-pointer"
+                  >
+                    {submittingPhone ? (
+                      <span className="inline-block w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <PhoneCall className="w-3.5 h-3.5" />
+                    )}
+                    <span>Être rappelé</span>
+                  </button>
+
+                  <p className="text-[9.5px] text-gray-400 text-center leading-tight">
+                    Votre numéro sera utilisé pour vous contacter au sujet de votre demande.
+                  </p>
+                </form>
+              </div>
+            )}
+
             <div ref={messagesEndRef} />
           </div>
 

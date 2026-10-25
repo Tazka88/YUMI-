@@ -2403,7 +2403,8 @@ router.get('/feed/meta-catalog.csv', async (req, res) => {
 router.get('/merchant-feed.xml', async (req, res) => {
   res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=3600, stale-while-revalidate=7200');
   
-  const cacheKey = 'merchant_feed_xml';
+  const limitParam = req.query.limit ? parseInt(String(req.query.limit), 10) : null;
+  const cacheKey = limitParam ? `merchant_feed_xml_${limitParam}` : 'merchant_feed_xml';
   const cached = getCache(cacheKey);
   if (cached) {
     res.setHeader('Content-Type', 'application/xml');
@@ -2411,17 +2412,21 @@ router.get('/merchant-feed.xml', async (req, res) => {
   }
 
   try {
-    const MERCHANT_PRODUCT_COLS = "p.id, p.sku, p.name, p.slug, p.description, p.seo_description, p.price, p.promo_price, p.stock, p.is_active, p.image";
+    const MERCHANT_PRODUCT_COLS = "p.id, p.sku, p.name, p.slug, p.description, p.seo_description, p.price, p.promo_price, p.stock, p.is_active, p.image, p.is_best_seller";
     const products = await sql`
       SELECT ${sql.unsafe(MERCHANT_PRODUCT_COLS)}, COALESCE(p.brand_name, b.name) as brand_name, c.name as category_name
       FROM products p 
       LEFT JOIN brands b ON p.brand_id = b.id
       LEFT JOIN categories c ON p.category_id = c.id
       WHERE p.is_active = true
+      ORDER BY (p.stock > 0) DESC, p.is_best_seller DESC, p.id DESC
     `;
 
     // Filter valid products
-    const activeProducts = products.filter((p) => p.image && typeof p.image === 'string' && p.image.trim() !== '');
+    let activeProducts = products.filter((p) => p.image && typeof p.image === 'string' && p.image.trim() !== '');
+    if (limitParam && !isNaN(limitParam) && limitParam > 0) {
+      activeProducts = activeProducts.slice(0, limitParam);
+    }
 
     const baseUrl = 'https://www.zorando.com';
     
@@ -3671,7 +3676,7 @@ router.get('/chat/messages', async (req, res) => {
     }
 
     const [conv] = await sql`
-      SELECT id, session_id, customer_name, status, unread_client_count, created_at, last_message_at
+      SELECT id, session_id, customer_name, customer_phone, callback_requested, callback_status, callback_requested_at, status, unread_client_count, created_at, last_message_at
       FROM chat_conversations
       WHERE session_id = ${session_id}
       LIMIT 1
@@ -3709,6 +3714,83 @@ router.get('/chat/messages', async (req, res) => {
   } catch (err) {
     console.error('Error fetching chat messages:', err);
     res.status(500).json({ error: 'Failed to fetch messages' });
+  }
+});
+
+// Client: Request callback with phone number
+router.post('/chat/callback', async (req, res) => {
+  try {
+    const session_id = req.body.session_id || req.body.sessionId;
+    const phone = req.body.phone || req.body.customer_phone;
+
+    if (!session_id || typeof session_id !== 'string' || session_id.length > 100) {
+      return res.status(400).json({ error: 'Session ID requis' });
+    }
+
+    const cleanedDigits = String(phone || '').replace(/\D/g, '');
+    let formattedPhone = '';
+
+    if (cleanedDigits.startsWith('213') && cleanedDigits.length >= 11) {
+      formattedPhone = '+213 ' + cleanedDigits.slice(3);
+    } else if (cleanedDigits.startsWith('0') && cleanedDigits.length === 10) {
+      formattedPhone = '+213 ' + cleanedDigits.slice(1);
+    } else if (cleanedDigits.length === 9) {
+      formattedPhone = '+213 ' + cleanedDigits;
+    } else {
+      return res.status(400).json({ error: 'Numéro invalide. Veuillez entrer un numéro algérien valide (ex: 07 81 95 59 25).' });
+    }
+
+    let [conv] = await sql`
+      SELECT id, status FROM chat_conversations WHERE session_id = ${session_id} LIMIT 1
+    `;
+
+    if (!conv) {
+      const [newConv] = await sql`
+        INSERT INTO chat_conversations (
+          session_id, customer_name, customer_phone, callback_requested, callback_requested_at, callback_status,
+          status, unread_admin_count, unread_client_count, created_at, updated_at
+        ) VALUES (
+          ${session_id}, 'Client', ${formattedPhone}, true, NOW(), 'pending',
+          'waiting_admin', 1, 0, NOW(), NOW()
+        )
+        RETURNING id, status
+      `;
+      conv = newConv;
+    } else {
+      await sql`
+        UPDATE chat_conversations SET
+          customer_phone = ${formattedPhone},
+          callback_requested = true,
+          callback_requested_at = NOW(),
+          callback_status = 'pending',
+          status = 'waiting_admin',
+          updated_at = NOW()
+        WHERE id = ${conv.id}
+      `;
+    }
+
+    // Insert system notification message into conversation
+    const [insertedMsg] = await sql`
+      INSERT INTO chat_messages (conversation_id, sender, sender_name, message, is_read, created_at)
+      VALUES (
+        ${conv.id},
+        'system',
+        'ZORANDO Rappel',
+        ${'📞 Demande de rappel confirmée au ' + formattedPhone + '. Notre équipe va vous rappeler très rapidement.'},
+        true,
+        NOW()
+      )
+      RETURNING id, sender, sender_name, message, is_read, created_at
+    `;
+
+    res.json({
+      success: true,
+      phone: formattedPhone,
+      message: insertedMsg
+    });
+  } catch (err: any) {
+    console.error('Error saving callback request:', err);
+    res.status(500).json({ error: 'Erreur lors de l\'enregistrement de la demande' });
   }
 });
 
@@ -3830,6 +3912,8 @@ router.get('/admin/chat/conversations', authenticate, async (req, res) => {
       conditions.push(sql`status = 'waiting_admin' AND waiting_since <= NOW() - INTERVAL '3 minutes'`);
     } else if (filter === 'resolved') {
       conditions.push(sql`status = 'resolved'`);
+    } else if (filter === 'callback_pending') {
+      conditions.push(sql`c.callback_requested = true AND c.callback_status = 'pending'`);
     }
 
     if (search && typeof search === 'string' && search.trim()) {
@@ -3849,6 +3933,7 @@ router.get('/admin/chat/conversations', authenticate, async (req, res) => {
     const conversations = await sql`
       SELECT 
         c.id, c.session_id, c.user_id, c.customer_name, c.customer_email, c.customer_phone,
+        c.callback_requested, c.callback_requested_at, c.callback_status,
         c.status, c.unread_admin_count, c.first_client_message_at, c.waiting_since,
         c.first_admin_reply_at, c.first_response_time_seconds, c.last_message_text,
         c.last_message_at, c.created_at,
@@ -3859,6 +3944,7 @@ router.get('/admin/chat/conversations', authenticate, async (req, res) => {
       LEFT JOIN profiles p ON c.user_id = p.id
       ${whereClause}
       ORDER BY 
+        CASE WHEN c.callback_requested = true AND c.callback_status = 'pending' THEN 0 ELSE 1 END,
         CASE WHEN c.status = 'waiting_admin' THEN 0 ELSE 1 END,
         c.waiting_since ASC NULLS LAST,
         c.last_message_at DESC
@@ -3873,6 +3959,7 @@ router.get('/admin/chat/conversations', authenticate, async (req, res) => {
         COUNT(*) FILTER (WHERE status = 'waiting_admin' AND waiting_since <= NOW() - INTERVAL '3 minutes' AND waiting_since > NOW() - INTERVAL '5 minutes') as warning_3min_count,
         COUNT(*) FILTER (WHERE status = 'waiting_admin' AND waiting_since <= NOW() - INTERVAL '5 minutes') as alert_5min_count,
         COUNT(*) FILTER (WHERE status = 'resolved' AND updated_at >= CURRENT_DATE) as resolved_today_count,
+        COUNT(*) FILTER (WHERE callback_requested = true AND callback_status = 'pending') as callback_pending_count,
         ROUND(AVG(first_response_time_seconds) FILTER (WHERE first_response_time_seconds IS NOT NULL)) as avg_response_seconds
       FROM chat_conversations
     `;
@@ -3887,6 +3974,7 @@ router.get('/admin/chat/conversations', authenticate, async (req, res) => {
         warning3minCount: parseInt(stats.warning_3min_count, 10) || 0,
         alert5minCount: parseInt(stats.alert_5min_count, 10) || 0,
         resolvedTodayCount: parseInt(stats.resolved_today_count, 10) || 0,
+        callbackPendingCount: parseInt(stats.callback_pending_count, 10) || 0,
         avgResponseSeconds: parseInt(stats.avg_response_seconds, 10) || null,
         availabilityStatus: statusRow?.value || 'online_fast'
       }
@@ -4025,6 +4113,31 @@ router.patch('/admin/chat/conversations/:id/status', authenticate, async (req, r
   } catch (err) {
     console.error('Error updating conversation status:', err);
     res.status(500).json({ error: 'Failed to update status' });
+  }
+});
+
+// Admin: Update callback status (pending / completed)
+router.patch('/admin/chat/conversations/:id/callback-status', authenticate, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+    const validStatus = status === 'completed' ? 'completed' : 'pending';
+
+    const [updated] = await sql`
+      UPDATE chat_conversations
+      SET callback_status = ${validStatus}, updated_at = NOW()
+      WHERE id = ${id}
+      RETURNING id, customer_phone, callback_requested, callback_requested_at, callback_status
+    `;
+
+    if (!updated) {
+      return res.status(404).json({ error: 'Conversation non trouvée' });
+    }
+
+    res.json({ success: true, conversation: updated });
+  } catch (err: any) {
+    console.error('Error updating callback status:', err);
+    res.status(500).json({ error: 'Erreur lors de la mise à jour du statut' });
   }
 });
 

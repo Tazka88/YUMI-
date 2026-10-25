@@ -12,6 +12,25 @@ export function buildBreadcrumbSchema(items: { name: string; item: string }[]) {
   };
 }
 
+export function buildItemListSchema(
+  name: string,
+  products: { slug: string }[],
+  baseUrl: string = 'https://www.zorando.com'
+) {
+  if (!products || !Array.isArray(products) || products.length === 0) return null;
+  return {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    "name": name,
+    "numberOfItems": products.length,
+    "itemListElement": products.map((p, index) => ({
+      "@type": "ListItem",
+      "position": index + 1,
+      "url": `${baseUrl}/product/${p.slug}`
+    }))
+  };
+}
+
 export function buildProductSchema(product: any, reviews: any[], currentUrl: string, baseUrl: string = 'https://www.zorando.com') {
   const now = new Date();
   let isPromoValid = false;
@@ -24,42 +43,73 @@ export function buildProductSchema(product: any, reviews: any[], currentUrl: str
   const basePriceNum = isPromoValid ? Number(product.promo_price) : Number(product.price);
   const currentPrice = !isNaN(basePriceNum) && basePriceNum > 0 ? basePriceNum.toFixed(2) : "0.00";
 
-  let imageUrl = product.image;
-  if (imageUrl && imageUrl.startsWith('/')) {
-    imageUrl = `${baseUrl}${imageUrl}`;
-  } else if (!imageUrl || imageUrl.startsWith('data:image')) {
-    imageUrl = `${baseUrl}/api/images/products/${product.id}/image/${product.slug}.webp`;
-  }
+  // Helper to convert any image path into a full, valid, absolute HTTPS URL
+  const formatAbsoluteImageUrl = (rawUrl: any): string | null => {
+    if (!rawUrl || typeof rawUrl !== 'string') return null;
+    const trimmed = rawUrl.trim();
+    if (!trimmed || trimmed.startsWith('data:image')) return null;
+
+    if (trimmed.startsWith('//')) {
+      return `https:${trimmed}`;
+    }
+    if (trimmed.startsWith('http://')) {
+      return trimmed.replace(/^http:\/\//, 'https://');
+    }
+    if (trimmed.startsWith('https://')) {
+      return trimmed;
+    }
+    // Handle Supabase storage relative paths (e.g. storage/v1/object/public/... or /storage/v1/object/public/...)
+    if (trimmed.startsWith('/storage/v1/') || trimmed.startsWith('storage/v1/')) {
+      const cleanPath = trimmed.startsWith('/') ? trimmed : `/${trimmed}`;
+      const supabaseBase = process.env.VITE_SUPABASE_URL || 'https://evvbhalgyffagsesmvhu.supabase.co';
+      return `${supabaseBase.replace(/\/+$/, '')}${cleanPath}`;
+    }
+    if (trimmed.startsWith('/')) {
+      return `${baseUrl}${trimmed}`;
+    }
+    return `${baseUrl}/${trimmed}`;
+  };
 
   const images: string[] = [];
-  if (imageUrl) images.push(imageUrl);
-  
+  const primaryImg = formatAbsoluteImageUrl(product.image);
+  if (primaryImg) {
+    images.push(primaryImg);
+  } else if (product.id && product.slug) {
+    images.push(`${baseUrl}/api/images/products/${product.id}/image/${product.slug}.webp`);
+  }
+
   if (product.images && Array.isArray(product.images)) {
     for (let img of product.images) {
       const imgStr = typeof img === 'string' ? img : img?.image;
-      if (imgStr && typeof imgStr === 'string') {
-        if (imgStr.startsWith('/')) {
-          images.push(`${baseUrl}${imgStr}`);
-        } else {
-          images.push(imgStr);
-        }
-      }
+      const formatted = formatAbsoluteImageUrl(imgStr);
+      if (formatted) images.push(formatted);
     }
   }
 
   // Deduplicate array
-  const uniqueImages = [...new Set(images)];
+  let uniqueImages = [...new Set(images)];
+
+  // Fallback image: Requirement 4 states "au moins 1, jamais vide ni null. Si un produit n'a pas d'image, utilise une image de secours valide plutôt que d'omettre le champ"
+  if (uniqueImages.length === 0) {
+    uniqueImages = [`${baseUrl}/og-image-fb.jpg`];
+  }
+
+  const cleanDescription = product.description 
+    ? product.description.substring(0, 5000).replace(/<[^>]+>/g, '').trim() 
+    : (product.seo_description || product.name || 'Produit disponible chez ZORANDO en Algérie.');
 
   const schema: any = {
     "@context": "https://schema.org",
     "@type": "Product",
-    "name": product.name,
-    "image": uniqueImages.length > 0 ? uniqueImages : undefined,
-    "description": product.description ? product.description.substring(0, 5000).replace(/<[^>]+>/g, '') : '',
+    "name": product.name || 'Produit ZORANDO',
+    "image": uniqueImages,
+    "description": cleanDescription,
   };
 
-  if (product.sku) {
-    schema.sku = product.sku;
+  if (product.sku && String(product.sku).trim()) {
+    schema.sku = String(product.sku).trim();
+  } else if (product.id) {
+    schema.sku = `PROD-${String(product.id).padStart(5, '0')}`;
   }
 
   const brandName = product.brand_name || (product.brand && product.brand.name) || "Zorando";
@@ -69,7 +119,10 @@ export function buildProductSchema(product: any, reviews: any[], currentUrl: str
   };
 
   const isStockAvailable = product.stock !== undefined && product.stock !== null && (Number(product.stock) > 0 || product.stock === true);
-  const cleanOfferUrl = currentUrl.split('?')[0];
+  let cleanOfferUrl = currentUrl ? currentUrl.split('?')[0] : `${baseUrl}/product/${product.slug}`;
+  if (!cleanOfferUrl.startsWith('http')) {
+    cleanOfferUrl = `${baseUrl}${cleanOfferUrl.startsWith('/') ? '' : '/'}${cleanOfferUrl}`;
+  }
 
   // Parse variations if present
   let variationsList: any[] = [];

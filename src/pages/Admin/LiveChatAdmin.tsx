@@ -23,6 +23,9 @@ interface Conversation {
   customer_name: string;
   customer_email: string | null;
   customer_phone: string | null;
+  callback_requested?: boolean;
+  callback_requested_at?: string | null;
+  callback_status?: 'pending' | 'completed' | null;
   status: 'open' | 'waiting_admin' | 'waiting_client' | 'resolved';
   unread_admin_count: number;
   first_client_message_at: string | null;
@@ -45,6 +48,7 @@ interface ChatStats {
   warning3minCount: number;
   alert5minCount: number;
   resolvedTodayCount: number;
+  callbackPendingCount?: number;
   avgResponseSeconds: number | null;
   availabilityStatus: string;
 }
@@ -67,13 +71,14 @@ export default function LiveChatAdmin() {
     warning3minCount: 0,
     alert5minCount: 0,
     resolvedTodayCount: 0,
+    callbackPendingCount: 0,
     avgResponseSeconds: null,
     availabilityStatus: 'online_fast'
   });
   const [loading, setLoading] = useState(true);
   const [replyText, setReplyText] = useState('');
   const [sendingReply, setSendingReply] = useState(false);
-  const [filter, setFilter] = useState<'all' | 'unanswered' | 'waiting_over_3min' | 'resolved'>('all');
+  const [filter, setFilter] = useState<'all' | 'callback_pending' | 'unanswered' | 'waiting_over_3min' | 'resolved'>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [soundEnabled, setSoundEnabled] = useState(true);
@@ -318,6 +323,29 @@ export default function LiveChatAdmin() {
     }
   };
 
+  const handleUpdateCallbackStatus = async (convId: string, newStatus: 'pending' | 'completed') => {
+    try {
+      const token = localStorage.getItem('adminToken');
+      const res = await fetch(`/api/admin/chat/conversations/${convId}/callback-status`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ status: newStatus })
+      });
+      if (!res.ok) throw new Error('Erreur de mise à jour');
+      toast.success(newStatus === 'completed' ? 'Rappel marqué comme traité ✅' : 'Rappel remis en attente');
+      setConversations(prev => prev.map(c => c.id === convId ? { ...c, callback_status: newStatus } : c));
+      if (selectedConv?.id === convId) {
+        setSelectedConv(prev => prev ? { ...prev, callback_status: newStatus } : null);
+      }
+      fetchConversations(true);
+    } catch (err: any) {
+      toast.error(err.message || 'Impossible de modifier le statut');
+    }
+  };
+
   const handlePurgeResolved = async () => {
     setDeleting(true);
     try {
@@ -495,10 +523,35 @@ export default function LiveChatAdmin() {
         </div>
       </div>
 
-      {/* 4 KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* 5 KPI Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        {/* Rappel Client */}
+        <div 
+          onClick={() => setFilter(filter === 'callback_pending' ? 'all' : 'callback_pending')}
+          className={`p-5 rounded-2xl border shadow-sm relative overflow-hidden cursor-pointer transition ${
+            filter === 'callback_pending' ? 'bg-purple-50 border-purple-400 ring-2 ring-purple-500' : 'bg-white border-purple-200 hover:border-purple-300'
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wider text-purple-700">À rappeler</p>
+              <h3 className="text-3xl font-black text-purple-700 mt-1">{stats.callbackPendingCount || 0}</h3>
+              <p className="text-xs text-purple-500 mt-1">Demandes de rappel client</p>
+            </div>
+            <div className="w-12 h-12 rounded-2xl bg-purple-100 flex items-center justify-center text-purple-700 shadow-xs">
+              <Phone className="w-6 h-6" />
+            </div>
+          </div>
+          <div className="absolute bottom-0 left-0 right-0 h-1 bg-purple-600" />
+        </div>
+
         {/* Unanswered */}
-        <div className="bg-white p-5 rounded-2xl border border-orange-200 shadow-sm relative overflow-hidden">
+        <div 
+          onClick={() => setFilter(filter === 'unanswered' ? 'all' : 'unanswered')}
+          className={`bg-white p-5 rounded-2xl border shadow-sm relative overflow-hidden cursor-pointer transition ${
+            filter === 'unanswered' ? 'border-orange-400 ring-2 ring-orange-500' : 'border-orange-200 hover:border-orange-300'
+          }`}
+        >
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs font-bold uppercase tracking-wider text-orange-600">En attente de réponse</p>
@@ -513,7 +566,12 @@ export default function LiveChatAdmin() {
         </div>
 
         {/* 5 min alert */}
-        <div className="bg-white p-5 rounded-2xl border border-red-200 shadow-sm relative overflow-hidden">
+        <div 
+          onClick={() => setFilter(filter === 'waiting_over_3min' ? 'all' : 'waiting_over_3min')}
+          className={`bg-white p-5 rounded-2xl border shadow-sm relative overflow-hidden cursor-pointer transition ${
+            filter === 'waiting_over_3min' ? 'border-red-400 ring-2 ring-red-500' : 'border-red-200 hover:border-red-300'
+          }`}
+        >
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs font-bold uppercase tracking-wider text-red-600">Dépassé &gt; 5 minutes</p>
@@ -543,7 +601,12 @@ export default function LiveChatAdmin() {
         </div>
 
         {/* Resolved Today */}
-        <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm relative overflow-hidden">
+        <div 
+          onClick={() => setFilter(filter === 'resolved' ? 'all' : 'resolved')}
+          className={`bg-white p-5 rounded-2xl border shadow-sm relative overflow-hidden cursor-pointer transition ${
+            filter === 'resolved' ? 'border-emerald-400 ring-2 ring-emerald-500' : 'border-gray-100 hover:border-gray-200'
+          }`}
+        >
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs font-bold uppercase tracking-wider text-emerald-600">Résolues aujourd'hui</p>
@@ -580,15 +643,24 @@ export default function LiveChatAdmin() {
               <div className="flex items-center gap-1 p-1 bg-gray-100 rounded-xl text-xs font-bold overflow-x-auto flex-1">
                 <button
                   onClick={() => setFilter('all')}
-                  className={`px-3 py-1 rounded-lg whitespace-nowrap transition ${
+                  className={`px-2.5 py-1 rounded-lg whitespace-nowrap transition ${
                     filter === 'all' ? 'bg-white text-gray-900 shadow-xs' : 'text-gray-500 hover:text-gray-900'
                   }`}
                 >
                   Toutes ({stats.totalCount})
                 </button>
                 <button
+                  onClick={() => setFilter('callback_pending')}
+                  className={`px-2.5 py-1 rounded-lg whitespace-nowrap transition flex items-center gap-1 ${
+                    filter === 'callback_pending' ? 'bg-purple-600 text-white shadow-xs' : 'text-purple-700 hover:text-purple-900 hover:bg-purple-50'
+                  }`}
+                >
+                  <Phone className="w-3 h-3" />
+                  <span>À rappeler ({stats.callbackPendingCount || 0})</span>
+                </button>
+                <button
                   onClick={() => setFilter('unanswered')}
-                  className={`px-3 py-1 rounded-lg whitespace-nowrap transition ${
+                  className={`px-2.5 py-1 rounded-lg whitespace-nowrap transition ${
                     filter === 'unanswered' ? 'bg-orange-500 text-white shadow-xs' : 'text-gray-500 hover:text-gray-900'
                   }`}
                 >
@@ -596,7 +668,7 @@ export default function LiveChatAdmin() {
                 </button>
                 <button
                   onClick={() => setFilter('waiting_over_3min')}
-                  className={`px-3 py-1 rounded-lg whitespace-nowrap transition ${
+                  className={`px-2.5 py-1 rounded-lg whitespace-nowrap transition ${
                     filter === 'waiting_over_3min' ? 'bg-red-600 text-white shadow-xs' : 'text-gray-500 hover:text-gray-900'
                   }`}
                 >
@@ -604,7 +676,7 @@ export default function LiveChatAdmin() {
                 </button>
                 <button
                   onClick={() => setFilter('resolved')}
-                  className={`px-3 py-1 rounded-lg whitespace-nowrap transition ${
+                  className={`px-2.5 py-1 rounded-lg whitespace-nowrap transition ${
                     filter === 'resolved' ? 'bg-emerald-600 text-white shadow-xs' : 'text-gray-500 hover:text-gray-900'
                   }`}
                 >
@@ -663,9 +735,22 @@ export default function LiveChatAdmin() {
 
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between gap-1 mb-1">
-                        <h4 className="text-xs font-bold text-gray-900 truncate">
-                          {conv.customer_name || 'Client ZORANDO'}
-                        </h4>
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <h4 className="text-xs font-bold text-gray-900 truncate">
+                            {conv.customer_name || 'Client ZORANDO'}
+                          </h4>
+                          {conv.callback_requested && (
+                            conv.callback_status === 'pending' ? (
+                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[9px] font-black bg-purple-600 text-white shrink-0 animate-pulse">
+                                <Phone className="w-2.5 h-2.5" /> À rappeler
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[9px] font-bold bg-emerald-100 text-emerald-800 shrink-0">
+                                <CheckCircle2 className="w-2.5 h-2.5" /> Traité
+                              </span>
+                            )
+                          )}
+                        </div>
                         <div className="flex items-center gap-1.5">
                           <span className="text-[10px] text-gray-400 whitespace-nowrap">
                             {new Date(conv.last_message_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
@@ -686,6 +771,13 @@ export default function LiveChatAdmin() {
                           </button>
                         </div>
                       </div>
+
+                      {conv.customer_phone && (
+                        <div className="flex items-center gap-1 text-[11px] font-mono font-bold text-purple-700 mb-0.5">
+                          <Phone className="w-2.5 h-2.5 text-purple-600" />
+                          <span>{conv.customer_phone}</span>
+                        </div>
+                      )}
 
                       <p className="text-xs text-gray-600 truncate mb-1.5 font-medium">
                         {conv.last_message_text || 'Nouvelle conversation'}
@@ -745,10 +837,10 @@ export default function LiveChatAdmin() {
                     <div className="flex items-center gap-3 text-xs text-gray-500 mt-0.5">
                       {(selectedConv.customer_phone || selectedConv.profile_phone) && (
                         <a
-                          href={`tel:${selectedConv.customer_phone || selectedConv.profile_phone}`}
-                          className="font-mono text-emerald-600 hover:underline flex items-center gap-1"
+                          href={`tel:${(selectedConv.customer_phone || selectedConv.profile_phone || '').replace(/\s+/g, '')}`}
+                          className="font-mono text-purple-700 hover:underline flex items-center gap-1 font-semibold"
                         >
-                          <Phone className="w-3 h-3" />
+                          <Phone className="w-3 h-3 text-purple-600" />
                           {selectedConv.customer_phone || selectedConv.profile_phone}
                         </a>
                       )}
@@ -794,6 +886,89 @@ export default function LiveChatAdmin() {
                   </button>
                 </div>
               </div>
+
+              {/* Prominent Callback Notification & Action Bar */}
+              {(selectedConv.callback_requested || selectedConv.customer_phone) && (
+                <div className={`px-4 py-3 border-b flex flex-wrap items-center justify-between gap-3 ${
+                  selectedConv.callback_requested && selectedConv.callback_status === 'pending'
+                    ? 'bg-gradient-to-r from-purple-50 via-amber-50/70 to-orange-50 border-purple-200'
+                    : selectedConv.callback_status === 'completed'
+                    ? 'bg-emerald-50/60 border-emerald-200'
+                    : 'bg-gray-50 border-gray-200'
+                }`}>
+                  <div className="flex items-center gap-3">
+                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-white shadow-xs ${
+                      selectedConv.callback_status === 'pending' ? 'bg-purple-600' : 'bg-emerald-600'
+                    }`}>
+                      <Phone className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-black text-gray-900">
+                          {selectedConv.callback_requested
+                            ? (selectedConv.callback_status === 'pending' ? 'Demande de rappel à effectuer' : 'Rappel téléphonique traité')
+                            : 'Numéro de contact client'}
+                        </span>
+                        {selectedConv.callback_requested && (
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                            selectedConv.callback_status === 'pending'
+                              ? 'bg-purple-600 text-white animate-pulse'
+                              : 'bg-emerald-100 text-emerald-800'
+                          }`}>
+                            {selectedConv.callback_status === 'pending' ? 'À rappeler' : 'Traité'}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 text-xs text-gray-600 mt-0.5">
+                        <span className="font-mono font-bold text-gray-900">
+                          {selectedConv.customer_phone || selectedConv.profile_phone}
+                        </span>
+                        {selectedConv.callback_requested_at && (
+                          <span className="text-gray-400 text-[11px]">
+                            • Demandé le {new Date(selectedConv.callback_requested_at).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' })} à {new Date(selectedConv.callback_requested_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    {/* Direct Call Button (opens phone app without dialing automatically) */}
+                    {(selectedConv.customer_phone || selectedConv.profile_phone) && (
+                      <a
+                        href={`tel:${(selectedConv.customer_phone || selectedConv.profile_phone || '').replace(/\s+/g, '')}`}
+                        className="px-3.5 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-xs cursor-pointer"
+                        title="Ouvrir l'application téléphone"
+                      >
+                        <Phone className="w-3.5 h-3.5" />
+                        <span>Appeler</span>
+                      </a>
+                    )}
+
+                    {/* Status Toggle Button */}
+                    {selectedConv.callback_requested && (
+                      selectedConv.callback_status === 'completed' ? (
+                        <button
+                          onClick={() => handleUpdateCallbackStatus(selectedConv.id, 'pending')}
+                          className="px-3 py-1.5 rounded-xl border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 text-xs font-bold transition shadow-2xs cursor-pointer"
+                          title="Remettre en attente d'appel"
+                        >
+                          Remettre à rappeler
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => handleUpdateCallbackStatus(selectedConv.id, 'completed')}
+                          className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-xs cursor-pointer"
+                          title="Marquer comme traité après avoir rappelé"
+                        >
+                          <CheckCheck className="w-3.5 h-3.5" />
+                          <span>Marquer comme Traité</span>
+                        </button>
+                      )
+                    )}
+                  </div>
+                </div>
+              )}
 
               {/* Messages Feed */}
               <div className="flex-1 p-5 overflow-y-auto space-y-3.5 bg-gray-50/50">

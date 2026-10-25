@@ -5,6 +5,7 @@ import SEO from '../components/SEO';
 import { Product } from '../store/cartStore';
 import { fetchWithCache } from '../lib/utils';
 import { ChevronRight, BookOpen, ArrowRight } from 'lucide-react';
+import { buildItemListSchema } from '../lib/schemaUtils';
 
 interface ExtractedCategory {
   id: number;
@@ -694,6 +695,16 @@ const ROBUSTE_BLOGS = [
           }
         }))
       });
+    }
+  }
+
+  if (displayedProducts && displayedProducts.length > 0) {
+    const listTitle = isCategoryPage && currentCategory 
+      ? `${currentCategory.name} ${brand.name} en Algérie`
+      : `${brand.name} en Algérie`;
+    const itemList = buildItemListSchema(listTitle, displayedProducts);
+    if (itemList) {
+      schemaData.push(itemList);
     }
   }
 

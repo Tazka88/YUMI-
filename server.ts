@@ -7,7 +7,7 @@ import fs from 'fs';
 import { sql } from './src/db/setup.js';
 import { categorySEOData } from './src/utils/seoData.js';
 import { formatSeoTitle } from './src/utils/seoTitle.js';
-import { buildProductSchema, buildBreadcrumbSchema, buildBlogSchema } from './src/lib/schemaUtils.js';
+import { buildProductSchema, buildBreadcrumbSchema, buildBlogSchema, buildItemListSchema } from './src/lib/schemaUtils.js';
 
 const app = express();
 let vite: any = null;
@@ -320,8 +320,7 @@ app.get('*', async (req, res, next) => {
               "itemListElement": products.map((p: any, idx: number) => ({
                 "@type": "ListItem",
                 "position": idx + 1,
-                "url": `${baseUrl}/product/${p.slug}`,
-                "name": p.name
+                "url": `${baseUrl}/product/${p.slug}`
               }))
             };
 
@@ -395,21 +394,7 @@ app.get('*', async (req, res, next) => {
               "itemListElement": products.map((p: any, idx: number) => ({
                 "@type": "ListItem",
                 "position": idx + 1,
-                "item": {
-                  "@type": "Product",
-                  "name": p.name,
-                  "url": `${baseUrl}/product/${p.slug}`,
-                  "offers": {
-                    "@type": "Offer",
-                    "priceCurrency": "DZD",
-                    "price": p.promo_price || p.price,
-                    "availability": p.stock > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
-                    "seller": {
-                      "@type": "Organization",
-                      "name": "ZORANDO"
-                    }
-                  }
-                }
+                "url": `${baseUrl}/product/${p.slug}`
               }))
             };
 

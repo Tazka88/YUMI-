@@ -102,6 +102,7 @@ export function buildProductSchema(product: any, reviews: any[], currentUrl: str
     "hasMerchantReturnPolicy": {
       "@type": "MerchantReturnPolicy",
       "applicableCountry": "DZ",
+      "returnPolicyCountry": "DZ",
       "returnPolicyCategory": "https://schema.org/MerchantReturnFiniteReturnWindow",
       "merchantReturnDays": 7,
       "returnMethod": "https://schema.org/ReturnByMail",
@@ -143,7 +144,9 @@ export function buildProductSchema(product: any, reviews: any[], currentUrl: str
         return endDate.toISOString().split('T')[0];
       }
     }
-    return "2027-12-31";
+    const nextYear = new Date();
+    nextYear.setFullYear(nextYear.getFullYear() + 1);
+    return nextYear.toISOString().split('T')[0];
   };
 
   if (hasMultiplePrices) {
@@ -216,10 +219,25 @@ export function buildProductSchema(product: any, reviews: any[], currentUrl: str
 export function buildOrganizationSchema(baseUrl: string = 'https://www.zorando.com') {
   return {
     "@context": "https://schema.org",
-    "@type": "Organization",
+    "@type": "OnlineStore",
     "name": "ZORANDO",
+    "alternateName": "ZORANDO Algérie",
     "url": baseUrl,
-    "logo": `${baseUrl}/logo.png`
+    "logo": `${baseUrl}/logo.png`,
+    "telephone": "+213781955925",
+    "email": "contact@zorando.com",
+    "address": {
+      "@type": "PostalAddress",
+      "streetAddress": "Cité 8 Mai 1945, UV 06, Bâtiment 18, N° 32",
+      "addressLocality": "Bab Ezzouar",
+      "addressRegion": "Alger",
+      "postalCode": "16000",
+      "addressCountry": "DZ"
+    },
+    "sameAs": [
+      "https://www.facebook.com/zorandodz",
+      "https://www.instagram.com/zorandoalgerie/?hl=fr"
+    ]
   };
 }
 

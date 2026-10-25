@@ -2489,7 +2489,13 @@ router.get('/merchant-feed.xml', async (req, res) => {
       xml += `    <g:availability>${availability}</g:availability>\n`;
       xml += `    <g:brand>${brand}</g:brand>\n`;
       xml += `    <g:condition>${condition}</g:condition>\n`;
-      xml += `    <g:google_product_category>${category}</g:google_product_category>\n`;
+      xml += `    <g:product_type>${category}</g:product_type>\n`;
+      xml += `    <g:identifier_exists>no</g:identifier_exists>\n`;
+      xml += `    <g:shipping>\n`;
+      xml += `      <g:country>DZ</g:country>\n`;
+      xml += `      <g:service>Livraison à domicile</g:service>\n`;
+      xml += `      <g:price>600.00 DZD</g:price>\n`;
+      xml += `    </g:shipping>\n`;
       xml += `  </item>\n`;
     });
 

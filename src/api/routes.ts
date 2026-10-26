@@ -3670,17 +3670,48 @@ router.get('/chat/messages', async (req, res) => {
   res.setHeader('Pragma', 'no-cache');
   res.setHeader('Expires', '0');
   try {
-    const { session_id } = req.query;
+    const { session_id, product_id } = req.query;
     if (!session_id || typeof session_id !== 'string') {
       return res.status(400).json({ error: 'Session ID requis' });
     }
 
-    const [conv] = await sql`
-      SELECT id, session_id, customer_name, customer_phone, callback_requested, callback_status, callback_requested_at, status, unread_client_count, created_at, last_message_at
-      FROM chat_conversations
-      WHERE session_id = ${session_id}
-      LIMIT 1
-    `;
+    let parsedProductId: number | null = null;
+    if (product_id !== undefined && product_id !== null && String(product_id).trim() !== '') {
+      const num = parseInt(String(product_id), 10);
+      if (!isNaN(num) && num > 0) {
+        parsedProductId = num;
+      }
+    }
+
+    const convs = parsedProductId
+      ? await sql`
+          SELECT 
+            c.id, c.session_id, c.customer_name, c.customer_phone, 
+            c.callback_requested, c.callback_status, c.callback_requested_at, 
+            c.status, c.unread_client_count, c.created_at, c.last_message_at,
+            c.product_id, c.product_name, c.product_url, c.product_image,
+            p.price as product_price, p.stock as product_stock, p.slug as product_slug
+          FROM chat_conversations c
+          LEFT JOIN products p ON c.product_id = p.id
+          WHERE c.session_id = ${session_id} AND c.product_id = ${parsedProductId}
+          ORDER BY c.updated_at DESC
+          LIMIT 1
+        `
+      : await sql`
+          SELECT 
+            c.id, c.session_id, c.customer_name, c.customer_phone, 
+            c.callback_requested, c.callback_status, c.callback_requested_at, 
+            c.status, c.unread_client_count, c.created_at, c.last_message_at,
+            c.product_id, c.product_name, c.product_url, c.product_image,
+            p.price as product_price, p.stock as product_stock, p.slug as product_slug
+          FROM chat_conversations c
+          LEFT JOIN products p ON c.product_id = p.id
+          WHERE c.session_id = ${session_id}
+          ORDER BY c.updated_at DESC
+          LIMIT 1
+        `;
+
+    const conv = convs[0];
 
     if (!conv) {
       return res.json({ conversation: null, messages: [] });
@@ -3722,6 +3753,7 @@ router.post('/chat/callback', async (req, res) => {
   try {
     const session_id = req.body.session_id || req.body.sessionId;
     const phone = req.body.phone || req.body.customer_phone;
+    const rawProductId = req.body.product_id || req.body.productId;
 
     if (!session_id || typeof session_id !== 'string' || session_id.length > 100) {
       return res.status(400).json({ error: 'Session ID requis' });
@@ -3740,18 +3772,45 @@ router.post('/chat/callback', async (req, res) => {
       return res.status(400).json({ error: 'Numéro invalide. Veuillez entrer un numéro algérien valide (ex: 07 81 95 59 25).' });
     }
 
-    let [conv] = await sql`
-      SELECT id, status FROM chat_conversations WHERE session_id = ${session_id} LIMIT 1
-    `;
+    let validProductId: number | null = null;
+    let validProductName: string | null = null;
+    let validProductUrl: string | null = null;
+    let validProductImage: string | null = null;
+
+    if (rawProductId !== undefined && rawProductId !== null && String(rawProductId).trim() !== '') {
+      const parsedId = parseInt(String(rawProductId), 10);
+      if (!isNaN(parsedId) && parsedId > 0) {
+        const [prod] = await sql`
+          SELECT id, name, slug, image 
+          FROM products 
+          WHERE id = ${parsedId} 
+          LIMIT 1
+        `;
+        if (prod) {
+          validProductId = Number(prod.id);
+          validProductName = prod.name;
+          validProductUrl = `/product/${prod.slug}`;
+          validProductImage = prod.image || null;
+        }
+      }
+    }
+
+    let convs = validProductId
+      ? await sql`SELECT id, status FROM chat_conversations WHERE session_id = ${session_id} AND product_id = ${validProductId} ORDER BY updated_at DESC LIMIT 1`
+      : await sql`SELECT id, status FROM chat_conversations WHERE session_id = ${session_id} ORDER BY updated_at DESC LIMIT 1`;
+
+    let conv = convs[0];
 
     if (!conv) {
       const [newConv] = await sql`
         INSERT INTO chat_conversations (
           session_id, customer_name, customer_phone, callback_requested, callback_requested_at, callback_status,
-          status, unread_admin_count, unread_client_count, created_at, updated_at
+          status, unread_admin_count, unread_client_count, created_at, updated_at,
+          product_id, product_name, product_url, product_image
         ) VALUES (
           ${session_id}, 'Client', ${formattedPhone}, true, NOW(), 'pending',
-          'waiting_admin', 1, 0, NOW(), NOW()
+          'waiting_admin', 1, 0, NOW(), NOW(),
+          ${validProductId}, ${validProductName}, ${validProductUrl}, ${validProductImage}
         )
         RETURNING id, status
       `;
@@ -3764,7 +3823,11 @@ router.post('/chat/callback', async (req, res) => {
           callback_requested_at = NOW(),
           callback_status = 'pending',
           status = 'waiting_admin',
-          updated_at = NOW()
+          updated_at = NOW(),
+          product_id = COALESCE(product_id, ${validProductId}),
+          product_name = COALESCE(product_name, ${validProductName}),
+          product_url = COALESCE(product_url, ${validProductUrl}),
+          product_image = COALESCE(product_image, ${validProductImage})
         WHERE id = ${conv.id}
       `;
     }
@@ -3803,6 +3866,8 @@ router.post('/chat/message', async (req, res) => {
     const customer_email = req.body.customer_email || req.body.customerEmail || req.body.email;
     const customer_phone = req.body.customer_phone || req.body.customerPhone || req.body.phone;
     const user_id = req.body.user_id || req.body.userId;
+    const rawProductId = req.body.product_id ?? req.body.productId;
+    const reqProductImage = req.body.product_image ?? req.body.productImage;
 
     if (!session_id || typeof session_id !== 'string' || session_id.length > 100) {
       return res.status(400).json({ error: 'Session ID invalide' });
@@ -3825,28 +3890,65 @@ router.post('/chat/message', async (req, res) => {
       validUserId = user_id;
     }
 
-    // Find existing conversation or create new
-    let [conv] = await sql`
-      SELECT id, status, waiting_since, first_client_message_at, customer_name
-      FROM chat_conversations
-      WHERE session_id = ${session_id}
-      LIMIT 1
-    `;
+    // Verify and authenticate product against the database
+    let validProductId: number | null = null;
+    let validProductName: string | null = null;
+    let validProductUrl: string | null = null;
+    let validProductImage: string | null = null;
 
+    if (rawProductId !== undefined && rawProductId !== null && String(rawProductId).trim() !== '') {
+      const parsedId = parseInt(String(rawProductId), 10);
+      if (!isNaN(parsedId) && parsedId > 0) {
+        const [prod] = await sql`
+          SELECT id, name, slug, image 
+          FROM products 
+          WHERE id = ${parsedId} 
+          LIMIT 1
+        `;
+        if (prod) {
+          validProductId = Number(prod.id);
+          validProductName = prod.name;
+          validProductUrl = `/product/${prod.slug}`;
+          validProductImage = prod.image || (typeof reqProductImage === 'string' ? reqProductImage : null);
+        }
+      }
+    }
+
+    // Find existing conversation for this session and product (or general fallback)
+    let convs = validProductId
+      ? await sql`
+          SELECT id, status, waiting_since, first_client_message_at, customer_name, product_id
+          FROM chat_conversations
+          WHERE session_id = ${session_id} AND product_id = ${validProductId}
+          ORDER BY updated_at DESC
+          LIMIT 1
+        `
+      : await sql`
+          SELECT id, status, waiting_since, first_client_message_at, customer_name, product_id
+          FROM chat_conversations
+          WHERE session_id = ${session_id} AND product_id IS NULL
+          ORDER BY updated_at DESC
+          LIMIT 1
+        `;
+
+    let conv = convs[0];
     let isNewConv = false;
+
     if (!conv) {
       isNewConv = true;
       const [newConv] = await sql`
         INSERT INTO chat_conversations (
           session_id, user_id, customer_name, customer_email, customer_phone,
           status, unread_admin_count, unread_client_count,
-          first_client_message_at, waiting_since, last_message_text, last_message_at
+          first_client_message_at, waiting_since, last_message_text, last_message_at,
+          product_id, product_name, product_url, product_image
         ) VALUES (
           ${session_id}, ${validUserId}, ${cleanName}, ${customer_email || null}, ${customer_phone || null},
           'waiting_admin', 1, 0,
-          NOW(), NOW(), ${cleanMsg}, NOW()
+          NOW(), NOW(), ${cleanMsg}, NOW(),
+          ${validProductId}, ${validProductName}, ${validProductUrl}, ${validProductImage}
         )
-        RETURNING id, status, waiting_since, first_client_message_at, customer_name
+        RETURNING id, status, waiting_since, first_client_message_at, customer_name, product_id
       `;
       conv = newConv;
     } else {
@@ -3862,7 +3964,11 @@ router.post('/chat/message', async (req, res) => {
           customer_name = CASE WHEN customer_name = 'Client' AND ${cleanName} != 'Client' THEN ${cleanName} ELSE customer_name END,
           customer_email = COALESCE(customer_email, ${customer_email || null}),
           customer_phone = COALESCE(customer_phone, ${customer_phone || null}),
-          user_id = COALESCE(user_id, ${validUserId})
+          user_id = COALESCE(user_id, ${validUserId}),
+          product_id = COALESCE(product_id, ${validProductId}),
+          product_name = COALESCE(product_name, ${validProductName}),
+          product_url = COALESCE(product_url, ${validProductUrl}),
+          product_image = COALESCE(product_image, ${validProductImage})
         WHERE id = ${conv.id}
       `;
     }
@@ -3907,11 +4013,11 @@ router.get('/admin/chat/conversations', authenticate, async (req, res) => {
 
     const conditions: any[] = [];
     if (filter === 'unanswered') {
-      conditions.push(sql`status = 'waiting_admin'`);
+      conditions.push(sql`c.status = 'waiting_admin'`);
     } else if (filter === 'waiting_over_3min') {
-      conditions.push(sql`status = 'waiting_admin' AND waiting_since <= NOW() - INTERVAL '3 minutes'`);
+      conditions.push(sql`c.status = 'waiting_admin' AND c.waiting_since <= NOW() - INTERVAL '3 minutes'`);
     } else if (filter === 'resolved') {
-      conditions.push(sql`status = 'resolved'`);
+      conditions.push(sql`c.status = 'resolved'`);
     } else if (filter === 'callback_pending') {
       conditions.push(sql`c.callback_requested = true AND c.callback_status = 'pending'`);
     }
@@ -3923,6 +4029,8 @@ router.get('/admin/chat/conversations', authenticate, async (req, res) => {
         OR c.customer_phone ILIKE ${q}
         OR c.customer_email ILIKE ${q}
         OR c.last_message_text ILIKE ${q}
+        OR c.product_name ILIKE ${q}
+        OR prod.name ILIKE ${q}
       )`);
     }
 
@@ -3937,11 +4045,15 @@ router.get('/admin/chat/conversations', authenticate, async (req, res) => {
         c.status, c.unread_admin_count, c.first_client_message_at, c.waiting_since,
         c.first_admin_reply_at, c.first_response_time_seconds, c.last_message_text,
         c.last_message_at, c.created_at,
+        c.product_id, c.product_name, c.product_url, c.product_image,
+        prod.name as real_product_name, prod.image as real_product_image, prod.slug as real_product_slug,
+        prod.price as product_price, prod.stock as product_stock,
         EXTRACT(EPOCH FROM (NOW() - c.waiting_since))::integer as wait_seconds_raw,
         p.first_name as profile_first_name, p.last_name as profile_last_name, 
         p.phone as profile_phone, p.email as profile_email
       FROM chat_conversations c
       LEFT JOIN profiles p ON c.user_id = p.id
+      LEFT JOIN products prod ON c.product_id = prod.id
       ${whereClause}
       ORDER BY 
         CASE WHEN c.callback_requested = true AND c.callback_status = 'pending' THEN 0 ELSE 1 END,
@@ -3994,12 +4106,18 @@ router.get('/admin/chat/conversations/:id/messages', authenticate, async (req, r
     const { id } = req.params;
 
     const [conv] = await sql`
-      SELECT c.*, p.first_name as profile_first_name, p.last_name as profile_last_name, p.phone as profile_phone
+      SELECT 
+        c.*, 
+        p.first_name as profile_first_name, p.last_name as profile_last_name, p.phone as profile_phone,
+        prod.name as real_product_name, prod.image as real_product_image, prod.slug as real_product_slug,
+        prod.price as product_price, prod.stock as product_stock
       FROM chat_conversations c
       LEFT JOIN profiles p ON c.user_id = p.id
+      LEFT JOIN products prod ON c.product_id = prod.id
       WHERE c.id = ${id}
       LIMIT 1
     `;
+    if (!conv) return res.status(404).json({ error: 'Conversation non trouvée' });
     if (!conv) return res.status(404).json({ error: 'Conversation non trouvée' });
 
     // Mark client messages as read by admin only if there are unread messages

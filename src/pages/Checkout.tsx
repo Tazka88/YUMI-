@@ -1500,15 +1500,6 @@ export default function Checkout() {
                   <span>Garantie Zorando Premium</span>
                 </div>
               </div>
-
-              <button
-                type="button"
-                onClick={() => window.dispatchEvent(new CustomEvent('open-live-chat'))}
-                className="w-full mt-3 py-2 text-xs font-semibold text-orange-600 hover:text-orange-700 bg-orange-50 hover:bg-orange-100 rounded-lg flex items-center justify-center gap-1.5 transition-colors border border-orange-200"
-              >
-                <MessageCircle size={14} />
-                <span>Besoin d'aide pour finaliser ? Chattez en direct</span>
-              </button>
             </div>
           </div>
 

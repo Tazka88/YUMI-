@@ -1,5 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { Trash2, ArrowRight, ShoppingBag, MessageCircle } from 'lucide-react';
+import { Trash2, ArrowRight, ShoppingBag } from 'lucide-react';
 import { useCartStore } from '../store/cartStore';
 import React, { useEffect, useRef } from 'react';
 import { formatPrice, getProductEffectivePrice } from '../utils/formatPrice';
@@ -178,15 +178,6 @@ export default function Cart() {
             <div className="mt-4 text-xs text-center text-gray-500">
               Paiement 100% sécurisé à la livraison.
             </div>
-
-            <button
-              type="button"
-              onClick={() => window.dispatchEvent(new CustomEvent('open-live-chat'))}
-              className="w-full mt-3 py-2 text-xs font-semibold text-orange-600 hover:text-orange-700 bg-orange-50 hover:bg-orange-100 rounded-lg flex items-center justify-center gap-1.5 transition-colors border border-orange-200"
-            >
-              <MessageCircle size={14} />
-              <span>Une question sur votre panier ? Chattez en direct</span>
-            </button>
           </div>
         </div>
       </div>

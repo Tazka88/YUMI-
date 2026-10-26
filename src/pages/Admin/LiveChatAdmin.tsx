@@ -4,7 +4,8 @@ import {
   MessageCircle, Search, RefreshCw, Send, CheckCheck, 
   CheckCircle2, Clock, AlertTriangle, AlertCircle, Phone, 
   Mail, User, Volume2, VolumeX, Sparkles, Filter, 
-  ChevronRight, ArrowLeft, ShieldCheck, Flame, X, Trash2
+  ChevronRight, ArrowLeft, ShieldCheck, Flame, X, Trash2,
+  Package, ExternalLink, Tag
 } from 'lucide-react';
 
 interface ChatMessage {
@@ -40,6 +41,15 @@ interface Conversation {
   profile_last_name?: string;
   profile_phone?: string;
   profile_email?: string;
+  product_id?: number | null;
+  product_name?: string | null;
+  product_url?: string | null;
+  product_image?: string | null;
+  real_product_name?: string | null;
+  real_product_image?: string | null;
+  real_product_slug?: string | null;
+  product_price?: number | string | null;
+  product_stock?: number | null;
 }
 
 interface ChatStats {
@@ -779,6 +789,36 @@ export default function LiveChatAdmin() {
                         </div>
                       )}
 
+                      {/* Product Association in List Item */}
+                      <div className="my-1.5 px-2 py-1 bg-white/90 border border-gray-200/90 rounded-lg flex items-center gap-2 shadow-2xs">
+                        {(conv.real_product_image || conv.product_image) ? (
+                          <img 
+                            src={conv.real_product_image || conv.product_image || ''} 
+                            alt={conv.real_product_name || conv.product_name || 'Produit'} 
+                            className="w-6 h-6 object-cover rounded-md border border-gray-200 shrink-0 bg-white"
+                          />
+                        ) : (conv.product_id || conv.product_name) ? (
+                          <div className="w-6 h-6 rounded-md bg-orange-100 flex items-center justify-center shrink-0 text-orange-700">
+                            <Package className="w-3.5 h-3.5" />
+                          </div>
+                        ) : (
+                          <div className="w-6 h-6 rounded-md bg-gray-100 flex items-center justify-center shrink-0 text-gray-400">
+                            <Tag className="w-3.5 h-3.5" />
+                          </div>
+                        )}
+                        <div className="min-w-0 flex-1">
+                          {(conv.product_id || conv.product_name) ? (
+                            <span className="text-[11px] font-bold text-gray-800 truncate block">
+                              {conv.real_product_name || conv.product_name}
+                            </span>
+                          ) : (
+                            <span className="text-[10px] text-gray-400 italic block">
+                              Produit non associé
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
                       <p className="text-xs text-gray-600 truncate mb-1.5 font-medium">
                         {conv.last_message_text || 'Nouvelle conversation'}
                       </p>
@@ -885,6 +925,75 @@ export default function LiveChatAdmin() {
                     <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
+              </div>
+
+              {/* Dedicated Product Card */}
+              <div className="px-4 py-3 bg-gradient-to-r from-orange-50/70 via-amber-50/40 to-white border-b border-orange-200/70 flex items-center justify-between gap-3 shadow-2xs">
+                {(selectedConv.product_id || selectedConv.product_name) ? (
+                  <div className="flex items-center gap-3.5 min-w-0 flex-1">
+                    {(selectedConv.real_product_image || selectedConv.product_image) ? (
+                      <img
+                        src={selectedConv.real_product_image || selectedConv.product_image || ''}
+                        alt={selectedConv.real_product_name || selectedConv.product_name || 'Produit'}
+                        className="w-12 h-12 object-cover rounded-xl border border-orange-200 shrink-0 bg-white shadow-2xs"
+                      />
+                    ) : (
+                      <div className="w-12 h-12 rounded-xl bg-orange-100 border border-orange-200 flex items-center justify-center shrink-0 text-orange-600 font-bold">
+                        <Package className="w-6 h-6" />
+                      </div>
+                    )}
+
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-[10px] font-black uppercase tracking-wider text-orange-700 bg-orange-100/80 px-2 py-0.5 rounded-md">
+                          Produit concerné
+                        </span>
+                        {/* Price: only show if present from DB */}
+                        {selectedConv.product_price !== null && selectedConv.product_price !== undefined && (
+                          <span className="text-xs font-black text-gray-900 bg-white px-2 py-0.5 rounded-md border border-gray-200 shadow-2xs">
+                            {Number(selectedConv.product_price).toLocaleString('fr-DZ')} DA
+                          </span>
+                        )}
+                        {/* Stock: only show if present from DB */}
+                        {selectedConv.product_stock !== null && selectedConv.product_stock !== undefined && (
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${
+                            Number(selectedConv.product_stock) > 0 ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'
+                          }`}>
+                            {Number(selectedConv.product_stock) > 0 ? `Stock: ${selectedConv.product_stock}` : 'Rupture'}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-2 mt-1">
+                        <h4 className="text-xs sm:text-sm font-extrabold text-gray-900 truncate">
+                          {selectedConv.real_product_name || selectedConv.product_name}
+                        </h4>
+                        {(selectedConv.product_url || selectedConv.real_product_slug) && (
+                          <a
+                            href={selectedConv.product_url || `/product/${selectedConv.real_product_slug}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs text-orange-600 hover:text-orange-700 hover:underline flex items-center gap-1 shrink-0 font-bold ml-1"
+                            title="Ouvrir la fiche produit dans un nouvel onglet"
+                          >
+                            <span>Voir le produit</span>
+                            <ExternalLink className="w-3 h-3" />
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2.5 text-xs text-gray-500 py-1">
+                    <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center shrink-0 text-gray-400">
+                      <Tag className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <span className="font-bold text-gray-700">Produit non associé</span>
+                      <span className="text-[11px] text-gray-400 block">Cette conversation n'a pas été initiée depuis une fiche produit.</span>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Prominent Callback Notification & Action Bar */}

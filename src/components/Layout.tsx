@@ -390,21 +390,9 @@ export default function Layout() {
                           <span className="text-sm font-medium">Modes de paiement</span>
                         </Link>
                       </div>
-                      <div className="p-4 bg-orange-50 border-t border-orange-100">
-                        <button 
-                          onClick={() => {
-                            setShowHelpDropdown(false);
-                            window.dispatchEvent(new CustomEvent('open-live-chat'));
-                          }}
-                          className="w-full flex items-center justify-center gap-2 py-2 bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold rounded-lg shadow-sm transition"
-                        >
-                          <MessageCircle size={14} />
-                          CHAT EN DIRECT
-                        </button>
-                      </div>
-                      </div>
                     </div>
-                  )}
+                  </div>
+                )}
               </div>
 
               {/* Account Mobile */}

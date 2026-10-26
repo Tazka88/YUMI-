@@ -448,6 +448,25 @@ export default function Product() {
     navigate('/checkout', { state: { directBuyItem: { ...product, quantity, selectedVariation, cartItemId: `${product.id}` + (selectedVariation ? `-${selectedVariation.id}` : '') } } });
   };
 
+  const handleOpenProductChat = () => {
+    if (!product) return;
+    const canonicalUrl = typeof window !== 'undefined' ? `${window.location.origin}/product/${product.slug}` : `/product/${product.slug}`;
+    const mainImage = (product.image && product.image.startsWith('/')) 
+      ? `https://www.zorando.com${product.image}` 
+      : (product.image || (product.images && product.images[0]) || '');
+
+    window.dispatchEvent(new CustomEvent('open-product-chat', {
+      detail: {
+        productId: product.id,
+        productName: product.name,
+        productUrl: canonicalUrl,
+        productImage: mainImage,
+        price: product.price,
+        stock: product.stock
+      }
+    }));
+  };
+
   const toggleWishlist = async () => {
     if (!product) return;
     await toggleFavoriteInStore(product, user);
@@ -902,36 +921,47 @@ export default function Product() {
               {(() => {
                 const maxAvailable = selectedVariation && typeof selectedVariation.stock === 'number' ? selectedVariation.stock : product.stock;
                 return (
-              <div className="flex items-center gap-2">
-                <a 
-                  href={`tel:${settings?.contact_phone?.replace(/\s/g, '') || ''}`}
-                  className="flex items-center justify-center w-[54px] h-[54px] rounded-md border-2 border-orange-500 text-orange-500 hover:bg-orange-50 shrink-0 transition-colors"
-                >
-                  <Phone size={24} />
-                </a>
+              <div className="space-y-2.5">
+                <div className="flex items-center gap-2">
+                  <a 
+                    href={`tel:${settings?.contact_phone?.replace(/\s/g, '') || ''}`}
+                    className="flex items-center justify-center w-[54px] h-[54px] rounded-md border-2 border-orange-500 text-orange-500 hover:bg-orange-50 shrink-0 transition-colors"
+                  >
+                    <Phone size={24} />
+                  </a>
+                  <button
+                    onClick={handleAddToCart}
+                    disabled={maxAvailable === 0}
+                    className="flex items-center justify-center w-[54px] h-[54px] rounded-md bg-orange-500 text-white shrink-0 hover:bg-orange-600 disabled:opacity-50 transition-colors shadow-sm"
+                  >
+                    <ShoppingCart size={24} />
+                  </button>
+                  <button
+                    onClick={toggleWishlist}
+                    className={`flex items-center justify-center w-[54px] h-[54px] rounded-md border-2 shrink-0 transition-all ${
+                      isInWishlist 
+                        ? 'bg-red-50 border-red-500 text-red-500' 
+                        : 'border-gray-200 text-gray-400 hover:border-red-200 hover:text-red-300'
+                    }`}
+                  >
+                    <Heart size={24} fill={isInWishlist ? "currentColor" : "none"} />
+                  </button>
+                  <button
+                    onClick={handleBuyNow}
+                    disabled={maxAvailable === 0}
+                    className="flex-1 bg-orange-500 text-white h-[54px] rounded-md font-bold text-lg flex items-center justify-center hover:bg-orange-600 disabled:opacity-50 transition-all hover:scale-[1.02] active:scale-[0.98] shadow-sm"
+                  >
+                    J'achète
+                  </button>
+                </div>
+
                 <button
-                  onClick={handleAddToCart}
-                  disabled={maxAvailable === 0}
-                  className="flex items-center justify-center w-[54px] h-[54px] rounded-md bg-orange-500 text-white shrink-0 hover:bg-orange-600 disabled:opacity-50 transition-colors shadow-sm"
+                  type="button"
+                  onClick={handleOpenProductChat}
+                  className="w-full py-3 px-4 rounded-xl bg-orange-50 hover:bg-orange-100 text-orange-700 border border-orange-200/90 font-bold text-sm flex items-center justify-center gap-2 transition-all hover:border-orange-300 shadow-2xs cursor-pointer active:scale-[0.99]"
                 >
-                  <ShoppingCart size={24} />
-                </button>
-                <button
-                  onClick={toggleWishlist}
-                  className={`flex items-center justify-center w-[54px] h-[54px] rounded-md border-2 shrink-0 transition-all ${
-                    isInWishlist 
-                      ? 'bg-red-50 border-red-500 text-red-500' 
-                      : 'border-gray-200 text-gray-400 hover:border-red-200 hover:text-red-300'
-                  }`}
-                >
-                  <Heart size={24} fill={isInWishlist ? "currentColor" : "none"} />
-                </button>
-                <button
-                  onClick={handleBuyNow}
-                  disabled={maxAvailable === 0}
-                  className="flex-1 bg-orange-500 text-white h-[54px] rounded-md font-bold text-lg flex items-center justify-center hover:bg-orange-600 disabled:opacity-50 transition-all hover:scale-[1.02] active:scale-[0.98] shadow-sm"
-                >
-                  J'achète
+                  <MessageCircle size={18} className="text-orange-600" />
+                  <span>Poser une question sur ce produit</span>
                 </button>
               </div>
                 );

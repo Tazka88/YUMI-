@@ -41,7 +41,9 @@ export function buildProductSchema(product: any, reviews: any[], currentUrl: str
   }
 
   const basePriceNum = isPromoValid ? Number(product.promo_price) : Number(product.price);
-  const currentPrice = !isNaN(basePriceNum) && basePriceNum > 0 ? basePriceNum.toFixed(2) : "0.00";
+  const currentPrice = !isNaN(basePriceNum) && basePriceNum > 0 
+    ? (Number.isInteger(basePriceNum) ? String(basePriceNum) : basePriceNum.toFixed(2)) 
+    : "0";
 
   // Helper to convert any image path into a full, valid, absolute HTTPS URL
   const formatAbsoluteImageUrl = (rawUrl: any): string | null => {
@@ -89,34 +91,94 @@ export function buildProductSchema(product: any, reviews: any[], currentUrl: str
   // Deduplicate array
   let uniqueImages = [...new Set(images)];
 
-  // Fallback image: Requirement 4 states "au moins 1, jamais vide ni null. Si un produit n'a pas d'image, utilise une image de secours valide plutôt que d'omettre le champ"
+  // Fallback image: Requirement states "au moins 1, jamais vide ni null. Si un produit n'a pas d'image, utilise une image de secours valide plutôt que d'omettre le champ"
   if (uniqueImages.length === 0) {
     uniqueImages = [`${baseUrl}/og-image-fb.jpg`];
   }
 
-  const cleanDescription = product.description 
-    ? product.description.substring(0, 5000).replace(/<[^>]+>/g, '').trim() 
-    : (product.seo_description || product.name || 'Produit disponible chez ZORANDO en Algérie.');
-
-  const schema: any = {
-    "@context": "https://schema.org",
-    "@type": "Product",
-    "name": product.name || 'Produit ZORANDO',
-    "image": uniqueImages,
-    "description": cleanDescription,
+  // Truncate name cleanly on word boundary to max 150 characters without trailing space/punctuation
+  const truncateName = (str: string, max: number = 150): string => {
+    if (!str) return 'Produit ZORANDO';
+    const trimmed = str.trim();
+    if (trimmed.length <= max) return trimmed;
+    let cut = trimmed.substring(0, max);
+    const lastSpace = cut.lastIndexOf(' ');
+    if (lastSpace > 0) cut = cut.substring(0, lastSpace);
+    cut = cut.replace(/[\s\-_|,.:;]+$/, '').trim();
+    cut = cut.replace(/\s+(?:en|de|du|des|le|la|les|pour|avec|et|ou|a|à|par|sur|sans)$/i, '').trim();
+    return cut.replace(/[\s\-_|,.:;]+$/, '').trim();
   };
+  const cleanName = truncateName(product.name || 'Produit ZORANDO', 150);
 
-  if (product.sku && String(product.sku).trim()) {
-    schema.sku = String(product.sku).trim();
-  } else if (product.id) {
-    schema.sku = `PROD-${String(product.id).padStart(5, '0')}`;
+  const brandName = (product.brand_name || (product.brand && product.brand.name) || "ZORANDO").trim();
+
+  // Clean description: strip HTML, 5000 max, fallback to default format if empty
+  let rawDescription = '';
+  if (product.description && typeof product.description === 'string') {
+    rawDescription = product.description;
+  } else if (product.seo_description && typeof product.seo_description === 'string') {
+    rawDescription = product.seo_description;
   }
 
-  const brandName = product.brand_name || (product.brand && product.brand.name) || "Zorando";
-  schema.brand = {
-    "@type": "Brand",
-    "name": brandName
-  };
+  let cleanDesc = rawDescription
+    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  if (!cleanDesc) {
+    cleanDesc = `${cleanName} - ${brandName} - disponible en Algérie chez ZORANDO`;
+  } else if (cleanDesc.length > 5000) {
+    let cutDesc = cleanDesc.substring(0, 5000);
+    const lastSpace = cutDesc.lastIndexOf(' ');
+    if (lastSpace > 0) cutDesc = cutDesc.substring(0, lastSpace);
+    cleanDesc = cutDesc.trim();
+  }
+
+  // SKU: sku du produit, sinon l'id
+  const sku = product.sku && String(product.sku).trim() 
+    ? String(product.sku).trim() 
+    : (product.id ? String(product.id) : undefined);
+
+  // MPN: modèle (ex. KM-1260) si disponible
+  let mpn: string | undefined = undefined;
+  if (product.mpn && String(product.mpn).trim()) {
+    mpn = String(product.mpn).trim();
+  } else if (product.model && String(product.model).trim()) {
+    mpn = String(product.model).trim();
+  } else if (product.model_number && String(product.model_number).trim()) {
+    mpn = String(product.model_number).trim();
+  } else if (Array.isArray(product.features)) {
+    const modelFeature = product.features.find((f: any) => 
+      f && typeof f.key === 'string' && /^(mod[eè]le|model|référence|ref)$/i.test(f.key.trim())
+    );
+    if (modelFeature && modelFeature.value && String(modelFeature.value).trim()) {
+      mpn = String(modelFeature.value).trim();
+    }
+  }
+  if (!mpn && product.name) {
+    const match = product.name.match(/\b(KM[- ]?[0-9A-Z]{2,6}|MS[- ]?[0-9A-Z]{2,6}|PC[- ]?[0-9A-Z]{2,6}|[A-Z]{2,4}[-][0-9A-Z]{2,6})\b/i);
+    if (match && match[1]) {
+      mpn = match[1].replace(' ', '-').toUpperCase();
+    }
+  }
+
+  // GTIN: uniquement si le code-barres existe en base, sinon omettre
+  let gtin: string | undefined = undefined;
+  if (product.gtin && String(product.gtin).trim()) {
+    gtin = String(product.gtin).trim();
+  } else if (product.barcode && String(product.barcode).trim()) {
+    gtin = String(product.barcode).trim();
+  } else if (product.ean && String(product.ean).trim()) {
+    gtin = String(product.ean).trim();
+  } else if (product.upc && String(product.upc).trim()) {
+    gtin = String(product.upc).trim();
+  }
 
   const isStockAvailable = product.stock !== undefined && product.stock !== null && (Number(product.stock) > 0 || product.stock === true);
   let cleanOfferUrl = currentUrl ? currentUrl.split('?')[0] : `${baseUrl}/product/${product.slug}`;
@@ -124,38 +186,33 @@ export function buildProductSchema(product: any, reviews: any[], currentUrl: str
     cleanOfferUrl = `${baseUrl}${cleanOfferUrl.startsWith('/') ? '' : '/'}${cleanOfferUrl}`;
   }
 
-  // Parse variations if present
-  let variationsList: any[] = [];
-  if (typeof product.variations === 'string' && product.variations.trim().length > 2) {
-    try {
-      variationsList = JSON.parse(product.variations);
-    } catch (e) {
-      variationsList = [];
-    }
-  } else if (Array.isArray(product.variations)) {
-    variationsList = product.variations;
-  }
+  const oneYearLater = new Date(now);
+  oneYearLater.setFullYear(oneYearLater.getFullYear() + 1);
+  const priceValidUntil = oneYearLater.toISOString().split('T')[0];
 
-  const variationPrices = variationsList
-    .map((v: any) => v && v.price ? Number(v.price) : null)
-    .filter((p): p is number => p !== null && !isNaN(p) && p > 0);
+  const validFrom = product.created_at 
+    ? new Date(product.created_at).toISOString().split('T')[0] 
+    : now.toISOString().split('T')[0];
 
-  const hasMultiplePrices = variationPrices.length > 0 && (
-    Math.min(...variationPrices) !== Math.max(...variationPrices) ||
-    variationPrices.some(p => p !== basePriceNum)
-  );
+  // Livraison : 0 DA si seuil >= 10 000 DA, sinon 600 DA (tarif wilaya le plus courant et fallback par défaut)
+  const shippingRateValue = basePriceNum >= 10000 ? "0" : "600";
 
-  const commonShippingAndReturns = {
+  const offers: any = {
+    "@type": "Offer",
+    "url": cleanOfferUrl,
+    "priceCurrency": "DZD",
+    "price": currentPrice,
+    "priceValidUntil": priceValidUntil,
+    "validFrom": validFrom,
+    "availability": isStockAvailable ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
     "itemCondition": "https://schema.org/NewCondition",
     "seller": {
       "@type": "Organization",
-      "name": "Zorando",
-      "url": "https://www.zorando.com"
+      "name": "ZORANDO"
     },
     "hasMerchantReturnPolicy": {
       "@type": "MerchantReturnPolicy",
       "applicableCountry": "DZ",
-      "returnPolicyCountry": "DZ",
       "returnPolicyCategory": "https://schema.org/MerchantReturnFiniteReturnWindow",
       "merchantReturnDays": 7,
       "returnMethod": "https://schema.org/ReturnByMail",
@@ -165,7 +222,7 @@ export function buildProductSchema(product: any, reviews: any[], currentUrl: str
       "@type": "OfferShippingDetails",
       "shippingRate": {
         "@type": "MonetaryAmount",
-        "value": "600",
+        "value": shippingRateValue,
         "currency": "DZD"
       },
       "shippingDestination": {
@@ -190,72 +247,30 @@ export function buildProductSchema(product: any, reviews: any[], currentUrl: str
     }
   };
 
-  const getPriceValidUntil = () => {
-    if (isPromoValid && product.promo_price_end_date) {
-      const endDate = new Date(product.promo_price_end_date);
-      if (endDate > now) {
-        return endDate.toISOString().split('T')[0];
-      }
-    }
-    const nextYear = new Date();
-    nextYear.setFullYear(nextYear.getFullYear() + 1);
-    return nextYear.toISOString().split('T')[0];
-  };
+  // Pas de aggregateRating ni de review sans vrais avis
+  let aggregateRating: any = undefined;
+  let reviewList: any = undefined;
 
-  if (hasMultiplePrices) {
-    const allPrices = [basePriceNum, ...variationPrices].filter(p => !isNaN(p) && p > 0);
-    const minPrice = Math.min(...allPrices);
-    const maxPrice = Math.max(...allPrices);
+  if (reviews && Array.isArray(reviews) && reviews.length > 0) {
+    const validReviews = reviews.filter((r: any) => r && !isNaN(Number(r.rating)) && Number(r.rating) > 0);
+    if (validReviews.length > 0) {
+      const avgRating = Number((validReviews.reduce((acc: number, r: any) => acc + Number(r.rating), 0) / validReviews.length).toFixed(1));
+      aggregateRating = {
+        "@type": "AggregateRating",
+        "ratingValue": avgRating,
+        "reviewCount": validReviews.length,
+        "bestRating": 5,
+        "worstRating": 1
+      };
 
-    schema.offers = {
-      "@type": "AggregateOffer",
-      "url": cleanOfferUrl,
-      "priceCurrency": "DZD",
-      "lowPrice": minPrice.toFixed(2),
-      "highPrice": maxPrice.toFixed(2),
-      "offerCount": variationsList.length || 1,
-      "priceValidUntil": getPriceValidUntil(),
-      "availability": isStockAvailable ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
-      ...commonShippingAndReturns
-    };
-  } else {
-    schema.offers = {
-      "@type": "Offer",
-      "url": cleanOfferUrl,
-      "priceCurrency": "DZD",
-      "price": currentPrice,
-      "priceValidUntil": getPriceValidUntil(),
-      "availability": isStockAvailable ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
-      ...commonShippingAndReturns
-    };
-  }
-
-  const reviewCount = reviews?.length > 0 ? reviews.length : Number(product.reviews_count || 0);
-
-  if (reviewCount > 0) {
-    let avgRating = Number(product.avg_rating || 0);
-    if (avgRating < 1 && reviewCount > 0) avgRating = 5;
-    if (reviews && reviews.length > 0) {
-      avgRating = Number((reviews.reduce((acc: number, r: any) => acc + Number(r.rating), 0) / reviews.length).toFixed(1));
-    }
-
-    schema.aggregateRating = {
-      "@type": "AggregateRating",
-      "ratingValue": avgRating,
-      "reviewCount": reviewCount,
-      "bestRating": 5,
-      "worstRating": 1
-    };
-
-    if (reviews && reviews.length > 0) {
-      schema.review = reviews.map((r: any) => ({
+      reviewList = validReviews.map((r: any) => ({
         "@type": "Review",
         "author": {
           "@type": "Person",
-          "name": r.customer_name
+          "name": r.customer_name || 'Client ZORANDO'
         },
-        "datePublished": new Date(r.created_at).toISOString().split('T')[0],
-        "reviewBody": r.comment,
+        "datePublished": r.created_at ? new Date(r.created_at).toISOString().split('T')[0] : now.toISOString().split('T')[0],
+        "reviewBody": r.comment || '',
         "reviewRating": {
           "@type": "Rating",
           "ratingValue": Number(r.rating),
@@ -266,7 +281,48 @@ export function buildProductSchema(product: any, reviews: any[], currentUrl: str
     }
   }
 
-  return schema;
+  // Recursive cleaner to ensure no field is null, undefined, "" or NaN
+  const cleanSchema = (obj: any): any => {
+    if (obj === null || obj === undefined) return undefined;
+    if (typeof obj !== 'object') return obj;
+    if (Array.isArray(obj)) {
+      const cleanedArr = obj
+        .map(cleanSchema)
+        .filter(item => item !== null && item !== undefined && item !== '' && !Number.isNaN(item));
+      return cleanedArr.length > 0 ? cleanedArr : undefined;
+    }
+    const result: any = {};
+    for (const [key, value] of Object.entries(obj)) {
+      if (value === null || value === undefined || value === '' || Number.isNaN(value)) {
+        continue;
+      }
+      const cleanedVal = cleanSchema(value);
+      if (cleanedVal !== null && cleanedVal !== undefined && cleanedVal !== '' && !Number.isNaN(cleanedVal)) {
+        result[key] = cleanedVal;
+      }
+    }
+    return result;
+  };
+
+  const schema: any = {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    "name": cleanName,
+    "description": cleanDesc,
+    "image": uniqueImages,
+    "sku": sku,
+    "mpn": mpn,
+    "gtin": gtin,
+    "brand": {
+      "@type": "Brand",
+      "name": brandName
+    },
+    "offers": offers,
+    "aggregateRating": aggregateRating,
+    "review": reviewList
+  };
+
+  return cleanSchema(schema);
 }
 
 export function buildOrganizationSchema(baseUrl: string = 'https://www.zorando.com') {

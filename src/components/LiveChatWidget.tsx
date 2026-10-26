@@ -34,6 +34,10 @@ export function getOrCreateChatSessionId(): string {
 
 export default function LiveChatWidget() {
   const { user, profile } = useAuth();
+  const location = useLocation();
+  const pathname = location.pathname || '';
+  const isProductPage = pathname.startsWith('/product/') || pathname.startsWith('/products/') || pathname.startsWith('/produit/');
+
   const [isOpen, setIsOpen] = useState(false);
   const [currentProduct, setCurrentProduct] = useState<ProductChatContext | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -66,8 +70,20 @@ export default function LiveChatWidget() {
     }
   }, [profile]);
 
-  // Restore active product from localStorage if previously stored
+  // Restore active product from localStorage or window.__CURRENT_PRODUCT__
   useEffect(() => {
+    if (typeof window !== 'undefined' && (window as any).__CURRENT_PRODUCT__) {
+      const p = (window as any).__CURRENT_PRODUCT__;
+      setCurrentProduct({
+        id: Number(p.id || p.productId),
+        name: p.name || p.productName || 'Produit',
+        url: p.url || p.productUrl || `/product/${p.slug || p.id}`,
+        image: p.image || p.productImage || '',
+        price: p.price,
+        stock: p.stock
+      });
+      return;
+    }
     try {
       const stored = localStorage.getItem('zorando_chat_active_product');
       if (stored) {
@@ -79,7 +95,51 @@ export default function LiveChatWidget() {
     } catch {}
   }, []);
 
-  // Listen for 'open-product-chat' and global 'open-live-chat'
+  // Automatic product resolution whenever on a product page
+  useEffect(() => {
+    if (!isProductPage) return;
+
+    // Check if window.__CURRENT_PRODUCT__ is already available
+    if (typeof window !== 'undefined' && (window as any).__CURRENT_PRODUCT__) {
+      const p = (window as any).__CURRENT_PRODUCT__;
+      const prodObj: ProductChatContext = {
+        id: Number(p.id || p.productId),
+        name: p.name || p.productName || 'Produit',
+        url: p.url || p.productUrl || pathname,
+        image: p.image || p.productImage || '',
+        price: p.price,
+        stock: p.stock
+      };
+      setCurrentProduct(prodObj);
+      fetchMessages(prodObj.id);
+      return;
+    }
+
+    // Otherwise, parse slug from pathname and fetch from API
+    const slugMatch = pathname.match(/^\/(?:product|products|produit)\/([^/?#]+)/);
+    if (slugMatch && slugMatch[1]) {
+      const slug = decodeURIComponent(slugMatch[1]);
+      fetch(`/api/products/${slug}`)
+        .then(res => res.ok ? res.json() : null)
+        .then(p => {
+          if (p && p.id) {
+            const prodObj: ProductChatContext = {
+              id: Number(p.id),
+              name: p.name || 'Produit',
+              url: `/product/${p.slug || slug}`,
+              image: p.image || '',
+              price: p.price,
+              stock: p.stock
+            };
+            setCurrentProduct(prodObj);
+            fetchMessages(prodObj.id);
+          }
+        })
+        .catch(() => {});
+    }
+  }, [pathname, isProductPage]);
+
+  // Listen for 'open-product-chat', 'product-page-active', and global 'open-live-chat'
   useEffect(() => {
     const handleProductChatEvent = (e: any) => {
       const p = e.detail?.product || e.detail;
@@ -104,15 +164,33 @@ export default function LiveChatWidget() {
       }
     };
 
+    const handleProductPageActive = (e: any) => {
+      const p = e.detail?.product || e.detail;
+      if (p && (p.productId || p.id)) {
+        const prodObj: ProductChatContext = {
+          id: Number(p.productId || p.id),
+          name: p.productName || p.name || 'Produit',
+          url: p.productUrl || p.url || `/product/${p.productId || p.id}`,
+          image: p.productImage || p.image || '',
+          price: p.price,
+          stock: p.stock
+        };
+        setCurrentProduct(prodObj);
+        fetchMessages(prodObj.id);
+      }
+    };
+
     const handleOpenEvent = () => {
       setIsOpen(true);
       fetchMessages();
     };
 
     window.addEventListener('open-product-chat', handleProductChatEvent);
+    window.addEventListener('product-page-active', handleProductPageActive);
     window.addEventListener('open-live-chat', handleOpenEvent);
     return () => {
       window.removeEventListener('open-product-chat', handleProductChatEvent);
+      window.removeEventListener('product-page-active', handleProductPageActive);
       window.removeEventListener('open-live-chat', handleOpenEvent);
     };
   }, []);
@@ -279,6 +357,20 @@ export default function LiveChatWidget() {
     setMessages(prev => [...prev, optimisticMsg]);
     setInputText('');
 
+    let targetProduct = currentProduct;
+    if (!targetProduct && typeof window !== 'undefined' && (window as any).__CURRENT_PRODUCT__) {
+      const p = (window as any).__CURRENT_PRODUCT__;
+      targetProduct = {
+        id: Number(p.id || p.productId),
+        name: p.name || p.productName || 'Produit',
+        url: p.url || p.productUrl || pathname,
+        image: p.image || p.productImage || '',
+        price: p.price,
+        stock: p.stock
+      };
+      setCurrentProduct(targetProduct);
+    }
+
     try {
       const res = await fetch('/api/chat/message', {
         method: 'POST',
@@ -290,10 +382,10 @@ export default function LiveChatWidget() {
           customer_email: profile?.email || undefined,
           customer_phone: profile?.phone || undefined,
           user_id: user?.id || undefined,
-          product_id: currentProduct?.id,
-          product_name: currentProduct?.name,
-          product_url: currentProduct?.url,
-          product_image: currentProduct?.image
+          product_id: targetProduct?.id,
+          product_name: targetProduct?.name,
+          product_url: targetProduct?.url || (isProductPage ? pathname : undefined),
+          product_image: targetProduct?.image
         })
       });
 
@@ -302,7 +394,7 @@ export default function LiveChatWidget() {
         if (data.message) {
           setMessages(prev => prev.map(m => m.id === optimisticMsg.id ? data.message : m));
         }
-        fetchMessages(currentProduct?.id);
+        fetchMessages(targetProduct?.id);
       }
     } catch (err) {
       console.error('Failed to send message:', err);
@@ -327,10 +419,6 @@ export default function LiveChatWidget() {
     (typeof window !== 'undefined' && localStorage.getItem('zorando_chat_callback_sent') === getOrCreateChatSessionId())
   );
   const shouldShowCallbackPrompt = hasClientMessage && !alreadyHasPhone && !callbackDismissed;
-
-  const location = useLocation();
-  const pathname = location.pathname || '';
-  const isProductPage = pathname.startsWith('/product/') || pathname.startsWith('/products/') || pathname.startsWith('/produit/');
 
   // Determine button positioning and visibility classes (strictly on product pages)
   const buttonClasses = 'fixed bottom-[calc(86px+env(safe-area-inset-bottom,0px))] right-3.5 z-40 sm:bottom-6 sm:right-6 sm:w-auto sm:h-auto sm:px-4 sm:py-3.5 w-11 h-11';

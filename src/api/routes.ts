@@ -3683,6 +3683,20 @@ router.get('/chat/messages', async (req, res) => {
       }
     }
 
+    // Fallback: If product_id is omitted in query, check referer header for /product/:slug
+    if (!parsedProductId && req.headers.referer) {
+      const match = String(req.headers.referer).match(/\/(?:product|products|produit)\/([^/?#]+)/);
+      if (match && match[1]) {
+        const decodedSlug = decodeURIComponent(match[1]);
+        const [foundProd] = await sql`
+          SELECT id FROM products WHERE slug = ${decodedSlug} OR id::text = ${decodedSlug} LIMIT 1
+        `;
+        if (foundProd) {
+          parsedProductId = Number(foundProd.id);
+        }
+      }
+    }
+
     const convs = parsedProductId
       ? await sql`
           SELECT 
@@ -3903,6 +3917,27 @@ router.post('/chat/message', async (req, res) => {
           SELECT id, name, slug, image 
           FROM products 
           WHERE id = ${parsedId} 
+          LIMIT 1
+        `;
+        if (prod) {
+          validProductId = Number(prod.id);
+          validProductName = prod.name;
+          validProductUrl = `/product/${prod.slug}`;
+          validProductImage = prod.image || (typeof reqProductImage === 'string' ? reqProductImage : null);
+        }
+      }
+    }
+
+    // Fallback: If product_id was not directly sent or resolved, check product_url or HTTP referer
+    if (!validProductId) {
+      const urlCandidate = req.body.product_url || req.body.productUrl || req.headers.referer || '';
+      const match = String(urlCandidate).match(/\/(?:product|products|produit)\/([^/?#]+)/);
+      if (match && match[1]) {
+        const decodedSlug = decodeURIComponent(match[1]);
+        const [prod] = await sql`
+          SELECT id, name, slug, image 
+          FROM products 
+          WHERE slug = ${decodedSlug} OR id::text = ${decodedSlug}
           LIMIT 1
         `;
         if (prod) {

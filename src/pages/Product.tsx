@@ -153,6 +153,20 @@ export default function Product() {
       const init = getInitialProduct();
       if (init) {
         setProduct(init);
+        if (typeof window !== 'undefined') {
+          (window as any).__CURRENT_PRODUCT__ = {
+            id: Number(init.id),
+            productId: Number(init.id),
+            name: init.name,
+            productName: init.name,
+            url: `/product/${init.slug || slug}`,
+            productUrl: `/product/${init.slug || slug}`,
+            image: init.image || '',
+            productImage: init.image || '',
+            price: init.price,
+            stock: init.stock
+          };
+        }
         const mainImg = init.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(init.name)}&background=random&size=800`;
         setSelectedImage(mainImg);
         setSelectedMedia({ type: 'image', url: mainImg, alt_text: init.main_image_alt || init.name });
@@ -179,6 +193,30 @@ export default function Product() {
            data.variations = [];
         }
         setProduct(data);
+        if (typeof window !== 'undefined') {
+          (window as any).__CURRENT_PRODUCT__ = {
+            id: Number(data.id),
+            productId: Number(data.id),
+            name: data.name,
+            productName: data.name,
+            url: `/product/${data.slug}`,
+            productUrl: `/product/${data.slug}`,
+            image: data.image || '',
+            productImage: data.image || '',
+            price: data.price,
+            stock: data.stock
+          };
+          window.dispatchEvent(new CustomEvent('product-page-active', {
+            detail: {
+              productId: Number(data.id),
+              productName: data.name,
+              productUrl: `/product/${data.slug}`,
+              productImage: data.image || '',
+              price: data.price,
+              stock: data.stock
+            }
+          }));
+        }
         const mainImage = data.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(data.name)}&background=random&size=800`;
         setSelectedImage(prev => prev || mainImage);
         setSelectedMedia(prev => prev.url ? prev : {type: 'image', url: mainImage, alt_text: data.main_image_alt || data.name});

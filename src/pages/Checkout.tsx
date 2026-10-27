@@ -8,7 +8,7 @@ import {
   CheckCircle, Truck, MapPin, Phone, User as UserIcon, Navigation, 
   ChevronDown, ChevronUp, Plus, Building2, Lock, Mail, ArrowRight, 
   Edit3, ShieldCheck, Sparkles, AlertCircle, Eye, EyeOff, Check, ShoppingBag,
-  MessageCircle
+  MessageCircle, Tag
 } from 'lucide-react';
 import { getSupabase } from '../lib/supabase';
 import { formatPrice, getProductEffectivePrice } from '../utils/formatPrice';
@@ -26,7 +26,7 @@ interface Wilaya {
 }
 
 export default function Checkout() {
-  const { items, total, clearCart, syncCustomerInfo } = useCartStore();
+  const { items, total, clearCart, syncCustomerInfo, appliedPromo, getPromoDiscount } = useCartStore();
   const { user, profile, loading: authLoading, refreshProfile } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -202,7 +202,8 @@ export default function Checkout() {
     ? 0 
     : (isShippingDiscountApplied ? deliveryCost * (1 - shippingSettings.percent / 100) : deliveryCost);
   
-  const finalTotal = checkoutTotal + effectiveDeliveryCost;
+  const promoDiscount = directBuyItem ? 0 : getPromoDiscount();
+  const finalTotal = Math.max(0, checkoutTotal - promoDiscount) + effectiveDeliveryCost;
 
   const handleApplyDiscount = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -571,6 +572,7 @@ export default function Checkout() {
       delivery_company: deliveryMode === 'bureau' && selectedOffice ? selectedOffice.company : 'ecomdz',
       customer_user_id: user?.id || null,
       cart_session_id: getOrCreateCartSessionId(),
+      promo_code: !directBuyItem && appliedPromo ? appliedPromo.code : null,
       items: checkoutItems.map(item => ({
         product_id: item.id,
         quantity: item.quantity,
@@ -777,6 +779,15 @@ export default function Checkout() {
                   <span className="font-semibold">{formatPrice(getProductEffectivePrice(item) * item.quantity)}</span>
                 </div>
               ))}
+              {!directBuyItem && appliedPromo && promoDiscount > 0 && (
+                <div className="pt-2 flex justify-between text-xs text-emerald-600 font-semibold">
+                  <span className="flex items-center gap-1">
+                    <Tag size={12} />
+                    Réduction code promo ({appliedPromo.code}) :
+                  </span>
+                  <span>-{formatPrice(promoDiscount)}</span>
+                </div>
+              )}
               <div className="pt-2 flex justify-between text-xs text-gray-500">
                 <span>Frais de livraison :</span>
                 <span className="font-medium text-gray-700">
@@ -1455,6 +1466,16 @@ export default function Checkout() {
                   <span>Sous-total</span>
                   <span className="font-semibold text-gray-900">{formatPrice(checkoutTotal)}</span>
                 </div>
+
+                {!directBuyItem && appliedPromo && promoDiscount > 0 && (
+                  <div className="flex justify-between text-emerald-600 font-medium">
+                    <span className="flex items-center gap-1.5">
+                      <Tag size={13} />
+                      Code promo ({appliedPromo.code})
+                    </span>
+                    <span className="font-semibold">-{formatPrice(promoDiscount)}</span>
+                  </div>
+                )}
 
                 <div className="flex justify-between text-gray-600">
                   <span>Livraison ({deliveryMode === 'bureau' ? 'Point Relais' : 'Domicile'})</span>

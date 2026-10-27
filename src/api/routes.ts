@@ -1386,8 +1386,88 @@ router.get('/orders/user/:userId', async (req, res) => {
   }
 });
 
+// Validate Promo Code (Public Endpoint)
+router.post('/promo-codes/validate', async (req, res) => {
+  const { code, items } = req.body;
+  if (!code || typeof code !== 'string' || !code.trim()) {
+    return res.status(400).json({ error: 'Veuillez saisir un code promo' });
+  }
+
+  try {
+    const cleanCode = code.trim().toUpperCase().replace(/\s+/g, '');
+    const [promo] = await sql`
+      SELECT 
+        pc.id,
+        pc.code,
+        pc.product_id,
+        pc.discount_percent,
+        pc.usage_limit,
+        pc.used_count,
+        pc.expires_at,
+        pc.is_active,
+        p.name as product_name,
+        p.price as product_price,
+        p.promo_price as product_promo_price,
+        p.image as product_image,
+        p.slug as product_slug
+      FROM promo_codes pc
+      JOIN products p ON pc.product_id = p.id
+      WHERE UPPER(pc.code) = UPPER(${cleanCode})
+    `;
+
+    if (!promo || !promo.is_active) {
+      return res.status(400).json({ error: 'Code promo invalide ou inactif' });
+    }
+
+    if (promo.expires_at && new Date(promo.expires_at) < new Date()) {
+      return res.status(400).json({ error: 'Ce code promo a expiré' });
+    }
+
+    if (promo.used_count >= promo.usage_limit) {
+      return res.status(400).json({ error: 'Ce code promo a atteint sa limite maximale d\'utilisations' });
+    }
+
+    if (items && Array.isArray(items) && items.length > 0) {
+      const matchingItem = items.find((it: any) => String(it.product_id || it.id) === String(promo.product_id));
+      if (!matchingItem) {
+        return res.status(400).json({ 
+          error: `Ce code promo est uniquement valable pour l'article : "${promo.product_name}". Ajoutez-le à votre panier pour en profiter !` 
+        });
+      }
+
+      const itemPrice = Number(matchingItem.price) || Number(promo.product_promo_price) || Number(promo.product_price);
+      const qty = Number(matchingItem.quantity) || 1;
+      const eligibleLineTotal = itemPrice * qty;
+      const discount_amount = Math.round((eligibleLineTotal * Number(promo.discount_percent)) / 100);
+
+      return res.json({
+        valid: true,
+        code: promo.code,
+        product_id: promo.product_id,
+        product_name: promo.product_name,
+        product_image: promo.product_image,
+        discount_percent: promo.discount_percent,
+        discount_amount,
+        message: `-${promo.discount_percent}% sur ${promo.product_name}`
+      });
+    }
+
+    return res.json({
+      valid: true,
+      code: promo.code,
+      product_id: promo.product_id,
+      product_name: promo.product_name,
+      product_image: promo.product_image,
+      discount_percent: promo.discount_percent
+    });
+  } catch (err) {
+    console.error('Error validating promo code:', err);
+    res.status(500).json({ error: 'Erreur lors de la validation du code promo' });
+  }
+});
+
 router.post('/orders', orderLimiter, async (req, res) => {
-  const { customer_name, customer_email, customer_phone, wilaya, commune, address, note, items, delivery_cost: clientDeliveryCost, customer_user_id, stop_desk, office_id, delivery_company, office_name, cart_session_id } = req.body;
+  const { customer_name, customer_email, customer_phone, wilaya, commune, address, note, items, delivery_cost: clientDeliveryCost, customer_user_id, stop_desk, office_id, delivery_company, office_name, cart_session_id, promo_code } = req.body;
   
   if (!items || !Array.isArray(items) || items.length === 0) {
     return res.status(400).json({ error: 'La commande doit contenir au moins un article' });
@@ -1459,12 +1539,48 @@ router.post('/orders', orderLimiter, async (req, res) => {
       delivery_cost = 0;
     }
 
-    calculatedTotal += delivery_cost;
+    let discountAmount = 0;
+    let appliedPromoCode: string | null = null;
 
     const orderData = await sql.begin(async (sql: any) => {
+      // Atomic Promo Code validation and consumption
+      if (promo_code && typeof promo_code === 'string' && promo_code.trim()) {
+        const cleanPromo = promo_code.trim().toUpperCase().replace(/\s+/g, '');
+        // Atomic consumption: only increments if active, unexpired, and usage limit not exceeded
+        const [promo] = await sql`
+          UPDATE promo_codes
+          SET used_count = used_count + 1,
+              updated_at = NOW()
+          WHERE UPPER(code) = UPPER(${cleanPromo})
+            AND is_active = true
+            AND (expires_at IS NULL OR expires_at > NOW())
+            AND used_count < usage_limit
+          RETURNING id, code, product_id, discount_percent, usage_limit, used_count
+        `;
+
+        if (!promo) {
+          throw new Error('Code promo invalide, expiré ou limite d\'utilisation atteinte');
+        }
+
+        // Verify promo code applies to one of the ordered items
+        const matchingItem = validatedItems.find(it => String(it.product_id) === String(promo.product_id));
+        if (!matchingItem) {
+          throw new Error('Ce code promo ne s\'applique pas aux produits de votre commande');
+        }
+
+        // Discount strictly calculated on the eligible product price (never shipping)
+        const eligibleProductTotal = Number(matchingItem.price) * Number(matchingItem.quantity);
+        discountAmount = Math.round((eligibleProductTotal * Number(promo.discount_percent)) / 100);
+        discountAmount = Math.min(discountAmount, eligibleProductTotal);
+        appliedPromoCode = promo.code;
+      }
+
+      // Final total: items subtotal minus discount plus intact delivery cost
+      const finalOrderTotal = Math.max(0, calculatedTotal - discountAmount) + delivery_cost;
+
       const [order] = await sql`
-        INSERT INTO orders (customer_name, customer_email, customer_phone, wilaya, commune, address, note, total_amount, delivery_cost, customer_user_id, stop_desk, office_id, delivery_company, office_name)
-        VALUES (${customer_name || ''}, ${customer_email || null}, ${customer_phone || ''}, ${wilaya || ''}, ${commune || ''}, ${address || ''}, ${note || null}, ${calculatedTotal}, ${delivery_cost}, ${customer_user_id || null}, ${stop_desk ? true : false}, ${office_id || null}, ${delivery_company || 'ecomdz'}, ${office_name || null})
+        INSERT INTO orders (customer_name, customer_email, customer_phone, wilaya, commune, address, note, total_amount, delivery_cost, customer_user_id, stop_desk, office_id, delivery_company, office_name, promo_code, discount_amount)
+        VALUES (${customer_name || ''}, ${customer_email || null}, ${customer_phone || ''}, ${wilaya || ''}, ${commune || ''}, ${address || ''}, ${note || null}, ${finalOrderTotal}, ${delivery_cost}, ${customer_user_id || null}, ${stop_desk ? true : false}, ${office_id || null}, ${delivery_company || 'ecomdz'}, ${office_name || null}, ${appliedPromoCode}, ${discountAmount})
         RETURNING id
       `;
       
@@ -1996,7 +2112,7 @@ router.get('/admin/orders', authenticate, async (req, res) => {
     const [totalCount] = await sql`SELECT COUNT(*) as count FROM orders o ${whereClause}`;
 
     const orders = await sql`
-      SELECT o.id, o.order_id, o.created_at, o.status, o.total_amount, o.delivery_cost, o.address, o.wilaya, o.commune, o.office_id, o.office_name, o.delivery_company, o.stop_desk, o.customer_name, o.customer_email, o.customer_phone, o.note, o.customer_user_id,
+      SELECT o.id, o.order_id, o.created_at, o.status, o.total_amount, o.delivery_cost, o.address, o.wilaya, o.commune, o.office_id, o.office_name, o.delivery_company, o.stop_desk, o.customer_name, o.customer_email, o.customer_phone, o.note, o.customer_user_id, o.promo_code, o.discount_amount,
       (SELECT JSON_AGG(JSON_BUILD_OBJECT('id', oi.id, 'product_id', oi.product_id, 'quantity', oi.quantity, 'price', oi.price, 'variation', oi.variation, 'status', oi.status, 'product_name', p.name, 'product_image', CASE WHEN p.image LIKE 'data:image/%' THEN '/api/images/products/' || p.id || '/image/product.webp' ELSE p.image END))
        FROM order_items oi 
        LEFT JOIN products p ON oi.product_id = p.id 
@@ -2127,6 +2243,221 @@ router.delete('/admin/orders/:id', authenticate, async (req, res) => {
     res.json({ message: 'Order deleted' });
   } catch (err) {
     res.status(500).json({ error: 'Failed to delete order' });
+  }
+});
+
+// Admin Promo Codes Endpoints
+router.get('/admin/promo-codes', authenticate, async (req, res) => {
+  try {
+    const promoCodes = await sql`
+      SELECT 
+        pc.id,
+        pc.code,
+        pc.product_id,
+        pc.discount_percent,
+        pc.usage_limit,
+        pc.used_count,
+        pc.expires_at,
+        pc.is_active,
+        pc.created_at,
+        pc.updated_at,
+        p.name as product_name,
+        p.sku as product_sku,
+        p.price as product_price,
+        p.promo_price as product_promo_price,
+        p.stock as product_stock,
+        CASE 
+          WHEN p.image LIKE 'data:image/%' THEN '/api/images/products/' || p.id || '/image/product.webp' 
+          ELSE p.image 
+        END as product_image
+      FROM promo_codes pc
+      LEFT JOIN products p ON pc.product_id = p.id
+      ORDER BY pc.created_at DESC
+    `;
+    res.json(promoCodes);
+  } catch (err) {
+    console.error('Failed to fetch promo codes:', err);
+    res.status(500).json({ error: 'Failed to fetch promo codes' });
+  }
+});
+
+router.post('/admin/promo-codes', authenticate, async (req, res) => {
+  try {
+    const { code, product_id, discount_percent, usage_limit, expires_at, is_active } = req.body;
+
+    if (!code || typeof code !== 'string' || !code.trim()) {
+      return res.status(400).json({ error: 'Le code promo est requis (ex: RETOUR10)' });
+    }
+
+    const cleanCode = code.trim().toUpperCase().replace(/\s+/g, '');
+    if (cleanCode.length < 2 || cleanCode.length > 50) {
+      return res.status(400).json({ error: 'Le code promo doit contenir entre 2 et 50 caractères' });
+    }
+
+    const prodId = parseInt(product_id, 10);
+    if (isNaN(prodId)) {
+      return res.status(400).json({ error: 'Veuillez sélectionner un produit valide dans le catalogue' });
+    }
+
+    const [product] = await sql`SELECT id, name FROM products WHERE id = ${prodId}`;
+    if (!product) {
+      return res.status(400).json({ error: 'Le produit sélectionné est introuvable' });
+    }
+
+    const discount = parseInt(discount_percent, 10);
+    if (isNaN(discount) || discount < 1 || discount > 100) {
+      return res.status(400).json({ error: 'Le pourcentage de réduction doit être compris entre 1 et 100%' });
+    }
+
+    const limit = parseInt(usage_limit, 10);
+    if (isNaN(limit) || limit < 1) {
+      return res.status(400).json({ error: 'La limite d\'utilisation doit être au minimum de 1' });
+    }
+
+    const [existing] = await sql`SELECT id FROM promo_codes WHERE UPPER(code) = UPPER(${cleanCode})`;
+    if (existing) {
+      return res.status(400).json({ error: `Le code promo "${cleanCode}" existe déjà. Veuillez en choisir un autre.` });
+    }
+
+    const expDate = expires_at && String(expires_at).trim() ? new Date(expires_at) : null;
+    const active = is_active !== undefined ? Boolean(is_active) : true;
+
+    const [created] = await sql`
+      INSERT INTO promo_codes (code, product_id, discount_percent, usage_limit, used_count, expires_at, is_active, created_at, updated_at)
+      VALUES (${cleanCode}, ${prodId}, ${discount}, ${limit}, 0, ${expDate}, ${active}, NOW(), NOW())
+      RETURNING *
+    `;
+
+    res.status(201).json(created);
+  } catch (err: any) {
+    console.error('Failed to create promo code:', err);
+    res.status(500).json({ error: 'Erreur lors de la création du code promo', details: err.message });
+  }
+});
+
+router.put('/admin/promo-codes/:id', authenticate, async (req, res) => {
+  try {
+    const promoId = parseInt(req.params.id, 10);
+    if (isNaN(promoId)) return res.status(400).json({ error: 'ID invalide' });
+
+    const [existing] = await sql`SELECT * FROM promo_codes WHERE id = ${promoId}`;
+    if (!existing) return res.status(404).json({ error: 'Code promo introuvable' });
+
+    const { code, product_id, discount_percent, usage_limit, expires_at, is_active } = req.body;
+
+    let cleanCode = existing.code;
+    if (code && typeof code === 'string' && code.trim()) {
+      cleanCode = code.trim().toUpperCase().replace(/\s+/g, '');
+      if (cleanCode !== existing.code) {
+        const [duplicate] = await sql`SELECT id FROM promo_codes WHERE UPPER(code) = UPPER(${cleanCode}) AND id != ${promoId}`;
+        if (duplicate) {
+          return res.status(400).json({ error: `Le code promo "${cleanCode}" est déjà utilisé.` });
+        }
+      }
+    }
+
+    let prodId = existing.product_id;
+    if (product_id !== undefined) {
+      prodId = parseInt(product_id, 10);
+      const [product] = await sql`SELECT id FROM products WHERE id = ${prodId}`;
+      if (!product) return res.status(400).json({ error: 'Produit introuvable' });
+    }
+
+    let discount = existing.discount_percent;
+    if (discount_percent !== undefined) {
+      discount = parseInt(discount_percent, 10);
+      if (isNaN(discount) || discount < 1 || discount > 100) {
+        return res.status(400).json({ error: 'Le pourcentage doit être entre 1 et 100%' });
+      }
+    }
+
+    let limit = existing.usage_limit;
+    if (usage_limit !== undefined) {
+      limit = parseInt(usage_limit, 10);
+      if (isNaN(limit) || limit < existing.used_count) {
+        return res.status(400).json({ 
+          error: `La limite d'utilisation ne peut pas être inférieure au nombre de fois où le code a déjà été utilisé (${existing.used_count}).` 
+        });
+      }
+    }
+
+    let expDate = existing.expires_at;
+    if (expires_at !== undefined) {
+      expDate = expires_at && String(expires_at).trim() ? new Date(expires_at) : null;
+    }
+
+    let active = existing.is_active;
+    if (is_active !== undefined) {
+      active = Boolean(is_active);
+    }
+
+    const [updated] = await sql`
+      UPDATE promo_codes
+      SET code = ${cleanCode},
+          product_id = ${prodId},
+          discount_percent = ${discount},
+          usage_limit = ${limit},
+          expires_at = ${expDate},
+          is_active = ${active},
+          updated_at = NOW()
+      WHERE id = ${promoId}
+      RETURNING *
+    `;
+
+    res.json(updated);
+  } catch (err: any) {
+    console.error('Failed to update promo code:', err);
+    res.status(500).json({ error: 'Erreur lors de la modification du code promo', details: err.message });
+  }
+});
+
+router.patch('/admin/promo-codes/:id/toggle', authenticate, async (req, res) => {
+  try {
+    const promoId = parseInt(req.params.id, 10);
+    if (isNaN(promoId)) return res.status(400).json({ error: 'ID invalide' });
+
+    const [updated] = await sql`
+      UPDATE promo_codes
+      SET is_active = NOT is_active,
+          updated_at = NOW()
+      WHERE id = ${promoId}
+      RETURNING *
+    `;
+
+    if (!updated) return res.status(404).json({ error: 'Code promo introuvable' });
+    res.json(updated);
+  } catch (err) {
+    console.error('Failed to toggle promo code:', err);
+    res.status(500).json({ error: 'Failed to toggle promo code' });
+  }
+});
+
+router.delete('/admin/promo-codes/:id', authenticate, async (req, res) => {
+  try {
+    const promoId = parseInt(req.params.id, 10);
+    if (isNaN(promoId)) return res.status(400).json({ error: 'ID invalide' });
+
+    const [promo] = await sql`SELECT id, code, used_count FROM promo_codes WHERE id = ${promoId}`;
+    if (!promo) return res.status(404).json({ error: 'Code promo introuvable' });
+
+    if (Number(promo.used_count) > 0) {
+      return res.status(400).json({
+        error: `Ce code promo a déjà été utilisé ${promo.used_count} fois pour des commandes. Pour préserver l'historique comptable et client, vous devez le désactiver plutôt que de le supprimer définitivement.`
+      });
+    }
+
+    const [ordersCount] = await sql`SELECT COUNT(*) as count FROM orders WHERE UPPER(promo_code) = UPPER(${promo.code})`;
+    if (ordersCount && Number(ordersCount.count) > 0) {
+      return res.status(400).json({
+        error: `Ce code promo est rattaché à ${ordersCount.count} commande(s) existante(s). Désactivez-le plutôt que de le supprimer afin de préserver l'historique.`
+      });
+    }
+
+    await sql`DELETE FROM promo_codes WHERE id = ${promoId}`;
+    res.json({ message: 'Code promo supprimé avec succès' });
+  } catch (err) {
+    console.error('Failed to delete promo code:', err);
+    res.status(500).json({ error: 'Failed to delete promo code' });
   }
 });
 

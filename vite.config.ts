@@ -15,11 +15,11 @@ export default defineConfig({
     'import.meta.env.VITE_SUPABASE_ANON_KEY': JSON.stringify(process.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV2dmJoYWxneWZmYWdzZXNtdmh1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4Nzc2MDMsImV4cCI6MjA4OTQ1MzYwM30.gL5FtiWtgIDLWXQJZnWbaOK9XY4voUQrfFLf5EaA2v4'),
   },
   resolve: {
-    dedupe: ['react', 'react-dom', 'react-router-dom', 'react-router', 'zustand', 'react-helmet-async'],
-    alias: {
-      react: path.resolve(process.cwd(), 'node_modules/react'),
-      'react-dom': path.resolve(process.cwd(), 'node_modules/react-dom'),
-    },
+    dedupe: ['react', 'react-dom', 'react-router', 'react-router-dom', 'zustand', 'react-helmet-async'],
+    alias: [
+      { find: /^react$/, replacement: path.resolve(process.cwd(), 'node_modules/react') },
+      { find: /^react-dom$/, replacement: path.resolve(process.cwd(), 'node_modules/react-dom') },
+    ],
   },
   optimizeDeps: {
     include: [
@@ -28,6 +28,7 @@ export default defineConfig({
       'react/jsx-dev-runtime',
       'react-dom',
       'react-dom/client',
+      'react-router',
       'react-router-dom',
       'react-helmet-async',
       'zustand',
@@ -37,6 +38,12 @@ export default defineConfig({
       'axios',
       'clsx',
       'tailwind-merge',
+      '@supabase/supabase-js',
+      '@hello-pangea/dnd',
+      'dompurify',
+      'react-easy-crop',
+      'react-simple-wysiwyg',
+      'swr',
     ],
   },
 });

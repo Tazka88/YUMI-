@@ -1,7 +1,7 @@
 import React from 'react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { formatPrice } from '../../utils/formatPrice';
-import { Printer, Trash2, Truck, MapPin, Phone } from 'lucide-react';
+import { Printer, Trash2, Truck, MapPin, Phone, Tag } from 'lucide-react';
 
 interface OrderKanbanProps {
   orders: any[];
@@ -98,9 +98,17 @@ export default function OrderKanban({ orders, updateOrderStatus, orderSearchTerm
                               <span className="font-mono text-xs font-bold text-gray-900 bg-gray-100 border border-gray-200 px-2 py-0.5 rounded-lg">
                                 {order.order_id || `#${order.id}`}
                               </span>
-                              <span className="font-extrabold text-sm text-orange-600 font-mono">
-                                {formatPrice(order.total_amount)}
-                              </span>
+                              <div className="text-right">
+                                <span className="font-extrabold text-sm text-orange-600 font-mono block">
+                                  {formatPrice(order.total_amount)}
+                                </span>
+                                {order.promo_code && (
+                                  <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded mt-0.5" title={`Code promo: ${order.promo_code}`}>
+                                    <Tag size={9} />
+                                    {order.promo_code}
+                                  </span>
+                                )}
+                              </div>
                             </div>
                             
                             <div>

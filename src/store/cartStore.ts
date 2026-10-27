@@ -120,21 +120,47 @@ export function triggerCartSync(items: CartItem[], customerInfo?: CustomerCartIn
   }, 1200);
 }
 
+export interface AppliedPromo {
+  code: string;
+  product_id: number;
+  product_name: string;
+  product_image?: string;
+  discount_percent: number;
+  discount_amount?: number;
+}
+
 interface CartStore {
   items: CartItem[];
+  appliedPromo: AppliedPromo | null;
   addItem: (product: Product, quantity: number, selectedVariation?: any) => void;
   removeItem: (cartItemId: string | number) => void;
   updateQuantity: (cartItemId: string | number, quantity: number) => void;
   clearCart: () => void;
   restoreCart: (items: CartItem[]) => void;
   syncCustomerInfo: (info: CustomerCartInfo) => void;
+  setAppliedPromo: (promo: AppliedPromo | null) => void;
+  getPromoDiscount: () => number;
   total: () => number;
+  finalTotal: () => number;
 }
 
 export const useCartStore = create<CartStore>()(
   persist(
     (set, get) => ({
       items: [],
+      appliedPromo: null,
+      setAppliedPromo: (promo) => {
+        set({ appliedPromo: promo });
+      },
+      getPromoDiscount: () => {
+        const { appliedPromo, items } = get();
+        if (!appliedPromo) return 0;
+        const matchingItem = items.find((i) => String(i.id) === String(appliedPromo.product_id));
+        if (!matchingItem) return 0;
+        const price = getProductEffectivePrice(matchingItem);
+        const lineTotal = price * matchingItem.quantity;
+        return Math.round((lineTotal * appliedPromo.discount_percent) / 100);
+      },
       addItem: (product, quantity, selectedVariation) => {
         set((state) => {
           const cartItemId = selectedVariation 
@@ -158,7 +184,17 @@ export const useCartStore = create<CartStore>()(
         set((state) => {
           const newItems = state.items.filter((i) => i.cartItemId !== id && i.id.toString() !== id.toString());
           triggerCartSync(newItems);
-          return { items: newItems };
+          
+          // Check if promo product was removed
+          let nextPromo = state.appliedPromo;
+          if (nextPromo) {
+            const hasPromoProduct = newItems.some((i) => String(i.id) === String(nextPromo?.product_id));
+            if (!hasPromoProduct) {
+              nextPromo = null;
+            }
+          }
+          
+          return { items: newItems, appliedPromo: nextPromo };
         });
       },
       updateQuantity: (id, quantity) => {
@@ -173,7 +209,7 @@ export const useCartStore = create<CartStore>()(
       clearCart: () => {
         set(() => {
           triggerCartSync([]);
-          return { items: [] };
+          return { items: [], appliedPromo: null };
         });
       },
       restoreCart: (items) => {
@@ -190,6 +226,11 @@ export const useCartStore = create<CartStore>()(
           const price = getProductEffectivePrice(item);
           return sum + price * item.quantity;
         }, 0);
+      },
+      finalTotal: () => {
+        const subtotal = get().total();
+        const discount = get().getPromoDiscount();
+        return Math.max(0, subtotal - discount);
       },
     }),
     {

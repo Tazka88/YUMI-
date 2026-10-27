@@ -1,12 +1,72 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { Trash2, ArrowRight, ShoppingBag } from 'lucide-react';
+import { Trash2, ArrowRight, ShoppingBag, Tag, CheckCircle2, X, Loader2 } from 'lucide-react';
 import { useCartStore } from '../store/cartStore';
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import toast from 'react-hot-toast';
 import { formatPrice, getProductEffectivePrice } from '../utils/formatPrice';
 import SEO from '../components/SEO';
 
 export default function Cart() {
-  const { items, updateQuantity, removeItem, total } = useCartStore();
+  const { items, updateQuantity, removeItem, total, appliedPromo, setAppliedPromo, getPromoDiscount, finalTotal } = useCartStore();
+  const [promoCodeInput, setPromoCodeInput] = useState('');
+  const [isApplyingPromo, setIsApplyingPromo] = useState(false);
+  const [promoError, setPromoError] = useState<string | null>(null);
+
+  const discountAmount = getPromoDiscount();
+
+  const handleApplyPromo = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!promoCodeInput.trim()) {
+      setPromoError('Veuillez entrer un code promo');
+      return;
+    }
+
+    setIsApplyingPromo(true);
+    setPromoError(null);
+
+    try {
+      const res = await fetch('/api/promo-codes/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          code: promoCodeInput.trim(),
+          items: items.map(item => ({
+            id: item.id,
+            product_id: item.id,
+            price: getProductEffectivePrice(item),
+            quantity: item.quantity
+          }))
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Code promo invalide');
+      }
+
+      setAppliedPromo({
+        code: data.code,
+        product_id: data.product_id,
+        product_name: data.product_name,
+        product_image: data.product_image,
+        discount_percent: data.discount_percent,
+        discount_amount: data.discount_amount
+      });
+      setPromoCodeInput('');
+      toast.success(data.message || `Code promo "${data.code}" appliqué avec succès !`);
+    } catch (err: any) {
+      setPromoError(err.message || 'Code promo invalide');
+      toast.error(err.message || 'Code promo invalide');
+    } finally {
+      setIsApplyingPromo(false);
+    }
+  };
+
+  const handleRemovePromo = () => {
+    setAppliedPromo(null);
+    setPromoError(null);
+    toast.success('Code promo retiré');
+  };
   
   const viewCartTrackedRef = useRef(false);
   useEffect(() => {
@@ -146,11 +206,86 @@ export default function Cart() {
           <div className="bg-white p-6 rounded-lg shadow-sm sticky top-24">
             <h2 className="text-lg font-bold text-gray-800 mb-4 border-b pb-4">Résumé de la commande</h2>
             
+            {/* Promo Code Section */}
+            <div className="mb-5 pb-5 border-b border-gray-100">
+              <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider block mb-2 flex items-center gap-1.5">
+                <Tag size={14} className="text-orange-500" />
+                Code promo
+              </label>
+
+              {appliedPromo ? (
+                <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-start gap-2">
+                      <CheckCircle2 size={16} className="text-emerald-600 shrink-0 mt-0.5" />
+                      <div>
+                        <div className="text-sm font-bold text-emerald-900 flex items-center gap-1.5">
+                          <span>{appliedPromo.code}</span>
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-200 text-emerald-800 font-semibold">
+                            -{appliedPromo.discount_percent}%
+                          </span>
+                        </div>
+                        <p className="text-xs text-emerald-700 mt-0.5">
+                          Appliqué sur : <span className="font-medium">{appliedPromo.product_name}</span>
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleRemovePromo}
+                      className="text-gray-400 hover:text-red-500 p-1 rounded-md transition"
+                      title="Supprimer le code promo"
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <form onSubmit={handleApplyPromo} className="space-y-2">
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={promoCodeInput}
+                      onChange={(e) => {
+                        setPromoCodeInput(e.target.value.toUpperCase());
+                        if (promoError) setPromoError(null);
+                      }}
+                      placeholder="Ex: RETOUR10"
+                      className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 font-mono uppercase"
+                    />
+                    <button
+                      type="submit"
+                      disabled={isApplyingPromo || !promoCodeInput.trim()}
+                      className="px-4 py-2 bg-gray-900 hover:bg-orange-600 disabled:bg-gray-300 text-white text-sm font-semibold rounded-md transition flex items-center justify-center gap-1.5 shrink-0"
+                    >
+                      {isApplyingPromo ? (
+                        <Loader2 size={16} className="animate-spin" />
+                      ) : (
+                        'Appliquer'
+                      )}
+                    </button>
+                  </div>
+                  {promoError && (
+                    <p className="text-xs text-red-500 font-medium">{promoError}</p>
+                  )}
+                </form>
+              )}
+            </div>
+
             <div className="space-y-3 mb-6">
               <div className="flex justify-between text-gray-600">
                 <span>Sous-total ({items.reduce((acc, item) => acc + item.quantity, 0)} articles)</span>
                 <span className="font-medium">{formatPrice(total())}</span>
               </div>
+              {appliedPromo && discountAmount > 0 && (
+                <div className="flex justify-between text-emerald-600 font-medium text-sm">
+                  <span className="flex items-center gap-1">
+                    <Tag size={13} />
+                    Réduction ({appliedPromo.code})
+                  </span>
+                  <span>-{formatPrice(discountAmount)}</span>
+                </div>
+              )}
               <div className="flex justify-between text-gray-600">
                 <span>Frais de livraison</span>
                 <span className="text-sm text-orange-500">Calculés à l'étape suivante</span>
@@ -161,7 +296,7 @@ export default function Cart() {
               <div className="flex justify-between items-end">
                 <span className="font-bold text-gray-800">Total</span>
                 <div className="text-right">
-                  <span className="text-2xl font-black text-orange-600">{formatPrice(total())}</span>
+                  <span className="text-2xl font-black text-orange-600">{formatPrice(finalTotal())}</span>
                   <div className="text-xs text-gray-500">TVA incluse</div>
                 </div>
               </div>

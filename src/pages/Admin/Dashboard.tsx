@@ -16,6 +16,7 @@ import BlogAdmin from './BlogAdmin';
 import PushNotificationAdmin from './PushNotificationAdmin';
 import AbandonedCartsAdmin from './AbandonedCartsAdmin';
 import LiveChatAdmin from './LiveChatAdmin';
+import PromoCodesAdmin from './PromoCodesAdmin';
 
 
 export interface HomeSection {
@@ -1796,6 +1797,13 @@ const handleBulkDelivery = async () => {
               <span className="flex-1 text-left">Paniers abandonnés</span>
             </button>
             <button
+              onClick={() => { setActiveTab('promo-codes'); setIsMobileNavOpen(false); }}
+              className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition ${activeTab === 'promo-codes' ? 'bg-orange-500 text-white font-semibold shadow-md shadow-orange-500/20' : 'text-gray-400 hover:bg-gray-800 hover:text-white'}`}
+            >
+              <Tag size={18} />
+              <span className="flex-1 text-left">Codes promo</span>
+            </button>
+            <button
               onClick={() => { setActiveTab('live-chat'); setIsMobileNavOpen(false); }}
               className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition ${activeTab === 'live-chat' ? 'bg-orange-500 text-white font-semibold shadow-md shadow-orange-500/20' : 'text-gray-400 hover:bg-gray-800 hover:text-white'}`}
             >
@@ -2009,6 +2017,13 @@ const handleBulkDelivery = async () => {
             >
               <ShoppingBag size={18} />
               <span className="flex-1 text-left">Paniers abandonnés</span>
+            </button>
+            <button 
+              onClick={() => setActiveTab('promo-codes')}
+              className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition ${activeTab === 'promo-codes' ? 'bg-orange-500 text-white font-semibold shadow-md shadow-orange-500/20' : 'text-gray-400 hover:bg-gray-800 hover:text-white'}`}
+            >
+              <Tag size={18} />
+              <span className="flex-1 text-left">Codes promo</span>
             </button>
             <button 
               onClick={() => setActiveTab('live-chat')}
@@ -2429,7 +2444,13 @@ const handleBulkDelivery = async () => {
                             </span>
                           </td>
                           <td className="px-6 py-4 font-extrabold text-gray-900">
-                            {formatPrice(order.total_amount)}
+                            <div>{formatPrice(order.total_amount)}</div>
+                            {order.promo_code && (
+                              <div className="text-[11px] font-semibold text-emerald-600 flex items-center gap-1 mt-0.5" title={`Code: ${order.promo_code}`}>
+                                <Tag size={10} />
+                                <span>{order.promo_code} (-{formatPrice(order.discount_amount || 0)})</span>
+                              </div>
+                            )}
                           </td>
                           <td className="px-6 py-4">
                             <span className={`px-3 py-1 rounded-full text-xs font-semibold border capitalize inline-flex items-center gap-1.5 ${getStatusColor(order.status)}`}>
@@ -2723,7 +2744,13 @@ const handleBulkDelivery = async () => {
                             </span>
                           </td>
                           <td className="px-6 py-4 font-extrabold text-gray-900">
-                            {formatPrice(order.total_amount)}
+                            <div>{formatPrice(order.total_amount)}</div>
+                            {order.promo_code && (
+                              <div className="text-[11px] font-semibold text-emerald-600 flex items-center gap-1 mt-0.5" title={`Code: ${order.promo_code}`}>
+                                <Tag size={10} />
+                                <span>{order.promo_code} (-{formatPrice(order.discount_amount || 0)})</span>
+                              </div>
+                            )}
                           </td>
                           <td className="px-6 py-4">
                             <select 
@@ -4443,6 +4470,9 @@ const handleBulkDelivery = async () => {
         )}
         {activeTab === 'live-chat' && (
           <LiveChatAdmin />
+        )}
+        {activeTab === 'promo-codes' && (
+          <PromoCodesAdmin />
         )}
 
       </main>

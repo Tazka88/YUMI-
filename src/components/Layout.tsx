@@ -79,6 +79,7 @@ export default function Layout() {
   const [showAccountDropdown, setShowAccountDropdown] = useState(false);
   const [showHelpDropdown, setShowHelpDropdown] = useState(false);
   const [expandedSubcategories, setExpandedSubcategories] = useState<number[]>([]);
+  const [expandedSubSubcategories, setExpandedSubSubcategories] = useState<number[]>([]);
   const [showAnnouncement, setShowAnnouncement] = useState(true);
   const [currentMessageIndex, setCurrentMessageIndex] = useState(0);
   const { settings, fetched: isSettingsLoaded, fetchSettings } = useSettingsStore();
@@ -88,6 +89,14 @@ export default function Layout() {
     e.preventDefault();
     e.stopPropagation();
     setExpandedSubcategories(prev => 
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    );
+  };
+
+  const toggleSubSubcategory = (id: number, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setExpandedSubSubcategories(prev => 
       prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
     );
   };
@@ -468,10 +477,24 @@ export default function Layout() {
                                       <li key={subsub.id}>
                                         <Link 
                                           to={`/category/${subsub.slug}?subsub=true`}
-                                          className="text-[13px] text-gray-500 hover:text-orange-500 transition-colors block"
+                                          className="text-[13px] font-medium text-gray-600 hover:text-orange-500 transition-colors block"
                                         >
                                           <CategoryNameDisplay name={subsub.name} />
                                         </Link>
+                                        {subsub.sub_sub_subcategories && subsub.sub_sub_subcategories.length > 0 && (
+                                          <ul className="pl-2 mt-1 space-y-1 border-l border-gray-100">
+                                            {subsub.sub_sub_subcategories.map((sss: any) => (
+                                              <li key={sss.id}>
+                                                <Link 
+                                                  to={`/category/${sss.slug}?level4=true`}
+                                                  className="text-[12px] text-gray-500 hover:text-orange-500 transition-colors block py-0.5"
+                                                >
+                                                  <CategoryNameDisplay name={sss.name} />
+                                                </Link>
+                                              </li>
+                                            ))}
+                                          </ul>
+                                        )}
                                       </li>
                                     ))}
                                   </ul>
@@ -597,13 +620,38 @@ export default function Layout() {
                             <ul className="pl-4 mt-1 space-y-2 border-l-2 border-gray-100">
                               {sub.sub_subcategories.map((subsub: any) => (
                                 <li key={subsub.id}>
-                                  <Link 
-                                    to={`/category/${subsub.slug}?subsub=true`} 
-                                    className="block font-normal text-[13px] font-sans text-gray-500 hover:text-orange-500 py-1"
-                                    onClick={() => setIsMenuOpen(false)}
-                                  >
-                                    <CategoryNameDisplay name={subsub.name} />
-                                  </Link>
+                                  <div className="flex items-center justify-between">
+                                    <Link 
+                                      to={`/category/${subsub.slug}?subsub=true`} 
+                                      className="block font-medium text-[13px] font-sans text-gray-700 hover:text-orange-500 py-1 flex-1"
+                                      onClick={() => setIsMenuOpen(false)}
+                                    >
+                                      <CategoryNameDisplay name={subsub.name} />
+                                    </Link>
+                                    {subsub.sub_sub_subcategories && subsub.sub_sub_subcategories.length > 0 && (
+                                      <button 
+                                        onClick={(e) => toggleSubSubcategory(subsub.id, e)}
+                                        className="p-1.5 text-gray-400 hover:text-orange-500"
+                                      >
+                                        <ChevronRight size={14} className={`transition-transform duration-200 ${expandedSubSubcategories.includes(subsub.id) ? 'rotate-90' : ''}`} />
+                                      </button>
+                                    )}
+                                  </div>
+                                  {subsub.sub_sub_subcategories && subsub.sub_sub_subcategories.length > 0 && expandedSubSubcategories.includes(subsub.id) && (
+                                    <ul className="pl-3 mt-1 space-y-1.5 border-l-2 border-orange-100">
+                                      {subsub.sub_sub_subcategories.map((sss: any) => (
+                                        <li key={sss.id}>
+                                          <Link 
+                                            to={`/category/${sss.slug}?level4=true`} 
+                                            className="block font-normal text-[12px] text-gray-500 hover:text-orange-500 py-0.5"
+                                            onClick={() => setIsMenuOpen(false)}
+                                          >
+                                            <CategoryNameDisplay name={sss.name} />
+                                          </Link>
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  )}
                                 </li>
                               ))}
                             </ul>

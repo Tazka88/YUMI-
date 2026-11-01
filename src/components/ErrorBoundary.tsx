@@ -17,6 +17,13 @@ class ErrorBoundary extends Component<Props, State> {
   };
 
   public static getDerivedStateFromError(error: Error): State {
+    const isChunkError = /Failed to fetch dynamically imported module|error loading dynamically imported module|Loading chunk/i.test(
+      error?.message || ''
+    );
+    if (isChunkError && typeof window !== 'undefined' && !sessionStorage.getItem('chunk_reloaded_boundary')) {
+      sessionStorage.setItem('chunk_reloaded_boundary', '1');
+      window.location.reload();
+    }
     return { hasError: true, error };
   }
 

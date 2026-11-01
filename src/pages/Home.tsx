@@ -4,7 +4,7 @@ import { ShoppingCart, Star, ChevronRight, ChevronLeft, Truck, ShieldCheck, Refr
 import { useCartStore, Product } from '../store/cartStore';
 import { formatPrice } from '../utils/formatPrice';
 import { ProductCard } from '../components/ProductCard';
-const ProductGrid = lazy(() => import('../components/ProductGrid'));
+import ProductGrid from '../components/ProductGrid';
 import SEO from '../components/SEO';
 import { buildOrganizationSchema, buildWebSiteSchema } from '../lib/schemaUtils';
 import { getCategoryWithEmoji, CategoryNameDisplay } from '../components/Layout';
@@ -884,9 +884,9 @@ export default function Home() {
               {isSectionLoading ? (
                 <GridSkeleton />
               ) : isCarousel ? (
-                <Suspense fallback={<GridSkeleton />}><ProductGrid products={sectionProducts} isCarousel={true} /></Suspense>
+                <ProductGrid products={sectionProducts} isCarousel={true} />
               ) : (
-                <Suspense fallback={<GridSkeleton />}><ProductGrid products={sectionProducts} /></Suspense>
+                <ProductGrid products={sectionProducts} />
               )}
             </section>
           );

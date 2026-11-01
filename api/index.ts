@@ -9,6 +9,15 @@ import { categorySEOData } from '../src/utils/seoData.js';
 import { formatSeoTitle } from '../src/utils/seoTitle.js';
 import { buildProductSchema, buildBreadcrumbSchema, buildBlogSchema } from '../src/lib/schemaUtils.js';
 
+// Prevent unhandled promise rejections / timeouts from terminating the process
+process.on('unhandledRejection', (reason: any) => {
+  console.warn('Unhandled Rejection safely handled:', reason?.message || reason);
+});
+
+process.on('uncaughtException', (err: any) => {
+  console.warn('Uncaught Exception safely handled:', err?.message || err);
+});
+
 const app = express();
 
 app.set('trust proxy', 1);
@@ -92,6 +101,9 @@ app.use(async (req, res, next) => {
 
       let [subsub] = await sql`SELECT slug FROM sub_subcategories WHERE id = ${id}`;
       if (subsub && subsub.slug) return res.redirect(301, `/category/${subsub.slug}?subsub=true`);
+
+      let [subsubsub] = await sql`SELECT slug FROM sub_sub_subcategories WHERE id = ${id}`;
+      if (subsubsub && subsubsub.slug) return res.redirect(301, `/category/${subsubsub.slug}?level4=true`);
     } catch (err) {
       console.error('Error resolving numeric category ID:', err);
     }
@@ -173,11 +185,11 @@ app.get('*', async (req, res, next) => {
     return next();
   }
 
+  let template = '<html><head></head><body><h1>Missing template.html</h1></body></html>';
   try {
     // Use string literals to help Vercel NFT trace dependencies
     const indexPath = path.join(process.cwd(), 'dist', 'template.html');
     const publicPath = path.join(process.cwd(), 'public', 'index.html');
-    let template = '<html><head></head><body><h1>Missing template.html</h1></body></html>';
     
     if (fs.existsSync(indexPath)) {
       template = fs.readFileSync(indexPath, 'utf-8');
@@ -221,7 +233,7 @@ app.get('*', async (req, res, next) => {
             <ul>${brands.map((b: any) => `<li><a href="/brands/${b.slug}">${b.name}</a></li>`).join('')}</ul>
           </div>
         `;
-      } catch(e) { console.error("DB Error in SSR:", e); }
+      } catch(e) { console.warn("SSR DB fallback:", (e as any)?.message || e); }
     } else if (req.path === '/brands') {
       title = 'Toutes nos marques | Zorando';
       try {
@@ -233,7 +245,7 @@ app.get('*', async (req, res, next) => {
             <ul>${brands.map((b: any) => `<li><a href="/brands/${b.slug}">${b.name}</a></li>`).join('')}</ul>
           </div>
         `;
-      } catch(e) { console.error("DB Error in SSR:", e); }
+      } catch(e) { console.warn("SSR DB fallback:", (e as any)?.message || e); }
     } else if (req.path === '/categories') {
       title = 'Toutes nos catégories | Zorando';
       description = 'Découvrez l\'ensemble des catégories de produits disponibles sur ZORANDO en Algérie.';
@@ -246,7 +258,7 @@ app.get('*', async (req, res, next) => {
             <ul>${categories.map((c: any) => `<li><a href="/category/${c.slug}">${c.name}</a></li>`).join('')}</ul>
           </div>
         `;
-      } catch(e) { console.error("DB Error in SSR:", e); }
+      } catch(e) { console.warn("SSR DB fallback:", (e as any)?.message || e); }
     } else if (req.path.startsWith('/brands/')) {
       const parts = req.path.split('/');
       const slug = parts[2];
@@ -334,7 +346,7 @@ app.get('*', async (req, res, next) => {
           } else {
              isNotFound = true;
           }
-        } catch(e) { console.error("DB Error in SSR generic brand cat:", e); }
+        } catch(e) { console.warn("SSR generic brand cat fallback:", (e as any)?.message || e); }
       } else {
         try {
           const [brand] = await sql`SELECT id, name, description, seo_title, seo_description, h1_title, seo_content, image FROM brands WHERE slug = ${slug}`;
@@ -443,7 +455,7 @@ app.get('*', async (req, res, next) => {
           } else {
             isNotFound = true;
           }
-        } catch(e) { console.error("DB Error in SSR:", e); }
+        } catch(e) { console.warn("SSR DB fallback:", (e as any)?.message || e); }
       }
     } else if (req.path.startsWith('/category/')) {
       const slug = req.path.split('/')[2];
@@ -469,7 +481,11 @@ app.get('*', async (req, res, next) => {
             else {
               const [subSubcat] = await sql`SELECT id, name FROM sub_subcategories WHERE slug = ${slug}`;
               if (subSubcat) catName = subSubcat.name;
-              else isNotFound = true;
+              else {
+                const [subSubSubcat] = await sql`SELECT id, name FROM sub_sub_subcategories WHERE slug = ${slug}`;
+                if (subSubSubcat) catName = subSubSubcat.name;
+                else isNotFound = true;
+              }
             }
           }
           
@@ -525,6 +541,8 @@ app.get('*', async (req, res, next) => {
             sub.slug as subcategory_slug,
             subsub.name as sub_subcategory_name,
             subsub.slug as sub_subcategory_slug,
+            sss.name as sub_sub_subcategory_name,
+            sss.slug as sub_sub_subcategory_slug,
             (SELECT COUNT(*) FROM reviews r WHERE r.product_id = p.id) as reviews_count,
             (SELECT COALESCE(AVG(rating), 0) FROM reviews r WHERE r.product_id = p.id) as avg_rating
           FROM products p
@@ -532,6 +550,7 @@ app.get('*', async (req, res, next) => {
           LEFT JOIN categories c ON p.category_id = c.id
           LEFT JOIN subcategories sub ON p.subcategory_id = sub.id
           LEFT JOIN sub_subcategories subsub ON p.sub_subcategory_id = subsub.id
+          LEFT JOIN sub_sub_subcategories sss ON p.sub_sub_subcategory_id = sss.id
           WHERE p.slug = ${slug}
         `;
         if (product) {
@@ -691,6 +710,9 @@ app.get('*', async (req, res, next) => {
           if (product.sub_subcategory_slug) {
             breadcrumbItems.push({ name: product.sub_subcategory_name, item: `${baseUrl}/category/${product.sub_subcategory_slug}?subsub=true` });
           }
+          if (product.sub_sub_subcategory_slug) {
+            breadcrumbItems.push({ name: product.sub_sub_subcategory_name, item: `${baseUrl}/category/${product.sub_sub_subcategory_slug}?level4=true` });
+          }
           breadcrumbItems.push({ name: product.name, item: `${baseUrl}${req.path}` });
           
           const breadcrumbSchema = buildBreadcrumbSchema(breadcrumbItems);
@@ -785,6 +807,9 @@ try {
                 <h2>Catégories</h2>
                 <ul>
                   <li><a href="${baseUrl}/category/${escapeHtml(product.category_slug)}">${escapeHtml(product.category_name)}</a></li>
+                  ${product.subcategory_slug ? `<li><a href="${baseUrl}/category/${escapeHtml(product.subcategory_slug)}?sub=true">${escapeHtml(product.subcategory_name)}</a></li>` : ''}
+                  ${product.sub_subcategory_slug ? `<li><a href="${baseUrl}/category/${escapeHtml(product.sub_subcategory_slug)}?subsub=true">${escapeHtml(product.sub_subcategory_name)}</a></li>` : ''}
+                  ${product.sub_sub_subcategory_slug ? `<li><a href="${baseUrl}/category/${escapeHtml(product.sub_sub_subcategory_slug)}?level4=true">${escapeHtml(product.sub_sub_subcategory_name)}</a></li>` : ''}
                 </ul>
               </div>
             </div>
@@ -793,7 +818,7 @@ try {
         } else {
           isNotFound = true;
         }
-      } catch(e) { console.error("DB Error in SSR:", e); }
+      } catch(e) { console.warn("SSR DB fallback:", (e as any)?.message || e); }
     } else if (req.path.startsWith('/blog/')) {
       const slug = req.path.split('/')[2];
       const BLOG_REDIRECTS: Record<string, string> = {
@@ -860,7 +885,7 @@ ${JSON.stringify(graphSchema)}
         } else {
           isNotFound = true;
         }
-      } catch(e) { console.error("DB Error in SSR:", e); }
+      } catch(e) { console.warn("SSR DB fallback:", (e as any)?.message || e); }
     } else if (req.path === '/blog') {
       title = 'Blog & Actualités | Zorando';
       description = 'Découvrez les dernières tendances, astuces et actualités sur le blog ZORANDO.';
@@ -1025,8 +1050,14 @@ ${JSON.stringify(graphSchema)}
     }
 
   } catch (err) {
-    console.error('SEO Injection Error:', err);
-    res.status(500).send('Erreur lors du rendu de la page SEO');
+    console.warn('SEO Injection Error (serving clean SPA fallback):', (err as any)?.message || err);
+    try {
+      const fallbackPath = path.join(process.cwd(), 'index.html');
+      const fallbackHtml = template || (fs.existsSync(fallbackPath) ? fs.readFileSync(fallbackPath, 'utf-8') : '');
+      res.status(200).header('Content-Type', 'text/html; charset=utf-8').send(fallbackHtml || '<!doctype html><html lang="fr"><head><meta charset="utf-8"/><title>ZORANDO</title></head><body><div id="root"></div><script type="module" src="/src/main.tsx"></script></body></html>');
+    } catch (_) {
+      res.status(200).header('Content-Type', 'text/html; charset=utf-8').send('<!doctype html><html lang="fr"><head><meta charset="utf-8"/><title>ZORANDO</title></head><body><div id="root"></div><script type="module" src="/src/main.tsx"></script></body></html>');
+    }
   }
 });
 

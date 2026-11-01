@@ -16,10 +16,6 @@ export default defineConfig({
   },
   resolve: {
     dedupe: ['react', 'react-dom', 'react-router', 'react-router-dom', 'zustand', 'react-helmet-async'],
-    alias: [
-      { find: /^react$/, replacement: path.resolve(process.cwd(), 'node_modules/react') },
-      { find: /^react-dom$/, replacement: path.resolve(process.cwd(), 'node_modules/react-dom') },
-    ],
   },
   optimizeDeps: {
     include: [

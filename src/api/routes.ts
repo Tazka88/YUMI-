@@ -244,8 +244,8 @@ const serveImageData = async (req: any, res: any, imageData: string, targetWidth
   res.status(404).json({ error: 'Invalid image format' });
 };
 
-const PRODUCT_COLS = `p.id, p.sku, p.category_id, p.subcategory_id, p.sub_subcategory_id, p.brand_id, p.name, p.slug, p.description, p.price, p.promo_price, p.promo_price_start_date, p.promo_price_end_date, p.stock, p.image as image, p.main_image_alt, p.video_url, p.is_popular, p.is_best_seller, p.is_new, p.is_recommended, p.is_fast_delivery, p.weight, p.is_active, p.features, p.key_points, p.faq_q1, p.faq_a1, p.faq_q2, p.faq_a2, p.variations, p.created_at, p.seo_title, p.seo_description, p.seo_keywords`;
-const PRODUCT_LIST_COLS = `p.id, p.sku, p.category_id, p.subcategory_id, p.sub_subcategory_id, p.brand_id, p.name, p.slug, p.price, p.promo_price, p.promo_price_start_date, p.promo_price_end_date, p.stock, p.is_fast_delivery, p.is_popular, p.is_best_seller, p.is_new, p.is_recommended, p.is_active, p.variations, p.created_at, p.image as image`;
+const PRODUCT_COLS = `p.id, p.sku, p.category_id, p.subcategory_id, p.sub_subcategory_id, p.sub_sub_subcategory_id, p.brand_id, p.name, p.slug, p.description, p.price, p.promo_price, p.promo_price_start_date, p.promo_price_end_date, p.stock, p.image as image, p.main_image_alt, p.video_url, p.is_popular, p.is_best_seller, p.is_new, p.is_recommended, p.is_fast_delivery, p.weight, p.is_active, p.features, p.key_points, p.faq_q1, p.faq_a1, p.faq_q2, p.faq_a2, p.variations, p.created_at, p.seo_title, p.seo_description, p.seo_keywords`;
+const PRODUCT_LIST_COLS = `p.id, p.sku, p.category_id, p.subcategory_id, p.sub_subcategory_id, p.sub_sub_subcategory_id, p.brand_id, p.name, p.slug, p.price, p.promo_price, p.promo_price_start_date, p.promo_price_end_date, p.stock, p.is_fast_delivery, p.is_popular, p.is_best_seller, p.is_new, p.is_recommended, p.is_active, p.variations, p.created_at, p.image as image`;
 const BLOG_POSTS_COLS = `id, category_id, title, slug, excerpt, content, image_url as image_url, status, published_at, created_at, seo_title, seo_description`;
 const BLOG_POSTS_LIST_COLS = `p.id, p.category_id, p.title, p.slug, p.excerpt, p.image_url as image_url, p.status, p.published_at, p.created_at`;
 const PRODUCT_IMAGES_COLS = `id, product_id, is_main, alt_text, image as image`;
@@ -254,13 +254,14 @@ const SLIDER_IMAGES_COLS = `id, category_id, position, is_active, title, descrip
 const BRANDS_COLS = `id, name, slug, description, seo_title, seo_description, h1_title, seo_content, image as image`;
 const SUBCAT_COLS = `id, category_id, name, slug, image as image`;
 const SUB_SUBCAT_COLS = `id, subcategory_id, name, slug, image as image`;
+const SUB_SUB_SUBCAT_COLS = `id, sub_subcategory_id, name, slug, image as image`;
 
 // Route to serve images from the database
 router.get(['/images/:table/:id/:field', '/images/:table/:id/:field/:seoSlug'], async (req, res) => {
   const { table, id, field } = req.params;
   
   // Validate table and field to prevent SQL injection
-  const allowedTables = ['products', 'categories', 'subcategories', 'sub_subcategories', 'brands', 'product_images', 'settings', 'slider_images', 'blog_posts', 'blog_categories', 'reviews'];
+  const allowedTables = ['products', 'categories', 'subcategories', 'sub_subcategories', 'sub_sub_subcategories', 'brands', 'product_images', 'settings', 'slider_images', 'blog_posts', 'blog_categories', 'reviews'];
   const allowedFields = ['image', 'value', 'image_url', 'slide_image', 'mobile_slide_image', 'mobile_image_url', 'image_1_url', 'image_2_url', 'image_3_url'];
   
   if (!allowedTables.includes(table) || !allowedFields.includes(field)) {
@@ -653,11 +654,12 @@ router.get('/sitemap.xml', async (req, res) => {
   try {
     const baseUrl = 'https://www.zorando.com';
     
-    const [products, categories, subcategories, sub_subcategories, brands, pages, brandSubSubCategories, blogPosts] = await Promise.all([
+    const [products, categories, subcategories, sub_subcategories, sub_sub_subcategories, brands, pages, brandSubSubCategories, blogPosts] = await Promise.all([
       sql`SELECT slug, created_at FROM products WHERE is_active = true`,
       sql`SELECT slug FROM categories`,
       sql`SELECT slug FROM subcategories`,
       sql`SELECT slug FROM sub_subcategories`,
+      sql`SELECT slug FROM sub_sub_subcategories`,
       sql`SELECT slug FROM brands`,
       sql`SELECT slug, updated_at FROM pages`,
       sql`SELECT DISTINCT b.slug as brand_slug, c.slug as category_slug FROM products p JOIN brands b ON p.brand_id = b.id JOIN sub_subcategories c ON p.sub_subcategory_id = c.id WHERE p.is_active = true AND p.sub_subcategory_id IS NOT NULL`,
@@ -704,6 +706,15 @@ router.get('/sitemap.xml', async (req, res) => {
       xml += `
   <url>
     <loc>${baseUrl}/category/${c.slug}?subsub=true</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.5</priority>
+  </url>`;
+    });
+
+    sub_sub_subcategories.forEach(c => {
+      xml += `
+  <url>
+    <loc>${baseUrl}/category/${c.slug}?level4=true</loc>
     <changefreq>weekly</changefreq>
     <priority>0.5</priority>
   </url>`;
@@ -966,11 +977,31 @@ router.get('/brands/:slug/categories', async (req, res) => {
   res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=60, stale-while-revalidate=300');
   try {
     const categories = await sql`
+      WITH RankedProducts AS (
+        SELECT 
+          p.sub_subcategory_id,
+          CASE 
+            WHEN p.image LIKE 'data:image/%' THEN '' 
+            ELSE p.image 
+          END as product_image,
+          ROW_NUMBER() OVER (
+            PARTITION BY p.sub_subcategory_id 
+            ORDER BY COALESCE(p.sales_count, 0) DESC, p.id ASC
+          ) as rn
+        FROM products p
+        JOIN brands b ON p.brand_id = b.id
+        WHERE b.slug = ${req.params.slug} 
+          AND p.is_active = true 
+          AND p.image IS NOT NULL 
+          AND p.image != ''
+      )
       SELECT DISTINCT
-        c.id, c.name, c.slug, 'sub_subcategory' as level 
+        c.id, c.name, c.slug, 'sub_subcategory' as level,
+        rp.product_image as image
        FROM sub_subcategories c 
        JOIN products p ON p.sub_subcategory_id = c.id 
        JOIN brands b ON p.brand_id = b.id 
+       LEFT JOIN RankedProducts rp ON rp.sub_subcategory_id = c.id AND rp.rn = 1
        WHERE b.slug = ${req.params.slug} AND p.is_active = true
        ORDER BY c.name ASC
     `;
@@ -1012,15 +1043,18 @@ router.get('/categories', async (req, res) => {
     const categories = await sql`SELECT ${sql.unsafe(CATEGORIES_COLS)} FROM categories`;
     const subcategories = await sql`SELECT ${sql.unsafe(SUBCAT_COLS)} FROM subcategories`;
     const sub_subcategories = await sql`SELECT ${sql.unsafe(SUB_SUBCAT_COLS)} FROM sub_subcategories`;
+    const sub_sub_subcategories = await sql`SELECT ${sql.unsafe(SUB_SUB_SUBCAT_COLS)} FROM sub_sub_subcategories`;
     
     const categoriesWithSubcats = categories.map((cat: any) => ({
       ...cat,
       subcategories: subcategories.filter((sub: any) => sub.category_id?.toString() === cat.id?.toString()).map((sub: any) => ({
         ...sub,
-        sub_subcategories: sub_subcategories.filter((ss: any) => ss.subcategory_id?.toString() === sub.id?.toString())
+        sub_subcategories: sub_subcategories.filter((ss: any) => ss.subcategory_id?.toString() === sub.id?.toString()).map((ss: any) => ({
+          ...ss,
+          sub_sub_subcategories: sub_sub_subcategories.filter((sss: any) => sss.sub_subcategory_id?.toString() === ss.id?.toString())
+        }))
       }))
     }));
-    
     
     categoriesWithSubcats.forEach((c: any) => {
       c.image = processImage('categories', c.id, 'image', c.image);
@@ -1034,6 +1068,11 @@ router.get('/categories', async (req, res) => {
           if (sub.sub_subcategories && Array.isArray(sub.sub_subcategories)) {
             sub.sub_subcategories.forEach((ss: any) => {
               ss.image = processImage('sub_subcategories', ss.id, 'image', ss.image);
+              if (ss.sub_sub_subcategories && Array.isArray(ss.sub_sub_subcategories)) {
+                ss.sub_sub_subcategories.forEach((sss: any) => {
+                  sss.image = processImage('sub_sub_subcategories', sss.id, 'image', sss.image);
+                });
+              }
             });
           }
         });
@@ -1047,6 +1086,25 @@ router.get('/categories', async (req, res) => {
   } catch (err: any) {
     console.error('Failed to fetch categories:', err);
     res.status(500).json({ error: 'Failed to fetch categories', details: err.message, stack: err.stack });
+  }
+});
+
+router.get('/sub_sub_subcategories', async (req, res) => {
+  const cacheKey = 'sub_sub_subcategories_all';
+  const cached = getCache(cacheKey);
+  if (cached) return res.json(cached);
+
+  res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=60, stale-while-revalidate=300');
+  try {
+    const list = await sql`SELECT ${sql.unsafe(SUB_SUB_SUBCAT_COLS)} FROM sub_sub_subcategories`;
+    list.forEach((item: any) => {
+      item.image = processImage('sub_sub_subcategories', item.id, 'image', item.image);
+    });
+    setCache(cacheKey, list, 60);
+    res.json(list);
+  } catch (err: any) {
+    console.error('Failed to fetch sub_sub_subcategories:', err);
+    res.status(500).json({ error: 'Failed to fetch level 4 categories' });
   }
 });
 
@@ -1079,6 +1137,7 @@ router.get('/products', async (req, res) => {
   const category = req.query.category as string | undefined;
   const subcategory = req.query.subcategory as string | undefined;
   const sub_subcategory = req.query.sub_subcategory as string | undefined;
+  const sub_sub_subcategory = (req.query.sub_sub_subcategory || req.query.level4) as string | undefined;
   const brand = req.query.brand as string | undefined;
   const search = req.query.search as string | undefined;
   const popular = req.query.popular || req.query.trending === 'true' ? 'true' : undefined;
@@ -1123,9 +1182,10 @@ router.get('/products', async (req, res) => {
       LEFT JOIN brands b ON p.brand_id = b.id 
       WHERE 
         p.is_active = true
-        AND (${category || null}::text IS NULL OR p.category_id = (SELECT id FROM categories WHERE slug = ${category || null} OR id = ${Number(category) || 0} LIMIT 1) OR p.subcategory_id IN (SELECT id FROM subcategories WHERE category_id = (SELECT id FROM categories WHERE slug = ${category || null} OR id = ${Number(category) || 0} LIMIT 1)) OR p.sub_subcategory_id IN (SELECT id FROM sub_subcategories WHERE subcategory_id IN (SELECT id FROM subcategories WHERE category_id = (SELECT id FROM categories WHERE slug = ${category || null} OR id = ${Number(category) || 0} LIMIT 1))))
-        AND (${subcategory || null}::text IS NULL OR p.subcategory_id = (SELECT id FROM subcategories WHERE slug = ${subcategory || null} OR id = ${Number(subcategory) || 0} LIMIT 1) OR p.sub_subcategory_id IN (SELECT id FROM sub_subcategories WHERE subcategory_id = (SELECT id FROM subcategories WHERE slug = ${subcategory || null} OR id = ${Number(subcategory) || 0} LIMIT 1)))
-        AND (${sub_subcategory || null}::text IS NULL OR p.sub_subcategory_id = (SELECT id FROM sub_subcategories WHERE slug = ${sub_subcategory || null} OR id = ${Number(sub_subcategory) || 0} LIMIT 1))
+        AND (${category || null}::text IS NULL OR p.category_id = (SELECT id FROM categories WHERE slug = ${category || null} OR id = ${Number(category) || 0} LIMIT 1) OR p.subcategory_id IN (SELECT id FROM subcategories WHERE category_id = (SELECT id FROM categories WHERE slug = ${category || null} OR id = ${Number(category) || 0} LIMIT 1)) OR p.sub_subcategory_id IN (SELECT id FROM sub_subcategories WHERE subcategory_id IN (SELECT id FROM subcategories WHERE category_id = (SELECT id FROM categories WHERE slug = ${category || null} OR id = ${Number(category) || 0} LIMIT 1))) OR p.sub_sub_subcategory_id IN (SELECT id FROM sub_sub_subcategories WHERE sub_subcategory_id IN (SELECT id FROM sub_subcategories WHERE subcategory_id IN (SELECT id FROM subcategories WHERE category_id = (SELECT id FROM categories WHERE slug = ${category || null} OR id = ${Number(category) || 0} LIMIT 1)))))
+        AND (${subcategory || null}::text IS NULL OR p.subcategory_id = (SELECT id FROM subcategories WHERE slug = ${subcategory || null} OR id = ${Number(subcategory) || 0} LIMIT 1) OR p.sub_subcategory_id IN (SELECT id FROM sub_subcategories WHERE subcategory_id = (SELECT id FROM subcategories WHERE slug = ${subcategory || null} OR id = ${Number(subcategory) || 0} LIMIT 1)) OR p.sub_sub_subcategory_id IN (SELECT id FROM sub_sub_subcategories WHERE sub_subcategory_id IN (SELECT id FROM sub_subcategories WHERE subcategory_id = (SELECT id FROM subcategories WHERE slug = ${subcategory || null} OR id = ${Number(subcategory) || 0} LIMIT 1))))
+        AND (${sub_subcategory || null}::text IS NULL OR p.sub_subcategory_id = (SELECT id FROM sub_subcategories WHERE slug = ${sub_subcategory || null} OR id = ${Number(sub_subcategory) || 0} LIMIT 1) OR p.sub_sub_subcategory_id IN (SELECT id FROM sub_sub_subcategories WHERE sub_subcategory_id = (SELECT id FROM sub_subcategories WHERE slug = ${sub_subcategory || null} OR id = ${Number(sub_subcategory) || 0} LIMIT 1)))
+        AND (${sub_sub_subcategory || null}::text IS NULL OR p.sub_sub_subcategory_id = (SELECT id FROM sub_sub_subcategories WHERE slug = ${sub_sub_subcategory || null} OR id = ${Number(sub_sub_subcategory) || 0} LIMIT 1))
         AND (${brand || null}::text IS NULL OR p.brand_id = (SELECT id FROM brands WHERE slug = ${brand || null} OR id = ${Number(brand) || 0} LIMIT 1))
         AND (${searchCondition})
         AND (${popular === 'true' ? true : null}::boolean IS NULL OR p.is_popular = true)
@@ -1198,13 +1258,14 @@ router.get('/products/:slug', async (req, res) => {
   try {
     res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=60, stale-while-revalidate=300');
     const [product] = await sql`
-      SELECT ${sql.unsafe(PRODUCT_COLS)}, c.name as category_name, c.slug as category_slug, s.name as subcategory_name, s.slug as subcategory_slug, ss.name as sub_subcategory_name, ss.slug as sub_subcategory_slug, COALESCE(p.brand_name, b.name) as brand_name, b.slug as brand_slug, CASE WHEN b.image LIKE 'data:image/%' THEN '/api/images/brands/' || b.id || '/image?v=' || LENGTH(b.image) ELSE b.image END as brand_image,
+      SELECT ${sql.unsafe(PRODUCT_COLS)}, c.name as category_name, c.slug as category_slug, s.name as subcategory_name, s.slug as subcategory_slug, ss.name as sub_subcategory_name, ss.slug as sub_subcategory_slug, sss.name as sub_sub_subcategory_name, sss.slug as sub_sub_subcategory_slug, COALESCE(p.brand_name, b.name) as brand_name, b.slug as brand_slug, CASE WHEN b.image LIKE 'data:image/%' THEN '/api/images/brands/' || b.id || '/image?v=' || LENGTH(b.image) ELSE b.image END as brand_image,
       (SELECT COUNT(*) FROM reviews r WHERE r.product_id = p.id) as reviews_count,
       (SELECT COALESCE(AVG(rating), 0) FROM reviews r WHERE r.product_id = p.id) as avg_rating
       FROM products p 
       LEFT JOIN categories c ON p.category_id = c.id 
       LEFT JOIN subcategories s ON p.subcategory_id = s.id
       LEFT JOIN sub_subcategories ss ON p.sub_subcategory_id = ss.id
+      LEFT JOIN sub_sub_subcategories sss ON p.sub_sub_subcategory_id = sss.id
       LEFT JOIN brands b ON p.brand_id = b.id 
       WHERE p.slug = ${req.params.slug} AND p.is_active = true
     `;
@@ -2506,11 +2567,12 @@ router.get('/admin/products', authenticate, async (req, res) => {
     `;
 
     const products = await sql`
-      SELECT ${sql.unsafe(PRODUCT_LIST_COLS)}, c.name as category_name, s.name as subcategory_name, ss.name as sub_subcategory_name, COALESCE(p.brand_name, b.name) as brand_name 
+      SELECT ${sql.unsafe(PRODUCT_LIST_COLS)}, c.name as category_name, s.name as subcategory_name, ss.name as sub_subcategory_name, sss.name as sub_sub_subcategory_name, COALESCE(p.brand_name, b.name) as brand_name 
       FROM products p 
       LEFT JOIN categories c ON p.category_id = c.id 
       LEFT JOIN subcategories s ON p.subcategory_id = s.id
       LEFT JOIN sub_subcategories ss ON p.sub_subcategory_id = ss.id
+      LEFT JOIN sub_sub_subcategories sss ON p.sub_sub_subcategory_id = sss.id
       LEFT JOIN brands b ON p.brand_id = b.id
       ${whereClause}
       ORDER BY p.id DESC
@@ -2547,11 +2609,12 @@ router.get('/admin/products', authenticate, async (req, res) => {
 router.get('/admin/products/:id', authenticate, async (req, res) => {
   try {
     const [product] = await sql`
-      SELECT ${sql.unsafe(PRODUCT_COLS)}, c.name as category_name, s.name as subcategory_name, ss.name as sub_subcategory_name, COALESCE(p.brand_name, b.name) as brand_name 
+      SELECT ${sql.unsafe(PRODUCT_COLS)}, c.name as category_name, s.name as subcategory_name, ss.name as sub_subcategory_name, sss.name as sub_sub_subcategory_name, COALESCE(p.brand_name, b.name) as brand_name 
       FROM products p 
       LEFT JOIN categories c ON p.category_id = c.id 
       LEFT JOIN subcategories s ON p.subcategory_id = s.id
       LEFT JOIN sub_subcategories ss ON p.sub_subcategory_id = ss.id
+      LEFT JOIN sub_sub_subcategories sss ON p.sub_sub_subcategory_id = sss.id
       LEFT JOIN brands b ON p.brand_id = b.id
       WHERE p.id = ${req.params.id}
     `;
@@ -2863,15 +2926,15 @@ function generateSlug(str: string): string {
 }
 
 router.post('/admin/products', authenticate, async (req, res) => {
-  const { category_id, subcategory_id, sub_subcategory_id, brand_id, brand_name, name, description, price, promo_price, stock, image, main_image_alt, video_url, is_popular, is_best_seller, is_new, is_recommended, is_fast_delivery, weight, is_active, images, features, key_points, faq_q1, faq_a1, faq_q2, faq_a2, variations, seo_title, seo_description, seo_keywords, promo_price_start_date, promo_price_end_date } = req.body;
+  const { category_id, subcategory_id, sub_subcategory_id, sub_sub_subcategory_id, brand_id, brand_name, name, description, price, promo_price, stock, image, main_image_alt, video_url, is_popular, is_best_seller, is_new, is_recommended, is_fast_delivery, weight, is_active, images, features, key_points, faq_q1, faq_a1, faq_q2, faq_a2, variations, seo_title, seo_description, seo_keywords, promo_price_start_date, promo_price_end_date } = req.body;
   
   try {
     const generatedSlug = generateSlug(name);
     
     const productId = await sql.begin(async (sql: any) => {
       const [info] = await sql`
-        INSERT INTO products (category_id, subcategory_id, sub_subcategory_id, brand_id, brand_name, name, slug, description, price, promo_price, promo_price_start_date, promo_price_end_date, stock, image, main_image_alt, video_url, is_popular, is_best_seller, is_new, is_recommended, is_fast_delivery, weight, is_active, features, key_points, faq_q1, faq_a1, faq_q2, faq_a2, variations, seo_title, seo_description, seo_keywords)
-        VALUES (${category_id || null}, ${subcategory_id || null}, ${sub_subcategory_id || null}, ${brand_id || null}, ${brand_name || null}, ${name || ''}, ${generatedSlug || ''}, ${description || null}, ${price || 0}, ${promo_price || null}, ${promo_price_start_date || null}, ${promo_price_end_date || null}, ${stock || 0}, ${image || null}, ${main_image_alt || null}, ${video_url || null}, ${is_popular ? true : false}, ${is_best_seller ? true : false}, ${is_new ? true : false}, ${is_recommended ? true : false}, ${is_fast_delivery ? true : false}, ${weight || null}, ${is_active !== undefined ? is_active : true}, ${features ? sql.json(features) : null}, ${key_points ? sql.json(key_points) : null}, ${faq_q1 || null}, ${faq_a1 || null}, ${faq_q2 || null}, ${faq_a2 || null}, ${variations ? sql.json(variations) : null}, ${seo_title || null}, ${seo_description || null}, ${seo_keywords || null})
+        INSERT INTO products (category_id, subcategory_id, sub_subcategory_id, sub_sub_subcategory_id, brand_id, brand_name, name, slug, description, price, promo_price, promo_price_start_date, promo_price_end_date, stock, image, main_image_alt, video_url, is_popular, is_best_seller, is_new, is_recommended, is_fast_delivery, weight, is_active, features, key_points, faq_q1, faq_a1, faq_q2, faq_a2, variations, seo_title, seo_description, seo_keywords)
+        VALUES (${category_id || null}, ${subcategory_id || null}, ${sub_subcategory_id || null}, ${sub_sub_subcategory_id || null}, ${brand_id || null}, ${brand_name || null}, ${name || ''}, ${generatedSlug || ''}, ${description || null}, ${price || 0}, ${promo_price || null}, ${promo_price_start_date || null}, ${promo_price_end_date || null}, ${stock || 0}, ${image || null}, ${main_image_alt || null}, ${video_url || null}, ${is_popular ? true : false}, ${is_best_seller ? true : false}, ${is_new ? true : false}, ${is_recommended ? true : false}, ${is_fast_delivery ? true : false}, ${weight || null}, ${is_active !== undefined ? is_active : true}, ${features ? sql.json(features) : null}, ${key_points ? sql.json(key_points) : null}, ${faq_q1 || null}, ${faq_a1 || null}, ${faq_q2 || null}, ${faq_a2 || null}, ${variations ? sql.json(variations) : null}, ${seo_title || null}, ${seo_description || null}, ${seo_keywords || null})
         RETURNING id
       `;
       
@@ -2897,7 +2960,7 @@ router.post('/admin/products', authenticate, async (req, res) => {
 });
 
 router.put('/admin/products/:id', authenticate, async (req, res) => {
-  const { category_id, subcategory_id, sub_subcategory_id, brand_id, brand_name, name, slug, description, price, promo_price, stock, image, main_image_alt, video_url, is_popular, is_best_seller, is_new, is_recommended, is_fast_delivery, weight, is_active, images, features, key_points, faq_q1, faq_a1, faq_q2, faq_a2, variations, seo_title, seo_description, seo_keywords, promo_price_start_date, promo_price_end_date } = req.body;
+  const { category_id, subcategory_id, sub_subcategory_id, sub_sub_subcategory_id, brand_id, brand_name, name, slug, description, price, promo_price, stock, image, main_image_alt, video_url, is_popular, is_best_seller, is_new, is_recommended, is_fast_delivery, weight, is_active, images, features, key_points, faq_q1, faq_a1, faq_q2, faq_a2, variations, seo_title, seo_description, seo_keywords, promo_price_start_date, promo_price_end_date } = req.body;
   
   try {
     const [oldProd] = await sql`
@@ -2910,13 +2973,13 @@ router.put('/admin/products/:id', authenticate, async (req, res) => {
       if (image && image.startsWith('/api/images/')) {
         await sql`
           UPDATE products 
-          SET category_id = ${category_id || null}, subcategory_id = ${subcategory_id || null}, sub_subcategory_id = ${sub_subcategory_id || null}, brand_id = ${brand_id || null}, brand_name = ${brand_name || null}, name = ${name || ''}, slug = ${slug || ''}, description = ${description || null}, price = ${price || 0}, promo_price = ${promo_price || null}, promo_price_start_date = ${promo_price_start_date || null}, promo_price_end_date = ${promo_price_end_date || null}, stock = ${stock || 0}, video_url = ${video_url || null}, is_popular = ${is_popular ? true : false}, is_best_seller = ${is_best_seller ? true : false}, is_new = ${is_new ? true : false}, is_recommended = ${is_recommended ? true : false}, is_fast_delivery = ${is_fast_delivery ? true : false}, weight = ${weight || null}, is_active = ${is_active !== undefined ? is_active : true}, features = ${features ? sql.json(features) : null}, key_points = ${key_points ? sql.json(key_points) : null}, faq_q1 = ${faq_q1 || null}, faq_a1 = ${faq_a1 || null}, faq_q2 = ${faq_q2 || null}, faq_a2 = ${faq_a2 || null}, variations = ${variations ? sql.json(variations) : null}, seo_title = ${seo_title || null}, seo_description = ${seo_description || null}, seo_keywords = ${seo_keywords || null}, main_image_alt = ${main_image_alt || null}, updated_at = NOW()
+          SET category_id = ${category_id || null}, subcategory_id = ${subcategory_id || null}, sub_subcategory_id = ${sub_subcategory_id || null}, sub_sub_subcategory_id = ${sub_sub_subcategory_id || null}, brand_id = ${brand_id || null}, brand_name = ${brand_name || null}, name = ${name || ''}, slug = ${slug || ''}, description = ${description || null}, price = ${price || 0}, promo_price = ${promo_price || null}, promo_price_start_date = ${promo_price_start_date || null}, promo_price_end_date = ${promo_price_end_date || null}, stock = ${stock || 0}, video_url = ${video_url || null}, is_popular = ${is_popular ? true : false}, is_best_seller = ${is_best_seller ? true : false}, is_new = ${is_new ? true : false}, is_recommended = ${is_recommended ? true : false}, is_fast_delivery = ${is_fast_delivery ? true : false}, weight = ${weight || null}, is_active = ${is_active !== undefined ? is_active : true}, features = ${features ? sql.json(features) : null}, key_points = ${key_points ? sql.json(key_points) : null}, faq_q1 = ${faq_q1 || null}, faq_a1 = ${faq_a1 || null}, faq_q2 = ${faq_q2 || null}, faq_a2 = ${faq_a2 || null}, variations = ${variations ? sql.json(variations) : null}, seo_title = ${seo_title || null}, seo_description = ${seo_description || null}, seo_keywords = ${seo_keywords || null}, main_image_alt = ${main_image_alt || null}, updated_at = NOW()
           WHERE id = ${req.params.id}
         `;
       } else {
         await sql`
           UPDATE products 
-          SET category_id = ${category_id || null}, subcategory_id = ${subcategory_id || null}, sub_subcategory_id = ${sub_subcategory_id || null}, brand_id = ${brand_id || null}, brand_name = ${brand_name || null}, name = ${name || ''}, slug = ${slug || ''}, description = ${description || null}, price = ${price || 0}, promo_price = ${promo_price || null}, promo_price_start_date = ${promo_price_start_date || null}, promo_price_end_date = ${promo_price_end_date || null}, stock = ${stock || 0}, image = ${image || null}, video_url = ${video_url || null}, is_popular = ${is_popular ? true : false}, is_best_seller = ${is_best_seller ? true : false}, is_new = ${is_new ? true : false}, is_recommended = ${is_recommended ? true : false}, is_fast_delivery = ${is_fast_delivery ? true : false}, weight = ${weight || null}, is_active = ${is_active !== undefined ? is_active : true}, features = ${features ? sql.json(features) : null}, key_points = ${key_points ? sql.json(key_points) : null}, faq_q1 = ${faq_q1 || null}, faq_a1 = ${faq_a1 || null}, faq_q2 = ${faq_q2 || null}, faq_a2 = ${faq_a2 || null}, variations = ${variations ? sql.json(variations) : null}, seo_title = ${seo_title || null}, seo_description = ${seo_description || null}, seo_keywords = ${seo_keywords || null}, main_image_alt = ${main_image_alt || null}, updated_at = NOW()
+          SET category_id = ${category_id || null}, subcategory_id = ${subcategory_id || null}, sub_subcategory_id = ${sub_subcategory_id || null}, sub_sub_subcategory_id = ${sub_sub_subcategory_id || null}, brand_id = ${brand_id || null}, brand_name = ${brand_name || null}, name = ${name || ''}, slug = ${slug || ''}, description = ${description || null}, price = ${price || 0}, promo_price = ${promo_price || null}, promo_price_start_date = ${promo_price_start_date || null}, promo_price_end_date = ${promo_price_end_date || null}, stock = ${stock || 0}, image = ${image || null}, video_url = ${video_url || null}, is_popular = ${is_popular ? true : false}, is_best_seller = ${is_best_seller ? true : false}, is_new = ${is_new ? true : false}, is_recommended = ${is_recommended ? true : false}, is_fast_delivery = ${is_fast_delivery ? true : false}, weight = ${weight || null}, is_active = ${is_active !== undefined ? is_active : true}, features = ${features ? sql.json(features) : null}, key_points = ${key_points ? sql.json(key_points) : null}, faq_q1 = ${faq_q1 || null}, faq_a1 = ${faq_a1 || null}, faq_q2 = ${faq_q2 || null}, faq_a2 = ${faq_a2 || null}, variations = ${variations ? sql.json(variations) : null}, seo_title = ${seo_title || null}, seo_description = ${seo_description || null}, seo_keywords = ${seo_keywords || null}, main_image_alt = ${main_image_alt || null}, updated_at = NOW()
           WHERE id = ${req.params.id}
         `;
       }
@@ -3184,6 +3247,58 @@ router.delete('/admin/sub_subcategories/:id', authenticate, async (req, res) => 
     res.json({ message: 'Sub-subcategory deleted' });
   } catch (err) {
     res.status(500).json({ error: 'Failed to delete sub-subcategory' });
+  }
+});
+
+// Admin Sub-sub-subcategories (Niveau 4)
+router.post('/admin/sub_sub_subcategories', authenticate, async (req, res) => {
+  const { sub_subcategory_id, name, slug, image } = req.body;
+  try {
+    const [info] = await sql`
+      INSERT INTO sub_sub_subcategories (sub_subcategory_id, name, slug, image) 
+      VALUES (${sub_subcategory_id || null}, ${name || ''}, ${slug || ''}, ${image || null}) 
+      RETURNING id
+    `;
+    res.status(201).json({ id: info.id, message: 'Catégorie de niveau 4 créée' });
+  } catch (err: any) {
+    console.error('Error creating level 4 category:', err);
+    res.status(500).json({ error: err.message || 'Impossible de créer la catégorie de niveau 4' });
+  }
+});
+
+router.put('/admin/sub_sub_subcategories/:id', authenticate, async (req, res) => {
+  const { sub_subcategory_id, name, slug, image } = req.body;
+  try {
+    if (image && image.startsWith('/api/images/')) {
+      await sql`
+        UPDATE sub_sub_subcategories 
+        SET sub_subcategory_id = ${sub_subcategory_id || null}, name = ${name || ''}, slug = ${slug || ''} 
+        WHERE id = ${req.params.id}
+      `;
+    } else {
+      await sql`
+        UPDATE sub_sub_subcategories 
+        SET sub_subcategory_id = ${sub_subcategory_id || null}, name = ${name || ''}, slug = ${slug || ''}, image = ${image || null} 
+        WHERE id = ${req.params.id}
+      `;
+    }
+    res.json({ message: 'Catégorie de niveau 4 modifiée' });
+  } catch (err: any) {
+    console.error('Error updating level 4 category:', err);
+    res.status(500).json({ error: 'Impossible de modifier la catégorie de niveau 4' });
+  }
+});
+
+router.delete('/admin/sub_sub_subcategories/:id', authenticate, async (req, res) => {
+  try {
+    await sql.begin(async (sql: any) => {
+      await sql`UPDATE products SET sub_sub_subcategory_id = NULL WHERE sub_sub_subcategory_id = ${req.params.id}`;
+      await sql`DELETE FROM sub_sub_subcategories WHERE id = ${req.params.id}`;
+    });
+    res.json({ message: 'Catégorie de niveau 4 supprimée' });
+  } catch (err) {
+    console.error('Error deleting level 4 category:', err);
+    res.status(500).json({ error: 'Impossible de supprimer la catégorie de niveau 4' });
   }
 });
 

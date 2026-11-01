@@ -36,16 +36,39 @@ let connectionString = resolveConnectionString(process.env.DATABASE_URL);
 
 export const sql = globalForPostgres.sql ?? postgres(connectionString, {
   ssl: connectionString.includes('localhost') || connectionString.includes('127.0.0.1') ? false : 'require',
-  max: isServerless ? 5 : 10, // Prevent Supabase pooler exhaustion
-  idle_timeout: isServerless ? 15 : 30, // Proactively close idle sockets
-  connect_timeout: 20, // 20s connection timeout to accommodate PgBouncer/Supavisor latency spikes
+  max: isServerless ? 5 : 8, // Prevent Supabase pooler exhaustion
+  idle_timeout: isServerless ? 10 : 20, // Proactively close idle sockets
+  connect_timeout: 8, // Fast 8s connection timeout to prevent proxy drops
   prepare: false, // Required for PgBouncer / Supavisor transaction mode
   max_lifetime: 60 * 3, // Recycle connections every 3 minutes
   backoff: (attempts) => Math.min(0.2 * Math.pow(2, attempts), 2),
+  connection: {
+    application_name: 'zorando_app'
+  },
+  onnotice: () => {}
 });
 
 // Cache on globalThis across all environments (including production serverless lambdas)
 globalForPostgres.sql = sql;
+
+/**
+ * Executes a database query for SSR with a strict timeout and fallback.
+ * Prevents SSR blocking and unhandled connection timeouts.
+ */
+export async function safeSsrQuery<T>(queryPromise: Promise<T>, fallback: T, timeoutMs = 3500): Promise<T> {
+  try {
+    let timer: NodeJS.Timeout;
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      timer = setTimeout(() => reject(new Error('SSR DB Query Timeout')), timeoutMs);
+    });
+    const result = await Promise.race([queryPromise, timeoutPromise]);
+    clearTimeout(timer!);
+    return result;
+  } catch (err) {
+    console.warn('SSR DB Query fallback used:', (err as Error)?.message || err);
+    return fallback;
+  }
+}
 
 export async function setupDb() {
   try {

@@ -11,7 +11,20 @@ interface ExtractedCategory {
   name: string;
   slug: string;
   level: 'category' | 'subcategory' | 'sub_subcategory';
+  image?: string | null;
 }
+
+const BRAND_CATEGORY_IMAGES: Record<string, string> = {
+  'accessoires-automobiles': 'https://evvbhalgyffagsesmvhu.supabase.co/storage/v1/object/public/images/products/prod-32-1781268269611-suvych.webp',
+  'accessoires-photo-video': 'https://evvbhalgyffagsesmvhu.supabase.co/storage/v1/object/public/images/products/prod-207-1781268289219-va2d6.webp',
+  'chargeurs': 'https://evvbhalgyffagsesmvhu.supabase.co/storage/v1/object/public/images/uploads/migrated-products-619-image-1786547239975.webp',
+  'ecouteurs-bluetooth': 'https://evvbhalgyffagsesmvhu.supabase.co/storage/v1/object/public/images/products/prod-215-1781268370725-c6cl5fbc.webp',
+  'montres-connectees': 'https://evvbhalgyffagsesmvhu.supabase.co/storage/v1/object/public/images/products/prod-203-1781268268056-jwr7wwp.webp',
+  'powerbanks': 'https://evvbhalgyffagsesmvhu.supabase.co/storage/v1/object/public/images/products/prod-169-1781268269753-mjbzb.webp',
+  'rasage-et-epilation': 'https://evvbhalgyffagsesmvhu.supabase.co/storage/v1/object/public/images/uploads/tondeuse-a-cheveux-et-barbe-hoco-dar05-lames-en-acier-inoxydable-1-ewnqr.webp'
+};
+
+const CATEGORY_PLACEHOLDER_IMAGE = '/images/placeholder-category.svg';
 
 export default function BrandProducts() {
   const { slug, categorySlug } = useParams();
@@ -754,21 +767,42 @@ const ROBUSTE_BLOGS = [
         <div className="mb-10">
           <h2 className="text-2xl font-bold text-gray-900 mb-6">Catégories {brand.name}</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {brandCategories.map(cat => (
-              <div key={`${cat.level}-${cat.id}`} className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 hover:border-orange-200 transition-colors flex flex-col">
-                <h3 className="text-lg font-bold text-gray-800 mb-2">{cat.name} {brand.name} Algérie</h3>
-                <p className="text-sm text-gray-500 mb-4 flex-1">
-                  Découvrez la gamme de {cat.name.toLowerCase()} {brand.name} disponible en Algérie.
-                </p>
-                <Link 
+            {brandCategories.map(cat => {
+              const cardTitle = `${cat.name} ${brand.name} Algérie`;
+              const categoryImage = cat.image || BRAND_CATEGORY_IMAGES[cat.slug] || CATEGORY_PLACEHOLDER_IMAGE;
+
+              return (
+                <Link
+                  key={`${cat.level}-${cat.id}`}
                   to={`/brands/${brand.slug}/${cat.slug}`}
-                  className="inline-flex items-center text-sm font-bold text-orange-600 hover:text-orange-700"
+                  className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 hover:border-orange-200 transition-colors flex flex-col group cursor-pointer"
                 >
-                  Voir les {cat.name.toLowerCase()} {brand.name}
-                  <ChevronRight size={16} className="ml-1" />
+                  <div
+                    className="w-full bg-[#f8fafc] rounded-[8px] mb-4 overflow-hidden flex items-center justify-center"
+                    style={{ aspectRatio: '16 / 9' }}
+                  >
+                    <img
+                      src={categoryImage}
+                      alt={cardTitle}
+                      loading="lazy"
+                      className="w-full h-full object-contain p-2"
+                      style={{ aspectRatio: '16 / 9', borderRadius: '8px' }}
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = CATEGORY_PLACEHOLDER_IMAGE;
+                      }}
+                    />
+                  </div>
+                  <h3 className="text-lg font-bold text-gray-800 mb-2">{cardTitle}</h3>
+                  <p className="text-sm text-gray-500 mb-4 flex-1">
+                    Découvrez la gamme de {cat.name.toLowerCase()} {brand.name} disponible en Algérie.
+                  </p>
+                  <span className="inline-flex items-center text-sm font-bold text-orange-600 group-hover:text-orange-700">
+                    Voir les {cat.name.toLowerCase()} {brand.name}
+                    <ChevronRight size={16} className="ml-1" />
+                  </span>
                 </Link>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}

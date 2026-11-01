@@ -3,40 +3,69 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
 import { Toaster } from 'react-hot-toast';
 import Layout from './components/Layout';
-const Analytics = React.lazy(() => import('./components/Analytics'));
+function lazyWithRetry<T extends React.ComponentType<any>>(
+  factory: () => Promise<{ default: T }>
+) {
+  return React.lazy(async () => {
+    try {
+      return await factory();
+    } catch (error) {
+      console.warn('Lazy module load failed, retrying once...', error);
+      try {
+        await new Promise((resolve) => setTimeout(resolve, 800));
+        return await factory();
+      } catch (retryError) {
+        const isChunkError = /Failed to fetch dynamically imported module|error loading dynamically imported module|Loading chunk/i.test(
+          String((error as any)?.message || error)
+        );
+        if (isChunkError && typeof window !== 'undefined' && !sessionStorage.getItem('chunk_reloaded_once')) {
+          sessionStorage.setItem('chunk_reloaded_once', '1');
+          window.location.reload();
+          return new Promise<{ default: T }>(() => {});
+        }
+        throw retryError;
+      }
+    }
+  });
+}
 
-const Home = React.lazy(() => import('./pages/Home'));
-const Category = React.lazy(() => import('./pages/Category'));
-const Product = React.lazy(() => import('./pages/Product'));
-const Cart = React.lazy(() => import('./pages/Cart'));
-const Checkout = React.lazy(() => import('./pages/Checkout'));
-const AdminLogin = React.lazy(() => import('./pages/Admin/Login'));
-const AdminDashboard = React.lazy(() => import('./pages/Admin/Dashboard'));
-const Brands = React.lazy(() => import('./pages/Brands'));
-const BrandProducts = React.lazy(() => import('./pages/BrandProducts'));
-const BlogList = React.lazy(() => import('./pages/Blog/BlogList'));
-const BlogPost = React.lazy(() => import('./pages/Blog/BlogPost'));
-const Page = React.lazy(() => import('./pages/Page'));
+const Analytics = lazyWithRetry(() => import('./components/Analytics'));
+
+const Home = lazyWithRetry(() => import('./pages/Home'));
+const Category = lazyWithRetry(() => import('./pages/Category'));
+const Product = lazyWithRetry(() => import('./pages/Product'));
+const Cart = lazyWithRetry(() => import('./pages/Cart'));
+const Checkout = lazyWithRetry(() => import('./pages/Checkout'));
+const AdminLogin = lazyWithRetry(() => import('./pages/Admin/Login'));
+const AdminDashboard = lazyWithRetry(() => import('./pages/Admin/Dashboard'));
+const Brands = lazyWithRetry(() => import('./pages/Brands'));
+const BrandProducts = lazyWithRetry(() => import('./pages/BrandProducts'));
+const BlogList = lazyWithRetry(() => import('./pages/Blog/BlogList'));
+const BlogPost = lazyWithRetry(() => import('./pages/Blog/BlogPost'));
+const Page = lazyWithRetry(() => import('./pages/Page'));
 
 import { AuthProvider } from './lib/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import ErrorBoundary from './components/ErrorBoundary';
 
-const Login = React.lazy(() => import('./pages/Account/Login'));
-const Register = React.lazy(() => import('./pages/Account/Register'));
-const ForgotPassword = React.lazy(() => import('./pages/Account/ForgotPassword'));
-const AccountLayout = React.lazy(() => import('./pages/Account/AccountLayout'));
-const Dashboard = React.lazy(() => import('./pages/Account/Dashboard'));
-const Orders = React.lazy(() => import('./pages/Account/Orders'));
-const Wishlist = React.lazy(() => import('./pages/Account/Wishlist'));
-const Addresses = React.lazy(() => import('./pages/Account/Addresses'));
-const Profile = React.lazy(() => import('./pages/Account/Profile'));
-const Notifications = React.lazy(() => import('./pages/Account/Notifications'));
-const AuthCallback = React.lazy(() => import('./pages/AuthCallback'));
+const Login = lazyWithRetry(() => import('./pages/Account/Login'));
+const Register = lazyWithRetry(() => import('./pages/Account/Register'));
+const ForgotPassword = lazyWithRetry(() => import('./pages/Account/ForgotPassword'));
+const AccountLayout = lazyWithRetry(() => import('./pages/Account/AccountLayout'));
+const Dashboard = lazyWithRetry(() => import('./pages/Account/Dashboard'));
+const Orders = lazyWithRetry(() => import('./pages/Account/Orders'));
+const Wishlist = lazyWithRetry(() => import('./pages/Account/Wishlist'));
+const Addresses = lazyWithRetry(() => import('./pages/Account/Addresses'));
+const Profile = lazyWithRetry(() => import('./pages/Account/Profile'));
+const Notifications = lazyWithRetry(() => import('./pages/Account/Notifications'));
+const AuthCallback = lazyWithRetry(() => import('./pages/AuthCallback'));
 
 export default function App() {
   useEffect(() => {
-    // Smooth entry after hydration
+    // Smooth entry after hydration and clear chunk retry flag
+    try {
+      sessionStorage.removeItem('chunk_reloaded_once');
+    } catch (_) {}
     document.getElementById('root')?.classList.add('app-ready');
   }, []);
 

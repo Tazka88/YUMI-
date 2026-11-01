@@ -578,7 +578,10 @@ export default function Product() {
     breadcrumbItems.push({ name: product.subcategory_name || 'Sous-catégorie', item: `https://www.zorando.com/category/${product.subcategory_slug}?sub=true` });
   }
   if (product.sub_subcategory_slug) {
-    breadcrumbItems.push({ name: product.sub_subcategory_name || 'Sous-sous-catégorie', item: `https://www.zorando.com/category/${product.sub_subcategory_slug}?subsub=true` });
+    breadcrumbItems.push({ name: product.sub_sub_category_name || product.sub_subcategory_name || 'Sous-sous-catégorie', item: `https://www.zorando.com/category/${product.sub_subcategory_slug}?subsub=true` });
+  }
+  if (product.sub_sub_subcategory_slug) {
+    breadcrumbItems.push({ name: product.sub_sub_subcategory_name || 'Catégorie spécialisée', item: `https://www.zorando.com/category/${product.sub_sub_subcategory_slug}?level4=true` });
   }
   breadcrumbItems.push({ name: product.name, item: cleanUrl });
 
@@ -610,6 +613,12 @@ export default function Product() {
           <>
             <span>/</span>
             <Link to={`/category/${product.sub_subcategory_slug || product.sub_subcategory_id}?subsub=true`} className="hover:text-orange-500">{product.sub_subcategory_name}</Link>
+          </>
+        )}
+        {product.sub_sub_subcategory_name && (
+          <>
+            <span>/</span>
+            <Link to={`/category/${product.sub_sub_subcategory_slug || product.sub_sub_subcategory_id}?level4=true`} className="hover:text-orange-500">{product.sub_sub_subcategory_name}</Link>
           </>
         )}
         <span>/</span>

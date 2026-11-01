@@ -24,6 +24,7 @@ export default function Category() {
   const [categories, setCategories] = useState<any[]>([]);
   const [currentSubcategories, setCurrentSubcategories] = useState<any[]>([]);
   const [currentSubSubcategories, setCurrentSubSubcategories] = useState<any[]>([]);
+  const [currentSubSubSubcategories, setCurrentSubSubSubcategories] = useState<any[]>([]);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
   const [priceFilters, setPriceFilters] = useState({
     under5k: false,
@@ -33,11 +34,16 @@ export default function Category() {
   const addItem = useCartStore(state => state.addItem);
 
   useEffect(() => {
-    if (searchParams.get('sub') !== 'true' && searchParams.get('subsub') !== 'true' && slug && slug !== 'all' && categories.length > 0) {
+    const isLevel4 = searchParams.get('level4') === 'true';
+    const isSubSub = searchParams.get('subsub') === 'true';
+    const isSub = searchParams.get('sub') === 'true';
+
+    if (!isSub && !isSubSub && !isLevel4 && slug && slug !== 'all' && categories.length > 0) {
       const cat = categories.find(c => c.slug === slug);
       setCurrentSubcategories(cat?.subcategories || []);
       setCurrentSubSubcategories([]);
-    } else if (searchParams.get('sub') === 'true' && slug && categories.length > 0) {
+      setCurrentSubSubSubcategories([]);
+    } else if (isSub && slug && categories.length > 0) {
       let foundSubcat = null;
       for (const cat of categories) {
         const sub = cat.subcategories?.find((s: any) => s.slug === slug);
@@ -48,9 +54,26 @@ export default function Category() {
       }
       setCurrentSubcategories([]);
       setCurrentSubSubcategories(foundSubcat?.sub_subcategories || []);
+      setCurrentSubSubSubcategories([]);
+    } else if (isSubSub && slug && categories.length > 0) {
+      let foundSubSubcat: any = null;
+      for (const cat of categories) {
+        for (const sub of (cat.subcategories || [])) {
+          const ssub = (sub.sub_subcategories || []).find((s: any) => s.slug === slug || s.id.toString() === slug);
+          if (ssub) {
+            foundSubSubcat = ssub;
+            break;
+          }
+        }
+        if (foundSubSubcat) break;
+      }
+      setCurrentSubcategories([]);
+      setCurrentSubSubcategories([]);
+      setCurrentSubSubSubcategories(foundSubSubcat?.sub_sub_subcategories || []);
     } else {
       setCurrentSubcategories([]);
       setCurrentSubSubcategories([]);
+      setCurrentSubSubSubcategories([]);
     }
   }, [categories, slug, searchParams]);
 
@@ -69,6 +92,7 @@ export default function Category() {
     const signal = controller.signal;
     const isSubcategory = searchParams.get('sub') === 'true';
     const isSubSubcategory = searchParams.get('subsub') === 'true';
+    const isLevel4 = searchParams.get('level4') === 'true';
 
     const formatSlugToTitle = (s: string) => {
       if (!s) return s;
@@ -89,7 +113,31 @@ export default function Category() {
 
       try {
         if (slug && slug !== 'all') {
-          if (isSubSubcategory) {
+          if (isLevel4) {
+            url += `?sub_sub_subcategory=${slug}`;
+            let foundName = formatSlugToTitle(slug);
+            for (const cat of categories) {
+              for (const sub of (cat.subcategories || [])) {
+                for (const ss of (sub.sub_subcategories || [])) {
+                  const sss = (ss.sub_sub_subcategories || []).find((s: any) => s.slug === slug || s.id.toString() === slug);
+                  if (sss) {
+                    foundName = sss.name;
+                    break;
+                  }
+                }
+              }
+            }
+            newCategoryName = getCategoryWithEmoji(foundName);
+            try {
+              const level4Cats = await fetchWithCache('/api/sub_sub_subcategories', { signal });
+              if (Array.isArray(level4Cats)) {
+                const found = level4Cats.find((s: any) => s.slug === slug || s.id.toString() === slug);
+                if (found) {
+                  newCategoryName = getCategoryWithEmoji(found.name);
+                }
+              }
+            } catch (e) {}
+          } else if (isSubSubcategory) {
             url += `?sub_subcategory=${slug}`;
             // Find the sub-subcategory name from the categories state
             let foundName = formatSlugToTitle(slug);
@@ -202,19 +250,66 @@ export default function Category() {
     setShowMobileFilters(false);
   }, [slug, searchParams]);
 
+  const breadcrumbTrail = React.useMemo(() => {
+    if (!slug || slug === 'all' || searchQuery || searchParams.get('ids')) return [];
+    const isSub = searchParams.get('sub') === 'true';
+    const isSubSub = searchParams.get('subsub') === 'true';
+    const isLevel4 = searchParams.get('level4') === 'true';
+
+    for (const c of categories) {
+      if (!isSub && !isSubSub && !isLevel4 && c.slug === slug) {
+        return [{ name: c.name, url: `/category/${c.slug}` }];
+      }
+      for (const s of (c.subcategories || [])) {
+        if (isSub && s.slug === slug) {
+          return [
+            { name: c.name, url: `/category/${c.slug}` },
+            { name: s.name, url: `/category/${s.slug}?sub=true` }
+          ];
+        }
+        for (const ss of (s.sub_subcategories || [])) {
+          if (isSubSub && ss.slug === slug) {
+            return [
+              { name: c.name, url: `/category/${c.slug}` },
+              { name: s.name, url: `/category/${s.slug}?sub=true` },
+              { name: ss.name, url: `/category/${ss.slug}?subsub=true` }
+            ];
+          }
+          for (const sss of (ss.sub_sub_subcategories || [])) {
+            if (isLevel4 && sss.slug === slug) {
+              return [
+                { name: c.name, url: `/category/${c.slug}` },
+                { name: s.name, url: `/category/${s.slug}?sub=true` },
+                { name: ss.name, url: `/category/${ss.slug}?subsub=true` },
+                { name: sss.name, url: `/category/${sss.slug}?level4=true` }
+              ];
+            }
+          }
+        }
+      }
+    }
+    return [{ name: categoryName, url: `/category/${slug}` }];
+  }, [categories, slug, searchParams, categoryName, searchQuery]);
+
   const categoryBreadcrumbSchema = React.useMemo(() => {
     if (!slug || slug === 'all' || searchQuery || searchParams.get('ids')) return undefined;
-    const name = slug && categorySEOData[slug] ? categorySEOData[slug].title : categoryName;
+    const items = [
+      { "@type": "ListItem", "position": 1, "name": "Accueil", "item": "https://www.zorando.com/" }
+    ];
+    breadcrumbTrail.forEach((b, index) => {
+      items.push({
+        "@type": "ListItem",
+        "position": index + 2,
+        "name": b.name,
+        "item": `https://www.zorando.com${b.url}`
+      });
+    });
     return {
       "@context": "https://schema.org",
       "@type": "BreadcrumbList",
-      "itemListElement": [
-        { "@type": "ListItem", "position": 1, "name": "Accueil", "item": "https://www.zorando.com/" },
-        { "@type": "ListItem", "position": 2, "name": "Catégories", "item": "https://www.zorando.com/categories" },
-        { "@type": "ListItem", "position": 3, "name": name, "item": `https://www.zorando.com/category/${slug}` }
-      ]
+      "itemListElement": items
     };
-  }, [categoryName, slug, searchQuery, searchParams]);
+  }, [slug, searchQuery, searchParams, breadcrumbTrail]);
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -256,30 +351,79 @@ export default function Category() {
                   Toutes les catégories
                 </Link>
               </li>
-              {categories.map(cat => (
-                <li key={cat.id}>
-                  <Link 
-                    to={`/category/${cat.slug}`} 
-                    className={`block font-bold text-[15px] ${slug === cat.slug && searchParams.get('sub') !== 'true' ? 'text-orange-500' : 'text-gray-800 hover:text-orange-500'}`}
-                  >
-                    <CategoryNameDisplay name={cat.name} />
-                  </Link>
-                  {(slug === cat.slug || cat.subcategories.some((s: any) => s.slug === slug)) && cat.subcategories && cat.subcategories.length > 0 && (
-                    <ul className="pl-4 mt-2 space-y-1 border-l-2 border-orange-100">
-                      {cat.subcategories.map((sub: any) => (
-                        <li key={sub.id}>
-                          <Link 
-                            to={`/category/${sub.slug}?sub=true`} 
-                            className={`block font-semibold text-[14px] ${slug === sub.slug && searchParams.get('sub') === 'true' ? 'text-orange-500' : 'text-gray-700 hover:text-orange-500'}`}
-                          >
-                            <CategoryNameDisplay name={sub.name} />
-                          </Link>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </li>
-              ))}
+              {categories.map(cat => {
+                const isCatActive = slug === cat.slug && searchParams.get('sub') !== 'true' && searchParams.get('subsub') !== 'true' && searchParams.get('level4') !== 'true';
+                const hasActiveDescendant = cat.subcategories?.some((s: any) => 
+                  s.slug === slug || 
+                  s.sub_subcategories?.some((ss: any) => ss.slug === slug || ss.sub_sub_subcategories?.some((sss: any) => sss.slug === slug))
+                );
+
+                return (
+                  <li key={cat.id}>
+                    <Link 
+                      to={`/category/${cat.slug}`} 
+                      className={`block font-bold text-[15px] ${isCatActive ? 'text-orange-500' : 'text-gray-800 hover:text-orange-500'}`}
+                    >
+                      <CategoryNameDisplay name={cat.name} />
+                    </Link>
+                    {(isCatActive || hasActiveDescendant) && cat.subcategories && cat.subcategories.length > 0 && (
+                      <ul className="pl-3 mt-1.5 space-y-1 border-l-2 border-orange-100">
+                        {cat.subcategories.map((sub: any) => {
+                          const isSubActive = slug === sub.slug && searchParams.get('sub') === 'true';
+                          const hasActiveSubSub = sub.sub_subcategories?.some((ss: any) => 
+                            ss.slug === slug || 
+                            ss.sub_sub_subcategories?.some((sss: any) => sss.slug === slug)
+                          );
+
+                          return (
+                            <li key={sub.id}>
+                              <Link 
+                                to={`/category/${sub.slug}?sub=true`} 
+                                className={`block font-semibold text-[14px] ${isSubActive ? 'text-orange-500' : 'text-gray-700 hover:text-orange-500'}`}
+                              >
+                                <CategoryNameDisplay name={sub.name} />
+                              </Link>
+                              {(isSubActive || hasActiveSubSub) && sub.sub_subcategories && sub.sub_subcategories.length > 0 && (
+                                <ul className="pl-3 mt-1 space-y-1 border-l border-orange-100">
+                                  {sub.sub_subcategories.map((ssub: any) => {
+                                    const isSubSubActive = slug === ssub.slug && searchParams.get('subsub') === 'true';
+                                    const hasActiveL4 = ssub.sub_sub_subcategories?.some((sss: any) => sss.slug === slug);
+
+                                    return (
+                                      <li key={ssub.id}>
+                                        <Link 
+                                          to={`/category/${ssub.slug}?subsub=true`} 
+                                          className={`block text-[13px] font-medium ${isSubSubActive ? 'text-orange-500 font-semibold' : 'text-gray-600 hover:text-orange-500'}`}
+                                        >
+                                          <CategoryNameDisplay name={ssub.name} />
+                                        </Link>
+                                        {(isSubSubActive || hasActiveL4) && ssub.sub_sub_subcategories && ssub.sub_sub_subcategories.length > 0 && (
+                                          <ul className="pl-3 mt-1 space-y-1 border-l border-orange-100">
+                                            {ssub.sub_sub_subcategories.map((sss: any) => (
+                                              <li key={sss.id}>
+                                                <Link 
+                                                  to={`/category/${sss.slug}?level4=true`} 
+                                                  className={`block text-[12px] ${slug === sss.slug && searchParams.get('level4') === 'true' ? 'text-orange-500 font-bold' : 'text-gray-500 hover:text-orange-500'}`}
+                                                >
+                                                  {sss.name}
+                                                </Link>
+                                              </li>
+                                            ))}
+                                          </ul>
+                                        )}
+                                      </li>
+                                    );
+                                  })}
+                                </ul>
+                              )}
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
           </div>
 
@@ -322,6 +466,22 @@ export default function Category() {
 
         {/* Main Content */}
         <div className="flex-1">
+          {breadcrumbTrail.length > 1 && (
+            <div className="text-xs md:text-sm text-gray-500 mb-4 flex items-center gap-2 flex-wrap">
+              <Link to="/" className="hover:text-orange-500">Accueil</Link>
+              {breadcrumbTrail.map((crumb, idx) => (
+                <React.Fragment key={crumb.url}>
+                  <span>/</span>
+                  {idx === breadcrumbTrail.length - 1 ? (
+                    <span className="text-gray-800 font-semibold">{crumb.name}</span>
+                  ) : (
+                    <Link to={crumb.url} className="hover:text-orange-500">{crumb.name}</Link>
+                  )}
+                </React.Fragment>
+              ))}
+            </div>
+          )}
+
           {loading ? (
             <div className="mb-8 rounded-xl overflow-hidden shadow-md relative w-full aspect-[16/5] bg-gray-200 animate-pulse hidden md:block"></div>
           ) : categoryImage ? (
@@ -413,6 +573,39 @@ export default function Category() {
                     </div>
                     <div className="p-3 w-full text-center border-t border-gray-50 bg-white">
                       <span className="font-semibold text-gray-800 text-sm group-hover:text-orange-500 transition-colors line-clamp-1">{subsub.name}</span>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {!loading && currentSubSubSubcategories.length > 0 && (
+            <div className="mb-8">
+              <h2 className="text-lg font-bold text-gray-800 mb-4">Catégories spécialisées</h2>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                {currentSubSubSubcategories.map(sss => (
+                  <Link 
+                    key={sss.id} 
+                    to={`/category/${sss.slug}?level4=true`}
+                    className="bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-md hover:border-orange-200 transition-all flex flex-col items-center justify-center group overflow-hidden"
+                  >
+                    <div className="w-full aspect-square bg-gray-50 flex items-center justify-center overflow-hidden relative">
+                      {sss.image ? (
+                        <img 
+                          src={getResizedImageUrl(sss.image, 600)} 
+                          alt={sss.name} 
+                          className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500" 
+                          referrerPolicy="no-referrer"
+                          loading="lazy"
+                          decoding="async"
+                        />
+                      ) : (
+                        <span className="text-4xl">👟</span>
+                      )}
+                    </div>
+                    <div className="p-3 w-full text-center border-t border-gray-50 bg-white">
+                      <span className="font-semibold text-gray-800 text-sm group-hover:text-orange-500 transition-colors line-clamp-1">{sss.name}</span>
                     </div>
                   </Link>
                 ))}

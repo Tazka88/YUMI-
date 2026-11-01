@@ -13,6 +13,9 @@ export interface Product {
   sub_subcategory_id?: number | null;
   sub_subcategory_name?: string;
   sub_subcategory_slug?: string;
+  sub_sub_subcategory_id?: number | null;
+  sub_sub_subcategory_name?: string;
+  sub_sub_subcategory_slug?: string;
   name: string;
   slug: string;
   description: string;

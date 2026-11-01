@@ -9,7 +9,7 @@ import PageSettings from './PageSettings';
 import WilayasSettings from './WilayasSettings';
 import CommunesSettings from './CommunesSettings';
 import OfficesSettings from './OfficesSettings';
-import { FileText, MapPin, Search, LayoutGrid, List, Printer, Download, Truck, Building2, Mail, Navigation, ChevronDown, ChevronRight, LayoutTemplate, FolderTree, Layers, Sparkles, CheckCircle2, HelpCircle, Eye, SlidersHorizontal, Info, Globe, Tag } from 'lucide-react';
+import { FileText, MapPin, Search, LayoutGrid, List, Printer, Download, Truck, Building2, Mail, Navigation, ChevronDown, ChevronRight, LayoutTemplate, FolderTree, Layers, Sparkles, CheckCircle2, HelpCircle, Eye, SlidersHorizontal, Info, Globe, Tag, Network } from 'lucide-react';
 import OrderKanban from './OrderKanban';
 import SliderImagesAdmin from './SliderImagesAdmin';
 import BlogAdmin from './BlogAdmin';
@@ -88,10 +88,12 @@ export default function AdminDashboard() {
   const [isSubcategoryModalOpen, setIsSubcategoryModalOpen] = useState(false);
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [isSubSubcategoryModalOpen, setIsSubSubcategoryModalOpen] = useState(false);
+  const [isSubSubSubcategoryModalOpen, setIsSubSubSubcategoryModalOpen] = useState(false);
   const [isBrandModalOpen, setIsBrandModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<any>(null);
   const [editingSubcategory, setEditingSubcategory] = useState<any>(null);
   const [editingSubSubcategory, setEditingSubSubcategory] = useState<any>(null);
+  const [editingSubSubSubcategory, setEditingSubSubSubcategory] = useState<any>(null);
   const [editingCategory, setEditingCategory] = useState<any>(null);
   const [editingBrand, setEditingBrand] = useState<any>(null);
   
@@ -102,7 +104,7 @@ export default function AdminDashboard() {
   });
   
   const [productForm, setProductForm] = useState({
-    name: '', slug: '', sku: '', category_id: '', subcategory_id: '', sub_subcategory_id: '', brand_id: '', brand_name: '', price: '', promo_price: '', promo_price_start_date: '', promo_price_end_date: '', stock: '', weight: '', description: '', image: '', video_url: '',
+    name: '', slug: '', sku: '', category_id: '', subcategory_id: '', sub_subcategory_id: '', sub_sub_subcategory_id: '', brand_id: '', brand_name: '', price: '', promo_price: '', promo_price_start_date: '', promo_price_end_date: '', stock: '', weight: '', description: '', image: '', video_url: '',
     is_popular: false, is_best_seller: false, is_new: false, is_recommended: false, is_fast_delivery: false, is_active: true, images: [] as any[], variations: [] as any[],
     features: '', key_points: '', faq_q1: '', faq_a1: '', faq_q2: '', faq_a2: '', seo_title: '', seo_description: '', seo_keywords: '', main_image_alt: ''
   });
@@ -114,6 +116,9 @@ export default function AdminDashboard() {
   });
   const [subSubcategoryForm, setSubSubcategoryForm] = useState({
     name: '', slug: '', subcategory_id: '', image: ''
+  });
+  const [subSubSubcategoryForm, setSubSubSubcategoryForm] = useState({
+    name: '', slug: '', sub_subcategory_id: '', image: ''
   });
   const [brandForm, setBrandForm] = useState({
     name: '', slug: '', image: '', description: '', seo_title: '', seo_description: '', h1_title: '', seo_content: ''
@@ -1081,7 +1086,7 @@ const handleBulkDelivery = async () => {
         };
 
         setProductForm({
-          name: fullProduct.name, slug: fullProduct.slug, sku: fullProduct.sku || '', category_id: fullProduct.category_id, subcategory_id: fullProduct.subcategory_id || '', sub_subcategory_id: fullProduct.sub_subcategory_id || '', brand_id: fullProduct.brand_id || '', brand_name: fullProduct.brand_name || '',
+          name: fullProduct.name, slug: fullProduct.slug, sku: fullProduct.sku || '', category_id: fullProduct.category_id, subcategory_id: fullProduct.subcategory_id || '', sub_subcategory_id: fullProduct.sub_subcategory_id || '', sub_sub_subcategory_id: fullProduct.sub_sub_subcategory_id || '', brand_id: fullProduct.brand_id || '', brand_name: fullProduct.brand_name || '',
           price: fullProduct.price, 
           promo_price: (fullProduct.promo_price !== null && fullProduct.promo_price !== undefined) ? fullProduct.promo_price : '', 
           promo_price_start_date: toDatetimeLocal(fullProduct.promo_price_start_date), 
@@ -1108,7 +1113,7 @@ const handleBulkDelivery = async () => {
     } else {
       setEditingProduct(null);
       setProductForm({
-        name: '', slug: '', sku: '', category_id: categories[0]?.id || '', subcategory_id: '', sub_subcategory_id: '', brand_id: '', brand_name: '', price: '', promo_price: '', promo_price_start_date: '', promo_price_end_date: '', stock: '', weight: '', description: '', image: '', video_url: '',
+        name: '', slug: '', sku: '', category_id: categories[0]?.id || '', subcategory_id: '', sub_subcategory_id: '', sub_sub_subcategory_id: '', brand_id: '', brand_name: '', price: '', promo_price: '', promo_price_start_date: '', promo_price_end_date: '', stock: '', weight: '', description: '', image: '', video_url: '',
         is_popular: false, is_best_seller: false, is_new: false, is_recommended: false, is_fast_delivery: false, is_active: true, images: [], variations: [], features: '', key_points: '',
         faq_q1: '', faq_a1: '', faq_q2: '', faq_a2: '', seo_title: '', seo_description: '', seo_keywords: '', main_image_alt: ''
       });
@@ -1145,6 +1150,22 @@ const handleBulkDelivery = async () => {
       });
     }
     setIsSubSubcategoryModalOpen(true);
+  };
+
+  const openSubSubSubcategoryModal = (subSubSubcategory: any = null) => {
+    if (subSubSubcategory) {
+      setEditingSubSubSubcategory(subSubSubcategory);
+      setSubSubSubcategoryForm({
+        name: subSubSubcategory.name, slug: subSubSubcategory.slug, sub_subcategory_id: subSubSubcategory.sub_subcategory_id, image: subSubSubcategory.image || ''
+      });
+    } else {
+      setEditingSubSubSubcategory(null);
+      const allSubSubcats = categories.flatMap(c => (c.subcategories || []).flatMap((s: any) => s.sub_subcategories || []));
+      setSubSubSubcategoryForm({
+        name: '', slug: '', sub_subcategory_id: allSubSubcats[0]?.id || '', image: ''
+      });
+    }
+    setIsSubSubSubcategoryModalOpen(true);
   };
 
   const openCategoryModal = (category: any = null) => {
@@ -1413,6 +1434,79 @@ const handleBulkDelivery = async () => {
             method: 'DELETE',
             headers: { 'Authorization': `Bearer ${token}` }
           });
+          fetch('/api/categories')
+            .then(res => res.json())
+            .then(data => { if (Array.isArray(data)) setCategories(data); })
+            .catch(console.error);
+          setConfirmModal({ ...confirmModal, isOpen: false });
+        } catch (err) {
+          console.error(err);
+        }
+      }
+    });
+  };
+
+  const handleSubSubSubcategorySubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!subSubSubcategoryForm.name) {
+      toast.error('Le nom est requis');
+      return;
+    }
+    if (!subSubSubcategoryForm.slug) {
+      toast.error('Le slug est requis');
+      return;
+    }
+    if (!subSubSubcategoryForm.sub_subcategory_id) {
+      toast.error('Veuillez sélectionner une sous-sous-catégorie parente (Niveau 3)');
+      return;
+    }
+
+    const token = localStorage.getItem('adminToken');
+    const url = editingSubSubSubcategory ? `/api/admin/sub_sub_subcategories/${editingSubSubSubcategory.id}` : '/api/admin/sub_sub_subcategories';
+    const method = editingSubSubSubcategory ? 'PUT' : 'POST';
+
+    try {
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify(subSubSubcategoryForm)
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        toast.error(`Erreur: ${errorData.error || 'Impossible de sauvegarder la catégorie Niveau 4'}`);
+        return;
+      }
+
+      toast.success(editingSubSubSubcategory ? 'Catégorie Niveau 4 modifiée avec succès' : 'Catégorie Niveau 4 créée avec succès');
+      setIsSubSubSubcategoryModalOpen(false);
+      fetch('/api/categories')
+        .then(res => res.json())
+        .then(data => { if (Array.isArray(data)) setCategories(data); })
+        .catch(console.error);
+    } catch (err) {
+      console.error(err);
+      toast.error('Erreur de connexion au serveur');
+    }
+  };
+
+  const deleteSubSubSubcategory = async (id: number) => {
+    setConfirmModal({
+      isOpen: true,
+      message: 'Êtes-vous sûr de vouloir supprimer cette catégorie de Niveau 4 ?',
+      onConfirm: async () => {
+        const token = localStorage.getItem('adminToken');
+        try {
+          const res = await fetch(`/api/admin/sub_sub_subcategories/${id}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            toast.error(err.error || 'Erreur lors de la suppression');
+            return;
+          }
+          toast.success('Catégorie Niveau 4 supprimée');
           fetch('/api/categories')
             .then(res => res.json())
             .then(data => { if (Array.isArray(data)) setCategories(data); })
@@ -4574,7 +4668,7 @@ const handleBulkDelivery = async () => {
                         required
                         className="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 bg-white text-sm transition shadow-2xs" 
                         value={productForm.category_id} 
-                        onChange={e => setProductForm({...productForm, category_id: e.target.value, subcategory_id: ''})}
+                        onChange={e => setProductForm({...productForm, category_id: e.target.value, subcategory_id: '', sub_subcategory_id: '', sub_sub_subcategory_id: ''})}
                       >
                         <option value="" disabled>Sélectionner une catégorie</option>
                         {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -4587,7 +4681,7 @@ const handleBulkDelivery = async () => {
                       <select 
                         className="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 bg-white text-sm transition shadow-2xs" 
                         value={productForm.subcategory_id} 
-                        onChange={e => setProductForm({...productForm, subcategory_id: e.target.value, sub_subcategory_id: ''})}
+                        onChange={e => setProductForm({...productForm, subcategory_id: e.target.value, sub_subcategory_id: '', sub_sub_subcategory_id: ''})}
                       >
                         <option value="">Aucune (Optionnelle)</option>
                         {categories.find(c => c.id.toString() === productForm.category_id.toString())?.subcategories?.map((s: any) => (
@@ -4597,16 +4691,35 @@ const handleBulkDelivery = async () => {
                     </div>
                     <div>
                       <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
-                        Sous-sous-catégorie
+                        Sous-sous-catégorie (Niveau 3)
                       </label>
                       <select 
                         className="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 bg-white text-sm transition shadow-2xs" 
                         value={productForm.sub_subcategory_id} 
-                        onChange={e => setProductForm({...productForm, sub_subcategory_id: e.target.value})}
+                        onChange={e => setProductForm({...productForm, sub_subcategory_id: e.target.value, sub_sub_subcategory_id: ''})}
                       >
                         <option value="">Aucune (Optionnelle)</option>
                         {categories.find(c => c.id.toString() === productForm.category_id.toString())?.subcategories?.find((s: any) => s.id.toString() === productForm.subcategory_id.toString())?.sub_subcategories?.map((ss: any) => (
                           <option key={ss.id} value={ss.id}>{ss.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
+                        Sous-catégorie Niveau 4 (Optionnelle)
+                      </label>
+                      <select 
+                        className="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 bg-white text-sm transition shadow-2xs" 
+                        value={productForm.sub_sub_subcategory_id} 
+                        onChange={e => setProductForm({...productForm, sub_sub_subcategory_id: e.target.value})}
+                      >
+                        <option value="">Aucune (Optionnelle)</option>
+                        {categories
+                          .find(c => c.id.toString() === productForm.category_id.toString())
+                          ?.subcategories?.find((s: any) => s.id.toString() === productForm.subcategory_id.toString())
+                          ?.sub_subcategories?.find((ss: any) => ss.id.toString() === productForm.sub_subcategory_id.toString())
+                          ?.sub_sub_subcategories?.map((sss: any) => (
+                            <option key={sss.id} value={sss.id}>{sss.name}</option>
                         ))}
                       </select>
                     </div>
@@ -5418,6 +5531,110 @@ const handleBulkDelivery = async () => {
                 </button>
                 <button type="submit" className="px-6 py-2.5 bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-xs sm:text-sm font-semibold transition shadow-md shadow-orange-500/25 active:scale-95">
                   {editingSubSubcategory ? 'Enregistrer' : 'Créer'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Sub-sub-subcategory (Level 4) Modal */}
+      {isSubSubSubcategoryModalOpen && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] flex flex-col border border-gray-100 overflow-hidden my-auto animate-in fade-in duration-200">
+            <div className="flex justify-between items-center px-6 py-5 border-b border-gray-100 shrink-0 bg-white">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-orange-50 text-orange-600 border border-orange-200/60 flex items-center justify-center shrink-0 shadow-2xs">
+                  <Network size={20} />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-gray-900 tracking-tight">
+                    {editingSubSubSubcategory ? 'Modifier la catégorie Niveau 4' : 'Nouvelle catégorie Niveau 4'}
+                  </h2>
+                  <p className="text-xs text-gray-500 mt-0.5">Sous-type de Niveau 4 de votre hiérarchie</p>
+                </div>
+              </div>
+              <button onClick={() => setIsSubSubSubcategoryModalOpen(false)} className="p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition">
+                <X size={20} />
+              </button>
+            </div>
+            <form onSubmit={handleSubSubSubcategorySubmit} className="flex flex-col overflow-hidden">
+              <div className="p-6 overflow-y-auto space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
+                    Nom de la catégorie Niveau 4 <span className="text-orange-600">*</span>
+                  </label>
+                  <input 
+                    type="text" 
+                    required
+                    placeholder="Ex: Baskets & Sneakers"
+                    className="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 bg-white text-sm transition shadow-2xs" 
+                    value={subSubSubcategoryForm.name} 
+                    onChange={e => {
+                      const name = e.target.value;
+                      const slug = generateSlug(name);
+                      setSubSubSubcategoryForm({...subSubSubcategoryForm, name, slug});
+                    }} 
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
+                    Slug (URL) <span className="text-orange-600">*</span>
+                  </label>
+                  <input 
+                    type="text" 
+                    required
+                    className="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 bg-white text-sm font-mono transition shadow-2xs" 
+                    value={subSubSubcategoryForm.slug} 
+                    onChange={e => setSubSubSubcategoryForm({...subSubSubcategoryForm, slug: e.target.value})} 
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
+                    Sous-sous-catégorie Parente (Niveau 3) <span className="text-orange-600">*</span>
+                  </label>
+                  <select 
+                    required
+                    className="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 bg-white text-sm transition shadow-2xs" 
+                    value={subSubSubcategoryForm.sub_subcategory_id} 
+                    onChange={e => setSubSubSubcategoryForm({...subSubSubcategoryForm, sub_subcategory_id: e.target.value})}
+                  >
+                    <option value="" disabled>Sélectionner une sous-sous-catégorie</option>
+                    {categories.flatMap(cat => 
+                      (cat.subcategories || []).flatMap((sub: any) => 
+                        (sub.sub_subcategories || []).map((ss: any) => (
+                          <option key={ss.id} value={ss.id}>
+                            {cat.name} › {sub.name} › {ss.name}
+                          </option>
+                        ))
+                      )
+                    )}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">Image</label>
+                  <div className="flex items-center gap-4 bg-gray-50 p-3 rounded-xl border border-gray-200">
+                    {subSubSubcategoryForm.image && (
+                      <img src={subSubSubcategoryForm.image} alt="Preview" className="w-16 h-16 object-cover rounded-xl border border-gray-200 shadow-2xs" referrerPolicy="no-referrer" />
+                    )}
+                    <label className="cursor-pointer bg-white border border-gray-300 hover:border-orange-500 px-4 py-2 rounded-xl hover:bg-orange-50/40 text-xs font-semibold text-gray-700 inline-flex items-center gap-2 transition shadow-2xs">
+                      <Upload size={15} className="text-orange-500" />
+                      Télécharger une image
+                      <input type="file" className="hidden" accept="image/*" onChange={async (e) => {
+                        const url = await handleFileUpload(e);
+                        if (url) setSubSubSubcategoryForm({...subSubSubcategoryForm, image: url});
+                      }} />
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3 border-t border-gray-100 p-4 sm:p-5 shrink-0 bg-gray-50/90 rounded-b-2xl">
+                <button type="button" onClick={() => setIsSubSubSubcategoryModalOpen(false)} className="px-5 py-2.5 border border-gray-300 rounded-xl text-gray-700 hover:bg-gray-100 text-xs sm:text-sm font-semibold transition bg-white shadow-2xs active:scale-95">
+                  Annuler
+                </button>
+                <button type="submit" className="px-6 py-2.5 bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-xs sm:text-sm font-semibold transition shadow-md shadow-orange-500/25 active:scale-95">
+                  {editingSubSubSubcategory ? 'Enregistrer' : 'Créer'}
                 </button>
               </div>
             </form>

@@ -1152,7 +1152,7 @@ const handleBulkDelivery = async () => {
     setIsSubSubcategoryModalOpen(true);
   };
 
-  const openSubSubSubcategoryModal = (subSubSubcategory: any = null) => {
+  const openSubSubSubcategoryModal = (subSubSubcategory: any = null, defaultParentSubSubcategoryId?: number | string) => {
     if (subSubSubcategory) {
       setEditingSubSubSubcategory(subSubSubcategory);
       setSubSubSubcategoryForm({
@@ -1162,7 +1162,7 @@ const handleBulkDelivery = async () => {
       setEditingSubSubSubcategory(null);
       const allSubSubcats = categories.flatMap(c => (c.subcategories || []).flatMap((s: any) => s.sub_subcategories || []));
       setSubSubSubcategoryForm({
-        name: '', slug: '', sub_subcategory_id: allSubSubcats[0]?.id || '', image: ''
+        name: '', slug: '', sub_subcategory_id: defaultParentSubSubcategoryId ? String(defaultParentSubSubcategoryId) : (allSubSubcats[0]?.id ? String(allSubSubcats[0].id) : ''), image: ''
       });
     }
     setIsSubSubSubcategoryModalOpen(true);
@@ -3071,7 +3071,8 @@ const handleBulkDelivery = async () => {
                 { id: 'products', label: 'Produits', count: products.length, icon: Package },
                 { id: 'categories', label: 'Catégories', count: categories.length, icon: FolderTree },
                 { id: 'subcategories', label: 'Sous-catégories', count: categories.reduce((acc, c) => acc + (c.subcategories?.length || 0), 0), icon: Layers },
-                { id: 'sub_subcategories', label: 'Sous-sous-catégories', count: categories.flatMap(c => c.subcategories || []).reduce((acc, s: any) => acc + (s.sub_subcategories?.length || 0), 0), icon: LayoutGrid }
+                { id: 'sub_subcategories', label: 'Sous-sous-catégories', count: categories.flatMap(c => c.subcategories || []).reduce((acc, s: any) => acc + (s.sub_subcategories?.length || 0), 0), icon: LayoutGrid },
+                { id: 'sub_sub_subcategories', label: 'Niveau 4 (Extension)', count: categories.flatMap(c => c.subcategories || []).flatMap((s: any) => s.sub_subcategories || []).reduce((acc: number, ss: any) => acc + (ss.sub_sub_subcategories?.length || 0), 0), icon: Network }
               ].map(tab => {
                 const isActive = productSubTab === tab.id;
                 const IconComponent = tab.icon;
@@ -3637,8 +3638,16 @@ const handleBulkDelivery = async () => {
                                   {sub.name}
                                 </span>
                               </td>
-                              <td className="px-6 py-4 text-right">
+                               <td className="px-6 py-4 text-right">
                                 <div className="flex items-center justify-end gap-1.5">
+                                  <button 
+                                    onClick={() => openSubSubSubcategoryModal(null, ss.id)} 
+                                    className="px-2.5 py-1.5 text-xs font-semibold text-orange-600 hover:text-orange-700 bg-orange-50 hover:bg-orange-100 rounded-xl transition border border-orange-200/60 shadow-2xs flex items-center gap-1 active:scale-95" 
+                                    title={`Ajouter un sous-type Niveau 4 sous "${ss.name}"`}
+                                  >
+                                    <Plus size={13} />
+                                    <span>Niveau 4</span>
+                                  </button>
                                   <button 
                                     onClick={() => openSubSubcategoryModal(ss)} 
                                     className="p-2 text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-xl transition border border-blue-200/60 shadow-2xs" 
@@ -3659,6 +3668,127 @@ const handleBulkDelivery = async () => {
                           ))
                         )
                       )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* Sub-tab 5: Sub-sub-subcategories (Niveau 4) */}
+            {productSubTab === 'sub_sub_subcategories' && (
+              <div className="bg-white rounded-2xl shadow-xs border border-gray-200/80 overflow-hidden">
+                <div className="p-5 sm:p-6 border-b border-gray-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white">
+                  <div className="flex items-center gap-3">
+                    <div className="w-11 h-11 rounded-xl bg-orange-50 text-orange-600 border border-orange-200/60 flex items-center justify-center shrink-0 shadow-2xs">
+                      <Network size={22} />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h2 className="text-lg sm:text-xl font-bold text-gray-900 tracking-tight">Gestion des catégories Niveau 4</h2>
+                        <span className="text-xs font-semibold bg-orange-100 text-orange-700 px-2.5 py-0.5 rounded-lg border border-orange-200 shadow-2xs">
+                          Niveau 4 (Extension)
+                        </span>
+                      </div>
+                      <p className="text-xs text-gray-500 mt-0.5">Ajoutez et personnalisez librement vos sous-types de Niveau 4 sous n'importe quelle catégorie</p>
+                    </div>
+                  </div>
+                  <button 
+                    onClick={() => openSubSubSubcategoryModal()}
+                    className="px-4 py-2.5 bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-2 transition shadow-md shadow-orange-500/25 active:scale-95"
+                  >
+                    <Plus size={16} />
+                    <span>Ajouter une catégorie Niveau 4</span>
+                  </button>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-sm text-gray-600">
+                    <thead className="bg-gray-50/80 text-gray-500 font-semibold text-xs uppercase tracking-wider border-b border-gray-100">
+                      <tr>
+                        <th className="px-6 py-3.5">Image</th>
+                        <th className="px-6 py-3.5">ID</th>
+                        <th className="px-6 py-3.5">Nom</th>
+                        <th className="px-6 py-3.5">Slug</th>
+                        <th className="px-6 py-3.5">Arborescence Parente (Niveaux 1 › 2 › 3)</th>
+                        <th className="px-6 py-3.5 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {(() => {
+                        const allL4: any[] = [];
+                        categories.forEach(cat => {
+                          (cat.subcategories || []).forEach((sub: any) => {
+                            (sub.sub_subcategories || []).forEach((ss: any) => {
+                              (ss.sub_sub_subcategories || []).forEach((sss: any) => {
+                                allL4.push({
+                                  ...sss,
+                                  parentTree: `${cat.name} › ${sub.name} › ${ss.name}`
+                                });
+                              });
+                            });
+                          });
+                        });
+
+                        if (allL4.length === 0) {
+                          return (
+                            <tr>
+                              <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
+                                <div className="max-w-md mx-auto space-y-3">
+                                  <Network size={36} className="mx-auto text-gray-300" />
+                                  <p className="font-semibold text-gray-700">Aucune catégorie de Niveau 4 pour le moment</p>
+                                  <p className="text-xs text-gray-400">Vous pouvez créer vos propres sous-types pour les chaussures femme, homme, ou toute autre sous-sous-catégorie.</p>
+                                  <button
+                                    onClick={() => openSubSubSubcategoryModal()}
+                                    className="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-xs font-semibold inline-flex items-center gap-1.5 transition shadow-sm"
+                                  >
+                                    <Plus size={14} />
+                                    <span>Ajouter une catégorie Niveau 4</span>
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        }
+
+                        return allL4.map(sss => (
+                          <tr key={sss.id} className="hover:bg-orange-50/20 transition-colors">
+                            <td className="px-6 py-4">
+                              <div className="w-12 h-12 rounded-xl bg-gray-50 border border-gray-200/80 overflow-hidden shrink-0 shadow-2xs flex items-center justify-center">
+                                <img src={sss.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(sss.name)}&background=random&size=50`} alt={sss.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                              </div>
+                            </td>
+                            <td className="px-6 py-4">
+                              <span className="font-mono text-xs font-semibold text-gray-500 bg-gray-100 px-2.5 py-0.5 rounded-md border border-gray-200">
+                                #{sss.id}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 font-bold text-gray-900">{sss.name}</td>
+                            <td className="px-6 py-4 font-mono text-xs text-gray-500">{sss.slug}</td>
+                            <td className="px-6 py-4">
+                              <span className="px-2.5 py-1 bg-orange-50 text-orange-800 border border-orange-200/70 text-xs rounded-lg font-semibold inline-block shadow-2xs">
+                                {sss.parentTree}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 text-right">
+                              <div className="flex items-center justify-end gap-1.5">
+                                <button 
+                                  onClick={() => openSubSubSubcategoryModal(sss)} 
+                                  className="p-2 text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-xl transition border border-blue-200/60 shadow-2xs" 
+                                  title="Modifier"
+                                >
+                                  <Edit size={15} />
+                                </button>
+                                <button 
+                                  onClick={() => deleteSubSubSubcategory(sss.id)} 
+                                  className="p-2 text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 rounded-xl transition border border-red-200/60 shadow-2xs" 
+                                  title="Supprimer"
+                                >
+                                  <Trash2 size={15} />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ));
+                      })()}
                     </tbody>
                   </table>
                 </div>
@@ -5599,15 +5729,21 @@ const handleBulkDelivery = async () => {
                     value={subSubSubcategoryForm.sub_subcategory_id} 
                     onChange={e => setSubSubSubcategoryForm({...subSubSubcategoryForm, sub_subcategory_id: e.target.value})}
                   >
-                    <option value="" disabled>Sélectionner une sous-sous-catégorie</option>
-                    {categories.flatMap(cat => 
-                      (cat.subcategories || []).flatMap((sub: any) => 
-                        (sub.sub_subcategories || []).map((ss: any) => (
-                          <option key={ss.id} value={ss.id}>
-                            {cat.name} › {sub.name} › {ss.name}
-                          </option>
-                        ))
-                      )
+                    <option value="" disabled>Sélectionner une sous-sous-catégorie parente</option>
+                    {categories.map(cat => 
+                      (cat.subcategories || []).map((sub: any) => {
+                        const subSubList = sub.sub_subcategories || [];
+                        if (subSubList.length === 0) return null;
+                        return (
+                          <optgroup key={sub.id} label={`${cat.name} › ${sub.name}`}>
+                            {subSubList.map((ss: any) => (
+                              <option key={ss.id} value={ss.id}>
+                                {ss.name}
+                              </option>
+                            ))}
+                          </optgroup>
+                        );
+                      })
                     )}
                   </select>
                 </div>

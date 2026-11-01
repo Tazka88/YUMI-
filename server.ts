@@ -1060,7 +1060,7 @@ ${JSON.stringify(graphSchema)}
       <meta data-rh="true" name="twitter:description" content="${description}" />
       <meta data-rh="true" name="twitter:image" content="${ogImage}" />
     
-      <meta data-rh="true" name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />`;
+      <meta data-rh="true" name="robots" content="${isNotFound ? 'noindex, follow' : 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1'}" />`;
     
     let finalHtml = template.replace('<!--seo-injection-->', globalNav);
     finalHtml = finalHtml.replace('<div id="root"></div>', `<div id="root">${seoHtml || ''}</div>`);

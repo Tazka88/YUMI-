@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { sql } from '../db/setup.js';
+import { sql, isDbConnectionError } from '../db/setup.js';
 import { getSupabase } from '../lib/supabase.js';
 import { sendOrderConfirmationEmail, sendOrderStatusEmail, sendAdminNotificationEmail, sendContactEmail } from '../lib/email.js';
 import bcrypt from 'bcryptjs';
@@ -396,7 +396,7 @@ const orderLimiter = rateLimit({
 const storage = multer.memoryStorage();
 const upload = multer({ 
   storage: storage,
-  limits: { fileSize: 50 * 1024 * 1024 },
+  limits: { fileSize: 100 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     const allowedTypes = /jpeg|jpg|png|webp|gif|svg|avif|heic|heif|mp4|webm|mov|avi/i;
     const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
@@ -1870,6 +1870,7 @@ router.post('/admin/settings', authenticate, async (req, res) => {
         }
       }
     });
+    MEMORY_CACHE.delete('global_settings');
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: 'Failed to update settings' });
@@ -1983,21 +1984,21 @@ router.post('/reviews/upload', upload.single('image') as any, async (req, res) =
   }
 });
 
-router.post('/admin/upload', authenticate, upload.single('image') as any, async (req, res) => {
-  
-  if (!req.file) {
+router.post('/admin/upload', authenticate, upload.any() as any, async (req, res) => {
+  const file = (req as any).files?.[0] || req.file;
+  if (!file) {
     return res.status(400).json({ error: 'No file uploaded' });
   }
   
   try {
-    let buffer = req.file.buffer;
-    let contentType = req.file.mimetype;
-    let ext = req.file.originalname.split('.').pop() || 'bin';
+    let buffer = file.buffer;
+    let contentType = file.mimetype;
+    let ext = (file.originalname.split('.').pop() || 'bin').toLowerCase();
 
-    if (req.file.mimetype !== 'image/svg+xml' && !req.file.mimetype.startsWith('video/')) {
+    if (file.mimetype !== 'image/svg+xml' && !file.mimetype.startsWith('video/')) {
       try {
         const sharp = (await import('sharp')).default;
-        buffer = await sharp(req.file.buffer)
+        buffer = await sharp(file.buffer)
           .resize({ width: 1200, height: 1200, fit: 'inside', withoutEnlargement: true })
           .webp({ quality: 80 })
           .toBuffer();
@@ -2008,50 +2009,58 @@ router.post('/admin/upload', authenticate, upload.single('image') as any, async 
       }
     }
 
-    // If Supabase is configured, upload to Storage
+    const customName = req.body.customName ? req.body.customName.replace(/[^a-z0-9-]/g, '') : '';
+    const uniqueId = Math.random().toString(36).substring(7);
+    const fileName = customName 
+      ? `uploads/${customName}-${uniqueId}.${ext}`
+      : `uploads/${Date.now()}-${uniqueId}.${ext}`;
+
+    // 1. Try Supabase Storage if configured
     const supabase = getSupabase();
     if (supabase) {
       try {
-        // Ensure bucket exists
-        const { data: bucketData, error: bucketError } = await supabase.storage.getBucket('images');
-        if (bucketError && (bucketError.message.includes('not found') || bucketError.message.includes('does not exist') || (bucketError as any).status === 404 || bucketError.name === 'StorageApiError')) {
-          console.log('Bucket "images" not found, creating it...');
-          await supabase.storage.createBucket('images', { public: true });
-        }
-        
-        const customName = req.body.customName ? req.body.customName.replace(/[^a-z0-9-]/g, '') : '';
-        const uniqueId = Math.random().toString(36).substring(7);
-        const fileName = customName 
-          ? `uploads/${customName}-${uniqueId}.${ext}`
-          : `uploads/${Date.now()}-${uniqueId}.${ext}`;
-        
         const { data, error } = await supabase.storage
-          .from('images') // The user must create this bucket in Supabase
+          .from('images')
           .upload(fileName, buffer, {
             contentType,
             cacheControl: 'public, max-age=31536000, immutable',
             upsert: false
           });
 
-        if (error) {
-          throw error;
+        if (!error && data) {
+          const { data: publicUrlData } = supabase.storage
+            .from('images')
+            .getPublicUrl(fileName);
+
+          if (publicUrlData?.publicUrl) {
+            return res.json({ url: publicUrlData.publicUrl });
+          }
         }
-
-        const { data: publicUrlData } = supabase.storage
-          .from('images')
-          .getPublicUrl(fileName);
-
-        return res.json({ url: publicUrlData.publicUrl });
       } catch (supabaseError) {
-        console.error('Supabase upload error:', supabaseError);
-        return res.status(500).json({ error: 'Failed to process image' });
+        console.warn('Supabase storage upload skipped or failed, using local storage fallback:', (supabaseError as Error)?.message || supabaseError);
       }
-    } else {
-      return res.status(500).json({ error: 'Supabase storage is not configured (SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY missing)' });
     }
+
+    // 2. Local disk fallback (served via /uploads in server.ts and api/index.ts)
+    const isVercel = Boolean(process.env.VERCEL || process.env.VERCEL_ENV || process.env.VERCEL_URL);
+    const uploadsDir = isVercel 
+      ? path.join('/tmp', 'uploads') 
+      : path.join(process.cwd(), 'public', 'uploads');
+
+    if (!fs.existsSync(uploadsDir)) {
+      fs.mkdirSync(uploadsDir, { recursive: true });
+    }
+
+    const localFileName = customName 
+      ? `${customName}-${uniqueId}.${ext}`
+      : `${Date.now()}-${uniqueId}.${ext}`;
+    const localFilePath = path.join(uploadsDir, localFileName);
+    fs.writeFileSync(localFilePath, buffer);
+
+    return res.json({ url: `/uploads/${localFileName}` });
   } catch (error) {
-    console.error('Image processing error:', error);
-    res.status(500).json({ error: 'Failed to process image' });
+    console.error('File upload processing error:', error);
+    res.status(500).json({ error: 'Failed to process file upload' });
   }
 });
 
@@ -4105,7 +4114,11 @@ router.get('/chat/status', async (req, res) => {
       message: autoReply
     });
   } catch (err) {
-    console.error('Error fetching chat status:', err);
+    if (isDbConnectionError(err)) {
+      console.warn('Transient DB connection issue in /chat/status (fallback applied)');
+    } else {
+      console.error('Error fetching chat status:', err);
+    }
     res.json({ status: 'online_fast', message: 'Bienvenue sur ZORANDO !' });
   }
 });
@@ -4203,6 +4216,10 @@ router.get('/chat/messages', async (req, res) => {
       messages
     });
   } catch (err) {
+    if (isDbConnectionError(err)) {
+      console.warn('Transient DB connection issue in /chat/messages (returning safe empty fallback):', (err as Error)?.message || err);
+      return res.status(200).json({ conversation: null, messages: [] });
+    }
     console.error('Error fetching chat messages:', err);
     res.status(500).json({ error: 'Failed to fetch messages' });
   }
@@ -4573,6 +4590,22 @@ router.get('/admin/chat/conversations', authenticate, async (req, res) => {
       }
     });
   } catch (err) {
+    if (isDbConnectionError(err)) {
+      console.warn('Transient DB connection issue in /admin/chat/conversations');
+      return res.json({
+        conversations: [],
+        stats: {
+          totalCount: 0,
+          unansweredCount: 0,
+          warning3minCount: 0,
+          alert5minCount: 0,
+          resolvedTodayCount: 0,
+          callbackPendingCount: 0,
+          avgResponseSeconds: null,
+          availabilityStatus: 'online_fast'
+        }
+      });
+    }
     console.error('Error fetching admin chat conversations:', err);
     res.status(500).json({ error: 'Failed to fetch conversations' });
   }
@@ -4627,6 +4660,10 @@ router.get('/admin/chat/conversations/:id/messages', authenticate, async (req, r
       messages
     });
   } catch (err) {
+    if (isDbConnectionError(err)) {
+      console.warn('Transient DB connection issue in /admin/chat/conversations/:id/messages');
+      return res.json({ conversation: null, messages: [] });
+    }
     console.error('Error fetching conversation messages:', err);
     res.status(500).json({ error: 'Failed to fetch messages' });
   }

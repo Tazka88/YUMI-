@@ -9,6 +9,7 @@ import SEO from '../components/SEO';
 import { buildOrganizationSchema, buildWebSiteSchema } from '../lib/schemaUtils';
 import { getCategoryWithEmoji, CategoryNameDisplay } from '../components/Layout';
 import Slider from '../components/Slider';
+import HeroVideo, { HeroVideoConfig } from '../components/HeroVideo';
 import { fetchWithCache } from '../lib/utils';
 import AppDownloadBanner from '../components/AppDownloadBanner';
 
@@ -505,6 +506,7 @@ export default function Home() {
     { id: 'new', type: 'new', title: 'Nouveautés 🆕', isVisible: true },
     { id: 'random', type: 'random', title: 'Découverte Aléatoire 🎲', isVisible: true },
   ]);
+  const [heroVideoConfig, setHeroVideoConfig] = useState<HeroVideoConfig | null>(null);
   const addItem = useCartStore(state => state.addItem);
 
   useEffect(() => {
@@ -531,6 +533,16 @@ export default function Home() {
     fetchWithCache('/api/settings', { signal, priority: 'high' } as any).then(data => {
       if ((data as any).active_theme) setActiveTheme((data as any).active_theme);
       setThemeImages(data);
+      if ((data as any).hero_video_config) {
+        try {
+          const cfg = typeof (data as any).hero_video_config === 'string'
+            ? JSON.parse((data as any).hero_video_config)
+            : (data as any).hero_video_config;
+          setHeroVideoConfig(cfg);
+        } catch (e) {
+          console.warn('Could not parse hero_video_config:', e);
+        }
+      }
       if ((data as any).home_sections) {
         try {
           const sections = JSON.parse((data as any).home_sections);
@@ -580,6 +592,14 @@ export default function Home() {
     const loadSections = () => {
       fetchDynamic('/api/settings')
         .then(data => {
+          if ((data as any).hero_video_config) {
+            try {
+              const cfg = typeof (data as any).hero_video_config === 'string'
+                ? JSON.parse((data as any).hero_video_config)
+                : (data as any).hero_video_config;
+              setHeroVideoConfig(cfg);
+            } catch (e) {}
+          }
           if ((data as any).home_sections) {
             try {
               const sections = JSON.parse((data as any).home_sections);
@@ -637,11 +657,15 @@ export default function Home() {
       <ThemeBackground activeTheme={activeTheme} themeImages={themeImages} />
       <div className="container mx-auto px-4 py-6">
         
-        {/* Hero Section with Sidebar and Carousel */}
+        {/* Hero Section with Sidebar and Carousel / Responsive Video */}
         <div className="flex gap-4 lg:h-[384px] mb-6">
           <CategorySidebar categories={categories} />
           <div className="flex-1 min-w-0 h-full">
-            <Slider />
+            {heroVideoConfig?.enabled && (heroVideoConfig.mobile_video_url || heroVideoConfig.desktop_video_url) ? (
+              <HeroVideo config={heroVideoConfig} fallback={<Slider />} />
+            ) : (
+              <Slider />
+            )}
           </div>
         </div>
 

@@ -2,7 +2,7 @@ import toast from 'react-hot-toast';
 import React, { useState, useEffect } from 'react';
 import useSWR from 'swr';
 import { useNavigate } from 'react-router-dom';
-import { LayoutDashboard, ShoppingBag, Users, Settings, LogOut, TrendingUp, AlertCircle, Package, Plus, Edit, Trash2, X, Image as ImageIcon, Upload, User, Bell, Menu, MessageCircle } from 'lucide-react';
+import { LayoutDashboard, ShoppingBag, Users, Settings, LogOut, TrendingUp, AlertCircle, Package, Plus, Edit, Trash2, X, Image as ImageIcon, Upload, User, Bell, Menu, MessageCircle, Video } from 'lucide-react';
 import { formatPrice } from '../../utils/formatPrice';
 import FooterSettings from './FooterSettings';
 import PageSettings from './PageSettings';
@@ -1941,8 +1941,8 @@ const handleBulkDelivery = async () => {
               onClick={() => { setActiveTab('images'); setIsMobileNavOpen(false); }}
               className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition ${activeTab === 'images' ? 'bg-orange-500 text-white font-semibold shadow-md shadow-orange-500/20' : 'text-gray-400 hover:bg-gray-800 hover:text-white'}`}
             >
-              <ImageIcon size={18} />
-              <span>Images Slider</span>
+              <Video size={18} />
+              <span>Hero Vidéos & Slider</span>
             </button>
             <button
               onClick={() => { setActiveTab('blog'); setIsMobileNavOpen(false); }}
@@ -2166,8 +2166,8 @@ const handleBulkDelivery = async () => {
               onClick={() => setActiveTab('images')}
               className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition ${activeTab === 'images' ? 'bg-orange-500 text-white font-semibold shadow-md shadow-orange-500/20' : 'text-gray-400 hover:bg-gray-800 hover:text-white'}`}
             >
-              <ImageIcon size={18} />
-              <span>Images Slider</span>
+              <Video size={18} />
+              <span>Hero Vidéos & Slider</span>
             </button>
             <button 
               onClick={() => setActiveTab('blog')}

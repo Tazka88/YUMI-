@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Plus, Edit, Trash2, GripVertical, Check, X, Image as ImageIcon } from 'lucide-react';
+import { Plus, Edit, Trash2, GripVertical, Check, X, Image as ImageIcon, Video } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import Cropper from 'react-easy-crop';
+import HeroVideoAdmin from './HeroVideoAdmin';
 
 interface Category {
   id: number;
@@ -41,6 +42,7 @@ export default function SliderImagesAdmin() {
   const [isMobileCropping, setIsMobileCropping] = useState(false);
   const [filterCategory, setFilterCategory] = useState<'global'>('global');
   const [isLoading, setIsLoading] = useState(false);
+  const [activeSubTab, setActiveSubTab] = useState<'video' | 'slider'>('video');
 
   useEffect(() => {
     fetchCategories();
@@ -311,11 +313,43 @@ export default function SliderImagesAdmin() {
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-      <div className="p-6 border-b border-gray-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <h2 className="text-lg font-bold text-gray-800">Gestion du Slider Principal (Accueil)</h2>
-        
-        <div className="flex items-center gap-4 w-full sm:w-auto">
+    <div className="space-y-6">
+      {/* Subtab Switcher */}
+      <div className="flex bg-white p-1.5 rounded-2xl shadow-xs border border-gray-200 gap-2 w-fit">
+        <button
+          type="button"
+          onClick={() => setActiveSubTab('video')}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition ${
+            activeSubTab === 'video'
+              ? 'bg-orange-500 text-white shadow-sm'
+              : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+          }`}
+        >
+          <Video size={16} />
+          <span>Vidéos Hero (Mobile 9:16 & Desktop)</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveSubTab('slider')}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition ${
+            activeSubTab === 'slider'
+              ? 'bg-orange-500 text-white shadow-sm'
+              : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+          }`}
+        >
+          <ImageIcon size={16} />
+          <span>Carrousel d'Images (Slider classique)</span>
+        </button>
+      </div>
+
+      {activeSubTab === 'video' ? (
+        <HeroVideoAdmin />
+      ) : (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+          <div className="p-6 border-b border-gray-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <h2 className="text-lg font-bold text-gray-800">Gestion du Slider Principal (Accueil)</h2>
+            
+            <div className="flex items-center gap-4 w-full sm:w-auto">
           <button 
             onClick={() => {
               setCurrentImage({ is_active: true, position: filteredImages.length, category_id: null });
@@ -653,6 +687,8 @@ export default function SliderImagesAdmin() {
           </div>
         </div>
       )}
-    </div>
-  );
+      </div>
+    )}
+  </div>
+);
 }

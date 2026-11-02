@@ -36,11 +36,11 @@ let connectionString = resolveConnectionString(process.env.DATABASE_URL);
 
 export const sql = globalForPostgres.sql ?? postgres(connectionString, {
   ssl: connectionString.includes('localhost') || connectionString.includes('127.0.0.1') ? false : 'require',
-  max: isServerless ? 5 : 8, // Prevent Supabase pooler exhaustion
-  idle_timeout: isServerless ? 10 : 20, // Proactively close idle sockets
-  connect_timeout: 8, // Fast 8s connection timeout to prevent proxy drops
+  max: isServerless ? 5 : 10, // Prevent Supabase pooler exhaustion
+  idle_timeout: isServerless ? 15 : 30, // Proactively close idle sockets
+  connect_timeout: 15, // Headroom for Supabase pooler TLS handshake & cold start
   prepare: false, // Required for PgBouncer / Supavisor transaction mode
-  max_lifetime: 60 * 3, // Recycle connections every 3 minutes
+  max_lifetime: 60 * 5, // Recycle connections every 5 minutes
   backoff: (attempts) => Math.min(0.2 * Math.pow(2, attempts), 2),
   connection: {
     application_name: 'zorando_app'
@@ -50,6 +50,26 @@ export const sql = globalForPostgres.sql ?? postgres(connectionString, {
 
 // Cache on globalThis across all environments (including production serverless lambdas)
 globalForPostgres.sql = sql;
+
+/**
+ * Checks if an error is a transient connection / timeout error.
+ */
+export function isDbConnectionError(err: unknown): boolean {
+  if (!err) return false;
+  const msg = (err as Error)?.message || String(err);
+  const code = (err as any)?.code;
+  return (
+    code === 'CONNECT_TIMEOUT' ||
+    code === 'ECONNRESET' ||
+    code === 'ECONNREFUSED' ||
+    code === 'CONNECTION_CLOSED' ||
+    msg.includes('CONNECT_TIMEOUT') ||
+    msg.includes('Connection timeout') ||
+    msg.includes('connection timed out') ||
+    msg.includes('Connection closed') ||
+    msg.includes('write CONNECT_TIMEOUT')
+  );
+}
 
 /**
  * Executes a database query for SSR with a strict timeout and fallback.

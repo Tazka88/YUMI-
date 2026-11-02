@@ -2088,6 +2088,88 @@ router.post('/admin/upload', authenticate, (req: any, res: any, next: any) => {
   }
 });
 
+// Resilient Chunked Video/File Upload (bypasses Cloud Run & Vercel 413 payload limits)
+router.post('/admin/upload-chunk', authenticate, (req: any, res: any, next: any) => {
+  upload.any()(req, res, (err: any) => {
+    if (err) {
+      console.error('Chunk upload multer error:', err);
+      return res.status(400).json({ error: err.message || 'Erreur téléversement du fragment' });
+    }
+    next();
+  });
+}, async (req, res) => {
+  try {
+    const file = (req as any).files?.[0] || req.file;
+    if (!file) {
+      return res.status(400).json({ error: 'Fragment de fichier manquant' });
+    }
+
+    const uploadId = req.body.uploadId ? String(req.body.uploadId).replace(/[^a-zA-Z0-9_-]/g, '') : '';
+    const chunkIndex = parseInt(req.body.chunkIndex, 10);
+    const totalChunks = parseInt(req.body.totalChunks, 10);
+    const originalName = req.body.fileName ? String(req.body.fileName).replace(/[^a-zA-Z0-9_.-]/g, '') : 'video.mp4';
+    const customName = req.body.customName ? String(req.body.customName).replace(/[^a-zA-Z0-9_-]/g, '') : '';
+
+    if (!uploadId || isNaN(chunkIndex) || isNaN(totalChunks) || totalChunks <= 0) {
+      return res.status(400).json({ error: 'Paramètres de fragment invalides' });
+    }
+
+    const isVercel = Boolean(process.env.VERCEL || process.env.VERCEL_ENV || process.env.VERCEL_URL);
+    const baseUploadsDir = isVercel 
+      ? path.join('/tmp', 'uploads') 
+      : path.join(process.cwd(), 'public', 'uploads');
+
+    const chunksDir = path.join(baseUploadsDir, '.chunks', uploadId);
+    if (!fs.existsSync(chunksDir)) {
+      fs.mkdirSync(chunksDir, { recursive: true });
+    }
+
+    // Write this chunk
+    const chunkPath = path.join(chunksDir, `part_${chunkIndex}`);
+    fs.writeFileSync(chunkPath, file.buffer);
+
+    // If all chunks received, assemble into final file
+    if (chunkIndex === totalChunks - 1) {
+      const ext = (originalName.split('.').pop() || 'mp4').toLowerCase();
+      const uniqueId = Math.random().toString(36).substring(7);
+      const finalFileName = customName 
+        ? `${customName}-${uniqueId}.${ext}`
+        : `${Date.now()}-${uniqueId}.${ext}`;
+      const finalFilePath = path.join(baseUploadsDir, finalFileName);
+
+      const writeStream = fs.createWriteStream(finalFilePath);
+      for (let i = 0; i < totalChunks; i++) {
+        const partFile = path.join(chunksDir, `part_${i}`);
+        if (fs.existsSync(partFile)) {
+          const partBuf = fs.readFileSync(partFile);
+          writeStream.write(partBuf);
+          try { fs.unlinkSync(partFile); } catch (e) {}
+        }
+      }
+      writeStream.end();
+
+      // Clean up chunk directory
+      try { fs.rmdirSync(chunksDir); } catch (e) {}
+
+      return res.json({ 
+        done: true, 
+        url: `/uploads/${finalFileName}`,
+        message: 'Fichier téléversé et assemblé avec succès'
+      });
+    }
+
+    res.json({ 
+      done: false, 
+      chunkIndex, 
+      totalChunks,
+      progress: Math.round(((chunkIndex + 1) / totalChunks) * 100)
+    });
+  } catch (err: any) {
+    console.error('Error in upload-chunk:', err);
+    res.status(500).json({ error: err.message || 'Erreur lors de l\'assemblage du fragment' });
+  }
+});
+
 router.get('/admin/stats', authenticate, async (req, res) => {
   try {
     const [totalOrders] = await sql`SELECT COUNT(*) as count FROM orders`;

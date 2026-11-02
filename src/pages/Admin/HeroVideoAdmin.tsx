@@ -36,6 +36,7 @@ export default function HeroVideoAdmin() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploadingField, setUploadingField] = useState<string | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<number>(0);
   const [previewTab, setPreviewTab] = useState<'mobile' | 'desktop'>('mobile');
 
   // Load existing configuration from /api/admin/settings
@@ -71,19 +72,21 @@ export default function HeroVideoAdmin() {
   };
 
   // Upload file helper
+  // Resilient Chunked File Upload (2MB slices to strictly eliminate HTTP 413 on Cloud Run/Vercel)
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, fieldName: keyof HeroVideoConfig) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Check size limit: 100MB for video, 15MB for image
     const isVideo = file.type.startsWith('video/') || /\.(mp4|webm|mov|m4v|avi|mkv|3gp)$/i.test(file.name);
-    const maxSize = isVideo ? 100 * 1024 * 1024 : 15 * 1024 * 1024;
+    const maxSize = isVideo ? 150 * 1024 * 1024 : 25 * 1024 * 1024;
     if (file.size > maxSize) {
-      toast.error(`Fichier trop volumineux (${(file.size / (1024 * 1024)).toFixed(1)} Mo). Limite : ${isVideo ? '100 Mo' : '15 Mo'}`);
+      toast.error(`Fichier trop volumineux (${(file.size / (1024 * 1024)).toFixed(1)} Mo). Limite : ${isVideo ? '150 Mo' : '25 Mo'}`);
       return;
     }
 
     setUploadingField(fieldName as string);
+    setUploadProgress(0);
+
     const token = localStorage.getItem('adminToken');
     if (!token) {
       toast.error('Session expirée. Veuillez vous reconnecter à l\'administration.');
@@ -91,34 +94,59 @@ export default function HeroVideoAdmin() {
       return;
     }
 
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('customName', `hero-${fieldName}`);
-
     try {
-      const res = await fetch('/api/admin/upload', {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}` },
-        body: formData
-      });
+      // 2MB chunk slice size - strictly avoids Cloud Run (32MB) and Vercel (4.5MB) 413 limits
+      const CHUNK_SIZE = 2 * 1024 * 1024;
+      const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+      const uploadId = `${Date.now()}_${Math.random().toString(36).substring(7)}`;
+      let finalUrl = '';
 
-      const data = await res.json().catch(() => ({}));
+      for (let i = 0; i < totalChunks; i++) {
+        const start = i * CHUNK_SIZE;
+        const end = Math.min(start + CHUNK_SIZE, file.size);
+        const chunkBlob = file.slice(start, end);
 
-      if (!res.ok) {
-        throw new Error(data.error || `Erreur de téléversement (${res.status})`);
+        const formData = new FormData();
+        formData.append('file', chunkBlob, file.name);
+        formData.append('uploadId', uploadId);
+        formData.append('chunkIndex', String(i));
+        formData.append('totalChunks', String(totalChunks));
+        formData.append('fileName', file.name);
+        formData.append('customName', `hero-${fieldName}`);
+
+        const currentPct = Math.round(((i + 1) / totalChunks) * 100);
+        setUploadProgress(currentPct);
+
+        const res = await fetch('/api/admin/upload-chunk', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}` },
+          body: formData
+        });
+
+        const data = await res.json().catch(() => ({}));
+
+        if (!res.ok) {
+          throw new Error(data.error || `Erreur lors de l'envoi du fragment ${i + 1}/${totalChunks} (${res.status})`);
+        }
+
+        if (data.done && data.url) {
+          finalUrl = data.url;
+          break;
+        }
       }
 
-      if (data.url) {
-        setConfig(prev => ({ ...prev, [fieldName]: data.url }));
-        toast.success(`${isVideo ? 'Vidéo' : 'Image'} téléversée avec succès`);
+      if (finalUrl) {
+        setConfig(prev => ({ ...prev, [fieldName]: finalUrl }));
+        toast.success(`${isVideo ? 'Vidéo' : 'Image'} téléversée avec succès !`);
       } else {
-        throw new Error('Réponse serveur invalide (URL manquante)');
+        throw new Error('Téléversement incomplet (URL manquante)');
       }
     } catch (err: any) {
       console.error('Upload failed:', err);
       toast.error(err.message || 'Échec du téléversement du fichier');
     } finally {
       setUploadingField(null);
+      setUploadProgress(0);
       e.target.value = '';
     }
   };
@@ -241,8 +269,9 @@ export default function HeroVideoAdmin() {
               <label className="text-xs font-semibold text-gray-700 flex items-center justify-between">
                 <span>Fichier Vidéo Mobile (MP4 / WebM vertical 9:16)</span>
                 {uploadingField === 'mobile_video_url' && (
-                  <span className="text-orange-500 flex items-center gap-1 text-[11px]">
-                    <RefreshCw size={12} className="animate-spin" /> Téléversement en cours...
+                  <span className="text-orange-600 font-semibold flex items-center gap-1.5 text-xs bg-orange-50 px-2 py-0.5 rounded-md border border-orange-200">
+                    <RefreshCw size={12} className="animate-spin text-orange-500" />
+                    <span>Envoi sans limite 413 : {uploadProgress}%</span>
                   </span>
                 )}
               </label>
@@ -357,8 +386,9 @@ export default function HeroVideoAdmin() {
               <label className="text-xs font-semibold text-gray-700 flex items-center justify-between">
                 <span>Fichier Vidéo Desktop (MP4 / WebM)</span>
                 {uploadingField === 'desktop_video_url' && (
-                  <span className="text-orange-500 flex items-center gap-1 text-[11px]">
-                    <RefreshCw size={12} className="animate-spin" /> Téléversement en cours...
+                  <span className="text-orange-600 font-semibold flex items-center gap-1.5 text-xs bg-orange-50 px-2 py-0.5 rounded-md border border-orange-200">
+                    <RefreshCw size={12} className="animate-spin text-orange-500" />
+                    <span>Envoi sans limite 413 : {uploadProgress}%</span>
                   </span>
                 )}
               </label>

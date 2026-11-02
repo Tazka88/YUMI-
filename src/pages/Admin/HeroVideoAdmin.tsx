@@ -76,15 +76,21 @@ export default function HeroVideoAdmin() {
     if (!file) return;
 
     // Check size limit: 100MB for video, 15MB for image
-    const isVideo = file.type.startsWith('video/');
+    const isVideo = file.type.startsWith('video/') || /\.(mp4|webm|mov|m4v|avi|mkv|3gp)$/i.test(file.name);
     const maxSize = isVideo ? 100 * 1024 * 1024 : 15 * 1024 * 1024;
     if (file.size > maxSize) {
-      toast.error(`Fichier trop volumineux. Limite : ${isVideo ? '100 Mo' : '15 Mo'}`);
+      toast.error(`Fichier trop volumineux (${(file.size / (1024 * 1024)).toFixed(1)} Mo). Limite : ${isVideo ? '100 Mo' : '15 Mo'}`);
       return;
     }
 
     setUploadingField(fieldName as string);
     const token = localStorage.getItem('adminToken');
+    if (!token) {
+      toast.error('Session expirée. Veuillez vous reconnecter à l\'administration.');
+      setUploadingField(null);
+      return;
+    }
+
     const formData = new FormData();
     formData.append('file', file);
     formData.append('customName', `hero-${fieldName}`);
@@ -96,20 +102,21 @@ export default function HeroVideoAdmin() {
         body: formData
       });
 
+      const data = await res.json().catch(() => ({}));
+
       if (!res.ok) {
-        throw new Error('Erreur de téléversement');
+        throw new Error(data.error || `Erreur de téléversement (${res.status})`);
       }
 
-      const data = await res.json();
       if (data.url) {
         setConfig(prev => ({ ...prev, [fieldName]: data.url }));
         toast.success(`${isVideo ? 'Vidéo' : 'Image'} téléversée avec succès`);
       } else {
-        throw new Error('URL manquante');
+        throw new Error('Réponse serveur invalide (URL manquante)');
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Upload failed:', err);
-      toast.error('Échec du téléversement du fichier');
+      toast.error(err.message || 'Échec du téléversement du fichier');
     } finally {
       setUploadingField(null);
       e.target.value = '';
@@ -252,7 +259,7 @@ export default function HeroVideoAdmin() {
                   <span>Importer</span>
                   <input
                     type="file"
-                    accept="video/mp4,video/webm,video/quicktime"
+                    accept="video/*,.mp4,.webm,.mov,.m4v,.avi,.mkv"
                     className="hidden"
                     onChange={e => handleFileUpload(e, 'mobile_video_url')}
                   />
@@ -368,7 +375,7 @@ export default function HeroVideoAdmin() {
                   <span>Importer</span>
                   <input
                     type="file"
-                    accept="video/mp4,video/webm,video/quicktime"
+                    accept="video/*,.mp4,.webm,.mov,.m4v,.avi,.mkv"
                     className="hidden"
                     onChange={e => handleFileUpload(e, 'desktop_video_url')}
                   />

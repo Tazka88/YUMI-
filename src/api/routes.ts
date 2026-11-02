@@ -398,14 +398,21 @@ const upload = multer({
   storage: storage,
   limits: { fileSize: 100 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
-    const allowedTypes = /jpeg|jpg|png|webp|gif|svg|avif|heic|heif|mp4|webm|mov|avi/i;
-    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-    const mimetype = allowedTypes.test(file.mimetype) || file.mimetype.startsWith('video/');
+    const ext = path.extname(file.originalname || '').toLowerCase().replace('.', '');
+    const allowedExtensions = ['jpeg', 'jpg', 'png', 'webp', 'gif', 'svg', 'avif', 'heic', 'heif', 'mp4', 'webm', 'mov', 'avi', 'm4v', 'mkv', '3gp', 'ogg'];
+    const isImageOrVideoMime = (
+      file.mimetype.startsWith('image/') ||
+      file.mimetype.startsWith('video/') ||
+      file.mimetype === 'application/octet-stream' ||
+      file.mimetype === 'application/mp4' ||
+      file.mimetype === 'application/x-troff-msvideo'
+    );
+    const isAllowedExt = allowedExtensions.includes(ext);
 
-    if (extname && mimetype) {
+    if (isAllowedExt || isImageOrVideoMime) {
       return cb(null, true);
     } else {
-      cb(new Error('Seules les images et les vidéos sont autorisées !'));
+      cb(new Error(`Format (${ext || file.mimetype}) non supporté. Veuillez utiliser un format vidéo (MP4, WebM, MOV) ou image.`));
     }
   }
 });
@@ -1984,10 +1991,21 @@ router.post('/reviews/upload', upload.single('image') as any, async (req, res) =
   }
 });
 
-router.post('/admin/upload', authenticate, upload.any() as any, async (req, res) => {
+router.post('/admin/upload', authenticate, (req: any, res: any, next: any) => {
+  upload.any()(req, res, (err: any) => {
+    if (err) {
+      console.error('Multer file upload error:', err);
+      const msg = err.code === 'LIMIT_FILE_SIZE' 
+        ? 'Le fichier dépasse la taille maximale autorisée (100 Mo)'
+        : (err.message || 'Erreur lors de la réception du fichier');
+      return res.status(400).json({ error: msg });
+    }
+    next();
+  });
+}, async (req, res) => {
   const file = (req as any).files?.[0] || req.file;
   if (!file) {
-    return res.status(400).json({ error: 'No file uploaded' });
+    return res.status(400).json({ error: 'Aucun fichier reçu' });
   }
   
   try {
@@ -1995,7 +2013,9 @@ router.post('/admin/upload', authenticate, upload.any() as any, async (req, res)
     let contentType = file.mimetype;
     let ext = (file.originalname.split('.').pop() || 'bin').toLowerCase();
 
-    if (file.mimetype !== 'image/svg+xml' && !file.mimetype.startsWith('video/')) {
+    const isVideo = file.mimetype.startsWith('video/') || ['mp4', 'webm', 'mov', 'avi', 'm4v', 'mkv', '3gp'].includes(ext);
+
+    if (!isVideo && file.mimetype !== 'image/svg+xml') {
       try {
         const sharp = (await import('sharp')).default;
         buffer = await sharp(file.buffer)
@@ -2006,6 +2026,10 @@ router.post('/admin/upload', authenticate, upload.any() as any, async (req, res)
         ext = 'webp';
       } catch (sharpError) {
         console.warn('Sharp compression failed, using original file:', sharpError);
+      }
+    } else if (isVideo) {
+      if (contentType === 'application/octet-stream' || !contentType.startsWith('video/')) {
+        contentType = ext === 'webm' ? 'video/webm' : ext === 'mov' ? 'video/quicktime' : 'video/mp4';
       }
     }
 

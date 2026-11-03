@@ -68,7 +68,7 @@ export default function HeroVideo({ config, fallback }: HeroVideoProps) {
     ? config.desktop_object_position 
     : 'center center';
 
-  // Ensure continuous autoPlay whenever video source changes
+  // Ensure continuous autoPlay whenever video source changes or component mounts
   useEffect(() => {
     if (videoRef.current) {
       videoRef.current.defaultMuted = true;
@@ -76,6 +76,17 @@ export default function HeroVideo({ config, fallback }: HeroVideoProps) {
       videoRef.current.play().catch(() => {});
     }
   }, [currentVideoUrl, isMuted]);
+
+  // Auto-resume playback if tab is hidden and restored
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && videoRef.current) {
+        videoRef.current.play().catch(() => {});
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, []);
 
   // Toggle Mute / Sound
   const toggleSound = (e: React.MouseEvent) => {
@@ -120,11 +131,25 @@ export default function HeroVideo({ config, fallback }: HeroVideoProps) {
           loop
           playsInline
           preload="auto"
+          onLoadedMetadata={(e) => {
+            const vid = e.currentTarget;
+            vid.muted = isMuted;
+            vid.play().catch(() => {});
+          }}
+          onCanPlay={(e) => {
+            const vid = e.currentTarget;
+            vid.muted = isMuted;
+            vid.play().catch(() => {});
+          }}
+          onPause={(e) => {
+            // Keep playing continuously with zero user action
+            e.currentTarget.play().catch(() => {});
+          }}
           onError={() => {
             console.warn('Hero video failed to load');
             setHasError(true);
           }}
-          className="absolute inset-0 w-full h-full object-cover z-0"
+          className="absolute inset-0 w-full h-full object-cover z-0 pointer-events-none"
           style={{ objectPosition }}
         />
       )}

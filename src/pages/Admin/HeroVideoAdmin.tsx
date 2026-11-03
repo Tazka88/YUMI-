@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   Video, Smartphone, Monitor, Upload, Link as LinkIcon, Check, 
-  RefreshCw, Eye, Volume2, Save, Sparkles, HelpCircle, AlertCircle, Copy,
+  RefreshCw, Eye, Volume2, VolumeX, Save, Sparkles, HelpCircle, AlertCircle, Copy,
   Trash2, ExternalLink, Play
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
@@ -40,6 +40,8 @@ export default function HeroVideoAdmin() {
   const [uploadingField, setUploadingField] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState<number>(0);
   const [previewTab, setPreviewTab] = useState<'mobile' | 'desktop'>('mobile');
+  const [previewMuted, setPreviewMuted] = useState(true);
+  const [previewError, setPreviewError] = useState<string | null>(null);
 
   const mobileVideoRef = useRef<HTMLVideoElement | null>(null);
   const desktopVideoRef = useRef<HTMLVideoElement | null>(null);
@@ -52,20 +54,20 @@ export default function HeroVideoAdmin() {
   // Ensure preview video plays continuously on load or tab switch
   useEffect(() => {
     if (previewTab === 'mobile' && mobileVideoRef.current) {
-      mobileVideoRef.current.load();
+      mobileVideoRef.current.muted = previewMuted;
       mobileVideoRef.current.play().catch(() => {});
     }
     if (previewTab === 'desktop' && desktopVideoRef.current) {
-      desktopVideoRef.current.load();
+      desktopVideoRef.current.muted = previewMuted;
       desktopVideoRef.current.play().catch(() => {});
     }
-  }, [previewTab, config.mobile_video_url, config.desktop_video_url]);
+  }, [previewTab, config.mobile_video_url, config.desktop_video_url, previewMuted]);
 
   const fetchSettings = async () => {
     setLoading(true);
     try {
       const token = localStorage.getItem('adminToken');
-      const res = await fetch('/api/admin/settings', {
+      const res = await fetch(`/api/admin/settings?t=${Date.now()}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {
@@ -214,19 +216,26 @@ export default function HeroVideoAdmin() {
 
         const updatedConfig = { ...config, [fieldName]: finalUrl };
         setConfig(updatedConfig);
+        setPreviewError(null);
+
+        // Auto-switch to the format that was just uploaded so admin immediately sees it
+        if (fieldName === 'desktop_video_url') {
+          setPreviewTab('desktop');
+        } else if (fieldName === 'mobile_video_url') {
+          setPreviewTab('mobile');
+        }
 
         // Auto-save so refreshing the page immediately shows the uploaded video!
-        fetch('/api/admin/settings', {
+        await fetch('/api/admin/settings', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`
           },
           body: JSON.stringify({ hero_video_config: JSON.stringify(updatedConfig) })
-        }).then(() => {
-          window.dispatchEvent(new Event('zorando_sections_updated'));
-        }).catch(() => {});
+        });
 
+        window.dispatchEvent(new Event('zorando_sections_updated'));
         toast.success(`${isVideo ? 'Vidéo' : 'Image'} téléversée et enregistrée !`);
       } else {
         throw new Error('Téléversement incomplet (URL manquante)');
@@ -768,104 +777,194 @@ export default function HeroVideoAdmin() {
               </div>
             </div>
 
-            {/* Preview Frame */}
-            <div className="mt-4 flex justify-center">
-              {previewTab === 'mobile' ? (
-                /* Mobile Phone Frame (9:16 Mockup) */
-                <div className="w-[260px] sm:w-[280px] bg-neutral-900 rounded-[32px] p-2.5 shadow-2xl border-4 border-neutral-700">
-                  <div className="relative rounded-[24px] overflow-hidden bg-black aspect-[9/16]">
-                    {config.mobile_video_url ? (
-                      <video
-                        key={`mobile-preview-${config.mobile_video_url}`}
-                        ref={mobileVideoRef}
-                        src={config.mobile_video_url}
-                        autoPlay
-                        muted
-                        loop
-                        playsInline
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex flex-col items-center justify-center text-gray-500 text-center p-4">
-                        <Video size={32} className="mb-2 opacity-50" />
-                        <span className="text-xs">Aucune vidéo mobile sélectionnée</span>
-                      </div>
-                    )}
-
-                    {/* Overlay */}
-                    <div 
-                      className="absolute inset-0 pointer-events-none"
-                      style={{
-                        backgroundColor: `rgba(0,0,0, ${(config.overlay_opacity ?? 25) / 100})`,
-                        backgroundImage: 'linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 60%)'
+            {/* Preview Frames: Both kept mounted in DOM so tab switching does not freeze or reset playback */}
+            <div className="mt-4 flex flex-col items-center">
+              
+              {/* 1. Mobile Phone Frame (9:16 Mockup) */}
+              <div className={`w-[260px] sm:w-[280px] bg-neutral-900 rounded-[32px] p-2.5 shadow-2xl border-4 border-neutral-700 ${previewTab === 'mobile' ? 'block' : 'hidden'}`}>
+                <div className="relative rounded-[24px] overflow-hidden bg-black aspect-[9/16]">
+                  {config.mobile_video_url ? (
+                    <video
+                      key={`mobile-preview-${config.mobile_video_url}`}
+                      ref={mobileVideoRef}
+                      src={config.mobile_video_url}
+                      autoPlay
+                      muted={previewMuted}
+                      loop
+                      playsInline
+                      preload="auto"
+                      onLoadedMetadata={(e) => {
+                        const v = e.currentTarget;
+                        v.muted = previewMuted;
+                        v.play().catch(() => {});
                       }}
+                      onCanPlay={(e) => {
+                        const v = e.currentTarget;
+                        v.muted = previewMuted;
+                        v.play().catch(() => {});
+                      }}
+                      onPause={(e) => {
+                        e.currentTarget.play().catch(() => {});
+                      }}
+                      onError={() => {
+                        setPreviewError("Erreur de chargement du flux vidéo mobile.");
+                      }}
+                      className="w-full h-full object-cover"
                     />
+                  ) : (
+                    <div className="w-full h-full flex flex-col items-center justify-center text-gray-500 text-center p-4">
+                      <Video size={32} className="mb-2 opacity-50" />
+                      <span className="text-xs">Aucune vidéo mobile sélectionnée</span>
+                    </div>
+                  )}
 
-                    {/* Text Preview */}
-                    {(config.title || config.button_text) && (
-                      <div className="absolute inset-x-3 bottom-4 text-white pointer-events-none">
-                        {config.title && <div className="text-sm font-bold leading-tight drop-shadow">{config.title}</div>}
-                        {config.subtitle && <div className="text-[10px] text-gray-200 mt-1 line-clamp-1 drop-shadow">{config.subtitle}</div>}
-                        {config.button_text && (
-                          <div className="mt-2 inline-block bg-orange-500 text-white text-[10px] font-semibold px-3 py-1 rounded-full shadow">
-                            {config.button_text}
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
+                  {/* Overlay */}
+                  <div 
+                    className="absolute inset-0 pointer-events-none"
+                    style={{
+                      backgroundColor: `rgba(0,0,0, ${(config.overlay_opacity ?? 25) / 100})`,
+                      backgroundImage: 'linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 60%)'
+                    }}
+                  />
+
+                  {/* Text Preview */}
+                  {(config.title || config.button_text) && (
+                    <div className="absolute inset-x-3 bottom-4 text-white pointer-events-none">
+                      {config.title && <div className="text-sm font-bold leading-tight drop-shadow">{config.title}</div>}
+                      {config.subtitle && <div className="text-[10px] text-gray-200 mt-1 line-clamp-1 drop-shadow">{config.subtitle}</div>}
+                      {config.button_text && (
+                        <div className="mt-2 inline-block bg-orange-500 text-white text-[10px] font-semibold px-3 py-1 rounded-full shadow">
+                          {config.button_text}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
-              ) : (
-                /* Desktop Preview Frame (Simulates Hero Section ratio ~16:9 / ~384px) */
-                <div className="w-full bg-neutral-900 rounded-xl p-2 shadow-xl border border-neutral-700">
-                  <div className="flex items-center gap-1.5 pb-1.5 px-2 border-b border-neutral-800 text-[10px] text-gray-400">
-                    <div className="w-2 h-2 rounded-full bg-red-500/80" />
-                    <div className="w-2 h-2 rounded-full bg-yellow-500/80" />
-                    <div className="w-2 h-2 rounded-full bg-green-500/80" />
-                    <span className="ml-2 font-mono text-[9px]">Aperçu Recadrage Desktop ({config.desktop_object_position || 'center center'})</span>
-                  </div>
-                  <div className="relative rounded-lg overflow-hidden bg-black aspect-[16/9] mt-1.5">
-                    {(config.desktop_video_url || config.mobile_video_url) ? (
-                      <video
-                        key={`desktop-preview-${config.desktop_video_url || config.mobile_video_url}`}
-                        ref={desktopVideoRef}
-                        src={config.desktop_video_url || config.mobile_video_url}
-                        autoPlay
-                        muted
-                        loop
-                        playsInline
-                        className="w-full h-full object-cover"
-                        style={{ objectPosition: config.desktop_object_position || 'center center' }}
-                      />
-                    ) : (
-                      <div className="w-full h-full flex flex-col items-center justify-center text-gray-500 text-center p-4">
-                        <Monitor size={32} className="mb-2 opacity-50" />
-                        <span className="text-xs">Aucune vidéo desktop sélectionnée</span>
-                      </div>
-                    )}
+              </div>
 
-                    {/* Overlay */}
-                    <div 
-                      className="absolute inset-0 pointer-events-none"
-                      style={{
-                        backgroundColor: `rgba(0,0,0, ${(config.overlay_opacity ?? 25) / 100})`,
-                        backgroundImage: 'linear-gradient(to top, rgba(0,0,0,0.6) 0%, transparent 60%)'
+              {/* 2. Desktop Preview Frame (Simulates Hero Section ratio ~16:9 / ~384px) */}
+              <div className={`w-full bg-neutral-900 rounded-xl p-2 shadow-xl border border-neutral-700 ${previewTab === 'desktop' ? 'block' : 'hidden'}`}>
+                <div className="flex items-center gap-1.5 pb-1.5 px-2 border-b border-neutral-800 text-[10px] text-gray-400">
+                  <div className="w-2 h-2 rounded-full bg-red-500/80" />
+                  <div className="w-2 h-2 rounded-full bg-yellow-500/80" />
+                  <div className="w-2 h-2 rounded-full bg-green-500/80" />
+                  <span className="ml-2 font-mono text-[9px]">Aperçu Recadrage Desktop ({config.desktop_object_position || 'center center'})</span>
+                </div>
+                <div className="relative rounded-lg overflow-hidden bg-black aspect-[16/9] mt-1.5">
+                  {(config.desktop_video_url || config.mobile_video_url) ? (
+                    <video
+                      key={`desktop-preview-${config.desktop_video_url || config.mobile_video_url}`}
+                      ref={desktopVideoRef}
+                      src={config.desktop_video_url || config.mobile_video_url}
+                      autoPlay
+                      muted={previewMuted}
+                      loop
+                      playsInline
+                      preload="auto"
+                      onLoadedMetadata={(e) => {
+                        const v = e.currentTarget;
+                        v.muted = previewMuted;
+                        v.play().catch(() => {});
                       }}
+                      onCanPlay={(e) => {
+                        const v = e.currentTarget;
+                        v.muted = previewMuted;
+                        v.play().catch(() => {});
+                      }}
+                      onPause={(e) => {
+                        e.currentTarget.play().catch(() => {});
+                      }}
+                      onError={() => {
+                        setPreviewError("Erreur de chargement du flux vidéo desktop.");
+                      }}
+                      className="w-full h-full object-cover"
+                      style={{ objectPosition: config.desktop_object_position || 'center center' }}
                     />
+                  ) : (
+                    <div className="w-full h-full flex flex-col items-center justify-center text-gray-500 text-center p-4">
+                      <Monitor size={32} className="mb-2 opacity-50" />
+                      <span className="text-xs">Aucune vidéo desktop sélectionnée</span>
+                    </div>
+                  )}
 
-                    {/* Text Preview */}
-                    {(config.title || config.button_text) && (
-                      <div className="absolute inset-x-4 bottom-4 text-white pointer-events-none">
-                        {config.title && <div className="text-base font-bold leading-tight drop-shadow">{config.title}</div>}
-                        {config.subtitle && <div className="text-xs text-gray-200 mt-1 line-clamp-1 drop-shadow">{config.subtitle}</div>}
-                        {config.button_text && (
-                          <div className="mt-2 inline-block bg-orange-500 text-white text-xs font-semibold px-4 py-1.5 rounded-full shadow">
-                            {config.button_text}
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
+                  {/* Overlay */}
+                  <div 
+                    className="absolute inset-0 pointer-events-none"
+                    style={{
+                      backgroundColor: `rgba(0,0,0, ${(config.overlay_opacity ?? 25) / 100})`,
+                      backgroundImage: 'linear-gradient(to top, rgba(0,0,0,0.6) 0%, transparent 60%)'
+                    }}
+                  />
+
+                  {/* Text Preview */}
+                  {(config.title || config.button_text) && (
+                    <div className="absolute inset-x-4 bottom-4 text-white pointer-events-none">
+                      {config.title && <div className="text-base font-bold leading-tight drop-shadow">{config.title}</div>}
+                      {config.subtitle && <div className="text-xs text-gray-200 mt-1 line-clamp-1 drop-shadow">{config.subtitle}</div>}
+                      {config.button_text && (
+                        <div className="mt-2 inline-block bg-orange-500 text-white text-xs font-semibold px-4 py-1.5 rounded-full shadow">
+                          {config.button_text}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Status and Diagnostic Controls Bar */}
+              <div className="w-full mt-3 pt-3 border-t border-gray-100 flex flex-wrap items-center justify-between gap-2 text-xs">
+                <div className="flex items-center gap-1.5 text-gray-600">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                  <span className="text-[11px] font-medium">Lecture continue (Boucle infinie sans pause)</span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  {/* Sound Preview Button */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const newMuted = !previewMuted;
+                      setPreviewMuted(newMuted);
+                      if (mobileVideoRef.current) mobileVideoRef.current.muted = newMuted;
+                      if (desktopVideoRef.current) desktopVideoRef.current.muted = newMuted;
+                    }}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-medium flex items-center gap-1 border transition ${
+                      !previewMuted ? 'bg-orange-50 text-orange-700 border-orange-300' : 'bg-gray-50 hover:bg-gray-100 text-gray-600 border-gray-200'
+                    }`}
+                    title={previewMuted ? "Tester le son de la vidéo" : "Couper le son"}
+                  >
+                    {!previewMuted ? <Volume2 size={13} className="text-orange-600" /> : <VolumeX size={13} />}
+                    <span>{!previewMuted ? 'Son Actif' : 'Son Coupé'}</span>
+                  </button>
+
+                  {/* Force Reload Preview */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPreviewError(null);
+                      if (previewTab === 'mobile' && mobileVideoRef.current) {
+                        mobileVideoRef.current.load();
+                        mobileVideoRef.current.play().catch(() => {});
+                      }
+                      if (previewTab === 'desktop' && desktopVideoRef.current) {
+                        desktopVideoRef.current.load();
+                        desktopVideoRef.current.play().catch(() => {});
+                      }
+                      toast.success('Aperçu rechargé !');
+                    }}
+                    className="px-2.5 py-1 rounded-lg text-xs font-medium text-gray-600 hover:text-gray-900 bg-gray-50 hover:bg-gray-100 border border-gray-200 flex items-center gap-1 transition"
+                    title="Forcer le rechargement de l'aperçu vidéo"
+                  >
+                    <RefreshCw size={13} />
+                    <span>Recharger</span>
+                  </button>
+                </div>
+              </div>
+
+              {previewError && (
+                <div className="w-full mt-2 p-2 bg-red-50 border border-red-200 text-red-700 rounded-lg text-xs flex items-center gap-2">
+                  <AlertCircle size={14} className="shrink-0" />
+                  <span>{previewError}</span>
                 </div>
               )}
             </div>

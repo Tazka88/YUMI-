@@ -2081,6 +2081,22 @@ router.post('/admin/upload', authenticate, (req: any, res: any, next: any) => {
     const localFilePath = path.join(uploadsDir, localFileName);
     fs.writeFileSync(localFilePath, buffer);
 
+    // Persist in PostgreSQL media_files table
+    try {
+      await sql`
+        INSERT INTO media_files (id, file_name, content_type, data, file_size)
+        VALUES (${uniqueId}, ${localFileName}, ${contentType}, ${buffer}, ${buffer.length})
+        ON CONFLICT (id) DO UPDATE SET
+          file_name = EXCLUDED.file_name,
+          content_type = EXCLUDED.content_type,
+          data = EXCLUDED.data,
+          file_size = EXCLUDED.file_size,
+          created_at = CURRENT_TIMESTAMP
+      `;
+    } catch (dbErr) {
+      console.warn('Failed to persist in media_files table:', dbErr);
+    }
+
     return res.json({ url: `/uploads/${localFileName}` });
   } catch (error) {
     console.error('File upload processing error:', error);
@@ -2137,19 +2153,36 @@ router.post('/admin/upload-chunk', authenticate, (req: any, res: any, next: any)
         : `${Date.now()}-${uniqueId}.${ext}`;
       const finalFilePath = path.join(baseUploadsDir, finalFileName);
 
-      const writeStream = fs.createWriteStream(finalFilePath);
+      const buffers: Buffer[] = [];
       for (let i = 0; i < totalChunks; i++) {
         const partFile = path.join(chunksDir, `part_${i}`);
         if (fs.existsSync(partFile)) {
-          const partBuf = fs.readFileSync(partFile);
-          writeStream.write(partBuf);
+          buffers.push(fs.readFileSync(partFile));
           try { fs.unlinkSync(partFile); } catch (e) {}
         }
       }
-      writeStream.end();
+      const fullBuffer = Buffer.concat(buffers);
+      fs.writeFileSync(finalFilePath, fullBuffer);
 
       // Clean up chunk directory
       try { fs.rmdirSync(chunksDir); } catch (e) {}
+
+      // Persist in PostgreSQL media_files table so file is never lost across container restarts
+      const contentType = ext === 'webm' ? 'video/webm' : ext === 'mov' ? 'video/quicktime' : 'video/mp4';
+      try {
+        await sql`
+          INSERT INTO media_files (id, file_name, content_type, data, file_size)
+          VALUES (${uniqueId}, ${finalFileName}, ${contentType}, ${fullBuffer}, ${fullBuffer.length})
+          ON CONFLICT (id) DO UPDATE SET
+            file_name = EXCLUDED.file_name,
+            content_type = EXCLUDED.content_type,
+            data = EXCLUDED.data,
+            file_size = EXCLUDED.file_size,
+            created_at = CURRENT_TIMESTAMP
+        `;
+      } catch (dbErr) {
+        console.warn('Failed to persist in media_files table:', dbErr);
+      }
 
       return res.json({ 
         done: true, 
@@ -2216,6 +2249,17 @@ router.post('/admin/delete-media', authenticate, async (req, res) => {
         } catch (unlinkErr) {
           console.warn('Local unlink error:', unlinkErr);
         }
+      }
+
+      // Also permanently delete from PostgreSQL media_files table
+      try {
+        await sql`
+          DELETE FROM media_files 
+          WHERE file_name = ${fileName} 
+             OR file_name LIKE ${'%' + fileName + '%'}
+        `;
+      } catch (dbErr) {
+        console.warn('DB media_files delete error:', dbErr);
       }
     }
 

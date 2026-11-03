@@ -52,8 +52,94 @@ app.use(helmet({
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
-// Serve uploads statically
-app.use('/uploads', express.static(uploadsDir, { maxAge: '1y' }));
+// Serve uploads statically with PostgreSQL persistence self-healing & HTTP 206 Range streaming
+app.use('/uploads', async (req, res, next) => {
+  const fileName = path.basename(req.path);
+  if (!fileName) return next();
+
+  const filePath = path.join(uploadsDir, fileName);
+
+  // Self-healing from PostgreSQL media_files table if not on local disk
+  if (!fs.existsSync(filePath)) {
+    try {
+      const rows = await sql`
+        SELECT content_type, data 
+        FROM media_files 
+        WHERE file_name = ${fileName} 
+           OR file_name LIKE ${'%' + fileName + '%'}
+           OR id = ${fileName.split('.')[0]}
+        LIMIT 1
+      `;
+      if (rows && rows.length > 0 && rows[0].data) {
+        if (!fs.existsSync(uploadsDir)) {
+          fs.mkdirSync(uploadsDir, { recursive: true });
+        }
+        fs.writeFileSync(filePath, rows[0].data);
+      }
+    } catch (dbErr) {
+      console.warn('Media self-healing check error:', dbErr);
+    }
+  }
+
+  // If file exists on disk and is a video, stream with robust HTTP 206 Range support
+  if (fs.existsSync(filePath) && /\.(mp4|webm|mov|m4v|avi|mkv)$/i.test(fileName)) {
+    try {
+      const stat = fs.statSync(filePath);
+      const fileSize = stat.size;
+      const range = req.headers.range;
+      const ext = path.extname(fileName).toLowerCase();
+      const contentType = ext === '.webm' ? 'video/webm' : (ext === '.mov' || ext === '.qt') ? 'video/mp4' : 'video/mp4';
+
+      if (req.method === 'HEAD') {
+        res.writeHead(200, {
+          'Content-Length': fileSize,
+          'Content-Type': contentType,
+          'Accept-Ranges': 'bytes',
+          'Cache-Control': 'public, max-age=31536000, immutable'
+        });
+        return res.end();
+      }
+
+      if (range) {
+        const matches = range.match(/bytes=(\d*)-(\d*)/);
+        let start = matches && matches[1] ? parseInt(matches[1], 10) : 0;
+        let end = matches && matches[2] ? parseInt(matches[2], 10) : fileSize - 1;
+        if (isNaN(start)) start = 0;
+        if (isNaN(end) || end >= fileSize) end = fileSize - 1;
+
+        if (start > end || start >= fileSize) {
+          res.writeHead(416, {
+            'Content-Range': `bytes */${fileSize}`
+          });
+          return res.end();
+        }
+
+        const chunksize = (end - start) + 1;
+        const fileStream = fs.createReadStream(filePath, { start, end });
+        res.writeHead(206, {
+          'Content-Range': `bytes ${start}-${end}/${fileSize}`,
+          'Accept-Ranges': 'bytes',
+          'Content-Length': chunksize,
+          'Content-Type': contentType,
+          'Cache-Control': 'public, max-age=31536000, immutable'
+        });
+        return fileStream.pipe(res);
+      } else {
+        res.writeHead(200, {
+          'Content-Length': fileSize,
+          'Content-Type': contentType,
+          'Accept-Ranges': 'bytes',
+          'Cache-Control': 'public, max-age=31536000, immutable'
+        });
+        return fs.createReadStream(filePath).pipe(res);
+      }
+    } catch (streamErr) {
+      console.error('Video stream error:', streamErr);
+    }
+  }
+
+  next();
+}, express.static(uploadsDir, { maxAge: '1y' }));
 
 // API Routes
 app.get(['/sitemap.xml', '/api/sitemap.xml'], (req, res, next) => {

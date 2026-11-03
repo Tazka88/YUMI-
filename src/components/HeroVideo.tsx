@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Volume2, VolumeX, Play, Pause, ChevronRight } from 'lucide-react';
+import { Volume2, VolumeX, ChevronRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export interface HeroVideoConfig {
@@ -32,8 +32,6 @@ export default function HeroVideo({ config, fallback }: HeroVideoProps) {
   });
 
   const [isMuted, setIsMuted] = useState(true);
-  const [isPlaying, setIsPlaying] = useState(true);
-  const [isVideoLoaded, setIsVideoLoaded] = useState(false);
   const [hasError, setHasError] = useState(false);
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
@@ -44,7 +42,6 @@ export default function HeroVideo({ config, fallback }: HeroVideoProps) {
     
     const handleChange = (e: MediaQueryListEvent | MediaQueryList) => {
       setIsMobile(e.matches);
-      setIsVideoLoaded(false); // Reset loaded state when switching breakpoint
     };
 
     setIsMobile(mediaQuery.matches);
@@ -53,7 +50,6 @@ export default function HeroVideo({ config, fallback }: HeroVideoProps) {
       mediaQuery.addEventListener('change', handleChange);
       return () => mediaQuery.removeEventListener('change', handleChange);
     } else {
-      // Fallback for older browsers
       mediaQuery.addListener(handleChange);
       return () => mediaQuery.removeListener(handleChange);
     }
@@ -72,6 +68,15 @@ export default function HeroVideo({ config, fallback }: HeroVideoProps) {
     ? config.desktop_object_position 
     : 'center center';
 
+  // Ensure continuous autoPlay whenever video source changes
+  useEffect(() => {
+    if (videoRef.current) {
+      videoRef.current.defaultMuted = true;
+      videoRef.current.muted = isMuted;
+      videoRef.current.play().catch(() => {});
+    }
+  }, [currentVideoUrl, isMuted]);
+
   // Toggle Mute / Sound
   const toggleSound = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -81,19 +86,6 @@ export default function HeroVideo({ config, fallback }: HeroVideoProps) {
     setIsMuted(newMutedState);
     if (!newMutedState && videoRef.current.paused) {
       videoRef.current.play().catch(() => {});
-      setIsPlaying(true);
-    }
-  };
-
-  // Toggle Play / Pause
-  const togglePlay = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!videoRef.current) return;
-    if (videoRef.current.paused) {
-      videoRef.current.play().then(() => setIsPlaying(true)).catch(() => {});
-    } else {
-      videoRef.current.pause();
-      setIsPlaying(false);
     }
   };
 
@@ -117,56 +109,36 @@ export default function HeroVideo({ config, fallback }: HeroVideoProps) {
       className={`relative w-full rounded-2xl overflow-hidden shadow-sm group select-none bg-neutral-900 ${mobileContainerClass} md:aspect-[1600/500] lg:h-full lg:aspect-auto`}
       style={{ contentVisibility: 'visible', contain: 'layout paint' }}
     >
-      {/* 1. Fast LCP Poster Image (displays instantly before video loads) */}
-      {currentPosterUrl && (
-        <img
-          src={currentPosterUrl}
-          alt={config.title || "ZORANDO Hero"}
-          loading="eager"
-          fetchPriority="high"
-          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-700 ease-in-out pointer-events-none ${
-            isVideoLoaded ? 'opacity-0 z-0' : 'opacity-100 z-10'
-          }`}
-          style={{ objectPosition }}
-        />
-      )}
-
-      {/* 2. Device-specific Video Element (ONLY loaded for active device) */}
+      {/* 1. Device-specific Video Element (ONLY loaded for active device, plays continuously) */}
       {currentVideoUrl && !hasError && (
         <video
-          key={currentVideoUrl} // Remounts cleanly when switching device source
+          key={currentVideoUrl}
           ref={videoRef}
           src={currentVideoUrl}
-          poster={currentPosterUrl || undefined}
           autoPlay
           muted={isMuted}
           loop
           playsInline
-          preload="metadata"
-          onCanPlay={() => setIsVideoLoaded(true)}
-          onPlaying={() => setIsPlaying(true)}
-          onPause={() => setIsPlaying(false)}
+          preload="auto"
           onError={() => {
-            console.warn('Hero video failed to load, falling back to poster');
+            console.warn('Hero video failed to load');
             setHasError(true);
           }}
-          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-700 ease-in-out ${
-            isVideoLoaded ? 'opacity-100 z-10' : 'opacity-0 z-0'
-          }`}
+          className="absolute inset-0 w-full h-full object-cover z-0"
           style={{ objectPosition }}
         />
       )}
 
-      {/* 3. Gradient Overlay for Typography Contrast & Visual Depth */}
+      {/* 2. Gradient Overlay for Typography Contrast & Visual Depth */}
       <div 
-        className="absolute inset-0 z-20 pointer-events-none transition-opacity duration-300"
+        className="absolute inset-0 z-10 pointer-events-none transition-opacity duration-300"
         style={{
           backgroundColor: `rgba(0, 0, 0, ${overlayOpacity})`,
           backgroundImage: 'linear-gradient(to top, rgba(0,0,0,0.65) 0%, rgba(0,0,0,0.15) 50%, rgba(0,0,0,0.3) 100%)'
         }}
       />
 
-      {/* 4. Content / Caption / Call-To-Action (if configured) */}
+      {/* 3. Content / Caption / Call-To-Action (if configured) */}
       {(config.title || config.subtitle || config.button_text) && (
         <div className="absolute inset-0 z-20 flex flex-col justify-end md:justify-center p-4 sm:p-6 md:p-10 pointer-events-none">
           <div className="w-full max-w-2xl text-white">
@@ -197,23 +169,9 @@ export default function HeroVideo({ config, fallback }: HeroVideoProps) {
         </div>
       )}
 
-      {/* 5. Minimalist Glassmorphic Interactive Controls (Bottom Right) */}
-      <div className="absolute bottom-3 right-3 sm:bottom-4 sm:right-4 z-30 flex items-center gap-2 pointer-events-auto">
-        {/* Play/Pause Button */}
-        {currentVideoUrl && !hasError && (
-          <button
-            type="button"
-            onClick={togglePlay}
-            aria-label={isPlaying ? 'Mettre en pause' : 'Reprendre la lecture'}
-            title={isPlaying ? 'Pause' : 'Lecture'}
-            className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-black/40 hover:bg-black/70 text-white backdrop-blur-md flex items-center justify-center transition-all duration-200 border border-white/20 hover:scale-105 active:scale-95 shadow-md"
-          >
-            {isPlaying ? <Pause size={14} className="sm:w-4 sm:h-4" /> : <Play size={14} className="sm:w-4 sm:h-4 ml-0.5" />}
-          </button>
-        )}
-
-        {/* Mute/Sound Button */}
-        {currentVideoUrl && !hasError && (config.show_sound_control ?? true) && (
+      {/* 4. Minimalist Sound Toggle Control (Bottom Right) */}
+      {currentVideoUrl && !hasError && (config.show_sound_control ?? true) && (
+        <div className="absolute bottom-3 right-3 sm:bottom-4 sm:right-4 z-30 pointer-events-auto">
           <button
             type="button"
             onClick={toggleSound}
@@ -223,8 +181,8 @@ export default function HeroVideo({ config, fallback }: HeroVideoProps) {
           >
             {isMuted ? <VolumeX size={14} className="sm:w-4 sm:h-4" /> : <Volume2 size={14} className="sm:w-4 sm:h-4 text-orange-400" />}
           </button>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

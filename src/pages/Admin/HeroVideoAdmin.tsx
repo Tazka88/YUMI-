@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Video, Smartphone, Monitor, Upload, Link as LinkIcon, Check, 
-  RefreshCw, Eye, Volume2, Save, Sparkles, HelpCircle, AlertCircle, Copy
+  RefreshCw, Eye, Volume2, Save, Sparkles, HelpCircle, AlertCircle, Copy,
+  Trash2, ExternalLink, Play
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { HeroVideoConfig } from '../../components/HeroVideo';
@@ -35,14 +36,30 @@ export default function HeroVideoAdmin() {
   const [config, setConfig] = useState<HeroVideoConfig>(DEFAULT_CONFIG);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [deletingField, setDeletingField] = useState<string | null>(null);
   const [uploadingField, setUploadingField] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState<number>(0);
   const [previewTab, setPreviewTab] = useState<'mobile' | 'desktop'>('mobile');
+
+  const mobileVideoRef = useRef<HTMLVideoElement | null>(null);
+  const desktopVideoRef = useRef<HTMLVideoElement | null>(null);
 
   // Load existing configuration from /api/admin/settings
   useEffect(() => {
     fetchSettings();
   }, []);
+
+  // Ensure preview video plays continuously on load or tab switch
+  useEffect(() => {
+    if (previewTab === 'mobile' && mobileVideoRef.current) {
+      mobileVideoRef.current.load();
+      mobileVideoRef.current.play().catch(() => {});
+    }
+    if (previewTab === 'desktop' && desktopVideoRef.current) {
+      desktopVideoRef.current.load();
+      desktopVideoRef.current.play().catch(() => {});
+    }
+  }, [previewTab, config.mobile_video_url, config.desktop_video_url]);
 
   const fetchSettings = async () => {
     setLoading(true);
@@ -71,8 +88,55 @@ export default function HeroVideoAdmin() {
     }
   };
 
-  // Upload file helper
-  // Resilient Chunked File Upload (2MB slices to strictly eliminate HTTP 413 on Cloud Run/Vercel)
+  // Permanently delete a file from Supabase storage or local disk
+  const handleDeleteMedia = async (fieldName: keyof HeroVideoConfig) => {
+    const urlToDelete = config[fieldName];
+    if (!urlToDelete || typeof urlToDelete !== 'string') return;
+
+    const confirmMsg = fieldName.includes('video')
+      ? 'Voulez-vous vraiment supprimer cette vidéo ? Le fichier sera définitivement effacé de votre stockage (Supabase/Serveur) pour ne pas gaspiller votre espace.'
+      : 'Voulez-vous vraiment supprimer cette image de préchargement ?';
+
+    if (!window.confirm(confirmMsg)) return;
+
+    setDeletingField(fieldName);
+    const token = localStorage.getItem('adminToken');
+
+    try {
+      // 1. Delete file from storage
+      await fetch('/api/admin/delete-media', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ url: urlToDelete })
+      });
+
+      // 2. Clear state and auto-save
+      const updatedConfig = { ...config, [fieldName]: '' };
+      setConfig(updatedConfig);
+
+      await fetch('/api/admin/settings', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ hero_video_config: JSON.stringify(updatedConfig) })
+      });
+
+      window.dispatchEvent(new Event('zorando_sections_updated'));
+      toast.success('Fichier supprimé définitivement de votre stockage (Supabase/Serveur) !');
+    } catch (err) {
+      console.error('Deletion error:', err);
+      toast.error('Erreur lors de la suppression du fichier');
+    } finally {
+      setDeletingField(null);
+    }
+  };
+
+  // Resilient Chunked File Upload (2MB slices to strictly eliminate HTTP 413)
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, fieldName: keyof HeroVideoConfig) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -95,7 +159,6 @@ export default function HeroVideoAdmin() {
     }
 
     try {
-      // 2MB chunk slice size - strictly avoids Cloud Run (32MB) and Vercel (4.5MB) 413 limits
       const CHUNK_SIZE = 2 * 1024 * 1024;
       const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
       const uploadId = `${Date.now()}_${Math.random().toString(36).substring(7)}`;
@@ -136,8 +199,35 @@ export default function HeroVideoAdmin() {
       }
 
       if (finalUrl) {
-        setConfig(prev => ({ ...prev, [fieldName]: finalUrl }));
-        toast.success(`${isVideo ? 'Vidéo' : 'Image'} téléversée avec succès !`);
+        // If replacing an existing file, clean up old file from storage to avoid orphan files
+        const oldUrl = config[fieldName];
+        if (oldUrl && typeof oldUrl === 'string' && oldUrl !== finalUrl) {
+          fetch('/api/admin/delete-media', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ url: oldUrl })
+          }).catch(() => {});
+        }
+
+        const updatedConfig = { ...config, [fieldName]: finalUrl };
+        setConfig(updatedConfig);
+
+        // Auto-save so refreshing the page immediately shows the uploaded video!
+        fetch('/api/admin/settings', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ hero_video_config: JSON.stringify(updatedConfig) })
+        }).then(() => {
+          window.dispatchEvent(new Event('zorando_sections_updated'));
+        }).catch(() => {});
+
+        toast.success(`${isVideo ? 'Vidéo' : 'Image'} téléversée et enregistrée !`);
       } else {
         throw new Error('Téléversement incomplet (URL manquante)');
       }
@@ -151,7 +241,7 @@ export default function HeroVideoAdmin() {
     }
   };
 
-  // Save settings
+  // Save settings manually
   const handleSave = async () => {
     setSaving(true);
     const token = localStorage.getItem('adminToken');
@@ -173,7 +263,7 @@ export default function HeroVideoAdmin() {
         throw new Error('Erreur lors de la sauvegarde');
       }
 
-      toast.success('Configuration de la vidéo Hero enregistrée !');
+      toast.success('Configuration enregistrée avec succès !');
       window.dispatchEvent(new Event('zorando_sections_updated'));
     } catch (err) {
       console.error('Save failed:', err);
@@ -189,11 +279,23 @@ export default function HeroVideoAdmin() {
       toast.error('Veuillez d\'abord ajouter une vidéo mobile');
       return;
     }
-    setConfig(prev => ({
-      ...prev,
-      desktop_video_url: prev.mobile_video_url,
-      desktop_poster_url: prev.desktop_poster_url || prev.mobile_poster_url
-    }));
+    const updated = {
+      ...config,
+      desktop_video_url: config.mobile_video_url
+    };
+    setConfig(updated);
+
+    // Auto-save
+    const token = localStorage.getItem('adminToken');
+    fetch('/api/admin/settings', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ hero_video_config: JSON.stringify(updated) })
+    }).catch(() => {});
+
     toast.success('Vidéo mobile copiée pour le desktop avec recadrage intelligent');
   };
 
@@ -208,6 +310,16 @@ export default function HeroVideoAdmin() {
     );
   }
 
+  const getCleanFileName = (url?: string) => {
+    if (!url) return '';
+    try {
+      const name = url.split('/').pop()?.split('?')[0];
+      return name || url;
+    } catch {
+      return url;
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Top Banner / Switch */}
@@ -221,7 +333,7 @@ export default function HeroVideoAdmin() {
               <h2 className="text-xl sm:text-2xl font-bold tracking-tight">Vidéos Hero Responsives</h2>
             </div>
             <p className="text-xs sm:text-sm text-gray-300 max-w-2xl">
-              Diffusez des vidéos immersives sur la page d'accueil avec un flux 9:16 vertical adapté aux smartphones et un recadrage intelligent sur ordinateur.
+              Lecture continue et fluide en boucle 24h/24. Détection automatique du mobile (9:16) et recadrage intelligent sur ordinateur.
             </p>
           </div>
 
@@ -232,7 +344,18 @@ export default function HeroVideoAdmin() {
             </span>
             <button
               type="button"
-              onClick={() => setConfig(prev => ({ ...prev, enabled: !prev.enabled }))}
+              onClick={() => {
+                const newEnabled = !config.enabled;
+                const updated = { ...config, enabled: newEnabled };
+                setConfig(updated);
+                // Auto-save toggle
+                const token = localStorage.getItem('adminToken');
+                fetch('/api/admin/settings', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                  body: JSON.stringify({ hero_video_config: JSON.stringify(updated) })
+                }).then(() => window.dispatchEvent(new Event('zorando_sections_updated'))).catch(() => {});
+              }}
               className={`relative inline-flex h-7 w-14 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
                 config.enabled ? 'bg-orange-500' : 'bg-gray-600'
               }`}
@@ -254,81 +377,105 @@ export default function HeroVideoAdmin() {
           
           {/* Section 1: Vidéo Mobile (9:16) */}
           <div className="bg-white p-5 sm:p-6 rounded-2xl shadow-sm border border-gray-200 space-y-4">
-            <div className="flex items-center gap-2 pb-2 border-b border-gray-100">
-              <div className="w-8 h-8 rounded-lg bg-orange-100 text-orange-600 flex items-center justify-center">
-                <Smartphone size={18} />
-              </div>
-              <div>
-                <h3 className="text-base font-bold text-gray-900">1. Vidéo Mobile (Smartphone 9:16)</h3>
-                <p className="text-xs text-gray-500">Diffusée automatiquement sur les écrans mobiles (&lt; 768px)</p>
-              </div>
-            </div>
-
-            {/* Mobile Video URL / Upload */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-gray-700 flex items-center justify-between">
-                <span>Fichier Vidéo Mobile (MP4 / WebM vertical 9:16)</span>
-                {uploadingField === 'mobile_video_url' && (
-                  <span className="text-orange-600 font-semibold flex items-center gap-1.5 text-xs bg-orange-50 px-2 py-0.5 rounded-md border border-orange-200">
-                    <RefreshCw size={12} className="animate-spin text-orange-500" />
-                    <span>Envoi sans limite 413 : {uploadProgress}%</span>
-                  </span>
-                )}
-              </label>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={config.mobile_video_url || ''}
-                  onChange={e => setConfig({ ...config, mobile_video_url: e.target.value })}
-                  placeholder="https://.../video-mobile.mp4 ou /uploads/..."
-                  className="flex-1 px-3 py-2 text-xs sm:text-sm border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:outline-none"
-                />
-                <label className="cursor-pointer bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-2 rounded-xl text-xs sm:text-sm font-medium flex items-center gap-1.5 transition border border-gray-300 shrink-0">
-                  <Upload size={14} />
-                  <span>Importer</span>
-                  <input
-                    type="file"
-                    accept="video/*,.mp4,.webm,.mov,.m4v,.avi,.mkv"
-                    className="hidden"
-                    onChange={e => handleFileUpload(e, 'mobile_video_url')}
-                  />
-                </label>
+            <div className="flex items-center justify-between pb-2 border-b border-gray-100">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-orange-100 text-orange-600 flex items-center justify-center">
+                  <Smartphone size={18} />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-gray-900">1. Vidéo Mobile (Smartphone 9:16)</h3>
+                  <p className="text-xs text-gray-500">Diffusée en boucle continue sur smartphones (&lt; 768px)</p>
+                </div>
               </div>
             </div>
 
-            {/* Mobile Poster Image (LCP optimization) */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-gray-700 flex items-center justify-between">
-                <span>Image Affiche Poster Mobile (Recommandé pour score LCP et affichage immédiat)</span>
-                {uploadingField === 'mobile_poster_url' && (
-                  <span className="text-orange-500 flex items-center gap-1 text-[11px]">
-                    <RefreshCw size={12} className="animate-spin" /> Téléversement...
-                  </span>
-                )}
-              </label>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={config.mobile_poster_url || ''}
-                  onChange={e => setConfig({ ...config, mobile_poster_url: e.target.value })}
-                  placeholder="https://.../poster-mobile.webp"
-                  className="flex-1 px-3 py-2 text-xs sm:text-sm border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:outline-none"
-                />
-                <label className="cursor-pointer bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-2 rounded-xl text-xs sm:text-sm font-medium flex items-center gap-1.5 transition border border-gray-300 shrink-0">
-                  <Upload size={14} />
-                  <span>Importer</span>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={e => handleFileUpload(e, 'mobile_poster_url')}
-                  />
-                </label>
+            {/* If Mobile Video is already configured: show active card with delete & replace */}
+            {config.mobile_video_url ? (
+              <div className="bg-orange-50/60 border border-orange-200 rounded-xl p-3.5 space-y-2.5">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="w-2.5 h-2.5 rounded-full bg-green-500 shrink-0 animate-pulse" />
+                    <span className="text-xs font-semibold text-gray-900 truncate">
+                      {getCleanFileName(config.mobile_video_url)}
+                    </span>
+                  </div>
+                  <a
+                    href={config.mobile_video_url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-xs text-orange-600 hover:text-orange-700 flex items-center gap-1 font-medium shrink-0"
+                    title="Ouvrir dans un nouvel onglet"
+                  >
+                    <span>Tester</span>
+                    <ExternalLink size={12} />
+                  </a>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-orange-200/60">
+                  {/* Replace Button */}
+                  <label className="cursor-pointer bg-white hover:bg-gray-50 text-gray-700 px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 border border-gray-300 shadow-2xs transition">
+                    <RefreshCw size={13} className={uploadingField === 'mobile_video_url' ? 'animate-spin' : ''} />
+                    <span>{uploadingField === 'mobile_video_url' ? `Envoi : ${uploadProgress}%` : 'Changer / Remplacer'}</span>
+                    <input
+                      type="file"
+                      accept="video/*,.mp4,.webm,.mov,.m4v,.avi,.mkv"
+                      className="hidden"
+                      disabled={Boolean(uploadingField)}
+                      onChange={e => handleFileUpload(e, 'mobile_video_url')}
+                    />
+                  </label>
+
+                  {/* Delete Button (frees Supabase & local storage) */}
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteMedia('mobile_video_url')}
+                    disabled={deletingField === 'mobile_video_url'}
+                    className="bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition active:scale-95"
+                  >
+                    <Trash2 size={13} />
+                    <span>{deletingField === 'mobile_video_url' ? 'Suppression...' : 'Supprimer la vidéo'}</span>
+                  </button>
+                </div>
               </div>
-            </div>
+            ) : (
+              /* Mobile Video Upload / URL Input */
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-gray-700 flex items-center justify-between">
+                  <span>Importer votre vidéo mobile (9:16 vertical)</span>
+                  {uploadingField === 'mobile_video_url' && (
+                    <span className="text-orange-600 font-semibold flex items-center gap-1.5 text-xs bg-orange-50 px-2 py-0.5 rounded-md border border-orange-200">
+                      <RefreshCw size={12} className="animate-spin text-orange-500" />
+                      <span>Envoi : {uploadProgress}%</span>
+                    </span>
+                  )}
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={config.mobile_video_url || ''}
+                    onChange={e => setConfig({ ...config, mobile_video_url: e.target.value })}
+                    placeholder="Coller un lien (Supabase, Drive, CDN...) ou importer un fichier"
+                    className="flex-1 px-3 py-2 text-xs sm:text-sm border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:outline-none"
+                  />
+                  <label className="cursor-pointer bg-orange-500 hover:bg-orange-600 text-white px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-1.5 transition shadow-sm shrink-0">
+                    <Upload size={14} />
+                    <span>Importer</span>
+                    <input
+                      type="file"
+                      accept="video/*,.mp4,.webm,.mov,.m4v,.avi,.mkv"
+                      className="hidden"
+                      onChange={e => handleFileUpload(e, 'mobile_video_url')}
+                    />
+                  </label>
+                </div>
+                <p className="text-[11px] text-gray-500">
+                  Formats acceptés : MP4, WebM, MOV. Envoi par fragments sécurisé sans limite 413.
+                </p>
+              </div>
+            )}
 
             {/* Mobile Aspect Ratio Choice */}
-            <div className="space-y-1.5">
+            <div className="space-y-1.5 pt-2">
               <label className="text-xs font-semibold text-gray-700">Proportions sur smartphone</label>
               <div className="grid grid-cols-3 gap-2">
                 {[
@@ -368,7 +515,7 @@ export default function HeroVideoAdmin() {
               </div>
 
               {/* Fast Copy Button */}
-              {config.mobile_video_url && (
+              {config.mobile_video_url && !config.desktop_video_url && (
                 <button
                   type="button"
                   onClick={copyMobileToDesktop}
@@ -381,40 +528,90 @@ export default function HeroVideoAdmin() {
               )}
             </div>
 
-            {/* Desktop Video URL / Upload */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-gray-700 flex items-center justify-between">
-                <span>Fichier Vidéo Desktop (MP4 / WebM)</span>
-                {uploadingField === 'desktop_video_url' && (
-                  <span className="text-orange-600 font-semibold flex items-center gap-1.5 text-xs bg-orange-50 px-2 py-0.5 rounded-md border border-orange-200">
-                    <RefreshCw size={12} className="animate-spin text-orange-500" />
-                    <span>Envoi sans limite 413 : {uploadProgress}%</span>
-                  </span>
-                )}
-              </label>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={config.desktop_video_url || ''}
-                  onChange={e => setConfig({ ...config, desktop_video_url: e.target.value })}
-                  placeholder="https://.../video-desktop.mp4 ou /uploads/..."
-                  className="flex-1 px-3 py-2 text-xs sm:text-sm border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:outline-none"
-                />
-                <label className="cursor-pointer bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-2 rounded-xl text-xs sm:text-sm font-medium flex items-center gap-1.5 transition border border-gray-300 shrink-0">
-                  <Upload size={14} />
-                  <span>Importer</span>
-                  <input
-                    type="file"
-                    accept="video/*,.mp4,.webm,.mov,.m4v,.avi,.mkv"
-                    className="hidden"
-                    onChange={e => handleFileUpload(e, 'desktop_video_url')}
-                  />
-                </label>
+            {/* If Desktop Video is already configured */}
+            {config.desktop_video_url ? (
+              <div className="bg-blue-50/60 border border-blue-200 rounded-xl p-3.5 space-y-2.5">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="w-2.5 h-2.5 rounded-full bg-blue-500 shrink-0 animate-pulse" />
+                    <span className="text-xs font-semibold text-gray-900 truncate">
+                      {getCleanFileName(config.desktop_video_url)}
+                    </span>
+                  </div>
+                  <a
+                    href={config.desktop_video_url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-xs text-blue-600 hover:text-blue-700 flex items-center gap-1 font-medium shrink-0"
+                    title="Ouvrir dans un nouvel onglet"
+                  >
+                    <span>Tester</span>
+                    <ExternalLink size={12} />
+                  </a>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-blue-200/60">
+                  {/* Replace Button */}
+                  <label className="cursor-pointer bg-white hover:bg-gray-50 text-gray-700 px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 border border-gray-300 shadow-2xs transition">
+                    <RefreshCw size={13} className={uploadingField === 'desktop_video_url' ? 'animate-spin' : ''} />
+                    <span>{uploadingField === 'desktop_video_url' ? `Envoi : ${uploadProgress}%` : 'Changer / Remplacer'}</span>
+                    <input
+                      type="file"
+                      accept="video/*,.mp4,.webm,.mov,.m4v,.avi,.mkv"
+                      className="hidden"
+                      disabled={Boolean(uploadingField)}
+                      onChange={e => handleFileUpload(e, 'desktop_video_url')}
+                    />
+                  </label>
+
+                  {/* Delete Button */}
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteMedia('desktop_video_url')}
+                    disabled={deletingField === 'desktop_video_url'}
+                    className="bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition active:scale-95"
+                  >
+                    <Trash2 size={13} />
+                    <span>{deletingField === 'desktop_video_url' ? 'Suppression...' : 'Supprimer la vidéo'}</span>
+                  </button>
+                </div>
               </div>
-            </div>
+            ) : (
+              /* Desktop Video Upload / URL Input */
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-gray-700 flex items-center justify-between">
+                  <span>Importer votre vidéo desktop</span>
+                  {uploadingField === 'desktop_video_url' && (
+                    <span className="text-orange-600 font-semibold flex items-center gap-1.5 text-xs bg-orange-50 px-2 py-0.5 rounded-md border border-orange-200">
+                      <RefreshCw size={12} className="animate-spin text-orange-500" />
+                      <span>Envoi : {uploadProgress}%</span>
+                    </span>
+                  )}
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={config.desktop_video_url || ''}
+                    onChange={e => setConfig({ ...config, desktop_video_url: e.target.value })}
+                    placeholder="Coller un lien (Supabase, Drive, CDN...) ou importer un fichier"
+                    className="flex-1 px-3 py-2 text-xs sm:text-sm border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:outline-none"
+                  />
+                  <label className="cursor-pointer bg-blue-600 hover:bg-blue-700 text-white px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-1.5 transition shadow-sm shrink-0">
+                    <Upload size={14} />
+                    <span>Importer</span>
+                    <input
+                      type="file"
+                      accept="video/*,.mp4,.webm,.mov,.m4v,.avi,.mkv"
+                      className="hidden"
+                      onChange={e => handleFileUpload(e, 'desktop_video_url')}
+                    />
+                  </label>
+                </div>
+              </div>
+            )}
 
             {/* Smart Crop Selector (object-position) */}
-            <div className="space-y-1.5">
+            <div className="space-y-1.5 pt-2">
               <div className="flex items-center justify-between">
                 <label className="text-xs font-semibold text-gray-700">
                   Recadrage intelligent Desktop (<code className="text-orange-600 text-[11px]">object-position</code>)
@@ -436,37 +633,6 @@ export default function HeroVideoAdmin() {
                     <div className="text-xs font-medium">{opt.label}</div>
                   </button>
                 ))}
-              </div>
-            </div>
-
-            {/* Desktop Poster Image */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-gray-700 flex items-center justify-between">
-                <span>Image Affiche Poster Desktop</span>
-                {uploadingField === 'desktop_poster_url' && (
-                  <span className="text-orange-500 flex items-center gap-1 text-[11px]">
-                    <RefreshCw size={12} className="animate-spin" /> Téléversement...
-                  </span>
-                )}
-              </label>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={config.desktop_poster_url || ''}
-                  onChange={e => setConfig({ ...config, desktop_poster_url: e.target.value })}
-                  placeholder="https://.../poster-desktop.webp"
-                  className="flex-1 px-3 py-2 text-xs sm:text-sm border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:outline-none"
-                />
-                <label className="cursor-pointer bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-2 rounded-xl text-xs sm:text-sm font-medium flex items-center gap-1.5 transition border border-gray-300 shrink-0">
-                  <Upload size={14} />
-                  <span>Importer</span>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={e => handleFileUpload(e, 'desktop_poster_url')}
-                  />
-                </label>
               </div>
             </div>
           </div>
@@ -610,16 +776,15 @@ export default function HeroVideoAdmin() {
                   <div className="relative rounded-[24px] overflow-hidden bg-black aspect-[9/16]">
                     {config.mobile_video_url ? (
                       <video
+                        key={`mobile-preview-${config.mobile_video_url}`}
+                        ref={mobileVideoRef}
                         src={config.mobile_video_url}
-                        poster={config.mobile_poster_url || undefined}
                         autoPlay
                         muted
                         loop
                         playsInline
                         className="w-full h-full object-cover"
                       />
-                    ) : config.mobile_poster_url ? (
-                      <img src={config.mobile_poster_url} alt="Poster" className="w-full h-full object-cover" />
                     ) : (
                       <div className="w-full h-full flex flex-col items-center justify-center text-gray-500 text-center p-4">
                         <Video size={32} className="mb-2 opacity-50" />
@@ -662,8 +827,9 @@ export default function HeroVideoAdmin() {
                   <div className="relative rounded-lg overflow-hidden bg-black aspect-[16/9] mt-1.5">
                     {(config.desktop_video_url || config.mobile_video_url) ? (
                       <video
+                        key={`desktop-preview-${config.desktop_video_url || config.mobile_video_url}`}
+                        ref={desktopVideoRef}
                         src={config.desktop_video_url || config.mobile_video_url}
-                        poster={config.desktop_poster_url || config.mobile_poster_url || undefined}
                         autoPlay
                         muted
                         loop
@@ -707,7 +873,7 @@ export default function HeroVideoAdmin() {
             <div className="mt-4 p-3 bg-gray-50 rounded-xl border border-gray-200 text-xs text-gray-600 flex items-start gap-2">
               <HelpCircle size={16} className="text-orange-500 shrink-0 mt-0.5" />
               <p>
-                <strong>Conseil :</strong> Sur ordinateur, la vidéo utilise <code className="text-orange-600 font-mono">object-fit: cover</code>. Vous pouvez tester les options de recadrage dans la liste pour vous assurer que le visage ou le produit principal reste parfaitement cadré.
+                <strong>Conseil :</strong> Sur ordinateur, la vidéo tourne en continu sans bouton pause. Vous pouvez tester les options de recadrage dans la liste pour conserver votre sujet ou produit toujours centré.
               </p>
             </div>
           </div>

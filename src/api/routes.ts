@@ -2170,6 +2170,67 @@ router.post('/admin/upload-chunk', authenticate, (req: any, res: any, next: any)
   }
 });
 
+// Permanently delete a media file from Supabase Storage or local disk storage
+router.post('/admin/delete-media', authenticate, async (req, res) => {
+  const { url } = req.body;
+  if (!url || typeof url !== 'string') {
+    return res.status(400).json({ error: 'URL manquante ou invalide' });
+  }
+
+  let deletedFromSupabase = false;
+  let deletedFromDisk = false;
+
+  try {
+    // 1. Check if Supabase Storage URL
+    if (url.includes('.supabase.co/storage/v1/object/')) {
+      const supabase = getSupabase();
+      if (supabase) {
+        const match = url.match(/\/storage\/v1\/object\/(?:public\/)?([^/]+)\/(.+)$/);
+        if (match) {
+          const bucket = match[1];
+          const filePath = decodeURIComponent(match[2].split('?')[0]);
+          const { error } = await supabase.storage.from(bucket).remove([filePath]);
+          if (!error) {
+            deletedFromSupabase = true;
+          } else {
+            console.warn('Supabase storage remove failed:', error);
+          }
+        }
+      }
+    }
+
+    // 2. Check if local /uploads/ URL
+    if (url.includes('/uploads/')) {
+      const isVercel = Boolean(process.env.VERCEL || process.env.VERCEL_ENV || process.env.VERCEL_URL);
+      const baseUploadsDir = isVercel 
+        ? path.join('/tmp', 'uploads') 
+        : path.join(process.cwd(), 'public', 'uploads');
+
+      const fileName = path.basename(url.split('?')[0]);
+      const filePath = path.join(baseUploadsDir, fileName);
+
+      if (fs.existsSync(filePath)) {
+        try {
+          fs.unlinkSync(filePath);
+          deletedFromDisk = true;
+        } catch (unlinkErr) {
+          console.warn('Local unlink error:', unlinkErr);
+        }
+      }
+    }
+
+    res.json({
+      success: true,
+      deletedFromSupabase,
+      deletedFromDisk,
+      message: 'Fichier supprimé définitivement du stockage'
+    });
+  } catch (err: any) {
+    console.error('Delete media error:', err);
+    res.status(500).json({ error: 'Erreur lors de la suppression du fichier' });
+  }
+});
+
 router.get('/admin/stats', authenticate, async (req, res) => {
   try {
     const [totalOrders] = await sql`SELECT COUNT(*) as count FROM orders`;

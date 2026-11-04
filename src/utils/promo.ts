@@ -53,6 +53,23 @@ export const isPromoActive = (product?: PromoProduct | null): boolean => {
 };
 
 /**
+ * Calculates the discount percentage between regular price and promo price.
+ * Formula: ((Ancien prix - Nouveau prix) / Ancien prix) * 100
+ * Returns rounded integer percentage (e.g. 20 for -20%), or 0 if no discount.
+ */
+export const calculateDiscountPercentage = (
+  regularPrice?: number | string | null,
+  promoPrice?: number | string | null
+): number => {
+  const regular = Number(regularPrice);
+  const promo = Number(promoPrice);
+  if (isNaN(regular) || isNaN(promo) || regular <= 0 || promo <= 0 || promo >= regular) {
+    return 0;
+  }
+  return Math.round(((regular - promo) / regular) * 100);
+};
+
+/**
  * Returns the effective price to charge for an item, taking into account:
  * - Selected variation price (if set)
  * - Active promo price (only if promo is currently valid and active)

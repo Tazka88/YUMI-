@@ -781,14 +781,20 @@ export default function Product() {
 
             <div className="mb-6 pb-6 border-b border-gray-100">
               {hasVariationPrice ? (
-                <div className="flex items-end gap-3">
-                  <span className="text-3xl font-black text-orange-600">{formatPrice(activePriceForDisplay)}</span>
+                <div className="flex items-center gap-3">
+                  <span className="text-3xl font-black text-[#FF6B00]">{formatPrice(activePriceForDisplay)}</span>
                 </div>
               ) : isPromo ? (
-                <div className="flex items-end gap-3">
-                  <span className="text-3xl font-black text-orange-600">{formatPrice(product.promo_price)}</span>
-                  <span className="sr-only"> au lieu de </span>
-                  <span className="text-lg text-gray-400 line-through mb-1">{formatPrice(product.price)}</span>
+                <div className="flex items-center gap-3 sm:gap-4 flex-wrap">
+                  <span className="text-xl sm:text-2xl text-gray-400 line-through font-normal">
+                    {formatPrice(product.price)}
+                  </span>
+                  <span className="text-3xl sm:text-4xl font-black text-[#FF6B00]">
+                    {formatPrice(product.promo_price)}
+                  </span>
+                  <span className="bg-[#FF6B00] text-white text-sm sm:text-base font-bold px-2.5 py-1 rounded-md shadow-xs">
+                    -{discount}%
+                  </span>
                 </div>
               ) : (
                 <span className="text-3xl font-black text-gray-900">{formatPrice(product.price)}</span>

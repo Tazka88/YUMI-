@@ -11,7 +11,7 @@ import {
   MessageCircle, Tag
 } from 'lucide-react';
 import { getSupabase } from '../lib/supabase';
-import { formatPrice, getProductEffectivePrice } from '../utils/formatPrice';
+import { formatPrice, getProductEffectivePrice, isPromoActive, calculateDiscountPercentage } from '../utils/formatPrice';
 import { fetchWithCache } from '../lib/utils';
 import { sendCapiEvent, generateEventId } from '../lib/capi';
 import { useCommunesStore } from '../store/useCommunesStore';
@@ -1450,7 +1450,20 @@ export default function Checkout() {
                         {item.selectedVariation && (
                           <p className="text-[10px] text-gray-500">{item.selectedVariation.attribute}: {item.selectedVariation.value}</p>
                         )}
-                        <span className="text-[11px] text-gray-500 font-bold">{item.quantity} × {formatPrice(currentPrice)}</span>
+                        <span className="text-[11px] font-bold">
+                          {item.quantity} ×{' '}
+                          {isPromoActive(item) ? (
+                            <span className="inline-flex items-center gap-1.5 flex-wrap">
+                              <span className="text-gray-400 line-through text-[10px] font-normal">{formatPrice(item.price)}</span>
+                              <span className="text-[#FF6B00]">{formatPrice(currentPrice)}</span>
+                              <span className="bg-[#FF6B00] text-white text-[9px] font-bold px-1 rounded">
+                                -{calculateDiscountPercentage(item.price, currentPrice)}%
+                              </span>
+                            </span>
+                          ) : (
+                            <span className="text-gray-500">{formatPrice(currentPrice)}</span>
+                          )}
+                        </span>
                       </div>
                       <span className="font-bold text-gray-900 text-xs shrink-0">
                         {formatPrice(currentPrice * item.quantity)}

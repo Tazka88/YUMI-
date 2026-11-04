@@ -3,7 +3,7 @@ import { Trash2, ArrowRight, ShoppingBag, Tag, CheckCircle2, X, Loader2 } from '
 import { useCartStore } from '../store/cartStore';
 import React, { useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
-import { formatPrice, getProductEffectivePrice } from '../utils/formatPrice';
+import { formatPrice, getProductEffectivePrice, isPromoActive, calculateDiscountPercentage } from '../utils/formatPrice';
 import SEO from '../components/SEO';
 
 export default function Cart() {
@@ -145,6 +145,8 @@ export default function Cart() {
         <div className="w-full lg:w-2/3 space-y-4">
           {items.map((item) => {
             const currentPrice = getProductEffectivePrice(item);
+            const isPromo = isPromoActive(item);
+            const discount = isPromo ? calculateDiscountPercentage(item.price, currentPrice) : 0;
             const itemImage = item.selectedVariation?.image ? (item.selectedVariation.image.startsWith('http') || item.selectedVariation.image.startsWith('/api') ? item.selectedVariation.image : '/api/images/' + item.selectedVariation.image) : item.image;
             return (
               <div key={item.cartItemId || item.id} className="bg-white p-4 rounded-lg shadow-sm flex flex-col sm:flex-row items-start sm:items-center gap-4 relative">
@@ -167,7 +169,21 @@ export default function Cart() {
                     </div>
                   )}
                   <div className="text-sm text-gray-400 mb-2">Vendeur: ZORANDO Express</div>
-                  <div className="text-lg font-bold text-orange-600">{formatPrice(currentPrice)}</div>
+                  {isPromo && discount > 0 ? (
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-xs sm:text-sm text-gray-400 line-through font-normal">
+                        {formatPrice(item.price)}
+                      </span>
+                      <span className="text-lg font-black text-[#FF6B00]">
+                        {formatPrice(currentPrice)}
+                      </span>
+                      <span className="bg-[#FF6B00] text-white text-[10px] sm:text-xs font-bold px-1.5 py-0.5 rounded shadow-xs leading-none">
+                        -{discount}%
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="text-lg font-bold text-gray-900">{formatPrice(currentPrice)}</div>
+                  )}
                 </div>
 
                 <div className="flex items-center gap-4 mt-4 sm:mt-0 w-full sm:w-auto justify-between sm:justify-end">

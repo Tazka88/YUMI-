@@ -135,16 +135,17 @@ export const ProductCard: React.FC<{ product: Product; priority?: boolean; isFla
         </div>
         <div className="flex flex-col mt-auto mb-2 sm:mb-3">
           {isPromo ? (
-            <>
-              <div className="flex items-end gap-1.5 sm:gap-2">
-                <div className="text-base sm:text-lg font-bold text-gray-900">{formatPrice(product.promo_price!)}</div>
-                <span className="sr-only"> au lieu de </span>
-                <div className="text-[10px] sm:text-xs text-gray-500 line-through mb-0.5 sm:mb-1">{formatPrice(product.price)}</div>
-              </div>
-              <div className="text-[10px] sm:text-xs text-green-600 font-medium mt-0.5 sm:mt-1 bg-green-50 self-start px-1.5 py-0.5 rounded">
-                Vous économisez {discount}%
-              </div>
-            </>
+            <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+              <span className="text-xs sm:text-sm text-gray-400 line-through font-normal">
+                {formatPrice(product.price)}
+              </span>
+              <span className="text-base sm:text-lg font-black text-[#FF6B00]">
+                {formatPrice(product.promo_price!)}
+              </span>
+              <span className="bg-[#FF6B00] text-white text-[10px] sm:text-xs font-bold px-1.5 py-0.5 rounded shadow-xs leading-none">
+                -{discount}%
+              </span>
+            </div>
           ) : (
             <div className="text-base sm:text-lg font-bold text-gray-900">{formatPrice(product.price)}</div>
           )}

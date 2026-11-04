@@ -51,3 +51,16 @@ export function getProductEffectivePrice(product: {
   const reg = typeof product.price === 'string' ? parseFloat(product.price) : (product.price || 0);
   return (!isNaN(reg) && reg > 0) ? reg : 0;
 }
+
+export function calculateDiscountPercentage(
+  regularPrice?: number | string | null,
+  promoPrice?: number | string | null
+): number {
+  const regular = Number(regularPrice);
+  const promo = Number(promoPrice);
+  if (isNaN(regular) || isNaN(promo) || regular <= 0 || promo <= 0 || promo >= regular) {
+    return 0;
+  }
+  return Math.round(((regular - promo) / regular) * 100);
+}
+

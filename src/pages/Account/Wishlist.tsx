@@ -154,13 +154,22 @@ export default function Wishlist() {
                   </Link>
 
                   {/* Price */}
-                  <div className="flex items-baseline gap-2 mb-4 mt-auto">
-                    <span className="text-lg font-black text-gray-900">
-                      {formatPrice(currentPrice)}
-                    </span>
-                    {hasPromo && (
-                      <span className="text-xs text-gray-400 line-through font-semibold">
-                        {formatPrice(item.price)}
+                  <div className="flex items-center gap-1.5 sm:gap-2 mb-4 mt-auto flex-wrap">
+                    {hasPromo ? (
+                      <>
+                        <span className="text-xs sm:text-sm text-gray-400 line-through font-normal">
+                          {formatPrice(item.price)}
+                        </span>
+                        <span className="text-lg font-black text-[#FF6B00]">
+                          {formatPrice(currentPrice)}
+                        </span>
+                        <span className="bg-[#FF6B00] text-white text-[10px] font-bold px-1.5 py-0.5 rounded shadow-xs leading-none">
+                          -{Math.round(((item.price - currentPrice) / item.price) * 100)}%
+                        </span>
+                      </>
+                    ) : (
+                      <span className="text-lg font-black text-gray-900">
+                        {formatPrice(currentPrice)}
                       </span>
                     )}
                   </div>

@@ -4,13 +4,10 @@ import { Link } from 'react-router-dom';
 
 export interface HeroVideoConfig {
   enabled?: boolean;
-  video_source_mode?: 'single_16_9' | 'separate';
+  video_source_mode?: 'separate' | 'single_16_9';
   video_url?: string;
-  mobile_video_url?: string;
-  mobile_poster_url?: string;
   desktop_video_url?: string;
-  desktop_poster_url?: string;
-  desktop_object_position?: string;
+  mobile_video_url?: string;
   desktop_aspect_ratio?: string;
   mobile_aspect_ratio?: string;
   object_fit?: 'cover' | 'contain' | string;
@@ -24,10 +21,9 @@ export interface HeroVideoConfig {
 
 interface HeroVideoProps {
   config: HeroVideoConfig;
-  fallback?: React.ReactNode;
 }
 
-export default function HeroVideo({ config, fallback }: HeroVideoProps) {
+export default function HeroVideo({ config }: HeroVideoProps) {
   const [isMobile, setIsMobile] = useState<boolean>(() => {
     if (typeof window !== 'undefined') {
       return window.innerWidth < 768;
@@ -39,7 +35,7 @@ export default function HeroVideo({ config, fallback }: HeroVideoProps) {
   const [hasError, setHasError] = useState(false);
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
-  // Responsive device detection listener
+  // Responsive device listener
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const mediaQuery = window.matchMedia('(max-width: 767px)');
@@ -59,22 +55,21 @@ export default function HeroVideo({ config, fallback }: HeroVideoProps) {
     }
   }, []);
 
-  // Determine active media URLs based on current device and mode
+  // Exclusively Video: Desktop (16:9) vs Mobile (9:16)
+  // Computer: exclusively desktop_video_url (falls back to video_url if set)
+  // Mobile: exclusively mobile_video_url (falls back to desktop_video_url if only 1 video provided)
   const currentVideoUrl = isMobile 
     ? (config.mobile_video_url || config.desktop_video_url || config.video_url || '')
-    : (config.desktop_video_url || config.mobile_video_url || config.video_url || '');
+    : (config.desktop_video_url || config.video_url || '');
 
-  const currentPosterUrl = isMobile 
-    ? (config.mobile_poster_url || config.desktop_poster_url || '')
-    : (config.desktop_poster_url || config.mobile_poster_url || '');
-
-  const objectPosition = !isMobile && config.desktop_object_position 
-    ? config.desktop_object_position 
-    : 'center center';
+  // Reset error when URL changes
+  useEffect(() => {
+    setHasError(false);
+  }, [currentVideoUrl]);
 
   // Ensure continuous autoPlay whenever video source changes or component mounts
   useEffect(() => {
-    if (videoRef.current) {
+    if (videoRef.current && currentVideoUrl) {
       videoRef.current.defaultMuted = true;
       videoRef.current.muted = isMuted;
       videoRef.current.play().catch(() => {});
@@ -104,29 +99,23 @@ export default function HeroVideo({ config, fallback }: HeroVideoProps) {
     }
   };
 
-  // If no video URL or fatal playback error and fallback exists, show fallback
-  if ((!currentVideoUrl && !currentPosterUrl) || (hasError && fallback)) {
-    return <>{fallback || null}</>;
+  // If no video URL or fatal error, return null (NO image fallback anywhere)
+  if (!currentVideoUrl || hasError || !config.enabled) {
+    return null;
   }
 
   // Calculate overlay opacity (0 to 60)
-  const overlayOpacity = Math.min(Math.max(Number(config.overlay_opacity ?? 25), 0), 75) / 100;
+  const overlayOpacity = Math.min(Math.max(Number(config.overlay_opacity ?? 20), 0), 75) / 100;
 
-  // Mobile container aspect classes (defaults to 16:9 aspect-video for non-cropped 16:9 video)
-  const mobileContainerClass = config.mobile_aspect_ratio === 'aspect-[9/16]'
-    ? 'aspect-[9/16]'
-    : config.mobile_aspect_ratio === 'h-[70vh]'
-    ? 'h-[65vh] min-h-[440px]'
-    : config.mobile_aspect_ratio === 'aspect-[4/5]'
-    ? 'aspect-[4/5]'
-    : 'aspect-video'; // 16:9 standard video without cropping
+  // Aspect ratio styling:
+  // Desktop: strictly 16:9 aspect-video
+  // Mobile: strictly 9:16 vertical (or max height on mobile)
+  const isVerticalMobile = Boolean(config.mobile_video_url) || config.mobile_aspect_ratio === 'aspect-[9/16]';
+  const mobileContainerClass = isVerticalMobile
+    ? 'aspect-[9/16] max-h-[78vh] mx-auto'
+    : 'aspect-video';
 
-  // Desktop container aspect classes (default 16:9 aspect-video for non-cropped 16:9 video)
-  const isBanner = config.desktop_aspect_ratio === 'banner';
-  const desktopContainerClass = isBanner
-    ? 'md:aspect-[1600/500] lg:h-full lg:aspect-auto'
-    : 'md:aspect-video lg:aspect-video lg:h-auto';
-
+  const desktopContainerClass = 'md:aspect-video lg:aspect-video lg:h-auto';
   const objectFitClass = config.object_fit === 'contain' ? 'object-contain bg-black' : 'object-cover';
 
   return (
@@ -134,52 +123,47 @@ export default function HeroVideo({ config, fallback }: HeroVideoProps) {
       className={`relative w-full rounded-2xl overflow-hidden shadow-sm group select-none bg-neutral-900 ${mobileContainerClass} ${desktopContainerClass}`}
       style={{ contentVisibility: 'visible', contain: 'layout paint' }}
     >
-      {/* 1. Device-specific Video Element (ONLY loaded for active device, plays continuously) */}
-      {currentVideoUrl && !hasError && (
-        <video
-          key={currentVideoUrl}
-          ref={videoRef}
-          src={currentVideoUrl}
-          autoPlay
-          muted={isMuted}
-          loop
-          playsInline
-          preload="auto"
-          controls={false}
-          disablePictureInPicture
-          onLoadedMetadata={(e) => {
-            const vid = e.currentTarget;
-            vid.muted = isMuted;
-            vid.play().catch(() => {});
-          }}
-          onCanPlay={(e) => {
-            const vid = e.currentTarget;
-            vid.muted = isMuted;
-            vid.play().catch(() => {});
-          }}
-          onPause={(e) => {
-            // Keep playing continuously with zero user action
-            e.currentTarget.play().catch(() => {});
-          }}
-          onError={() => {
-            console.warn('Hero video failed to load');
-            setHasError(true);
-          }}
-          className={`absolute inset-0 w-full h-full ${objectFitClass} z-0 pointer-events-none`}
-          style={{ objectPosition }}
-        />
-      )}
+      {/* Exclusively Video Element (ONLY loaded for active device, never both) */}
+      <video
+        key={currentVideoUrl}
+        ref={videoRef}
+        src={currentVideoUrl}
+        autoPlay
+        muted={isMuted}
+        loop
+        playsInline
+        preload="auto"
+        controls={false}
+        disablePictureInPicture
+        onLoadedMetadata={(e) => {
+          const vid = e.currentTarget;
+          vid.muted = isMuted;
+          vid.play().catch(() => {});
+        }}
+        onCanPlay={(e) => {
+          const vid = e.currentTarget;
+          vid.muted = isMuted;
+          vid.play().catch(() => {});
+        }}
+        onPause={(e) => {
+          e.currentTarget.play().catch(() => {});
+        }}
+        onError={() => {
+          setHasError(true);
+        }}
+        className={`absolute inset-0 w-full h-full ${objectFitClass} z-0 pointer-events-none`}
+      />
 
-      {/* 2. Gradient Overlay for Typography Contrast & Visual Depth */}
+      {/* Gradient Overlay for Typography Contrast & Visual Depth */}
       <div 
         className="absolute inset-0 z-10 pointer-events-none transition-opacity duration-300"
         style={{
           backgroundColor: `rgba(0, 0, 0, ${overlayOpacity})`,
-          backgroundImage: 'linear-gradient(to top, rgba(0,0,0,0.65) 0%, rgba(0,0,0,0.15) 50%, rgba(0,0,0,0.3) 100%)'
+          backgroundImage: 'linear-gradient(to top, rgba(0,0,0,0.65) 0%, rgba(0,0,0,0.1) 50%, rgba(0,0,0,0.25) 100%)'
         }}
       />
 
-      {/* 3. Content / Caption / Call-To-Action (if configured) */}
+      {/* Content / Caption / Call-To-Action (if configured) */}
       {(config.title || config.subtitle || config.button_text) && (
         <div className="absolute inset-0 z-20 flex flex-col justify-end md:justify-center p-4 sm:p-6 md:p-10 pointer-events-none">
           <div className="w-full max-w-2xl text-white">
@@ -210,8 +194,8 @@ export default function HeroVideo({ config, fallback }: HeroVideoProps) {
         </div>
       )}
 
-      {/* 4. Minimalist Sound Toggle Control (Bottom Right) */}
-      {currentVideoUrl && !hasError && (config.show_sound_control ?? true) && (
+      {/* Sound Toggle Control (Bottom Right) */}
+      {(config.show_sound_control ?? true) && (
         <div className="absolute bottom-3 right-3 sm:bottom-4 sm:right-4 z-30 pointer-events-auto">
           <button
             type="button"

@@ -8,7 +8,6 @@ import ProductGrid from '../components/ProductGrid';
 import SEO from '../components/SEO';
 import { buildOrganizationSchema, buildWebSiteSchema } from '../lib/schemaUtils';
 import { getCategoryWithEmoji, CategoryNameDisplay } from '../components/Layout';
-import Slider from '../components/Slider';
 import HeroVideo, { HeroVideoConfig } from '../components/HeroVideo';
 import { fetchWithCache } from '../lib/utils';
 import AppDownloadBanner from '../components/AppDownloadBanner';
@@ -657,22 +656,22 @@ export default function Home() {
       <ThemeBackground activeTheme={activeTheme} themeImages={themeImages} />
       <div className="container mx-auto px-4 py-6">
         
-        {/* Hero Section with Sidebar and Carousel / Responsive Video */}
+        {/* Hero Section: Exclusivement Vidéo (Sans Images HERO) */}
         {(() => {
           const isHeroVideoActive = Boolean(
             heroVideoConfig?.enabled && (heroVideoConfig.desktop_video_url || heroVideoConfig.mobile_video_url || heroVideoConfig.video_url)
           );
-          const is169Hero = isHeroVideoActive && (!heroVideoConfig?.desktop_aspect_ratio || heroVideoConfig?.desktop_aspect_ratio === 'aspect-video' || heroVideoConfig?.desktop_aspect_ratio === '16:9');
+
+          if (!isHeroVideoActive) {
+            // Si aucune vidéo n'est enregistrée, masquer la section HERO (aucune image affichée)
+            return null;
+          }
 
           return (
-            <div className={`flex gap-4 ${is169Hero ? 'items-start' : 'lg:h-[384px]'} mb-6`}>
-              <CategorySidebar categories={categories} is169Hero={is169Hero} />
-              <div className={`flex-1 min-w-0 ${is169Hero ? '' : 'h-full'}`}>
-                {isHeroVideoActive ? (
-                  <HeroVideo config={heroVideoConfig!} fallback={<Slider />} />
-                ) : (
-                  <Slider />
-                )}
+            <div className="flex gap-4 items-start mb-6">
+              <CategorySidebar categories={categories} is169Hero={true} />
+              <div className="flex-1 min-w-0">
+                <HeroVideo config={heroVideoConfig!} />
               </div>
             </div>
           );

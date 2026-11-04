@@ -11,7 +11,7 @@ import CommunesSettings from './CommunesSettings';
 import OfficesSettings from './OfficesSettings';
 import { FileText, MapPin, Search, LayoutGrid, List, Printer, Download, Truck, Building2, Mail, Navigation, ChevronDown, ChevronRight, LayoutTemplate, FolderTree, Layers, Sparkles, CheckCircle2, HelpCircle, Eye, SlidersHorizontal, Info, Globe, Tag, Network } from 'lucide-react';
 import OrderKanban from './OrderKanban';
-import SliderImagesAdmin from './SliderImagesAdmin';
+import HeroVideoAdmin from './HeroVideoAdmin';
 import BlogAdmin from './BlogAdmin';
 import PushNotificationAdmin from './PushNotificationAdmin';
 import AbandonedCartsAdmin from './AbandonedCartsAdmin';
@@ -1942,7 +1942,7 @@ const handleBulkDelivery = async () => {
               className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition ${activeTab === 'images' ? 'bg-orange-500 text-white font-semibold shadow-md shadow-orange-500/20' : 'text-gray-400 hover:bg-gray-800 hover:text-white'}`}
             >
               <Video size={18} />
-              <span>Hero Vidéos & Slider</span>
+              <span>Vidéos Hero</span>
             </button>
             <button
               onClick={() => { setActiveTab('blog'); setIsMobileNavOpen(false); }}
@@ -2167,7 +2167,7 @@ const handleBulkDelivery = async () => {
               className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition ${activeTab === 'images' ? 'bg-orange-500 text-white font-semibold shadow-md shadow-orange-500/20' : 'text-gray-400 hover:bg-gray-800 hover:text-white'}`}
             >
               <Video size={18} />
-              <span>Hero Vidéos & Slider</span>
+              <span>Vidéos Hero</span>
             </button>
             <button 
               onClick={() => setActiveTab('blog')}
@@ -2312,7 +2312,7 @@ const handleBulkDelivery = async () => {
                 : activeTab === 'blog'
                 ? "Blog & Actualités"
                 : activeTab === 'images'
-                ? "Gestion des Bannières (Slider)"
+                ? "Gestion des Vidéos Hero"
                 : activeTab === 'customers'
                 ? "Gestion des Clients"
                 : activeTab === 'wilayas'
@@ -3867,7 +3867,7 @@ const handleBulkDelivery = async () => {
         )}
 
         {activeTab === 'images' && (
-          <SliderImagesAdmin />
+          <HeroVideoAdmin />
         )}
 
         {activeTab === 'customers' && (

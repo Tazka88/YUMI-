@@ -2164,13 +2164,22 @@ router.post('/admin/upload-chunk', authenticate, (req: any, res: any, next: any)
       const fullBuffer = Buffer.concat(buffers);
       fs.writeFileSync(finalFilePath, fullBuffer);
 
+      // Redundantly write to both /tmp/uploads and public/uploads for total reliability
+      try {
+        const altUploadsDir = baseUploadsDir.startsWith('/tmp')
+          ? path.join(process.cwd(), 'public', 'uploads')
+          : path.join('/tmp', 'uploads');
+        if (!fs.existsSync(altUploadsDir)) fs.mkdirSync(altUploadsDir, { recursive: true });
+        fs.writeFileSync(path.join(altUploadsDir, finalFileName), fullBuffer);
+      } catch (e) {}
+
       // Clean up chunk directory
       try { fs.rmdirSync(chunksDir); } catch (e) {}
 
-      // Persist in PostgreSQL media_files table so file is never lost across container restarts
-      const contentType = ext === 'webm' ? 'video/webm' : ext === 'mov' ? 'video/quicktime' : 'video/mp4';
+      // Persist in PostgreSQL media_files table with strict timeout so upload always responds fast
+      const contentType = ext === 'webm' ? 'video/webm' : (ext === 'mov' || ext === 'qt') ? 'video/mp4' : 'video/mp4';
       try {
-        await sql`
+        const insertPromise = sql`
           INSERT INTO media_files (id, file_name, content_type, data, file_size)
           VALUES (${uniqueId}, ${finalFileName}, ${contentType}, ${fullBuffer}, ${fullBuffer.length})
           ON CONFLICT (id) DO UPDATE SET
@@ -2180,8 +2189,12 @@ router.post('/admin/upload-chunk', authenticate, (req: any, res: any, next: any)
             file_size = EXCLUDED.file_size,
             created_at = CURRENT_TIMESTAMP
         `;
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('DB media persist timeout')), 4000)
+        );
+        await Promise.race([insertPromise, timeoutPromise]);
       } catch (dbErr) {
-        console.warn('Failed to persist in media_files table:', dbErr);
+        console.warn('DB media_files persist info (file is safely written to disk):', dbErr);
       }
 
       return res.json({ 
@@ -2234,30 +2247,40 @@ router.post('/admin/delete-media', authenticate, async (req, res) => {
 
     // 2. Check if local /uploads/ URL
     if (url.includes('/uploads/')) {
-      const isVercel = Boolean(process.env.VERCEL || process.env.VERCEL_ENV || process.env.VERCEL_URL);
-      const baseUploadsDir = isVercel 
-        ? path.join('/tmp', 'uploads') 
-        : path.join(process.cwd(), 'public', 'uploads');
-
       const fileName = path.basename(url.split('?')[0]);
-      const filePath = path.join(baseUploadsDir, fileName);
+      const publicPath = path.join(process.cwd(), 'public', 'uploads', fileName);
+      const tmpPath = path.join('/tmp', 'uploads', fileName);
 
-      if (fs.existsSync(filePath)) {
+      if (fs.existsSync(publicPath)) {
         try {
-          fs.unlinkSync(filePath);
+          fs.unlinkSync(publicPath);
           deletedFromDisk = true;
         } catch (unlinkErr) {
-          console.warn('Local unlink error:', unlinkErr);
+          console.warn('Public unlink error:', unlinkErr);
         }
       }
 
-      // Also permanently delete from PostgreSQL media_files table
+      if (fs.existsSync(tmpPath)) {
+        try {
+          fs.unlinkSync(tmpPath);
+          deletedFromDisk = true;
+        } catch (unlinkErr) {
+          console.warn('Tmp unlink error:', unlinkErr);
+        }
+      }
+
+      // Also permanently delete from PostgreSQL media_files table with strict timeout
       try {
-        await sql`
+        const delPromise = sql`
           DELETE FROM media_files 
           WHERE file_name = ${fileName} 
              OR file_name LIKE ${'%' + fileName + '%'}
+             OR id = ${fileName.split('.')[0]}
         `;
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('DB media delete timeout')), 3000)
+        );
+        await Promise.race([delPromise, timeoutPromise]);
       } catch (dbErr) {
         console.warn('DB media_files delete error:', dbErr);
       }

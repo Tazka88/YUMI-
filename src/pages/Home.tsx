@@ -335,7 +335,7 @@ const CATEGORY_ICONS: Record<string, React.ElementType> = {
   "Accessoire Auto Moto": Car
 };
 
-const CategorySidebar = ({ categories }: { categories: any[] }) => {
+const CategorySidebar = ({ categories, is169Hero = false }: { categories: any[]; is169Hero?: boolean }) => {
   const [isDesktop, setIsDesktop] = useState(false);
 
   useEffect(() => {
@@ -370,7 +370,7 @@ const CategorySidebar = ({ categories }: { categories: any[] }) => {
   if (!isDesktop) return null;
 
   return (
-    <div className="hidden lg:flex flex-col w-[240px] shrink-0 bg-white rounded shadow-[0_2px_5px_rgba(0,0,0,0.1)] py-2 h-[384px] relative z-30">
+    <div className={`hidden lg:flex flex-col w-[240px] shrink-0 bg-white rounded shadow-[0_2px_5px_rgba(0,0,0,0.1)] py-2 ${is169Hero ? 'min-h-[384px] self-stretch justify-between' : 'h-[384px]'} relative z-30`}>
       {sortedCategories.map((cat) => {
         const Icon = CATEGORY_ICONS[cat.name] || Shirt;
         // Strip emoji if it's at the start of the name (some DB entries might have it)
@@ -658,16 +658,25 @@ export default function Home() {
       <div className="container mx-auto px-4 py-6">
         
         {/* Hero Section with Sidebar and Carousel / Responsive Video */}
-        <div className="flex gap-4 lg:h-[384px] mb-6">
-          <CategorySidebar categories={categories} />
-          <div className="flex-1 min-w-0 h-full">
-            {heroVideoConfig?.enabled && (heroVideoConfig.mobile_video_url || heroVideoConfig.desktop_video_url) ? (
-              <HeroVideo config={heroVideoConfig} fallback={<Slider />} />
-            ) : (
-              <Slider />
-            )}
-          </div>
-        </div>
+        {(() => {
+          const isHeroVideoActive = Boolean(
+            heroVideoConfig?.enabled && (heroVideoConfig.desktop_video_url || heroVideoConfig.mobile_video_url || heroVideoConfig.video_url)
+          );
+          const is169Hero = isHeroVideoActive && (!heroVideoConfig?.desktop_aspect_ratio || heroVideoConfig?.desktop_aspect_ratio === 'aspect-video' || heroVideoConfig?.desktop_aspect_ratio === '16:9');
+
+          return (
+            <div className={`flex gap-4 ${is169Hero ? 'items-start' : 'lg:h-[384px]'} mb-6`}>
+              <CategorySidebar categories={categories} is169Hero={is169Hero} />
+              <div className={`flex-1 min-w-0 ${is169Hero ? '' : 'h-full'}`}>
+                {isHeroVideoActive ? (
+                  <HeroVideo config={heroVideoConfig!} fallback={<Slider />} />
+                ) : (
+                  <Slider />
+                )}
+              </div>
+            </div>
+          );
+        })()}
 
       {/* Trust Badges Section */}
       <div 

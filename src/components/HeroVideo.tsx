@@ -4,12 +4,16 @@ import { Link } from 'react-router-dom';
 
 export interface HeroVideoConfig {
   enabled?: boolean;
+  video_source_mode?: 'single_16_9' | 'separate';
+  video_url?: string;
   mobile_video_url?: string;
   mobile_poster_url?: string;
   desktop_video_url?: string;
   desktop_poster_url?: string;
   desktop_object_position?: string;
+  desktop_aspect_ratio?: string;
   mobile_aspect_ratio?: string;
+  object_fit?: 'cover' | 'contain' | string;
   title?: string;
   subtitle?: string;
   button_text?: string;
@@ -55,10 +59,10 @@ export default function HeroVideo({ config, fallback }: HeroVideoProps) {
     }
   }, []);
 
-  // Determine active media URLs based on current device
+  // Determine active media URLs based on current device and mode
   const currentVideoUrl = isMobile 
-    ? (config.mobile_video_url || config.desktop_video_url || '')
-    : (config.desktop_video_url || config.mobile_video_url || '');
+    ? (config.mobile_video_url || config.desktop_video_url || config.video_url || '')
+    : (config.desktop_video_url || config.mobile_video_url || config.video_url || '');
 
   const currentPosterUrl = isMobile 
     ? (config.mobile_poster_url || config.desktop_poster_url || '')
@@ -108,16 +112,26 @@ export default function HeroVideo({ config, fallback }: HeroVideoProps) {
   // Calculate overlay opacity (0 to 60)
   const overlayOpacity = Math.min(Math.max(Number(config.overlay_opacity ?? 25), 0), 75) / 100;
 
-  // Mobile container height/aspect classes
+  // Mobile container aspect classes (defaults to 16:9 aspect-video for non-cropped 16:9 video)
   const mobileContainerClass = config.mobile_aspect_ratio === 'aspect-[9/16]'
     ? 'aspect-[9/16]'
     : config.mobile_aspect_ratio === 'h-[70vh]'
     ? 'h-[65vh] min-h-[440px]'
-    : 'aspect-[4/5] sm:aspect-[4/5]';
+    : config.mobile_aspect_ratio === 'aspect-[4/5]'
+    ? 'aspect-[4/5]'
+    : 'aspect-video'; // 16:9 standard video without cropping
+
+  // Desktop container aspect classes (default 16:9 aspect-video for non-cropped 16:9 video)
+  const isBanner = config.desktop_aspect_ratio === 'banner';
+  const desktopContainerClass = isBanner
+    ? 'md:aspect-[1600/500] lg:h-full lg:aspect-auto'
+    : 'md:aspect-video lg:aspect-video lg:h-auto';
+
+  const objectFitClass = config.object_fit === 'contain' ? 'object-contain bg-black' : 'object-cover';
 
   return (
     <div 
-      className={`relative w-full rounded-2xl overflow-hidden shadow-sm group select-none bg-neutral-900 ${mobileContainerClass} md:aspect-[1600/500] lg:h-full lg:aspect-auto`}
+      className={`relative w-full rounded-2xl overflow-hidden shadow-sm group select-none bg-neutral-900 ${mobileContainerClass} ${desktopContainerClass}`}
       style={{ contentVisibility: 'visible', contain: 'layout paint' }}
     >
       {/* 1. Device-specific Video Element (ONLY loaded for active device, plays continuously) */}
@@ -131,6 +145,8 @@ export default function HeroVideo({ config, fallback }: HeroVideoProps) {
           loop
           playsInline
           preload="auto"
+          controls={false}
+          disablePictureInPicture
           onLoadedMetadata={(e) => {
             const vid = e.currentTarget;
             vid.muted = isMuted;
@@ -149,7 +165,7 @@ export default function HeroVideo({ config, fallback }: HeroVideoProps) {
             console.warn('Hero video failed to load');
             setHasError(true);
           }}
-          className="absolute inset-0 w-full h-full object-cover z-0 pointer-events-none"
+          className={`absolute inset-0 w-full h-full ${objectFitClass} z-0 pointer-events-none`}
           style={{ objectPosition }}
         />
       )}

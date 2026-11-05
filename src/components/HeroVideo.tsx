@@ -56,11 +56,11 @@ export default function HeroVideo({ config }: HeroVideoProps) {
   }, []);
 
   // Exclusively Video: Desktop (16:9) vs Mobile (9:16)
-  // Computer: exclusively desktop_video_url (falls back to video_url if set)
-  // Mobile: exclusively mobile_video_url (falls back to desktop_video_url if only 1 video provided)
+  // Computer: desktop_video_url (falls back to video_url or mobile_video_url)
+  // Mobile: mobile_video_url (falls back to desktop_video_url or video_url)
   const currentVideoUrl = isMobile 
     ? (config.mobile_video_url || config.desktop_video_url || config.video_url || '')
-    : (config.desktop_video_url || config.video_url || '');
+    : (config.desktop_video_url || config.video_url || config.mobile_video_url || '');
 
   // Reset error when URL changes
   useEffect(() => {
@@ -69,10 +69,17 @@ export default function HeroVideo({ config }: HeroVideoProps) {
 
   // Ensure continuous autoPlay whenever video source changes or component mounts
   useEffect(() => {
-    if (videoRef.current && currentVideoUrl) {
-      videoRef.current.defaultMuted = true;
-      videoRef.current.muted = isMuted;
-      videoRef.current.play().catch(() => {});
+    const vid = videoRef.current;
+    if (vid && currentVideoUrl) {
+      vid.defaultMuted = true;
+      vid.muted = isMuted;
+      const playPromise = vid.play();
+      if (playPromise !== undefined) {
+        playPromise.catch((err) => {
+          // Autoplay policy handled gracefully
+          console.warn('Hero video autoplay notice:', err?.message || err);
+        });
+      }
     }
   }, [currentVideoUrl, isMuted]);
 
@@ -99,8 +106,8 @@ export default function HeroVideo({ config }: HeroVideoProps) {
     }
   };
 
-  // If no video URL or fatal error, return null (NO image fallback anywhere)
-  if (!currentVideoUrl || hasError || !config.enabled) {
+  // If no video URL or explicitly disabled, do not render
+  if (!currentVideoUrl || !config.enabled) {
     return null;
   }
 
@@ -109,27 +116,31 @@ export default function HeroVideo({ config }: HeroVideoProps) {
 
   // Aspect ratio styling:
   // Desktop: strictly 16:9 aspect-video
-  // Mobile: strictly 9:16 vertical (or max height on mobile)
-  const isVerticalMobile = Boolean(config.mobile_video_url) || config.mobile_aspect_ratio === 'aspect-[9/16]';
-  const mobileContainerClass = isVerticalMobile
+  // Mobile: strictly 9:16 vertical (or 16:9 if horizontal)
+  const isVerticalMobile = isMobile && (Boolean(config.mobile_video_url) || config.mobile_aspect_ratio === 'aspect-[9/16]');
+  const containerAspectClass = isVerticalMobile
     ? 'aspect-[9/16] max-h-[78vh] mx-auto'
     : 'aspect-video';
 
-  const desktopContainerClass = 'md:aspect-video lg:aspect-video lg:h-auto';
   const objectFitClass = config.object_fit === 'contain' ? 'object-contain bg-black' : 'object-cover';
 
   return (
     <div 
-      className={`relative w-full rounded-2xl overflow-hidden shadow-sm group select-none bg-neutral-900 ${mobileContainerClass} ${desktopContainerClass}`}
-      style={{ contentVisibility: 'visible', contain: 'layout paint' }}
+      className={`relative w-full ${containerAspectClass} rounded-2xl overflow-hidden shadow-md group select-none bg-neutral-950`}
     >
       {/* Exclusively Video Element (ONLY loaded for active device, never both) */}
       <video
         key={currentVideoUrl}
-        ref={videoRef}
+        ref={(el) => {
+          videoRef.current = el;
+          if (el) {
+            el.defaultMuted = true;
+            el.muted = isMuted;
+          }
+        }}
         src={currentVideoUrl}
         autoPlay
-        muted={isMuted}
+        muted
         loop
         playsInline
         preload="auto"
@@ -137,6 +148,7 @@ export default function HeroVideo({ config }: HeroVideoProps) {
         disablePictureInPicture
         onLoadedMetadata={(e) => {
           const vid = e.currentTarget;
+          vid.defaultMuted = true;
           vid.muted = isMuted;
           vid.play().catch(() => {});
         }}
@@ -148,8 +160,13 @@ export default function HeroVideo({ config }: HeroVideoProps) {
         onPause={(e) => {
           e.currentTarget.play().catch(() => {});
         }}
-        onError={() => {
-          setHasError(true);
+        onError={(e) => {
+          console.warn('Hero video load warning, retrying source:', e);
+          // Do not unmount component; retry once if video element paused
+          if (videoRef.current) {
+            videoRef.current.load();
+            videoRef.current.play().catch(() => {});
+          }
         }}
         className={`absolute inset-0 w-full h-full ${objectFitClass} z-0 pointer-events-none`}
       />
@@ -159,7 +176,7 @@ export default function HeroVideo({ config }: HeroVideoProps) {
         className="absolute inset-0 z-10 pointer-events-none transition-opacity duration-300"
         style={{
           backgroundColor: `rgba(0, 0, 0, ${overlayOpacity})`,
-          backgroundImage: 'linear-gradient(to top, rgba(0,0,0,0.65) 0%, rgba(0,0,0,0.1) 50%, rgba(0,0,0,0.25) 100%)'
+          backgroundImage: 'linear-gradient(to top, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.1) 50%, rgba(0,0,0,0.3) 100%)'
         }}
       />
 

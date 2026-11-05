@@ -138,10 +138,25 @@ export default function HeroVideoAdmin() {
     loadSettings();
   }, []);
 
+  // Helper to resolve relative uploads to Supabase CDN or return absolute URL
+  const resolveVideoUrl = (rawUrl?: string): string => {
+    if (!rawUrl) return '';
+    if (rawUrl.startsWith('http://') || rawUrl.startsWith('https://') || rawUrl.startsWith('blob:')) {
+      return rawUrl;
+    }
+    if (rawUrl.startsWith('/uploads/')) {
+      const fileName = rawUrl.replace(/^\/uploads\//, '');
+      return `https://evvbhalgyffagsesmvhu.supabase.co/storage/v1/object/public/images/${fileName}`;
+    }
+    return rawUrl;
+  };
+
   // Sync preview video playback whenever active video URL or device changes
-  const activePreviewUrl = previewDevice === 'desktop'
-    ? (config.desktop_video_url || '')
-    : (config.mobile_video_url || config.desktop_video_url || '');
+  const activePreviewUrl = resolveVideoUrl(
+    previewDevice === 'desktop'
+      ? (config.desktop_video_url || '')
+      : (config.mobile_video_url || config.desktop_video_url || '')
+  );
 
   useEffect(() => {
     const video = previewVideoRef.current;
@@ -539,11 +554,12 @@ export default function HeroVideoAdmin() {
                   <video
                     ref={desktopCardVideoRef}
                     key={config.desktop_video_url}
-                    src={config.desktop_video_url}
+                    src={resolveVideoUrl(config.desktop_video_url)}
                     autoPlay
                     muted
                     loop
                     playsInline
+                    crossOrigin="anonymous"
                     className="w-full h-full object-cover"
                     onError={() => setDesktopVideoError(true)}
                     onLoadedMetadata={() => setDesktopVideoError(false)}
@@ -661,11 +677,12 @@ export default function HeroVideoAdmin() {
                     <video
                       ref={mobileCardVideoRef}
                       key={config.mobile_video_url}
-                      src={config.mobile_video_url}
+                      src={resolveVideoUrl(config.mobile_video_url)}
                       autoPlay
                       muted
                       loop
                       playsInline
+                      crossOrigin="anonymous"
                       className="w-full h-full object-cover"
                       onError={() => setMobileVideoError(true)}
                       onLoadedMetadata={() => setMobileVideoError(false)}
@@ -892,12 +909,13 @@ export default function HeroVideoAdmin() {
                         <video
                           ref={previewVideoRef}
                           key={`preview-desktop-${config.desktop_video_url}`}
-                          src={config.desktop_video_url}
+                          src={resolveVideoUrl(config.desktop_video_url)}
                           autoPlay
                           muted={isMuted}
                           loop
                           playsInline
                           preload="auto"
+                          crossOrigin="anonymous"
                           className="w-full h-full object-cover"
                           onPlay={() => setIsPaused(false)}
                           onPause={() => setIsPaused(true)}
@@ -951,12 +969,13 @@ export default function HeroVideoAdmin() {
                         <video
                           ref={previewVideoRef}
                           key={`preview-mobile-${config.mobile_video_url || config.desktop_video_url}`}
-                          src={config.mobile_video_url || config.desktop_video_url}
+                          src={resolveVideoUrl(config.mobile_video_url || config.desktop_video_url)}
                           autoPlay
                           muted={isMuted}
                           loop
                           playsInline
                           preload="auto"
+                          crossOrigin="anonymous"
                           className="w-full h-full object-cover"
                           onPlay={() => setIsPaused(false)}
                           onPause={() => setIsPaused(true)}

@@ -55,12 +55,28 @@ export default function HeroVideo({ config }: HeroVideoProps) {
     }
   }, []);
 
+  // Helper to resolve relative uploads to Supabase CDN or return absolute URL
+  const resolveVideoUrl = (rawUrl?: string): string => {
+    if (!rawUrl) return '';
+    if (rawUrl.startsWith('http://') || rawUrl.startsWith('https://') || rawUrl.startsWith('blob:')) {
+      return rawUrl;
+    }
+    // If relative /uploads/... path, map to Supabase Storage public CDN
+    if (rawUrl.startsWith('/uploads/')) {
+      const fileName = rawUrl.replace(/^\/uploads\//, '');
+      return `https://evvbhalgyffagsesmvhu.supabase.co/storage/v1/object/public/images/${fileName}`;
+    }
+    return rawUrl;
+  };
+
   // Exclusively Video: Desktop (16:9) vs Mobile (9:16)
   // Computer: desktop_video_url (falls back to video_url or mobile_video_url)
   // Mobile: mobile_video_url (falls back to desktop_video_url or video_url)
-  const currentVideoUrl = isMobile 
+  const chosenRawUrl = isMobile 
     ? (config.mobile_video_url || config.desktop_video_url || config.video_url || '')
     : (config.desktop_video_url || config.video_url || config.mobile_video_url || '');
+
+  const currentVideoUrl = resolveVideoUrl(chosenRawUrl);
 
   // Reset error when URL changes
   useEffect(() => {
@@ -112,7 +128,8 @@ export default function HeroVideo({ config }: HeroVideoProps) {
   }
 
   // Calculate overlay opacity (0 to 60)
-  const overlayOpacity = Math.min(Math.max(Number(config.overlay_opacity ?? 20), 0), 75) / 100;
+  const overlayOpacity = Math.min(Math.max(Number(config.overlay_opacity ?? 0), 0), 75) / 100;
+  const hasTextContent = Boolean(config.title || config.subtitle || config.button_text);
 
   // Aspect ratio styling:
   // Desktop: strictly 16:9 aspect-video
@@ -146,6 +163,7 @@ export default function HeroVideo({ config }: HeroVideoProps) {
         preload="auto"
         controls={false}
         disablePictureInPicture
+        crossOrigin="anonymous"
         onLoadedMetadata={(e) => {
           const vid = e.currentTarget;
           vid.defaultMuted = true;
@@ -162,7 +180,7 @@ export default function HeroVideo({ config }: HeroVideoProps) {
         }}
         onError={(e) => {
           console.warn('Hero video load warning, retrying source:', e);
-          // Do not unmount component; retry once if video element paused
+          // If video failed and URL was relative or Supabase, try secondary fallback
           if (videoRef.current) {
             videoRef.current.load();
             videoRef.current.play().catch(() => {});
@@ -171,14 +189,18 @@ export default function HeroVideo({ config }: HeroVideoProps) {
         className={`absolute inset-0 w-full h-full ${objectFitClass} z-0 pointer-events-none`}
       />
 
-      {/* Gradient Overlay for Typography Contrast & Visual Depth */}
-      <div 
-        className="absolute inset-0 z-10 pointer-events-none transition-opacity duration-300"
-        style={{
-          backgroundColor: `rgba(0, 0, 0, ${overlayOpacity})`,
-          backgroundImage: 'linear-gradient(to top, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.1) 50%, rgba(0,0,0,0.3) 100%)'
-        }}
-      />
+      {/* Gradient Overlay for Typography Contrast & Visual Depth (only if text exists or overlay requested) */}
+      {(hasTextContent || overlayOpacity > 0) && (
+        <div 
+          className="absolute inset-0 z-10 pointer-events-none transition-opacity duration-300"
+          style={{
+            backgroundColor: overlayOpacity > 0 ? `rgba(0, 0, 0, ${overlayOpacity})` : undefined,
+            backgroundImage: hasTextContent 
+              ? 'linear-gradient(to top, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.1) 50%, rgba(0,0,0,0.3) 100%)' 
+              : undefined
+          }}
+        />
+      )}
 
       {/* Content / Caption / Call-To-Action (if configured) */}
       {(config.title || config.subtitle || config.button_text) && (

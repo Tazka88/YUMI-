@@ -2176,8 +2176,34 @@ router.post('/admin/upload-chunk', authenticate, (req: any, res: any, next: any)
       // Clean up chunk directory
       try { fs.rmdirSync(chunksDir); } catch (e) {}
 
-      // Persist in PostgreSQL media_files table with strict timeout so upload always responds fast
+      // Persist in PostgreSQL media_files table and Supabase Storage for total cross-platform reliability
       const contentType = ext === 'webm' ? 'video/webm' : (ext === 'mov' || ext === 'qt') ? 'video/mp4' : 'video/mp4';
+      let publicVideoUrl = `/uploads/${finalFileName}`;
+
+      // 1. Upload to Supabase Storage 'images' bucket (permanent global CDN)
+      const supabase = getSupabase();
+      if (supabase) {
+        try {
+          const { data: sData, error: sErr } = await supabase.storage
+            .from('images')
+            .upload(finalFileName, fullBuffer, {
+              contentType,
+              upsert: true
+            });
+          if (!sErr && sData) {
+            const { data: pubData } = supabase.storage
+              .from('images')
+              .getPublicUrl(finalFileName);
+            if (pubData?.publicUrl) {
+              publicVideoUrl = pubData.publicUrl;
+            }
+          }
+        } catch (sUploadErr) {
+          console.warn('Supabase storage upload notice in chunk handler:', sUploadErr);
+        }
+      }
+
+      // 2. Persist in PostgreSQL media_files table with strict timeout
       try {
         const insertPromise = sql`
           INSERT INTO media_files (id, file_name, content_type, data, file_size)
@@ -2199,7 +2225,7 @@ router.post('/admin/upload-chunk', authenticate, (req: any, res: any, next: any)
 
       return res.json({ 
         done: true, 
-        url: `/uploads/${finalFileName}`,
+        url: publicVideoUrl,
         message: 'Fichier téléversé et assemblé avec succès'
       });
     }

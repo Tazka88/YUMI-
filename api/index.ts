@@ -51,8 +51,126 @@ app.use(helmet({
 app.use(express.json({ limit: '5mb' }));
 app.use(express.urlencoded({ limit: '5mb', extended: true }));
 
-// Serve uploads statically
-app.use('/uploads', express.static(uploadsDir, { maxAge: '1y' }));
+// Serve uploads statically with PostgreSQL persistence self-healing & HTTP 206 Range streaming (Vercel serverless)
+app.use('/uploads', async (req, res, next) => {
+  const fileName = path.basename(req.path);
+  if (!fileName) return next();
+
+  const isVideo = /\.(mp4|webm|mov|m4v|avi|mkv)$/i.test(fileName);
+  let filePath = path.join(uploadsDir, fileName);
+
+  // 1. Cross-check alternative local directories (e.g. /tmp/uploads vs public/uploads)
+  if (!fs.existsSync(filePath)) {
+    const altUploadsDir = uploadsDir.startsWith('/tmp') 
+      ? path.join(process.cwd(), 'public', 'uploads')
+      : path.join('/tmp', 'uploads');
+    const altFilePath = path.join(altUploadsDir, fileName);
+    if (fs.existsSync(altFilePath)) {
+      try {
+        if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+        fs.copyFileSync(altFilePath, filePath);
+      } catch (e) {
+        filePath = altFilePath;
+      }
+    }
+  }
+
+  // 2. Self-healing from PostgreSQL media_files table with strict 1.5s timeout (never hangs serverless)
+  if (!fs.existsSync(filePath)) {
+    try {
+      const queryPromise = sql`
+        SELECT content_type, data 
+        FROM media_files 
+        WHERE file_name = ${fileName} 
+           OR file_name LIKE ${'%' + fileName + '%'}
+           OR id = ${fileName.split('.')[0]}
+        LIMIT 1
+      `;
+      const timeoutPromise = new Promise<any[]>((_, reject) => 
+        setTimeout(() => reject(new Error('DB self-healing query timeout')), 1500)
+      );
+      const rows = await Promise.race([queryPromise, timeoutPromise]);
+      if (rows && rows.length > 0 && rows[0].data) {
+        if (!fs.existsSync(uploadsDir)) {
+          fs.mkdirSync(uploadsDir, { recursive: true });
+        }
+        fs.writeFileSync(filePath, rows[0].data);
+      }
+    } catch (dbErr: any) {
+      console.warn('Media self-healing check info:', dbErr?.message || 'Check skipped');
+    }
+  }
+
+  // 3. If missing video file, return immediate 404 text response rather than falling through to SPA HTML
+  if (isVideo && !fs.existsSync(filePath)) {
+    return res.status(404).set({
+      'Content-Type': 'text/plain',
+      'Cache-Control': 'no-store, no-cache, must-revalidate'
+    }).send('Video not found');
+  }
+
+  // 4. If file exists on disk and is a video, stream with robust RFC 206 Range support
+  if (fs.existsSync(filePath) && isVideo) {
+    try {
+      const stat = fs.statSync(filePath);
+      const fileSize = stat.size;
+      const range = req.headers.range;
+      const ext = path.extname(fileName).toLowerCase();
+      const contentType = ext === '.webm' ? 'video/webm' : (ext === '.mov' || ext === '.qt') ? 'video/mp4' : 'video/mp4';
+
+      const commonHeaders = {
+        'Content-Type': contentType,
+        'Accept-Ranges': 'bytes',
+        'Access-Control-Allow-Origin': '*',
+        'Cross-Origin-Resource-Policy': 'cross-origin',
+        'Cache-Control': 'public, max-age=31536000, immutable'
+      };
+
+      if (req.method === 'HEAD') {
+        res.writeHead(200, {
+          ...commonHeaders,
+          'Content-Length': fileSize
+        });
+        return res.end();
+      }
+
+      if (range) {
+        const matches = range.match(/bytes=(\d*)-(\d*)/);
+        let start = matches && matches[1] ? parseInt(matches[1], 10) : 0;
+        let end = matches && matches[2] ? parseInt(matches[2], 10) : fileSize - 1;
+        if (isNaN(start)) start = 0;
+        if (isNaN(end) || end >= fileSize) end = fileSize - 1;
+
+        if (start > end || start >= fileSize) {
+          res.writeHead(416, {
+            'Content-Range': `bytes */${fileSize}`,
+            'Access-Control-Allow-Origin': '*'
+          });
+          return res.end();
+        }
+
+        const chunksize = (end - start) + 1;
+        const fileStream = fs.createReadStream(filePath, { start, end });
+        res.writeHead(206, {
+          ...commonHeaders,
+          'Content-Range': `bytes ${start}-${end}/${fileSize}`,
+          'Content-Length': chunksize
+        });
+        return fileStream.pipe(res);
+      } else {
+        res.writeHead(200, {
+          ...commonHeaders,
+          'Content-Length': fileSize
+        });
+        return fs.createReadStream(filePath).pipe(res);
+      }
+    } catch (streamErr) {
+      console.error('Video stream error in api/index.ts:', streamErr);
+    }
+  }
+
+  next();
+}, express.static(uploadsDir, { maxAge: '1y' }));
 
 // API Routes
 app.get('/api/sitemap.xml', (req, res, next) => {

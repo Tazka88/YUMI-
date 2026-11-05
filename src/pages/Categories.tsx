@@ -75,17 +75,17 @@ export default function Categories() {
             {categories.map(category => (
               <div 
                 key={category.id}
-                className="group border border-gray-100 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 flex flex-col bg-white"
+                className="group border border-gray-100 rounded-2xl overflow-hidden shadow-xs hover:shadow-xl hover:border-[#FF6B00]/60 transition-all duration-300 flex flex-col bg-white"
               >
                 <Link 
                   to={`/category/${category.slug}`}
-                  className="relative aspect-video w-full overflow-hidden bg-gray-50 flex items-center justify-center"
+                  className="relative aspect-[16/10] w-full overflow-hidden bg-neutral-900 flex items-center justify-center"
                 >
                   {category.image ? (
                     <img 
-                      src={getResizedImageUrl(category.image, 600)} 
+                      src={category.image} 
                       alt={category.name} 
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 ease-out" 
                       loading="lazy"
                     />
                   ) : (
@@ -93,8 +93,9 @@ export default function Categories() {
                       <Layers size={48} className="text-gray-300" />
                     </div>
                   )}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent flex items-end p-4">
-                    <span className="text-white font-bold text-lg drop-shadow-sm">
+                  {/* High contrast gradient */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/35 to-transparent flex items-end p-4">
+                    <span className="text-white font-extrabold text-lg sm:text-xl drop-shadow-md group-hover:text-orange-200 transition-colors">
                       <CategoryNameDisplay name={category.name} />
                     </span>
                   </div>

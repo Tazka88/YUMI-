@@ -12,6 +12,15 @@ import HeroVideo, { HeroVideoConfig } from '../components/HeroVideo';
 import HeroPromoColumn from '../components/HeroPromoColumn';
 import { fetchWithCache } from '../lib/utils';
 import AppDownloadBanner from '../components/AppDownloadBanner';
+import catTelephonieImg from '../assets/images/cat_telephonie_1793875329557.jpg';
+import catFashionImg from '../assets/images/cat_mode_fashion_1793875330679.jpg';
+import catBeauteImg from '../assets/images/cat_beaute_sante_1793875331075.jpg';
+import catElectroImg from '../assets/images/cat_electromenager_1793875331132.jpg';
+import catMaisonImg from '../assets/images/cat_maison_bureau_1793875346271.jpg';
+import catInformatiqueImg from '../assets/images/cat_informatique_1793875347028.jpg';
+import catSportsImg from '../assets/images/cat_sports_loisirs_1793875347173.jpg';
+import catAutoImg from '../assets/images/cat_auto_moto_1793875348320.jpg';
+import catJouetsImg from '../assets/images/cat_jouets_jeux_1793875348613.jpg';
 
 
 const GridSkeleton = () => (
@@ -284,38 +293,84 @@ const getResizedImageUrl = (url: string | null, width: number) => {
   return url;
 };
 
-const MasonryCategoryCard: React.FC<{ cat: any, index: number }> = ({ cat, index }) => {
-  let spanClasses = '';
-  let aspectClass = '';
-  
-  // Homogeneous layout
-  spanClasses = 'col-span-1 row-span-1';
-  aspectClass = 'aspect-square';
+const CATEGORY_LOCAL_FALLBACKS: Record<string, string> = {
+  "telephone": catTelephonieImg,
+  "mode": catFashionImg,
+  "beaute": catBeauteImg,
+  "electromenager": catElectroImg,
+  "maison": catMaisonImg,
+  "informatique": catInformatiqueImg,
+  "sports": catSportsImg,
+  "accessoires-auto-moto": catAutoImg,
+  "jouets-jeux": catJouetsImg,
+};
+
+const CATEGORY_SUBTITLES: Record<string, string> = {
+  "Mode & Vêtements": "Prêt-à-porter, Chaussures & Sacs",
+  "Téléphone & Tablette": "Smartphones, Tablettes & Montres",
+  "Beauté & Santé": "Parfums, Soins & Cosmétiques",
+  "Électroménager": "Cuisine, Fours & Robot ménager",
+  "Maison, cuisine & bureau": "Mobilier, Déco & Bureau",
+  "Informatique": "Laptops, PC Gamers & Accessoires",
+  "Sports & Loisirs": "Fitness, Vélos & Équipements",
+  "Accessoire Auto Moto": "Entretien, Électronique & Casques",
+  "Jouets et Jeux": "Jeux de société, Consoles & Figurines"
+};
+
+const MasonryCategoryCard: React.FC<{ cat: any; index: number }> = ({ cat, index }) => {
+  const cleanName = cat.name.replace(/^[\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF]\s*/g, '').trim();
+  const Icon = CATEGORY_ICONS[cleanName] || CATEGORY_ICONS[cat.name] || Shirt;
+  const subtitle = CATEGORY_SUBTITLES[cleanName] || CATEGORY_SUBTITLES[cat.name] || "Découvrez la collection";
+
+  // Use uploaded Supabase CDN image, image proxy or high-res local fallback
+  const imageUrl = (cat.image && typeof cat.image === 'string' && (cat.image.startsWith('http') || cat.image.startsWith('/api/')))
+    ? cat.image
+    : (CATEGORY_LOCAL_FALLBACKS[cat.slug] || cat.image || '');
 
   return (
     <Link 
       to={`/category/${cat.slug}`} 
-      className={`group relative overflow-hidden rounded-2xl bg-gray-50 block ${spanClasses} opacity-100 transition-opacity duration-500`}
+      className="group relative rounded-2xl overflow-hidden border border-gray-100 shadow-xs hover:shadow-2xl hover:border-[#FF6B00]/70 transition-all duration-300 block select-none bg-neutral-900 active:scale-[0.98] aspect-[4/3] sm:aspect-[16/11]"
     >
-      <div className={`w-full h-full relative overflow-hidden bg-white ${aspectClass}`}>
+      {/* Background Image with smooth zoom */}
+      {imageUrl ? (
         <img 
-          src={getResizedImageUrl(cat.image, index % 5 === 0 ? 800 : 400) || `https://ui-avatars.com/api/?name=${encodeURIComponent(cat.name)}&background=random&color=fff&size=400`} 
-          srcSet={cat.image && cat.image.startsWith('/api/images/') ? `${getResizedImageUrl(cat.image, 300)} 300w, ${getResizedImageUrl(cat.image, 400)} 400w, ${getResizedImageUrl(cat.image, 600)} 600w, ${getResizedImageUrl(cat.image, 800)} 800w` : undefined}
-          sizes={index % 5 === 0 ? "(max-width: 768px) 100vw, 50vw" : "(max-width: 768px) 50vw, 25vw"}
-          alt={cat.name}
+          src={imageUrl} 
+          alt={cleanName}
           loading="lazy"
           decoding="async"
-          className="w-full h-full object-cover object-center transition-transform duration-700 group-hover:scale-105"
-          referrerPolicy="no-referrer"
+          className="absolute inset-0 w-full h-full object-cover object-center transition-transform duration-700 ease-out group-hover:scale-110"
         />
-        <div className="absolute inset-0 bg-black/40 group-hover:bg-black/50 transition-colors duration-300"></div>
-        
-        <div className="absolute inset-0 p-4 sm:p-6 lg:p-8 flex flex-col items-center justify-center text-center">
-          <h3 className={`font-bold text-white tracking-tight leading-tight ${index % 5 === 0 ? 'text-xl md:text-2xl lg:text-3xl' : 'text-base md:text-lg lg:text-xl'}`}>
-            {cat.name.replace(/^[\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF]\s*/g, '').trim()}
-          </h3>
-          <div className="mt-2 sm:mt-3 flex items-center text-white/90 text-xs sm:text-sm font-semibold opacity-0 translate-y-4 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300">
-            Découvrir <ChevronRight className="w-3 h-3 sm:w-4 sm:h-4 ml-1" />
+      ) : (
+        <div className="absolute inset-0 bg-gradient-to-br from-neutral-900 via-neutral-800 to-orange-950 flex items-center justify-center">
+          <Icon size={48} className="text-orange-500/30" />
+        </div>
+      )}
+
+      {/* Atmospheric Contrast Dark Gradient Overlay */}
+      <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/50 to-black/25 group-hover:via-black/40 transition-colors duration-300 pointer-events-none" />
+
+      {/* Top Floating Badge with Category Icon */}
+      <div className="absolute top-3 left-3 sm:top-4 sm:left-4 z-10 flex items-center gap-2 pointer-events-none">
+        <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-black/40 backdrop-blur-md border border-white/20 text-[#FF6B00] flex items-center justify-center shadow-md group-hover:bg-[#FF6B00] group-hover:text-white transition-all duration-300 group-hover:scale-105">
+          <Icon size={16} className="sm:w-[18px] sm:h-[18px]" />
+        </div>
+      </div>
+
+      {/* Bottom Content Area */}
+      <div className="absolute inset-x-0 bottom-0 p-3.5 sm:p-5 z-10 flex flex-col justify-end pointer-events-none">
+        <span className="text-[10px] sm:text-[11px] font-extrabold text-orange-400 uppercase tracking-wider mb-1 line-clamp-1 drop-shadow-xs">
+          {subtitle}
+        </span>
+        <h3 className="font-extrabold text-white text-base sm:text-lg lg:text-xl tracking-tight leading-tight group-hover:text-orange-200 transition-colors drop-shadow-md">
+          {cleanName}
+        </h3>
+
+        {/* Interactive Call to Action bar */}
+        <div className="mt-2.5 pt-2 border-t border-white/15 flex items-center justify-between text-xs sm:text-sm font-bold text-white group-hover:text-orange-300 transition-colors">
+          <span className="flex items-center gap-1 font-semibold">Explorer l'univers</span>
+          <div className="w-6 h-6 rounded-full bg-white/15 backdrop-blur-xs group-hover:bg-[#FF6B00] text-white flex items-center justify-center shadow-xs group-hover:scale-110 transition-all duration-300">
+            <ChevronRight size={14} className="transition-transform group-hover:translate-x-0.5" />
           </div>
         </div>
       </div>
@@ -724,28 +779,29 @@ export default function Home() {
         ))}
       </div>
 
-      {/* Categories Section - Premium Design */}
+      {/* Categories Section - Premium Pro Design */}
       <div className="mb-10 sm:mb-16 mt-4">
         <div className="flex items-end justify-between mb-6 px-2">
           <div>
-            <h3 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">Catégories</h3>
-            <p className="text-gray-500 mt-1 text-sm sm:text-base">Explorez nos collections</p>
+            <div className="flex items-center gap-1.5 mb-1">
+              <span className="text-[11px] font-extrabold uppercase tracking-wider text-[#FF6B00]">
+                Catalogue ZORANDO
+              </span>
+            </div>
+            <h3 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">Catégories</h3>
+            <p className="text-gray-500 mt-1 text-sm sm:text-base">Explorez nos univers et collections au meilleur prix en Algérie</p>
           </div>
-          <Link to="/category/all" className="hidden sm:flex items-center text-sm font-semibold text-gray-900 hover:text-orange-600 transition-colors">
+          <Link to="/category/all" className="hidden sm:flex items-center text-sm font-bold text-gray-900 hover:text-[#FF6B00] transition-colors">
             Tout voir <ChevronRight className="w-4 h-4 ml-1" />
           </Link>
         </div>
         
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6 px-2 sm:px-0">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-3.5 sm:gap-6 px-2 sm:px-0">
           {categories.length === 0 ? (
             // Skeleton loader for categories
-            [...Array(6)].map((_, i) => {
-              let spanClasses = 'col-span-1 row-span-1';
-              let aspectClass = 'aspect-square';
-              return (
-                <div key={i} className={`rounded-2xl bg-gray-100 animate-pulse block ${spanClasses} ${aspectClass}`}></div>
-              );
-            })
+            [...Array(6)].map((_, i) => (
+              <div key={i} className="rounded-2xl bg-gray-100 animate-pulse aspect-[4/3] sm:aspect-[16/11]"></div>
+            ))
           ) : (
             categories.map((cat, index) => (
               <MasonryCategoryCard key={cat.id} cat={cat} index={index} />

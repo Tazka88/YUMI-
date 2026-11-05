@@ -9,6 +9,7 @@ import SEO from '../components/SEO';
 import { buildOrganizationSchema, buildWebSiteSchema } from '../lib/schemaUtils';
 import { getCategoryWithEmoji, CategoryNameDisplay } from '../components/Layout';
 import HeroVideo, { HeroVideoConfig } from '../components/HeroVideo';
+import HeroPromoColumn from '../components/HeroPromoColumn';
 import { fetchWithCache } from '../lib/utils';
 import AppDownloadBanner from '../components/AppDownloadBanner';
 
@@ -369,27 +370,32 @@ const CategorySidebar = ({ categories, is169Hero = false }: { categories: any[];
   if (!isDesktop) return null;
 
   return (
-    <div className={`hidden lg:flex flex-col w-[240px] shrink-0 bg-white rounded shadow-[0_2px_5px_rgba(0,0,0,0.1)] py-2 ${is169Hero ? 'min-h-[384px] self-stretch justify-between' : 'h-[384px]'} relative z-30`}>
+    <div className={`hidden lg:flex flex-col w-[230px] xl:w-[250px] shrink-0 bg-white rounded-2xl border border-gray-100 shadow-sm py-2.5 self-stretch justify-between relative z-30`}>
       {sortedCategories.map((cat) => {
         const Icon = CATEGORY_ICONS[cat.name] || Shirt;
         // Strip emoji if it's at the start of the name (some DB entries might have it)
         const cleanName = cat.name.replace(/^[\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF]\s*/g, '').trim();
         
         return (
-          <div key={cat.id} className="group static">
+          <div key={cat.id} className="group/cat static">
             <Link
               to={`/category/${cat.slug}`}
-              className="flex items-center gap-2 px-4 py-2 hover:bg-[#f5f5f5] cursor-pointer transition-colors"
+              className="flex items-center justify-between px-3 py-1.5 mx-2 rounded-xl hover:bg-orange-50/70 cursor-pointer transition-all duration-200 group-hover/cat:text-[#FF6B00]"
             >
-              <Icon size={20} className="text-[#757575] shrink-0" />
-              <span className="text-[#282828] font-['Roboto',sans-serif] text-[14px] font-normal truncate">
-                {cleanName}
-              </span>
+              <div className="flex items-center gap-2.5 truncate">
+                <div className="w-7 h-7 rounded-lg bg-gray-50 group-hover/cat:bg-orange-500/10 text-gray-500 group-hover/cat:text-[#FF6B00] flex items-center justify-center shrink-0 transition-colors duration-200">
+                  <Icon size={16} />
+                </div>
+                <span className="text-gray-700 font-medium text-[13px] group-hover/cat:text-[#FF6B00] group-hover/cat:font-semibold truncate transition-colors">
+                  {cleanName}
+                </span>
+              </div>
+              <ChevronRight size={13} className="text-gray-300 group-hover/cat:text-[#FF6B00] group-hover/cat:translate-x-0.5 transition-all shrink-0" />
             </Link>
             
             {/* Mega Menu */}
             {cat.subcategories && cat.subcategories.length > 0 && (
-              <div className="absolute left-full top-0 w-[700px] h-full bg-white shadow-[0_2px_5px_rgba(0,0,0,0.1)] border-l border-gray-100 hidden group-hover:flex p-6 z-50 overflow-y-auto">
+              <div className="absolute left-full top-0 w-[700px] h-full bg-white shadow-xl rounded-2xl border border-gray-100 hidden group-hover/cat:flex p-6 z-50 overflow-y-auto">
                 <div className="columns-3 gap-8 w-full">
                   {cat.subcategories.map((sub: any) => (
                     <div key={sub.id} className="break-inside-avoid mb-6">
@@ -668,11 +674,17 @@ export default function Home() {
           }
 
           return (
-            <div className="flex gap-4 items-start mb-6">
+            <div className="flex flex-col lg:flex-row gap-4 items-stretch mb-6">
+              {/* 1. Colonne GAUCHE : Catégories modernes et élégantes (desktop) */}
               <CategorySidebar categories={categories} is169Hero={true} />
-              <div className="flex-1 min-w-0">
+
+              {/* 2. Colonne CENTRE : Vidéo Hero dominante (élément visuel principal) */}
+              <div className="flex-1 min-w-0 flex flex-col justify-center">
                 <HeroVideo config={heroVideoConfig!} />
               </div>
+
+              {/* 3. Colonne DROITE : 3 cartes promotionnelles verticales (Bons plans, Livraison, Application) */}
+              <HeroPromoColumn />
             </div>
           );
         })()}

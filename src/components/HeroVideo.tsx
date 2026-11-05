@@ -165,16 +165,16 @@ export default function HeroVideo({ config }: HeroVideoProps) {
 
       {/* Content / Caption / Call-To-Action (if configured) */}
       {(config.title || config.subtitle || config.button_text) && (
-        <div className="absolute inset-0 z-20 flex flex-col justify-end md:justify-center p-4 sm:p-6 md:p-10 pointer-events-none">
-          <div className="w-full max-w-2xl text-white">
+        <div className="absolute inset-0 z-20 flex flex-col justify-end md:justify-center p-4 sm:p-6 md:p-8 lg:p-10 pointer-events-none">
+          <div className="w-full max-w-xl lg:max-w-2xl text-white">
             {config.title && (
-              <h2 className="text-xl sm:text-2xl md:text-4xl lg:text-5xl font-extrabold tracking-tight leading-tight mb-2 md:mb-3 drop-shadow-md">
+              <h2 className="text-lg sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-black tracking-tight leading-tight mb-2 md:mb-3 drop-shadow-[0_3px_10px_rgba(0,0,0,0.85)] whitespace-pre-line">
                 {config.title}
               </h2>
             )}
 
             {config.subtitle && (
-              <p className="text-xs sm:text-sm md:text-base lg:text-lg text-white/90 font-medium mb-3 md:mb-5 line-clamp-2 drop-shadow max-w-xl">
+              <p className="text-xs sm:text-sm md:text-base lg:text-lg text-white/95 font-medium mb-3 md:mb-5 line-clamp-3 drop-shadow-[0_2px_8px_rgba(0,0,0,0.85)] max-w-lg whitespace-pre-line">
                 {config.subtitle}
               </p>
             )}
@@ -183,7 +183,7 @@ export default function HeroVideo({ config }: HeroVideoProps) {
               <div className="pointer-events-auto inline-block">
                 <Link
                   to={config.button_link || '/category/all'}
-                  className="inline-flex items-center gap-2 bg-orange-500 hover:bg-orange-600 active:scale-95 text-white font-semibold text-xs sm:text-sm md:text-base px-5 py-2.5 sm:px-6 sm:py-3 rounded-full shadow-lg hover:shadow-orange-500/30 transition-all duration-300 group/btn"
+                  className="inline-flex items-center gap-2 bg-[#FF6B00] hover:bg-orange-600 active:scale-95 text-white font-bold text-xs sm:text-sm md:text-base px-5 py-2.5 sm:px-6 sm:py-3 rounded-full shadow-lg hover:shadow-[#FF6B00]/40 transition-all duration-300 group/btn"
                 >
                   <span>{config.button_text}</span>
                   <ChevronRight size={16} className="transition-transform group-hover/btn:translate-x-1" />

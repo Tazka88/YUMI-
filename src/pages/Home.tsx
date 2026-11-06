@@ -180,14 +180,14 @@ const ThemeBackground = ({ activeTheme, themeImages }: { activeTheme: string, th
         </Helmet>
       )}
       <style>{`
-        .min-h-screen.bg-gray-50 {
+        .min-h-screen.bg-gray-50,
+        .min-h-screen.bg-\[\#f6f4f1\] {
           background-color: transparent !important;
         }
         .theme-bg {
           background-image: ${theme.image ? `linear-gradient(to bottom, ${color1}, ${color2}), url('${theme.image}')` : `linear-gradient(to bottom, ${color1}, ${color2})`};
           background-size: cover;
           background-position: center;
-          background-attachment: fixed;
         }
         @media (min-width: 768px) {
           .theme-bg {
@@ -272,7 +272,7 @@ const FlashSalesHeader = ({ link }: { link?: string }) => {
 };
 
 const SectionHeader = ({ title, link, children }: { title: string, link?: string, children?: React.ReactNode }) => (
-  <div className="flex items-center justify-between mb-4 mt-8 bg-white p-3 rounded-t-lg border-b-2 border-orange-500">
+  <div className="flex items-center justify-between mb-4 mt-8 bg-white p-3.5 rounded-xl shadow-[0_2px_10px_rgba(0,0,0,0.06)] border border-gray-100 border-b-2 border-b-orange-500">
     <div className="flex items-center">
       <h3 className="text-lg font-bold text-gray-800">{title}</h3>
       {children}
@@ -330,16 +330,16 @@ const MasonryCategoryCard: React.FC<{ cat: any; index: number }> = ({ cat, index
   return (
     <Link 
       to={`/category/${cat.slug}`} 
-      className="group relative rounded-2xl overflow-hidden border border-gray-100 shadow-xs hover:shadow-2xl hover:border-[#FF6B00]/70 transition-all duration-300 block select-none bg-neutral-900 active:scale-[0.98] aspect-[4/3] sm:aspect-[16/11]"
+      className="group relative rounded-2xl overflow-hidden border border-gray-100 shadow-[0_2px_10px_rgba(0,0,0,0.06)] hover:shadow-xl hover:border-[#FF6B00]/70 transition-all duration-300 block select-none bg-neutral-900 active:scale-[0.99] aspect-[16/9] sm:aspect-[4/3] lg:aspect-[16/11]"
     >
-      {/* Background Image with smooth zoom */}
+      {/* Background Image with lazy loading and object-cover */}
       {imageUrl ? (
         <img 
           src={imageUrl} 
           alt={cleanName}
           loading="lazy"
           decoding="async"
-          className="absolute inset-0 w-full h-full object-cover object-center transition-transform duration-700 ease-out group-hover:scale-110"
+          className="absolute inset-0 w-full h-full object-cover object-center transition-transform duration-500 ease-out group-hover:scale-105"
         />
       ) : (
         <div className="absolute inset-0 bg-gradient-to-br from-neutral-900 via-neutral-800 to-orange-950 flex items-center justify-center">
@@ -347,31 +347,30 @@ const MasonryCategoryCard: React.FC<{ cat: any; index: number }> = ({ cat, index
         </div>
       )}
 
-      {/* Atmospheric Contrast Dark Gradient Overlay */}
-      <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/50 to-black/25 group-hover:via-black/40 transition-colors duration-300 pointer-events-none" />
+      {/* Atmospheric Contrast Dark Gradient Overlay (high performance, no backdrop filter) */}
+      <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent group-hover:via-black/30 transition-colors duration-300 pointer-events-none" />
 
       {/* Top Floating Badge with Category Icon */}
       <div className="absolute top-3 left-3 sm:top-4 sm:left-4 z-10 flex items-center gap-2 pointer-events-none">
-        <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-black/40 backdrop-blur-md border border-white/20 text-[#FF6B00] flex items-center justify-center shadow-md group-hover:bg-[#FF6B00] group-hover:text-white transition-all duration-300 group-hover:scale-105">
+        <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-black/60 border border-white/15 text-[#FF6B00] flex items-center justify-center shadow-sm group-hover:bg-[#FF6B00] group-hover:text-white transition-all duration-300">
           <Icon size={16} className="sm:w-[18px] sm:h-[18px]" />
         </div>
       </div>
 
-      {/* Bottom Content Area */}
-      <div className="absolute inset-x-0 bottom-0 p-3.5 sm:p-5 z-10 flex flex-col justify-end pointer-events-none">
-        <span className="text-[10px] sm:text-[11px] font-extrabold text-orange-400 uppercase tracking-wider mb-1 line-clamp-1 drop-shadow-xs">
-          {subtitle}
-        </span>
-        <h3 className="font-extrabold text-white text-base sm:text-lg lg:text-xl tracking-tight leading-tight group-hover:text-orange-200 transition-colors drop-shadow-md">
-          {cleanName}
-        </h3>
+      {/* Bottom Content Area: Clear, bold typography and integrated subtle action arrow */}
+      <div className="absolute inset-x-0 bottom-0 p-4 sm:p-5 z-10 flex items-end justify-between gap-3 pointer-events-none">
+        <div className="flex flex-col min-w-0 pr-2">
+          <span className="text-xs font-bold text-orange-400 uppercase tracking-wider mb-1 line-clamp-1 drop-shadow-xs">
+            {subtitle}
+          </span>
+          <h3 className="font-black text-white text-lg sm:text-xl lg:text-2xl tracking-tight leading-snug group-hover:text-orange-200 transition-colors drop-shadow-md truncate">
+            {cleanName}
+          </h3>
+        </div>
 
-        {/* Interactive Call to Action bar */}
-        <div className="mt-2.5 pt-2 border-t border-white/15 flex items-center justify-between text-xs sm:text-sm font-bold text-white group-hover:text-orange-300 transition-colors">
-          <span className="flex items-center gap-1 font-semibold">Explorer l'univers</span>
-          <div className="w-6 h-6 rounded-full bg-white/15 backdrop-blur-xs group-hover:bg-[#FF6B00] text-white flex items-center justify-center shadow-xs group-hover:scale-110 transition-all duration-300">
-            <ChevronRight size={14} className="transition-transform group-hover:translate-x-0.5" />
-          </div>
+        {/* Integrated Discreet Arrow Action (replaces the bulky 30% bottom button) */}
+        <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/20 group-hover:bg-[#FF6B00] text-white flex items-center justify-center shrink-0 transition-all duration-300 group-hover:scale-105 group-hover:translate-x-0.5 shadow-sm">
+          <ChevronRight size={18} className="transition-transform group-hover:translate-x-0.5" />
         </div>
       </div>
     </Link>
@@ -425,7 +424,7 @@ const CategorySidebar = ({ categories, is169Hero = false }: { categories: any[];
   if (!isDesktop) return null;
 
   return (
-    <div className={`hidden lg:flex flex-col w-[230px] xl:w-[250px] shrink-0 bg-white rounded-2xl border border-gray-100 shadow-sm py-2.5 self-stretch justify-between relative z-30`}>
+    <div className={`hidden lg:flex flex-col w-[230px] xl:w-[250px] shrink-0 bg-white rounded-2xl border border-gray-100 shadow-[0_2px_10px_rgba(0,0,0,0.06)] py-2.5 self-stretch justify-between relative z-30`}>
       {sortedCategories.map((cat) => {
         const Icon = CATEGORY_ICONS[cat.name] || Shirt;
         // Strip emoji if it's at the start of the name (some DB entries might have it)
@@ -760,7 +759,7 @@ export default function Home() {
             stars: true
           },
         ].map((badge, idx) => (
-          <div key={idx} className={`min-w-[140px] sm:min-w-0 bg-white p-2 sm:p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col sm:flex-row items-center sm:items-start gap-1.5 sm:gap-4 group hover:shadow-md hover:border-[#FF6B00]/30 transition-all duration-300 cursor-default text-center sm:text-left snap-start`}>
+          <div key={idx} className={`min-w-[140px] sm:min-w-0 bg-white p-2 sm:p-4 rounded-xl shadow-[0_2px_10px_rgba(0,0,0,0.06)] border border-gray-100 flex flex-col sm:flex-row items-center sm:items-start gap-1.5 sm:gap-4 group hover:shadow-md hover:border-[#FF6B00]/30 transition-all duration-300 cursor-default text-center sm:text-left snap-start`}>
             <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-full bg-[#FF6B00]/10 text-[#FF6B00] flex items-center justify-center group-hover:bg-[#1a1a2e] group-hover:text-white transition-all duration-300 shrink-0 group-hover:scale-110 transform">
               <badge.icon size={16} className="sm:w-6 sm:h-6" />
             </div>
@@ -796,11 +795,11 @@ export default function Home() {
           </Link>
         </div>
         
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-3.5 sm:gap-6 px-2 sm:px-0">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 px-1 sm:px-0">
           {categories.length === 0 ? (
             // Skeleton loader for categories
             [...Array(6)].map((_, i) => (
-              <div key={i} className="rounded-2xl bg-gray-100 animate-pulse aspect-[4/3] sm:aspect-[16/11]"></div>
+              <div key={i} className="rounded-2xl bg-gray-100 animate-pulse aspect-[16/9] sm:aspect-[4/3] lg:aspect-[16/11]"></div>
             ))
           ) : (
             categories.map((cat, index) => (
@@ -812,7 +811,7 @@ export default function Home() {
 
       {/* Brands Section */}
       {(loadingBrands || brands.length > 0) && (
-        <div className="mb-6 sm:mb-8 bg-white p-4 sm:p-6 rounded-2xl shadow-xs border border-gray-100 relative">
+        <div className="mb-6 sm:mb-8 bg-white p-4 sm:p-6 rounded-2xl shadow-[0_2px_10px_rgba(0,0,0,0.06)] border border-gray-100 relative">
           <div className="flex justify-between items-center mb-4 sm:mb-6">
             <div>
               <div className="flex items-center gap-2">

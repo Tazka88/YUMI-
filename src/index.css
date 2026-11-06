@@ -2,10 +2,16 @@
 @plugin "@tailwindcss/typography";
 
 html, body {
+  background-color: #f6f4f1;
   touch-action: pan-x pan-y;
 }
 
 @theme {
+  --color-page-bg: #f6f4f1;
+  --shadow-card: 0 2px 10px rgba(0, 0, 0, 0.06);
+  --shadow-sm: 0 2px 10px rgba(0, 0, 0, 0.06);
+  --shadow-xs: 0 2px 10px rgba(0, 0, 0, 0.06);
+
   --color-orange-50: #fff4eb;
   --color-orange-100: #ffecd6;
   --color-orange-200: #ffd6ad;
@@ -23,6 +29,14 @@ html, body {
     0% { opacity: 0; transform: translateY(-10px); }
     100% { opacity: 1; transform: translateY(0); }
   }
+}
+
+/* Card shadow requested: 0 2px 10px rgba(0,0,0,0.06) */
+.card-shadow,
+.shadow-card,
+.shadow-sm,
+.shadow-xs {
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06) !important;
 }
 
 /* ZORANDO TopBar Custom CSS */

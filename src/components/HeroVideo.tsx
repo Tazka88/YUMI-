@@ -141,9 +141,16 @@ export default function HeroVideo({ config }: HeroVideoProps) {
 
   const objectFitClass = config.object_fit === 'contain' ? 'object-contain bg-black' : 'object-cover';
 
+  const posterUrl = isVerticalMobile ? '/hero-mobile-poster.jpg' : '/hero-desktop-poster.jpg';
+
   return (
     <div 
-      className={`relative w-full ${containerAspectClass} rounded-2xl overflow-hidden shadow-md group select-none bg-neutral-950`}
+      className={`relative w-full ${containerAspectClass} rounded-2xl overflow-hidden shadow-[0_2px_10px_rgba(0,0,0,0.06)] group select-none bg-neutral-900 cursor-pointer`}
+      onClick={() => {
+        if (videoRef.current && videoRef.current.paused) {
+          videoRef.current.play().catch(() => {});
+        }
+      }}
     >
       {/* Exclusively Video Element (ONLY loaded for active device, never both) */}
       <video
@@ -153,9 +160,13 @@ export default function HeroVideo({ config }: HeroVideoProps) {
           if (el) {
             el.defaultMuted = true;
             el.muted = isMuted;
+            el.playsInline = true;
+            if (el.paused) {
+              el.play().catch(() => {});
+            }
           }
         }}
-        src={currentVideoUrl}
+        poster={posterUrl}
         autoPlay
         muted
         loop
@@ -163,10 +174,14 @@ export default function HeroVideo({ config }: HeroVideoProps) {
         preload="auto"
         controls={false}
         disablePictureInPicture
-        crossOrigin="anonymous"
         onLoadedMetadata={(e) => {
           const vid = e.currentTarget;
           vid.defaultMuted = true;
+          vid.muted = isMuted;
+          vid.play().catch(() => {});
+        }}
+        onLoadedData={(e) => {
+          const vid = e.currentTarget;
           vid.muted = isMuted;
           vid.play().catch(() => {});
         }}
@@ -176,18 +191,22 @@ export default function HeroVideo({ config }: HeroVideoProps) {
           vid.play().catch(() => {});
         }}
         onPause={(e) => {
-          e.currentTarget.play().catch(() => {});
+          // If paused by browser autoplay policy, retry muted playback
+          if (e.currentTarget.muted) {
+            e.currentTarget.play().catch(() => {});
+          }
         }}
         onError={(e) => {
           console.warn('Hero video load warning, retrying source:', e);
-          // If video failed and URL was relative or Supabase, try secondary fallback
           if (videoRef.current) {
             videoRef.current.load();
             videoRef.current.play().catch(() => {});
           }
         }}
         className={`absolute inset-0 w-full h-full ${objectFitClass} z-0 pointer-events-none`}
-      />
+      >
+        <source src={currentVideoUrl} type="video/mp4" />
+      </video>
 
       {/* Gradient Overlay for Typography Contrast & Visual Depth (only if text exists or overlay requested) */}
       {(hasTextContent || overlayOpacity > 0) && (

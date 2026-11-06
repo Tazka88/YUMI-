@@ -45,7 +45,7 @@ export const ProductCard: React.FC<{ product: Product; priority?: boolean; isFla
   }
 
   return (
-    <div className="bg-white rounded-xl shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden group flex flex-col h-full relative border border-gray-100">
+    <div className="bg-white rounded-xl shadow-[0_2px_10px_rgba(0,0,0,0.06)] hover:shadow-xl transition-all duration-300 overflow-hidden group flex flex-col h-full relative border border-gray-100/80">
       <div className="relative block aspect-[4/5] sm:aspect-square bg-gray-50/50 overflow-hidden shrink-0">
         {/* Badges - Top left */}
         <div className="absolute top-1 left-1 sm:top-2 sm:left-2 flex flex-col gap-1 z-10">

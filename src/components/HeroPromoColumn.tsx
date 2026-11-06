@@ -16,7 +16,7 @@ export default function HeroPromoColumn() {
       {/* 1. Carte Bons Plans avec Image */}
       <Link
         to="/category/all?promo=true"
-        className="flex-1 min-h-[115px] xl:min-h-[125px] relative rounded-2xl overflow-hidden border border-white/10 shadow-sm hover:shadow-xl hover:border-[#FF6B00]/70 transition-all duration-300 flex flex-col justify-between p-3.5 group active:scale-[0.98]"
+        className="flex-1 min-h-[115px] xl:min-h-[125px] relative rounded-2xl overflow-hidden border border-white/10 shadow-[0_2px_10px_rgba(0,0,0,0.06)] hover:shadow-xl hover:border-[#FF6B00]/70 transition-all duration-300 flex flex-col justify-between p-3.5 group active:scale-[0.98]"
       >
         {/* Background Image */}
         <img 
@@ -61,7 +61,7 @@ export default function HeroPromoColumn() {
       {/* 2. Carte Livraison 58 Wilayas avec Image */}
       <Link
         to="/category/all"
-        className="flex-1 min-h-[115px] xl:min-h-[125px] relative rounded-2xl overflow-hidden border border-white/10 shadow-sm hover:shadow-xl hover:border-orange-400/70 transition-all duration-300 flex flex-col justify-between p-3.5 group active:scale-[0.98]"
+        className="flex-1 min-h-[115px] xl:min-h-[125px] relative rounded-2xl overflow-hidden border border-white/10 shadow-[0_2px_10px_rgba(0,0,0,0.06)] hover:shadow-xl hover:border-orange-400/70 transition-all duration-300 flex flex-col justify-between p-3.5 group active:scale-[0.98]"
       >
         {/* Background Image */}
         <img 
@@ -109,7 +109,7 @@ export default function HeroPromoColumn() {
         href={GOOGLE_PLAY_URL}
         target="_blank"
         rel="noopener noreferrer"
-        className="flex-1 min-h-[115px] xl:min-h-[125px] relative rounded-2xl overflow-hidden border border-white/10 shadow-sm hover:shadow-xl hover:border-[#FF6B00]/70 transition-all duration-300 flex flex-col justify-between p-3.5 group active:scale-[0.98]"
+        className="flex-1 min-h-[115px] xl:min-h-[125px] relative rounded-2xl overflow-hidden border border-white/10 shadow-[0_2px_10px_rgba(0,0,0,0.06)] hover:shadow-xl hover:border-[#FF6B00]/70 transition-all duration-300 flex flex-col justify-between p-3.5 group active:scale-[0.98]"
       >
         {/* Background Image */}
         <img 

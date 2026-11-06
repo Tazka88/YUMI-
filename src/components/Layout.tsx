@@ -198,7 +198,7 @@ export default function Layout() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50 font-sans">
+    <div className="min-h-screen flex flex-col bg-[#f6f4f1] font-sans">
       <TopBar />
 
       {/* Header */}

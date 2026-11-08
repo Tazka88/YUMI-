@@ -863,33 +863,33 @@ export default function Home() {
                 <Link 
                   key={brand.id} 
                   to={`/brands/${brand.slug}`} 
-                  className="group relative flex flex-col justify-between w-[140px] sm:w-[170px] md:w-[185px] h-[115px] sm:h-[130px] shrink-0 rounded-xl bg-white border border-gray-200/90 p-3 transition-all duration-300 hover:border-orange-500 hover:shadow-md hover:-translate-y-0.5 snap-start"
+                  className="group relative flex flex-col justify-between w-[145px] sm:w-[175px] md:w-[190px] h-[120px] sm:h-[135px] shrink-0 rounded-2xl bg-white border border-gray-200/90 p-3 transition-all duration-300 hover:border-orange-500 hover:shadow-md hover:-translate-y-0.5 snap-start shadow-[0_2px_10px_rgba(0,0,0,0.06)]"
                 >
-                  <div className="flex-1 flex items-center justify-center p-1">
+                  <div className="flex-1 w-full flex items-center justify-center p-1 overflow-hidden">
                     {brand.image ? (
                       <img 
-                        src={getResizedImageUrl(brand.image, 200)} 
-                        srcSet={brand.image && brand.image.startsWith('/api/images/') ? `${getResizedImageUrl(brand.image, 140)} 140w, ${getResizedImageUrl(brand.image, 200)} 200w, ${getResizedImageUrl(brand.image, 400)} 400w` : undefined}
-                        sizes="(max-width: 640px) 140px, 185px"
+                        src={getResizedImageUrl(brand.image, 240)} 
+                        srcSet={brand.image && brand.image.startsWith('/api/images/') ? `${getResizedImageUrl(brand.image, 160)} 160w, ${getResizedImageUrl(brand.image, 240)} 240w, ${getResizedImageUrl(brand.image, 400)} 400w` : undefined}
+                        sizes="(max-width: 640px) 145px, 190px"
                         alt={brand.name} 
-                        width="185"
+                        width="190"
                         height="90"
                         loading="lazy"
                         decoding="async"
-                        className="max-h-[50px] sm:max-h-[60px] max-w-[85%] object-contain group-hover:scale-105 transition-transform duration-300" 
+                        className="max-h-[62px] sm:max-h-[72px] w-full max-w-[94%] object-contain group-hover:scale-105 transition-transform duration-300 drop-shadow-2xs" 
                         referrerPolicy="no-referrer"
                       />
                     ) : (
-                      <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 font-bold text-base group-hover:bg-orange-50 group-hover:text-orange-600 transition-colors">
+                      <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 font-bold text-lg group-hover:bg-orange-50 group-hover:text-orange-600 transition-colors">
                         {brand.name.charAt(0)}
                       </div>
                     )}
                   </div>
-                  <div className="border-t border-gray-100 pt-1.5 flex items-center justify-between">
+                  <div className="border-t border-gray-100 pt-2 flex items-center justify-between">
                     <span className="text-xs font-bold text-gray-800 truncate group-hover:text-orange-600 transition-colors">
                       {brand.name}
                     </span>
-                    <ChevronRight size={13} className="text-gray-300 group-hover:text-orange-600 transition-colors shrink-0" />
+                    <ChevronRight size={13} className="text-gray-400 group-hover:text-orange-600 transition-colors shrink-0" />
                   </div>
                 </Link>
               ))

@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ImageIcon } from 'lucide-react';
+import { ImageIcon, ChevronRight } from 'lucide-react';
 import SEO from '../components/SEO';
-import { fetchWithCache } from '../lib/utils';
+import { fetchWithCache, getResizedImageUrl } from '../lib/utils';
 
 export default function Brands() {
   const [brands, setBrands] = useState<any[]>([]);
@@ -47,26 +47,35 @@ export default function Brands() {
         <span className="text-gray-800 font-medium">Toutes les marques</span>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm p-6 md:p-8 mb-8">
-        <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">Toutes nos marques</h1>
-        <p className="text-gray-600 mb-8">Découvrez les produits de vos marques préférées.</p>
+      <div className="bg-white rounded-2xl shadow-[0_2px_10px_rgba(0,0,0,0.06)] p-6 md:p-8 mb-8 border border-gray-100">
+        <h1 className="text-2xl md:text-3xl font-extrabold text-gray-900 mb-2">Toutes nos marques</h1>
+        <p className="text-gray-500 mb-8 text-sm">Découvrez les boutiques officielles et produits de vos marques préférées.</p>
 
         {brands.length > 0 ? (
-          <div className="flex flex-wrap justify-center gap-6">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 sm:gap-6">
             {brands.map(brand => (
               <Link 
                 key={brand.id} 
                 to={`/brands/${brand.slug}`} 
-                className="flex flex-col items-center justify-center w-[160px] h-[120px] sm:w-[180px] sm:h-[140px] rounded-[12px] bg-white shadow-[0_2px_12px_rgba(0,0,0,0.08)] hover:shadow-[0_8px_24px_rgba(0,0,0,0.12)] hover:scale-[1.03] transition-all duration-300 group"
+                className="flex flex-col justify-between h-[130px] sm:h-[145px] rounded-2xl bg-white border border-gray-200/80 p-3 shadow-[0_2px_10px_rgba(0,0,0,0.05)] hover:shadow-md hover:border-orange-500 hover:-translate-y-1 transition-all duration-300 group"
               >
-                {brand.image ? (
-                  <img src={brand.image} alt={brand.name} className="w-[80%] h-[80%] object-contain p-4" />
-                ) : (
-                  <div className="w-[80%] h-[80%] flex items-center justify-center text-gray-400 p-4">
-                    <span className="font-bold text-4xl">{brand.name.charAt(0)}</span>
-                  </div>
-                )}
-                <span className="font-bold text-gray-800 text-center group-hover:text-orange-600 px-4 truncate w-full">{brand.name}</span>
+                <div className="flex-1 w-full flex items-center justify-center p-1 overflow-hidden">
+                  {brand.image ? (
+                    <img 
+                      src={getResizedImageUrl(brand.image, 240)} 
+                      alt={brand.name} 
+                      className="max-h-[66px] sm:max-h-[78px] w-full max-w-[94%] object-contain group-hover:scale-105 transition-transform duration-300 drop-shadow-2xs" 
+                    />
+                  ) : (
+                    <div className="w-12 h-12 flex items-center justify-center text-gray-400">
+                      <span className="font-extrabold text-3xl">{brand.name.charAt(0)}</span>
+                    </div>
+                  )}
+                </div>
+                <div className="w-full pt-2 border-t border-gray-100 flex items-center justify-between">
+                  <span className="font-bold text-xs text-gray-800 truncate group-hover:text-orange-600 transition-colors">{brand.name}</span>
+                  <ChevronRight size={13} className="text-gray-400 group-hover:text-orange-500 transition-transform group-hover:translate-x-0.5 shrink-0" />
+                </div>
               </Link>
             ))}
           </div>

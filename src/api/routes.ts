@@ -129,6 +129,9 @@ const processImage = (table: string, id: number | string, field: string, image: 
       hash = Math.abs(code).toString(36);
     }
   }
+  if (table === 'brands') {
+    hash = `${hash}-v4`;
+  }
   const seoPart = slug ? `/${slug}.webp` : '';
   return `/api/images/${table}/${id}/${field}${seoPart}?v=${hash}`;
 };
@@ -145,24 +148,93 @@ const getSharp = async () => {
   }
 };
 
+// ==========================================
+// IN-MEMORY PROCESSED IMAGE CACHE
+// ==========================================
+const IMAGE_BUFFER_CACHE = new Map<string, { buffer: Buffer, contentType: string, expires: number }>();
+const MAX_IMAGE_CACHE_ENTRIES = 300;
+
+const getImageCache = (key: string) => {
+  const item = IMAGE_BUFFER_CACHE.get(key);
+  if (item && item.expires > Date.now()) return item;
+  if (item) IMAGE_BUFFER_CACHE.delete(key);
+  return null;
+};
+
+const setImageCache = (key: string, buffer: Buffer, contentType: string, ttlMs = 1000 * 60 * 60 * 4) => {
+  if (IMAGE_BUFFER_CACHE.size >= MAX_IMAGE_CACHE_ENTRIES) {
+    const oldestKey = IMAGE_BUFFER_CACHE.keys().next().value;
+    if (oldestKey) IMAGE_BUFFER_CACHE.delete(oldestKey);
+  }
+  IMAGE_BUFFER_CACHE.set(key, { buffer, contentType, expires: Date.now() + ttlMs });
+};
+
+// Dedicated optimizer for brand SVGs with square padding without touching horizontal SVGs
+const optimizeBrandSvg = (buffer: Buffer, brandId?: string): Buffer => {
+  let svgStr = buffer.toString('utf8');
+  const id = String(brandId || '');
+  if (id === '24' || (svgStr.includes('viewBox="0 0 750 750"') && svgStr.includes('VTracer'))) {
+    // hoco
+    svgStr = svgStr.replace(/viewBox=["\x27][^"\x27]+["\x27]/, 'viewBox="34 260 680 226"');
+  } else if (id === '10' || svgStr.includes('viewBox="0 0 193 193"')) {
+    // Sonashi
+    svgStr = svgStr.replace(/viewBox=["\x27][^"\x27]+["\x27]/, 'viewBox="8 82 177 29"');
+    svgStr = svgStr.replace(/<path[^>]*fill:rgb\(100%,100%,100%\)[^>]*\/>/gi, '');
+  } else if (id === '25' || (id === '' && svgStr.includes('192.756') && svgStr.includes('#cc2229') && svgStr.includes('M49.548'))) {
+    // kenwood
+    svgStr = svgStr.replace(/viewBox=["\x27][^"\x27]+["\x27]/, 'viewBox="2 80 188 32"');
+    svgStr = svgStr.replace(/<path[^>]*fill=["\x27]#fff["\x27][^>]*d=["\x27]M0 0h192\.756v192\.756H0V0z["\x27][^>]*\/>/gi, '');
+  } else if (id === '9' || (id === '' && svgStr.includes('192.756') && svgStr.includes('M31.016 96.918'))) {
+    // Nespresso
+    svgStr = svgStr.replace(/viewBox=["\x27][^"\x27]+["\x27]/, 'viewBox="10 80 173 30"');
+    svgStr = svgStr.replace(/<path[^>]*fill=["\x27]#fff["\x27][^>]*d=["\x27]M0 0h192\.756v192\.756H0V0z["\x27][^>]*\/>/gi, '');
+  } else if (id === '30' || (id === '' && svgStr.includes('192.756') && svgStr.includes('M72.699 100.652'))) {
+    // seb
+    svgStr = svgStr.replace(/viewBox=["\x27][^"\x27]+["\x27]/, 'viewBox="9 76 178 40"');
+    svgStr = svgStr.replace(/<path[^>]*fill=["\x27]#fff["\x27][^>]*d=["\x27]M0 0h192\.756v192\.756H0V0z["\x27][^>]*\/>/gi, '');
+  }
+  // All other brand SVGs (Robuste, Moulinex, LG, PHILIPS, Tefal, BOSCH, etc.) remain 100% untouched
+  return Buffer.from(svgStr, 'utf8');
+};
+
 // Helper to serve image data directly without CPU intensive sharp usage or Regex at runtime
-const serveImageData = async (req: any, res: any, imageData: string, targetWidth?: number, cacheControl = 'public, max-age=31536000, immutable') => {
-  let processWithSharp = async (inputBuffer, originalExt) => {
+const serveImageData = async (req: any, res: any, imageData: string, targetWidth?: number, cacheControl = 'public, max-age=31536000, immutable', table?: string) => {
+  const isBrand = table === 'brands' || req?.params?.table === 'brands' || req?.originalUrl?.includes('/images/brands/');
+  const brandId = String(req?.params?.id || '');
+  const w = req?.query?.w || targetWidth;
+  const f = req?.query?.f;
+  const q = req?.query?.q;
+  const cacheKey = `${imageData}_w${w || ''}_f${f || ''}_q${q || ''}_b${isBrand ? '1' : '0'}`;
+
+  // Check in-memory cache first
+  const cached = getImageCache(cacheKey);
+  if (cached) {
+    res.setHeader('Content-Type', cached.contentType);
+    res.setHeader('Cache-Control', cacheControl);
+    res.setHeader('Vercel-CDN-Cache-Control', 'max-age=31536000, immutable');
+    res.setHeader('CDN-Cache-Control', 'max-age=31536000, immutable');
+    return res.send(cached.buffer);
+  }
+
+  let processWithSharp = async (inputBuffer: Buffer, originalExt: string) => {
     let outputBuffer = inputBuffer;
     let ext = originalExt;
-    const w = req?.query?.w || targetWidth;
-    const f = req?.query?.f;
-    const q = req?.query?.q;
     
-    if (w || f === 'webp' || q) {
+    // Only process raster bitmaps with Sharp (never SVGs)
+    if (ext !== 'svg+xml') {
       try {
-        const sharp = (await import('sharp')).default;
-        let s = sharp(inputBuffer);
-        if (w) {
-          s = s.resize(Number(w), null, { withoutEnlargement: true });
+        const sharpModule = (await import('sharp')).default;
+        let s = sharpModule(inputBuffer);
+        if (isBrand) {
+          s = s.trim();
         }
-        if (f === 'webp' || ext === 'webp') {
-          s = s.webp({ quality: q ? Number(q) : 80 });
+        if (w) {
+          s = s.resize(Number(w), null, { fit: 'inside', withoutEnlargement: true });
+        } else if (isBrand) {
+          s = s.resize(300, 100, { fit: 'inside', withoutEnlargement: true });
+        }
+        if (isBrand || f === 'webp' || ext === 'webp') {
+          s = s.webp({ quality: q ? Number(q) : 85 });
           ext = 'webp';
         } else if (q) {
           if (ext === 'jpeg' || ext === 'jpg') {
@@ -189,13 +261,27 @@ const serveImageData = async (req: any, res: any, imageData: string, targetWidth
       const base64Data = imageData.substring(commaIndex + 1);
       let buffer = Buffer.from(base64Data, 'base64');
       
-      if (ext !== 'svg+xml') {
-        const processed = await processWithSharp(buffer, ext);
-        buffer = processed.buffer;
-        ext = processed.ext;
+      if (ext === 'svg+xml') {
+        if (isBrand) {
+          buffer = optimizeBrandSvg(buffer, brandId);
+        }
+        const finalContentType = 'image/svg+xml';
+        setImageCache(cacheKey, buffer, finalContentType);
+        res.setHeader('Content-Type', finalContentType);
+        res.setHeader('Cache-Control', cacheControl);
+        res.setHeader('Vercel-CDN-Cache-Control', 'max-age=31536000, immutable');
+        res.setHeader('CDN-Cache-Control', 'max-age=31536000, immutable');
+        return res.send(buffer);
       }
+
+      const processed = await processWithSharp(buffer, ext);
+      buffer = processed.buffer;
+      ext = processed.ext;
       
-      res.setHeader('Content-Type', `image/${ext === 'svg+xml' ? 'svg+xml' : ext}`);
+      const finalContentType = `image/${ext}`;
+      setImageCache(cacheKey, buffer, finalContentType);
+
+      res.setHeader('Content-Type', finalContentType);
       res.setHeader('Cache-Control', cacheControl);
       res.setHeader('Vercel-CDN-Cache-Control', 'max-age=31536000, immutable');
       res.setHeader('CDN-Cache-Control', 'max-age=31536000, immutable');
@@ -205,20 +291,36 @@ const serveImageData = async (req: any, res: any, imageData: string, targetWidth
   
   if (imageData.startsWith('http') || imageData.startsWith('https')) {
     try {
-      const resp = await fetch(imageData);
+      const abortSignal = (AbortSignal as any).timeout ? (AbortSignal as any).timeout(4000) : undefined;
+      const resp = await fetch(imageData, { signal: abortSignal });
       if (resp.ok) {
         const arrayBuffer = await resp.arrayBuffer();
         let buffer = Buffer.from(arrayBuffer);
         let contentType = resp.headers.get('content-type') || 'image/webp';
         let ext = contentType.split('/')[1] || 'jpeg';
         
-        if (ext !== 'svg+xml') {
-          const processed = await processWithSharp(buffer, ext);
-          buffer = processed.buffer;
-          ext = processed.ext;
-          contentType = `image/${ext}`;
+        // If SVG: serve natively as vector image with fast viewBox adjustment if padded
+        if (ext === 'svg+xml' || contentType.includes('svg') || imageData.includes('.svg')) {
+          if (isBrand) {
+            buffer = optimizeBrandSvg(buffer, brandId);
+          }
+          const finalContentType = 'image/svg+xml';
+          setImageCache(cacheKey, buffer, finalContentType);
+          res.setHeader('Content-Type', finalContentType);
+          res.setHeader('Cache-Control', cacheControl);
+          res.setHeader('Vercel-CDN-Cache-Control', 'max-age=31536000, immutable');
+          res.setHeader('CDN-Cache-Control', 'max-age=31536000, immutable');
+          return res.send(buffer);
         }
+
+        // Bitmaps: Trim and optimize with Sharp
+        const processed = await processWithSharp(buffer, ext);
+        buffer = processed.buffer;
+        ext = processed.ext;
+        contentType = `image/${ext}`;
         
+        setImageCache(cacheKey, buffer, contentType);
+
         res.setHeader('Content-Type', contentType);
         res.setHeader('Cache-Control', cacheControl);
         res.setHeader('Vercel-CDN-Cache-Control', 'max-age=31536000, immutable');
@@ -229,16 +331,16 @@ const serveImageData = async (req: any, res: any, imageData: string, targetWidth
         res.setHeader('Cache-Control', 'public, max-age=60');
         return res.send(`<svg width="400" height="400" xmlns="http://www.w3.org/2000/svg"><rect width="400" height="400" fill="#f3f4f6"/><path d="M150 150 L250 250 M250 150 L150 250" stroke="#d1d5db" stroke-width="4" stroke-linecap="round"/><rect width="180" height="140" x="110" y="130" fill="none" stroke="#d1d5db" stroke-width="4" rx="10"/></svg>`);
       }
-    } catch (err) {
-      console.warn('Proxy fetch failed, falling back to redirect:', err);
+    } catch (err: any) {
+      // If network times out, silently fallback to direct redirect
     }
     res.setHeader('Cache-Control', cacheControl);
-    return res.redirect(301, imageData);
+    return res.redirect(302, imageData);
   }
   
   if (imageData.startsWith('/')) {
     res.setHeader('Cache-Control', cacheControl);
-    return res.redirect(301, imageData);
+    return res.redirect(302, imageData);
   }
   
   res.status(404).json({ error: 'Invalid image format' });
@@ -309,7 +411,7 @@ router.get(['/images/:table/:id/:field', '/images/:table/:id/:field/:seoSlug'], 
     
     const width = parseInt(req.query.w as string);
     
-    await serveImageData(req, res, imageData, width);
+    await serveImageData(req, res, imageData, width, undefined, table);
 
   } catch (err) {
     console.error('Error serving image:', err);

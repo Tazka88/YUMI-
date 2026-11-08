@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useSearchParams, Link } from 'react-router-dom';
-import { ShoppingCart, Star, Filter, ChevronDown, ChevronUp } from 'lucide-react';
+import { ShoppingCart, Star, Filter, ChevronDown, ChevronUp, ChevronRight, Sparkles, Layers } from 'lucide-react';
 import { useCartStore, Product } from '../store/cartStore';
 import { formatPrice } from '../utils/formatPrice';
 import { ProductCard } from '../components/ProductCard';
@@ -9,6 +9,144 @@ import { getCategoryWithEmoji, CategoryNameDisplay } from '../components/Layout'
 import Slider from '../components/Slider';
 import { fetchWithCache } from '../lib/utils';
 import { categorySEOData } from '../utils/seoData';
+
+const SUBCATEGORY_FALLBACK_IMAGES: Record<string, string> = {
+  // Électroménager
+  "petits-electromenagers": "https://images.unsplash.com/photo-1570222094114-d054a817e56b?w=800&auto=format&fit=crop&q=80",
+  "gros-electromenagers": "https://images.unsplash.com/photo-1556911220-e15b29be8c8f?w=800&auto=format&fit=crop&q=80",
+  "chauffage-climatisation": "https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=800&auto=format&fit=crop&q=80",
+
+  // Téléphonie
+  "telephone-portable": "https://evvbhalgyffagsesmvhu.supabase.co/storage/v1/object/public/images/uploads/1788299230867-rjf4nqr.webp",
+  "accessoires-telephone": "https://evvbhalgyffagsesmvhu.supabase.co/storage/v1/object/public/images/uploads/1788299296497-stuu4c.webp",
+  "telephones-fixes": "https://evvbhalgyffagsesmvhu.supabase.co/storage/v1/object/public/images/uploads/1788299197925-f6sjys.webp",
+
+  // Mode & Vêtements
+  "hommes": "https://images.unsplash.com/photo-1490578474895-699bc4e2cf59?w=800&auto=format&fit=crop&q=80",
+  "femmes": "https://images.unsplash.com/photo-1483985988355-763728e1935b?w=800&auto=format&fit=crop&q=80",
+  "enfant-et-bebe": "https://images.unsplash.com/photo-1515488042361-ee00e0ddd4e4?w=800&auto=format&fit=crop&q=80",
+
+  // Maison & Cuisine & Bureau
+  "maison-cuisine": "https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?w=800&auto=format&fit=crop&q=80",
+  "cuisine": "https://images.unsplash.com/photo-1556911220-bff31c812dba?w=800&auto=format&fit=crop&q=80",
+  "bureau-fournitures": "https://images.unsplash.com/photo-1524758631624-e2822e304c36?w=800&auto=format&fit=crop&q=80",
+  "bricolage-renovation": "https://images.unsplash.com/photo-1504148455328-c376907d081c?w=800&auto=format&fit=crop&q=80",
+  "jardin-et-plein-air": "https://images.unsplash.com/photo-1585320806297-9794b3e4eeae?w=800&auto=format&fit=crop&q=80",
+
+  // Informatique
+  "accessoires-pc": "https://images.unsplash.com/photo-1618384887929-16ec33fab9ef?w=800&auto=format&fit=crop&q=80",
+  "composants-pc-informatique": "https://images.unsplash.com/photo-1587202372775-e229f172b9d7?w=800&auto=format&fit=crop&q=80",
+  "reseaux-informatique": "https://images.unsplash.com/photo-1544197150-b99a580bb7a8?w=800&auto=format&fit=crop&q=80",
+
+  // Sports & Loisirs
+  "sport-fitness": "https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=800&auto=format&fit=crop&q=80",
+  "loisirs-plein-air": "https://images.unsplash.com/photo-1485965120184-e220f721d03e?w=800&auto=format&fit=crop&q=80",
+  "survetements-de-sport": "https://images.unsplash.com/photo-1517466787929-bc90951d0974?w=800&auto=format&fit=crop&q=80",
+  "camping-et-randonnee": "https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?w=800&auto=format&fit=crop&q=80",
+
+  // Beauté & Santé
+  "beaute-soins-femme": "https://evvbhalgyffagsesmvhu.supabase.co/storage/v1/object/public/images/uploads/1791383213095-j5fuai.webp",
+  "beaute-soins-homme": "https://evvbhalgyffagsesmvhu.supabase.co/storage/v1/object/public/images/uploads/1791382893185-1jpwdp.webp",
+  "bien-etre-massage-relaxation": "https://evvbhalgyffagsesmvhu.supabase.co/storage/v1/object/public/images/uploads/1791383438335-f39b5s.webp",
+  "sante-premiers-soins": "https://evvbhalgyffagsesmvhu.supabase.co/storage/v1/object/public/images/uploads/1791383705502-pzhu9.webp",
+  "soins-bucco-dentaires": "https://evvbhalgyffagsesmvhu.supabase.co/storage/v1/object/public/images/uploads/1791383617701-qd5ad8.webp",
+};
+
+const SUBCATEGORY_SUBTITLES: Record<string, string> = {
+  "petits-electromenagers": "Cafetières, Mixeurs & Air Fryers",
+  "gros-electromenagers": "Réfrigérateurs, Fours & Lave-linge",
+  "chauffage-climatisation": "Climatiseurs & Radiateurs",
+  "telephone-portable": "Smartphones, iPhones & Android",
+  "accessoires-telephone": "Écouteurs, Coques & Chargeurs",
+  "telephones-fixes": "Téléphones sans fil & Bureautique",
+  "hommes": "Costumes, Chemises & Streetwear",
+  "femmes": "Robes, Chaussures & Sacs à main",
+  "enfant-et-bebe": "Mode Bébé, Poussettes & Jouets",
+  "maison-cuisine": "Salons, Décoration & Mobilier",
+  "cuisine": "Poêles, Casseroles & Ustensiles Chef",
+  "bureau-fournitures": "Bureaux, Chaises & Organisation",
+  "bricolage-renovation": "Perceuses, Outillage & Bricolage",
+  "jardin-et-plein-air": "Mobilier Extérieur & Outillage Jardin",
+  "accessoires-pc": "Claviers Gamers, Souris & Tapis",
+  "composants-pc-informatique": "Cartes Graphiques, RAM & Boîtiers",
+  "reseaux-informatique": "Routeurs Wi-Fi 6 & Commutateurs",
+  "sport-fitness": "Haltères, Tapis de Course & Muscu",
+  "loisirs-plein-air": "Vélos, Trottinettes & Glisse",
+  "survetements-de-sport": "Joggings, Vestes & Tenues Pro",
+  "camping-et-randonnee": "Tentes, Sacs à dos & Bivouac",
+  "beaute-soins-femme": "Soins du Visage, Parfums & Make-up",
+  "beaute-soins-homme": "Tondeuses, Parfums & Soins Barbe",
+  "bien-etre-massage-relaxation": "Appareils de Massage & Relaxation",
+  "sante-premiers-soins": "Tensiomètres & Soins Quotidiens",
+  "soins-bucco-dentaires": "Brosses à dents électriques & Soins"
+};
+
+const SubCategoryCard: React.FC<{
+  item: any;
+  parentName?: string;
+  queryParam: 'sub' | 'subsub' | 'level4';
+}> = ({ item, parentName, queryParam }) => {
+  const cleanName = item.name.replace(/^[\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF]\s*/g, '').trim();
+  const subtitle = SUBCATEGORY_SUBTITLES[item.slug] || (parentName ? `Univers ${parentName}` : "Découvrez la sélection");
+
+  const rawImage = item.image && typeof item.image === 'string' && (item.image.startsWith('http') || item.image.startsWith('/api/'))
+    ? item.image
+    : (SUBCATEGORY_FALLBACK_IMAGES[item.slug] || item.image || '');
+
+  const imageUrl = rawImage && rawImage.startsWith('/api/images/')
+    ? `${rawImage}${rawImage.includes('?') ? '&' : '?'}w=800`
+    : rawImage;
+
+  return (
+    <Link
+      to={`/category/${item.slug}?${queryParam}=true`}
+      className="group relative rounded-2xl overflow-hidden border border-gray-100 shadow-[0_2px_10px_rgba(0,0,0,0.06)] hover:shadow-xl hover:border-[#FF6B00]/70 transition-all duration-300 block select-none bg-neutral-900 active:scale-[0.99] aspect-[16/9] sm:aspect-[4/3] lg:aspect-[16/11]"
+    >
+      {/* Background Image with lazy loading and object-cover */}
+      {imageUrl ? (
+        <img
+          src={imageUrl}
+          alt={cleanName}
+          loading="lazy"
+          decoding="async"
+          className="absolute inset-0 w-full h-full object-cover object-center transition-transform duration-500 ease-out group-hover:scale-105"
+        />
+      ) : (
+        <div className="absolute inset-0 bg-gradient-to-br from-neutral-900 via-neutral-800 to-orange-950 flex items-center justify-center">
+          <Layers size={48} className="text-orange-500/30" />
+        </div>
+      )}
+
+      {/* Atmospheric Contrast Dark Gradient Overlay (high performance, no backdrop filter) */}
+      <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent group-hover:via-black/30 transition-colors duration-300 pointer-events-none" />
+
+      {/* Top Floating Badge */}
+      <div className="absolute top-3 left-3 sm:top-4 sm:left-4 z-10 flex items-center gap-2 pointer-events-none">
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/60 border border-white/15 text-[11px] font-bold text-orange-400 shadow-sm group-hover:bg-[#FF6B00] group-hover:text-white transition-colors">
+          <Sparkles size={12} />
+          <span>Rayon</span>
+        </span>
+      </div>
+
+      {/* Bottom Content Area: Clear, bold typography and integrated subtle action arrow */}
+      <div className="absolute inset-x-0 bottom-0 p-4 sm:p-5 z-10 flex items-end justify-between gap-3 pointer-events-none">
+        <div className="flex flex-col min-w-0 pr-2">
+          <span className="text-xs font-bold text-orange-400 uppercase tracking-wider mb-1 line-clamp-1 drop-shadow-xs">
+            {subtitle}
+          </span>
+          <h3 className="font-black text-white text-lg sm:text-xl lg:text-2xl tracking-tight leading-snug group-hover:text-orange-200 transition-colors drop-shadow-md truncate">
+            {cleanName}
+          </h3>
+        </div>
+
+        {/* Integrated Discreet Arrow Action (replaces the bulky 30% bottom button) */}
+        <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/20 group-hover:bg-[#FF6B00] text-white flex items-center justify-center shrink-0 transition-all duration-300 group-hover:scale-105 group-hover:translate-x-0.5 shadow-sm">
+          <ChevronRight size={18} className="transition-transform group-hover:translate-x-0.5" />
+        </div>
+      </div>
+    </Link>
+  );
+};
 
 export default function Category() {
   const { slug } = useParams();
@@ -515,99 +653,48 @@ export default function Category() {
           </div>
 
           {!loading && currentSubcategories.length > 0 && (
-            <div className="mb-8">
-              <h2 className="text-lg font-bold text-gray-800 mb-4">Sous-catégories</h2>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+            <div className="mb-10 sm:mb-14">
+              <div className="flex items-center gap-2.5 mb-4 sm:mb-6">
+                <span className="w-2.5 h-6 bg-[#FF6B00] rounded-full"></span>
+                <h2 className="text-xl sm:text-2xl font-black text-gray-900 tracking-tight">
+                  Sous-catégories
+                </h2>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                 {currentSubcategories.map(sub => (
-                  <Link 
-                    key={sub.id} 
-                    to={`/category/${sub.slug}?sub=true`}
-                    className="bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-md hover:border-orange-200 transition-all flex flex-col items-center justify-center group overflow-hidden"
-                  >
-                    <div className="w-full aspect-square bg-gray-50 flex items-center justify-center overflow-hidden relative">
-                      {sub.image ? (
-                        <img 
-                          src={getResizedImageUrl(sub.image, 600)} 
-                          alt={sub.name} 
-                          className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500" 
-                          referrerPolicy="no-referrer"
-                          loading="lazy"
-                          decoding="async"
-                        />
-                      ) : (
-                        <span className="text-4xl">{getCategoryWithEmoji(sub.name).split(' ')[0]}</span>
-                      )}
-                    </div>
-                    <div className="p-3 w-full text-center border-t border-gray-50 bg-white">
-                      <span className="font-semibold text-gray-800 text-sm group-hover:text-orange-500 transition-colors line-clamp-1">{sub.name}</span>
-                    </div>
-                  </Link>
+                  <SubCategoryCard key={sub.id} item={sub} parentName={categoryName} queryParam="sub" />
                 ))}
               </div>
             </div>
           )}
 
           {!loading && currentSubSubcategories.length > 0 && (
-            <div className="mb-8">
-              <h2 className="text-lg font-bold text-gray-800 mb-4">Sous-sous-catégories</h2>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+            <div className="mb-10 sm:mb-14">
+              <div className="flex items-center gap-2.5 mb-4 sm:mb-6">
+                <span className="w-2.5 h-6 bg-[#FF6B00] rounded-full"></span>
+                <h2 className="text-xl sm:text-2xl font-black text-gray-900 tracking-tight">
+                  Sous-sous-catégories
+                </h2>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                 {currentSubSubcategories.map(subsub => (
-                  <Link 
-                    key={subsub.id} 
-                    to={`/category/${subsub.slug}?subsub=true`}
-                    className="bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-md hover:border-orange-200 transition-all flex flex-col items-center justify-center group overflow-hidden"
-                  >
-                    <div className="w-full aspect-square bg-gray-50 flex items-center justify-center overflow-hidden relative">
-                      {subsub.image ? (
-                        <img 
-                          src={getResizedImageUrl(subsub.image, 600)} 
-                          alt={subsub.name} 
-                          className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500" 
-                          referrerPolicy="no-referrer"
-                          loading="lazy"
-                          decoding="async"
-                        />
-                      ) : (
-                        <span className="text-4xl">{getCategoryWithEmoji(subsub.name).split(' ')[0]}</span>
-                      )}
-                    </div>
-                    <div className="p-3 w-full text-center border-t border-gray-50 bg-white">
-                      <span className="font-semibold text-gray-800 text-sm group-hover:text-orange-500 transition-colors line-clamp-1">{subsub.name}</span>
-                    </div>
-                  </Link>
+                  <SubCategoryCard key={subsub.id} item={subsub} parentName={categoryName} queryParam="subsub" />
                 ))}
               </div>
             </div>
           )}
 
           {!loading && currentSubSubSubcategories.length > 0 && (
-            <div className="mb-8">
-              <h2 className="text-lg font-bold text-gray-800 mb-4">Catégories spécialisées</h2>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+            <div className="mb-10 sm:mb-14">
+              <div className="flex items-center gap-2.5 mb-4 sm:mb-6">
+                <span className="w-2.5 h-6 bg-[#FF6B00] rounded-full"></span>
+                <h2 className="text-xl sm:text-2xl font-black text-gray-900 tracking-tight">
+                  Catégories spécialisées
+                </h2>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                 {currentSubSubSubcategories.map(sss => (
-                  <Link 
-                    key={sss.id} 
-                    to={`/category/${sss.slug}?level4=true`}
-                    className="bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-md hover:border-orange-200 transition-all flex flex-col items-center justify-center group overflow-hidden"
-                  >
-                    <div className="w-full aspect-square bg-gray-50 flex items-center justify-center overflow-hidden relative">
-                      {sss.image ? (
-                        <img 
-                          src={getResizedImageUrl(sss.image, 600)} 
-                          alt={sss.name} 
-                          className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500" 
-                          referrerPolicy="no-referrer"
-                          loading="lazy"
-                          decoding="async"
-                        />
-                      ) : (
-                        <span className="text-4xl">👟</span>
-                      )}
-                    </div>
-                    <div className="p-3 w-full text-center border-t border-gray-50 bg-white">
-                      <span className="font-semibold text-gray-800 text-sm group-hover:text-orange-500 transition-colors line-clamp-1">{sss.name}</span>
-                    </div>
-                  </Link>
+                  <SubCategoryCard key={sss.id} item={sss} parentName={categoryName} queryParam="level4" />
                 ))}
               </div>
             </div>

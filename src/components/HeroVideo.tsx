@@ -155,20 +155,11 @@ export default function HeroVideo({ config }: HeroVideoProps) {
       {/* Exclusively Video Element (ONLY loaded for active device, never both) */}
       <video
         key={currentVideoUrl}
-        ref={(el) => {
-          videoRef.current = el;
-          if (el) {
-            el.defaultMuted = true;
-            el.muted = isMuted;
-            el.playsInline = true;
-            if (el.paused) {
-              el.play().catch(() => {});
-            }
-          }
-        }}
+        ref={videoRef}
+        src={currentVideoUrl}
         poster={posterUrl}
         autoPlay
-        muted
+        muted={isMuted}
         loop
         playsInline
         preload="auto"
@@ -176,7 +167,6 @@ export default function HeroVideo({ config }: HeroVideoProps) {
         disablePictureInPicture
         onLoadedMetadata={(e) => {
           const vid = e.currentTarget;
-          vid.defaultMuted = true;
           vid.muted = isMuted;
           vid.play().catch(() => {});
         }}
@@ -191,17 +181,12 @@ export default function HeroVideo({ config }: HeroVideoProps) {
           vid.play().catch(() => {});
         }}
         onPause={(e) => {
-          // If paused by browser autoplay policy, retry muted playback
           if (e.currentTarget.muted) {
             e.currentTarget.play().catch(() => {});
           }
         }}
         onError={(e) => {
-          console.warn('Hero video load warning, retrying source:', e);
-          if (videoRef.current) {
-            videoRef.current.load();
-            videoRef.current.play().catch(() => {});
-          }
+          console.warn('Hero video load warning:', e);
         }}
         className={`absolute inset-0 w-full h-full ${objectFitClass} z-0 pointer-events-none`}
       >

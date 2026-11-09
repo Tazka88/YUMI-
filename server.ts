@@ -45,8 +45,16 @@ app.use(cors({
 app.use(helmet({
   crossOriginResourcePolicy: false,
   crossOriginEmbedderPolicy: false,
+  crossOriginOpenerPolicy: false,
   contentSecurityPolicy: false,
+  frameguard: false,
 }));
+
+// Ensure X-Frame-Options is never present so the preview iframe can embed safely in AI Studio
+app.use((_req, res, next) => {
+  res.removeHeader('X-Frame-Options');
+  next();
+});
 
 // app.use(compression()); // Removed to prevent double-compression in Vercel
 app.use(express.json({ limit: '50mb' }));
@@ -298,6 +306,18 @@ const escapeHtml = (str: any): string => {
     }
     next();
   });
+
+  // Vite dev middleware or production static files before SPA wildcard handler
+  app.use((req, res, next) => {
+    if (vite) {
+      return vite.middlewares(req, res, next);
+    }
+    next();
+  });
+
+  if (process.env.NODE_ENV === 'production') {
+    app.use(express.static(path.join(process.cwd(), 'dist')));
+  }
 
 app.get('*', async (req, res, next) => {
   // If it looks like a static file request (has extension dot), let it fall through
@@ -1247,25 +1267,18 @@ app.use((err: any, req: any, res: any, next: any) => {
 // Export the Express API for Vercel Serverless Functions
 
 async function startServer() {
-  const PORT = 3000;
+  const PORT = Number(process.env.PORT) || 3000;
   
   if (process.env.NODE_ENV !== 'production') {
-    const { createServer: createViteServer } = await import('vite');
-    vite = await createViteServer({
-      server: { middlewareMode: true, hmr: false },
-      appType: 'custom',
-    });
-    // Add vite middleware right before the SEO wildcard handler
-    const getStarIndex = app._router.stack.findIndex((layer: any) => layer.route && layer.route.path === '*');
-    if (getStarIndex !== -1) {
-      const starLayer = app._router.stack.splice(getStarIndex, 1)[0];
-      app.use(vite.middlewares);
-      app._router.stack.push(starLayer);
-    } else {
-      app.use(vite.middlewares);
+    try {
+      const { createServer: createViteServer } = await import('vite');
+      vite = await createViteServer({
+        server: { middlewareMode: true, hmr: false },
+        appType: 'custom',
+      });
+    } catch (viteErr) {
+      console.error('Vite dev server initialization warning:', viteErr);
     }
-  } else {
-    app.use(express.static(path.join(process.cwd(), 'dist')));
   }
 
   app.listen(PORT, '0.0.0.0', () => {

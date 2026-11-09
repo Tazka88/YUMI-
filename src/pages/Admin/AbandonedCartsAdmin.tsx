@@ -4,7 +4,8 @@ import {
   ShoppingBag, Search, RefreshCw, MessageSquare, Phone, 
   ExternalLink, Copy, Check, Clock, AlertTriangle, 
   CheckCircle2, X, ChevronLeft, ChevronRight, Eye, 
-  Trash2, User, MapPin, Mail, ArrowUpRight
+  Trash2, User, MapPin, Mail, ArrowUpRight, Gift, Percent,
+  Sparkles, Send, Tag, Share2
 } from 'lucide-react';
 import { formatPrice } from '../../utils/formatPrice';
 
@@ -71,6 +72,17 @@ export default function AbandonedCartsAdmin() {
   const [recoveryLang, setRecoveryLang] = useState<'fr' | 'ar'>('fr');
   const [copied, setCopied] = useState(false);
 
+  // Dedicated WhatsApp Promo Recovery Modal State
+  const [promoRecoveryCart, setPromoRecoveryCart] = useState<Cart | null>(null);
+  const [selectedDiscount, setSelectedDiscount] = useState<number>(5); // 3, 5, 10, 15, 20
+  const [promoCodeInput, setPromoCodeInput] = useState<string>('');
+  const [promoTemplate, setPromoTemplate] = useState<'friendly' | 'vip' | 'urgent' | 'support'>('friendly');
+  const [promoRecoveryLang, setPromoRecoveryLang] = useState<'fr' | 'ar'>('fr');
+  const [customMessage, setCustomMessage] = useState<string>('');
+  const [isActivatingPromo, setIsActivatingPromo] = useState(false);
+  const [activatedCode, setActivatedCode] = useState<{ code: string; discount: number } | null>(null);
+  const [promoCopied, setPromoCopied] = useState(false);
+
   const fetchCarts = async () => {
     setLoading(true);
     try {
@@ -123,6 +135,7 @@ export default function AbandonedCartsAdmin() {
       if (!res.ok) throw new Error('Échec de suppression');
       toast.success('Panier supprimé avec succès');
       if (selectedCart?.id === id) setSelectedCart(null);
+      if (promoRecoveryCart?.id === id) setPromoRecoveryCart(null);
       fetchCarts();
     } catch (err: any) {
       toast.error(err.message);
@@ -148,7 +161,195 @@ export default function AbandonedCartsAdmin() {
     return 'Visiteur anonyme';
   };
 
-  // Generate recovery text
+  // Predefined promo message builder with 3%, 5%, 10%, etc.
+  const buildPromoMessage = (
+    cart: Cart,
+    discount: number,
+    code: string,
+    template: 'friendly' | 'vip' | 'urgent' | 'support',
+    lang: 'fr' | 'ar'
+  ): string => {
+    const name = getCustomerDisplayName(cart);
+    const clientGreeting = name !== 'Visiteur anonyme' ? name : '';
+    const firstItem = cart.items && cart.items.length > 0 ? cart.items[0].name : 'vos articles';
+    const itemsCount = cart.items ? cart.items.length : 0;
+    const additional = itemsCount > 1 ? ` et ${itemsCount - 1} autre(s) article(s)` : '';
+    const fullCartName = `« ${firstItem}${additional} »`;
+    const cleanCode = code.trim().toUpperCase() || `PANIER${discount}`;
+    const cartUrl = `https://www.zorando.com/cart?promo=${encodeURIComponent(cleanCode)}`;
+
+    if (lang === 'ar') {
+      switch (template) {
+        case 'friendly':
+          return `سلام عليكم ${clientGreeting ? clientGreeting + ' ' : ''}! 😊
+لاحظنا بلي خليت سلتك في متجر ZORANDO فيها ${fullCartName} وما كملتش الطلب ديالك.
+باش نفرحوك ونشجعوك، درنالك كود برومو تخفيض استثنائي بنسبة ${discount}% على كامل سلتك 🎁 !
+
+🏷️ كود البرومو الخاص بك : *${cleanCode}*
+⚡ نسبة التخفيض : *-${discount}%*
+
+تقدر تكمل الطلب ديالك مباشرة عبر هذا الرابط ويتم تطبيق التخفيض تلقائياً :
+${cartUrl}
+
+🚚 التوصيل سريع إلى 58 ولاية والدفع عند الاستلام بعد معاينة السلعة.
+شكراً لثقتك في ZORANDO !`;
+
+        case 'vip':
+          return `سلام عليكم ${clientGreeting ? clientGreeting + ' ' : ''}! 🌟
+بصفتك زبون مميز في ZORANDO، يسعدنا أن نهديك كود خصم خاص بنسبة ${discount}% على سلتك ${fullCartName}.
+
+🏷️ الكود : *${cleanCode}* (-${discount}%)
+رابط السلة المباشر مع التخفيض :
+${cartUrl}
+
+📦 سارع بإكمال طلبك، الكمية محدودة جداً مع التوصيل لـ 58 ولاية والدفع عند الاستلام !`;
+
+        case 'urgent':
+          return `تنبيه هام من ZORANDO ⚠️
+سلام عليكم ${clientGreeting ? clientGreeting + ' ' : ''}!
+المنتجات في سلتك ${fullCartName} مطلوبة جداً والكمية المتبقية في المخزن أوشكت على النفاد.
+لمساعدتك على تأكيد حجزك، فعلنا لك كود خصم سريع بنسبة ${discount}% صالح لمدة 48 ساعة فقط :
+
+🏷️ كود البرومو : *${cleanCode}* (-${discount}%)
+اضغط هنا لإتمام طلبك قبل نفاد الكمية :
+${cartUrl}`;
+
+        case 'support':
+        default:
+          return `سلام عليكم ${clientGreeting ? clientGreeting + ' ' : ''}! 👋
+فريق خدمة الزبائن ZORANDO معك. هل واجهتك أي صعوبة في إتمام طلبك لـ ${fullCartName}؟
+نحن هنا لمساعدتك والإجابة على كل استفساراتك، ويسرنا أن نقدم لك تخفيضاً بنسبة ${discount}% بكود :
+
+🏷️ كود البرومو : *${cleanCode}* (-${discount}%)
+رابط طلبك المباشر :
+${cartUrl}
+إذا كنت بحاجة إلى أي مساعدة، أجبنا على هذه الرسالة وسنكون في خدمتك فوراً !`;
+      }
+    }
+
+    // French templates
+    switch (template) {
+      case 'friendly':
+        return `Bonjour ${clientGreeting ? clientGreeting + ' ' : ''}! 😊
+Nous avons remarqué que vous n'avez pas finalisé votre commande pour ${fullCartName} sur ZORANDO.
+Pour vous faire plaisir et vous accompagner, nous vous offrons exceptionnellement une remise exclusive de ${discount}% sur l'ensemble de votre panier 🎁 !
+
+🏷️ Votre code promo : *${cleanCode}*
+⚡ Remise accordée : *-${discount}%*
+
+Retrouvez vos articles et bénéficiez automatiquement de votre réduction en 1 clic :
+${cartUrl}
+
+🚚 Livraison rapide dans les 58 wilayas et paiement à la livraison après vérification du colis.
+Merci pour votre confiance sur ZORANDO !`;
+
+      case 'vip':
+        return `Bonjour ${clientGreeting ? clientGreeting + ' ' : ''}! 🌟
+Privilège client ZORANDO : Nous vous réservons une remise exceptionnelle de ${discount}% sur votre panier ${fullCartName}.
+
+🏷️ Code VIP exclusif : *${cleanCode}* (-${discount}%)
+Lien direct vers votre panier avec réduction appliquée :
+${cartUrl}
+
+📦 Ne tardez pas à finaliser votre commande, cette offre et les stocks disponibles sont limités !`;
+
+      case 'urgent':
+        return `Attention ZORANDO : Vos articles sont bientôt épuisés ⚠️
+Bonjour ${clientGreeting ? clientGreeting + ' ' : ''}!
+Les articles de votre panier ${fullCartName} rencontrent un grand succès et nos stocks sont presque épuisés.
+Pour vous permettre de réserver votre commande dès maintenant, nous vous offrons un code remise de ${discount}% valable pendant 48 heures :
+
+🏷️ Votre code promo : *${cleanCode}* (-${discount}%)
+Finalisez votre commande avant rupture :
+${cartUrl}`;
+
+      case 'support':
+      default:
+        return `Bonjour ${clientGreeting ? clientGreeting + ' ' : ''}! 👋
+L'équipe ZORANDO à votre service. Avez-vous rencontré la moindre difficulté lors de la validation de votre panier pour ${fullCartName} ?
+Nous sommes à votre entière disposition pour vous guider par message ou par téléphone.
+Pour vous faciliter la commande, voici également un code promotionnel de ${discount}% :
+
+🏷️ Code Promo : *${cleanCode}* (-${discount}%)
+Votre panier :
+${cartUrl}
+N'hésitez pas à nous répondre directement sur WhatsApp, nous nous ferons un plaisir de vous aider !`;
+    }
+  };
+
+  // Open Promo Recovery Modal
+  const openPromoRecovery = (cart: Cart, defaultDiscount = 5) => {
+    const randomSuffix = Math.random().toString(36).substring(2, 6).toUpperCase();
+    const generated = `PANIER${defaultDiscount}-${randomSuffix}`;
+    setSelectedDiscount(defaultDiscount);
+    setPromoCodeInput(generated);
+    setActivatedCode(null);
+    setPromoRecoveryCart(cart);
+    const initialMsg = buildPromoMessage(cart, defaultDiscount, generated, promoTemplate, promoRecoveryLang);
+    setCustomMessage(initialMsg);
+  };
+
+  // When changing discount, template or language in promo modal
+  const handleUpdatePromoSettings = (
+    newDiscount = selectedDiscount,
+    newTemplate = promoTemplate,
+    newLang = promoRecoveryLang,
+    newCode = promoCodeInput
+  ) => {
+    setSelectedDiscount(newDiscount);
+    setPromoTemplate(newTemplate);
+    setPromoRecoveryLang(newLang);
+    setPromoCodeInput(newCode);
+    if (promoRecoveryCart) {
+      setCustomMessage(buildPromoMessage(promoRecoveryCart, newDiscount, newCode, newTemplate, newLang));
+    }
+  };
+
+  // Activate promo code on backend
+  const handleActivatePromoCode = async () => {
+    if (!promoCodeInput.trim()) {
+      toast.error('Veuillez saisir un code promo valide');
+      return;
+    }
+    setIsActivatingPromo(true);
+    try {
+      const token = localStorage.getItem('adminToken');
+      const cleanCode = promoCodeInput.trim().toUpperCase();
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 5); // 5 days validity
+
+      const res = await fetch('/api/admin/promo-codes', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          code: cleanCode,
+          product_id: null, // Site-wide / whole cart!
+          discount_percent: selectedDiscount,
+          is_active: true,
+          usage_limit: 3,
+          expires_at: expiresAt.toISOString()
+        })
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || 'Erreur lors de la création du code promo');
+      }
+
+      setActivatedCode({ code: cleanCode, discount: selectedDiscount });
+      toast.success(`Code promo ${cleanCode} (-${selectedDiscount}%) activé avec succès dans le système !`);
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message || 'Impossible d’activer le code promo');
+    } finally {
+      setIsActivatingPromo(false);
+    }
+  };
+
+  // Generate standard recovery text (without promo)
   const generateRecoveryMessage = (cart: Cart, lang: 'fr' | 'ar') => {
     const name = getCustomerDisplayName(cart);
     const firstItem = cart.items && cart.items.length > 0 ? cart.items[0].name : 'vos articles';
@@ -159,7 +360,7 @@ export default function AbandonedCartsAdmin() {
     if (lang === 'ar') {
       return `سلام عليكم ${name !== 'Visiteur anonyme' ? name : ''} !
 لقد أضفت « ${firstItem}${additional} » إلى سلتك على متجر ZORANDO ولكن لم يتم تأكيد الطلب.
-إذا كنت ما زلت مهتماً، سنوفر لك توصيلاً سريعاً إلى 58 ولاية مع الدفع عند الاستلام.
+إذا كنت ما زلت مهتماً، سنوفر لك توصيلاً سريعاً إلى 58 ولاية مع الدفع عند الاستلام بعد المعاينة.
 يمكنك إكمال طلبك مباشرة عبر الرابط التالي:
 ${recoveryUrl}
 شكراً لثقتك بنا في ZORANDO !`;
@@ -180,10 +381,26 @@ Merci pour votre confiance sur ZORANDO !`;
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const handleCopyPromoMessage = () => {
+    const msg = customMessage || (promoRecoveryCart ? buildPromoMessage(promoRecoveryCart, selectedDiscount, promoCodeInput, promoTemplate, promoRecoveryLang) : '');
+    navigator.clipboard.writeText(msg);
+    setPromoCopied(true);
+    toast.success('Message WhatsApp promo copié !');
+    setTimeout(() => setPromoCopied(false), 2000);
+  };
+
   const getWhatsAppLink = (cart: Cart) => {
     const phone = getCleanPhone(cart);
     if (!phone) return null;
     const msg = encodeURIComponent(generateRecoveryMessage(cart, recoveryLang));
+    return `https://wa.me/${phone}?text=${msg}`;
+  };
+
+  const getPromoWhatsAppLink = () => {
+    if (!promoRecoveryCart) return null;
+    const phone = getCleanPhone(promoRecoveryCart);
+    if (!phone) return null;
+    const msg = encodeURIComponent(customMessage || buildPromoMessage(promoRecoveryCart, selectedDiscount, promoCodeInput, promoTemplate, promoRecoveryLang));
     return `https://wa.me/${phone}?text=${msg}`;
   };
 
@@ -493,14 +710,26 @@ Merci pour votre confiance sur ZORANDO !`;
                       {/* Actions */}
                       <td className="py-4 px-4 whitespace-nowrap text-right">
                         <div className="flex items-center justify-end gap-1.5">
-                          {/* WhatsApp recovery button */}
+                          {/* Dedicated WhatsApp Promo Recovery Button */}
+                          {isAbandoned && (
+                            <button
+                              onClick={() => openPromoRecovery(cart, 5)}
+                              className="px-2.5 py-1.5 rounded-xl bg-orange-50 hover:bg-orange-600 text-orange-600 hover:text-white transition shadow-sm font-bold text-xs flex items-center gap-1.5 border border-orange-200 hover:border-transparent"
+                              title="Créer un code promo (3%, 5%, 10%...) et relancer sur WhatsApp"
+                            >
+                              <Gift className="w-3.5 h-3.5" />
+                              <span className="hidden sm:inline">Relance Promo</span>
+                            </button>
+                          )}
+
+                          {/* Simple WhatsApp recovery button */}
                           {phone && isAbandoned && (
                             <a
                               href={getWhatsAppLink(cart) || '#'}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="p-2 rounded-xl bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white transition shadow-sm"
-                              title="Relancer sur WhatsApp"
+                              title="Relancer sur WhatsApp (message standard)"
                             >
                               <MessageSquare className="w-4 h-4" />
                             </a>
@@ -559,7 +788,7 @@ Merci pour votre confiance sur ZORANDO !`;
         )}
       </div>
 
-      {/* Cart Detail & Recovery Modal */}
+      {/* Cart Detail Modal */}
       {selectedCart && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
           <div className="bg-white rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-gray-100">
@@ -685,7 +914,7 @@ Merci pour votre confiance sur ZORANDO !`;
                 <div className="flex items-center justify-between">
                   <h4 className="font-extrabold text-orange-950 text-sm flex items-center gap-2">
                     <MessageSquare className="w-4 h-4 text-orange-600" />
-                    Relance Client
+                    Relance Standard Client
                   </h4>
                   <div className="flex items-center gap-1 bg-white p-1 rounded-xl border border-orange-200 text-xs font-bold">
                     <button
@@ -719,7 +948,7 @@ Merci pour votre confiance sur ZORANDO !`;
                     className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-orange-300 bg-white hover:bg-orange-50 text-orange-700 font-bold text-xs transition shadow-sm"
                   >
                     {copied ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
-                    {copied ? 'Copié !' : 'Copier le message'}
+                    {copied ? 'Copié !' : 'Copier'}
                   </button>
 
                   {getCleanPhone(selectedCart) ? (
@@ -730,17 +959,310 @@ Merci pour votre confiance sur ZORANDO !`;
                       className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition shadow-md"
                     >
                       <MessageSquare className="w-4 h-4" />
-                      Envoyer sur WhatsApp
+                      WhatsApp Standard
                     </a>
                   ) : (
                     <button
                       disabled
                       className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gray-100 text-gray-400 font-bold text-xs cursor-not-allowed"
                     >
-                      Numéro non disponible
+                      Numéro absent
                     </button>
                   )}
+
+                  {/* Switch to Promo Recovery */}
+                  <button
+                    onClick={() => {
+                      const c = selectedCart;
+                      setSelectedCart(null);
+                      openPromoRecovery(c, 5);
+                    }}
+                    className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-extrabold text-xs transition shadow-md mt-1"
+                  >
+                    <Gift className="w-4 h-4" />
+                    Offrir un Code Promo WhatsApp (-3%, -5%, -10%...)
+                  </button>
                 </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* DEDICATED WHATSAPP PROMO RECOVERY MODAL */}
+      {promoRecoveryCart && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white rounded-3xl max-w-2xl w-full max-h-[92vh] overflow-y-auto shadow-2xl border border-orange-200">
+            {/* Modal Header */}
+            <div className="p-6 border-b border-gray-100 flex items-center justify-between sticky top-0 bg-white/95 backdrop-blur z-10">
+              <div className="flex items-center gap-3">
+                <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-orange-500 to-amber-500 text-white flex items-center justify-center shadow-md">
+                  <Gift className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-black text-gray-900 flex items-center gap-2">
+                    Relance Promo WhatsApp
+                    <span className="text-xs px-2.5 py-0.5 rounded-full bg-orange-100 text-orange-700 font-bold">
+                      -{selectedDiscount}%
+                    </span>
+                  </h3>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    Client : <span className="font-bold text-gray-800">{getCustomerDisplayName(promoRecoveryCart)}</span>
+                    {getCleanPhone(promoRecoveryCart) && (
+                      <span className="ml-2 font-mono text-emerald-600">({promoRecoveryCart.customer_phone || promoRecoveryCart.profile_phone})</span>
+                    )}
+                  </p>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setPromoRecoveryCart(null)}
+                className="p-2 text-gray-400 hover:text-gray-600 rounded-xl hover:bg-gray-100"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-6 space-y-5">
+              {/* Cart Summary Banner */}
+              <div className="bg-gradient-to-r from-orange-50 via-amber-50 to-orange-50 p-4 rounded-2xl border border-orange-200/80 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  {promoRecoveryCart.items && promoRecoveryCart.items[0]?.image ? (
+                    <img
+                      src={promoRecoveryCart.items[0].image}
+                      alt=""
+                      className="w-12 h-12 rounded-xl object-cover border border-white shadow-sm flex-shrink-0"
+                    />
+                  ) : (
+                    <div className="w-12 h-12 rounded-xl bg-orange-100 flex items-center justify-center text-orange-600 flex-shrink-0">
+                      <ShoppingBag className="w-6 h-6" />
+                    </div>
+                  )}
+                  <div className="min-w-0">
+                    <p className="font-bold text-xs text-gray-900 truncate">
+                      {promoRecoveryCart.items && promoRecoveryCart.items[0] ? promoRecoveryCart.items[0].name : 'Articles du panier'}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      {promoRecoveryCart.item_count} article{promoRecoveryCart.item_count > 1 ? 's' : ''} • Panier actuel : {formatPrice(promoRecoveryCart.total_estimated)}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="text-right flex-shrink-0 bg-white px-3 py-1.5 rounded-xl border border-orange-200 shadow-2xs">
+                  <span className="text-[10px] uppercase font-bold text-gray-400 block">Nouveau total estimé (-{selectedDiscount}%)</span>
+                  <span className="text-sm font-black text-emerald-600">
+                    {formatPrice(Math.round(promoRecoveryCart.total_estimated * (1 - selectedDiscount / 100)))}
+                  </span>
+                </div>
+              </div>
+
+              {/* STEP 1: Choisir le pourcentage de réduction */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-black uppercase tracking-wider text-gray-700 flex items-center gap-1.5">
+                    <Percent className="w-4 h-4 text-orange-500" />
+                    1. Pourcentage de réduction (%)
+                  </label>
+                  <span className="text-xs text-gray-400">Cliquez pour appliquer</span>
+                </div>
+
+                <div className="grid grid-cols-5 sm:grid-cols-7 gap-2">
+                  {[3, 5, 10, 15, 20, 30, 50].map((pct) => (
+                    <button
+                      key={pct}
+                      type="button"
+                      onClick={() => handleUpdatePromoSettings(pct, promoTemplate, promoRecoveryLang, `PANIER${pct}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`)}
+                      className={`py-2 rounded-xl text-xs font-black transition border ${
+                        selectedDiscount === pct
+                          ? 'bg-orange-500 text-white border-orange-500 shadow-md scale-102'
+                          : 'bg-gray-50 hover:bg-gray-100 text-gray-700 border-gray-200'
+                      }`}
+                    >
+                      {pct}%
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* STEP 2: Code promo & Activation */}
+              <div className="space-y-2 bg-gray-50 p-4 rounded-2xl border border-gray-200/80">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-black uppercase tracking-wider text-gray-700 flex items-center gap-1.5">
+                    <Tag className="w-4 h-4 text-orange-500" />
+                    2. Code Promo Personnalisé
+                  </label>
+                  <span className="text-[11px] text-gray-400">Valable sur tout le panier</span>
+                </div>
+
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                  <div className="relative flex-1">
+                    <input
+                      type="text"
+                      value={promoCodeInput}
+                      onChange={(e) => {
+                        const val = e.target.value.toUpperCase();
+                        handleUpdatePromoSettings(selectedDiscount, promoTemplate, promoRecoveryLang, val);
+                      }}
+                      placeholder="Ex: PANIER5-A7X9"
+                      className="w-full font-mono font-bold text-sm tracking-wider uppercase px-3.5 py-2.5 bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    />
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleActivatePromoCode}
+                    disabled={isActivatingPromo}
+                    className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-bold text-xs transition shadow-sm disabled:opacity-50 whitespace-nowrap"
+                  >
+                    {isActivatingPromo ? (
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Sparkles className="w-3.5 h-3.5" />
+                    )}
+                    {activatedCode?.code === promoCodeInput.trim().toUpperCase() ? '✓ Réactiver' : '⚡ Activer le code'}
+                  </button>
+                </div>
+
+                {activatedCode?.code === promoCodeInput.trim().toUpperCase() ? (
+                  <div className="flex items-center gap-2 text-xs font-semibold text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-200">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                    <span>Code promo <strong>{activatedCode.code}</strong> actif (-{activatedCode.discount}%) ! Il sera appliqué automatiquement par le lien.</span>
+                  </div>
+                ) : (
+                  <p className="text-[11px] text-gray-500 flex items-center gap-1">
+                    <span>💡 Cliquez sur « ⚡ Activer le code » pour que le client puisse utiliser ce coupon immédiatement lors de sa commande.</span>
+                  </p>
+                )}
+              </div>
+
+              {/* STEP 3: Modèles de messages prédéfinis */}
+              <div className="space-y-3">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                  <label className="text-xs font-black uppercase tracking-wider text-gray-700 flex items-center gap-1.5">
+                    <MessageSquare className="w-4 h-4 text-emerald-600" />
+                    3. Message WhatsApp Prédéfini
+                  </label>
+
+                  {/* Lang switcher */}
+                  <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-xl text-xs font-bold">
+                    <button
+                      type="button"
+                      onClick={() => handleUpdatePromoSettings(selectedDiscount, promoTemplate, 'fr', promoCodeInput)}
+                      className={`px-3 py-1 rounded-lg transition ${
+                        promoRecoveryLang === 'fr' ? 'bg-orange-500 text-white shadow-xs' : 'text-gray-600 hover:text-gray-900'
+                      }`}
+                    >
+                      Français 🇫🇷
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleUpdatePromoSettings(selectedDiscount, promoTemplate, 'ar', promoCodeInput)}
+                      className={`px-3 py-1 rounded-lg transition ${
+                        promoRecoveryLang === 'ar' ? 'bg-orange-500 text-white shadow-xs' : 'text-gray-600 hover:text-gray-900'
+                      }`}
+                    >
+                      الدارجة 🇩🇿
+                    </button>
+                  </div>
+                </div>
+
+                {/* Template tabs */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 p-1 bg-gray-100 rounded-xl">
+                  <button
+                    type="button"
+                    onClick={() => handleUpdatePromoSettings(selectedDiscount, 'friendly', promoRecoveryLang, promoCodeInput)}
+                    className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition text-center ${
+                      promoTemplate === 'friendly' ? 'bg-white text-orange-600 shadow-xs' : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    🎁 Geste Amical
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleUpdatePromoSettings(selectedDiscount, 'vip', promoRecoveryLang, promoCodeInput)}
+                    className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition text-center ${
+                      promoTemplate === 'vip' ? 'bg-white text-orange-600 shadow-xs' : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    🌟 Offre VIP
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleUpdatePromoSettings(selectedDiscount, 'urgent', promoRecoveryLang, promoCodeInput)}
+                    className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition text-center ${
+                      promoTemplate === 'urgent' ? 'bg-white text-orange-600 shadow-xs' : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    ⚠️ Stock Limité
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleUpdatePromoSettings(selectedDiscount, 'support', promoRecoveryLang, promoCodeInput)}
+                    className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition text-center ${
+                      promoTemplate === 'support' ? 'bg-white text-orange-600 shadow-xs' : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    💬 Aide & Service
+                  </button>
+                </div>
+
+                {/* Message Textarea */}
+                <div className="relative">
+                  <textarea
+                    rows={7}
+                    value={customMessage}
+                    onChange={(e) => setCustomMessage(e.target.value)}
+                    dir={promoRecoveryLang === 'ar' ? 'rtl' : 'ltr'}
+                    className="w-full text-xs font-sans p-3.5 bg-white border border-gray-300 rounded-2xl focus:outline-none focus:ring-2 focus:ring-orange-500 leading-relaxed text-gray-800 shadow-2xs"
+                  />
+                  <div className="absolute bottom-2 right-2 flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setCustomMessage(buildPromoMessage(promoRecoveryCart, selectedDiscount, promoCodeInput, promoTemplate, promoRecoveryLang))}
+                      className="px-2 py-1 rounded-md text-[10px] font-semibold bg-gray-100 text-gray-600 hover:bg-gray-200 transition"
+                      title="Réinitialiser avec le modèle"
+                    >
+                      Réinitialiser
+                    </button>
+                  </div>
+                </div>
+
+                {/* Link highlight badge */}
+                <div className="text-[11px] text-gray-500 flex items-center gap-1.5 px-1">
+                  <ExternalLink className="w-3.5 h-3.5 text-orange-500 shrink-0" />
+                  <span className="truncate">
+                    Lien direct avec code auto-appliqué : <span className="font-mono text-orange-600 font-semibold">https://www.zorando.com/cart?promo={promoCodeInput.trim().toUpperCase()}</span>
+                  </span>
+                </div>
+              </div>
+
+              {/* STEP 4: Envoi WhatsApp & Actions */}
+              <div className="pt-2 border-t border-gray-100 flex flex-col sm:flex-row items-center gap-3">
+                <button
+                  type="button"
+                  onClick={handleCopyPromoMessage}
+                  className="w-full sm:w-auto flex-1 inline-flex items-center justify-center gap-2 px-4 py-3 rounded-2xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 font-bold text-xs transition shadow-sm"
+                >
+                  {promoCopied ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
+                  {promoCopied ? 'Message copié !' : 'Copier le message'}
+                </button>
+
+                {getCleanPhone(promoRecoveryCart) ? (
+                  <a
+                    href={getPromoWhatsAppLink() || '#'}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full sm:w-auto flex-1 inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-sm transition shadow-lg shadow-emerald-600/20"
+                  >
+                    <MessageSquare className="w-4 h-4" />
+                    Envoyer sur WhatsApp
+                  </a>
+                ) : (
+                  <div className="w-full sm:w-auto flex-1 text-center py-2 px-3 rounded-2xl bg-amber-50 border border-amber-200 text-amber-800 text-xs font-semibold">
+                    ⚠️ Numéro de téléphone absent sur ce panier (copiez le texte)
+                  </div>
+                )}
               </div>
             </div>
           </div>

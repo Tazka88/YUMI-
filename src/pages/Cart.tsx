@@ -1,4 +1,4 @@
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Trash2, ArrowRight, ShoppingBag, Tag, CheckCircle2, X, Loader2 } from 'lucide-react';
 import { useCartStore } from '../store/cartStore';
 import React, { useEffect, useRef, useState } from 'react';
@@ -7,6 +7,7 @@ import { formatPrice, getProductEffectivePrice, isPromoActive, calculateDiscount
 import SEO from '../components/SEO';
 
 export default function Cart() {
+  const [searchParams] = useSearchParams();
   const { items, updateQuantity, removeItem, total, appliedPromo, setAppliedPromo, getPromoDiscount, finalTotal } = useCartStore();
   const [promoCodeInput, setPromoCodeInput] = useState('');
   const [isApplyingPromo, setIsApplyingPromo] = useState(false);
@@ -67,6 +68,51 @@ export default function Cart() {
     setPromoError(null);
     toast.success('Code promo retiré');
   };
+
+  // Automatically apply promo code from URL if provided (e.g., from WhatsApp recovery message ?promo=CODE)
+  const urlPromo = searchParams.get('promo') || searchParams.get('code');
+  const promoAppliedFromUrlRef = useRef(false);
+
+  useEffect(() => {
+    if (urlPromo && !appliedPromo && items.length > 0 && !promoAppliedFromUrlRef.current) {
+      promoAppliedFromUrlRef.current = true;
+      const autoApply = async () => {
+        setIsApplyingPromo(true);
+        try {
+          const res = await fetch('/api/promo-codes/validate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              code: urlPromo.trim(),
+              items: items.map(item => ({
+                id: item.id,
+                product_id: item.id,
+                price: getProductEffectivePrice(item),
+                quantity: item.quantity
+              }))
+            })
+          });
+          const data = await res.json();
+          if (res.ok && data.valid) {
+            setAppliedPromo({
+              code: data.code,
+              product_id: data.product_id,
+              product_name: data.product_name,
+              product_image: data.product_image,
+              discount_percent: data.discount_percent,
+              discount_amount: data.discount_amount
+            });
+            toast.success(data.message || `Code promo "${data.code}" appliqué avec succès !`);
+          }
+        } catch (_) {
+          // Silent fallback if invalid
+        } finally {
+          setIsApplyingPromo(false);
+        }
+      };
+      autoApply();
+    }
+  }, [urlPromo, items.length, appliedPromo]);
   
   const viewCartTrackedRef = useRef(false);
   useEffect(() => {

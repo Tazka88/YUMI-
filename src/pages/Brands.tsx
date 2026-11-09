@@ -59,12 +59,12 @@ export default function Brands() {
                 to={`/brands/${brand.slug}`} 
                 className="flex flex-col justify-between h-[130px] sm:h-[145px] rounded-2xl bg-white border border-gray-200/80 p-3 shadow-[0_2px_10px_rgba(0,0,0,0.05)] hover:shadow-md hover:border-orange-500 hover:-translate-y-1 transition-all duration-300 group"
               >
-                <div className="flex-1 w-full flex items-center justify-center p-1 overflow-hidden">
+                <div className="flex-1 w-full flex items-center justify-center p-1.5 overflow-hidden">
                   {brand.image ? (
                     <img 
                       src={getResizedImageUrl(brand.image, 240)} 
                       alt={brand.name} 
-                      className="max-h-[66px] sm:max-h-[78px] w-full max-w-[94%] object-contain group-hover:scale-105 transition-transform duration-300 drop-shadow-2xs" 
+                      className="max-h-[68px] sm:max-h-[80px] w-auto max-w-[94%] object-contain group-hover:scale-105 transition-transform duration-300 drop-shadow-2xs" 
                     />
                   ) : (
                     <div className="w-12 h-12 flex items-center justify-center text-gray-400">

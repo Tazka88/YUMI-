@@ -5,6 +5,7 @@ import path from 'path';
 
 export default defineConfig({
   server: {
+    hmr: false,
     watch: {
       ignored: ['**/dist/**', '**/*.html', '**/*.txt', '**/*.xml', '**/*.cjs', '**/*.py', '**/temp*/**', '**/node_modules/**']
     }

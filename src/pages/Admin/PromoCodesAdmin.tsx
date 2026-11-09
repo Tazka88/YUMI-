@@ -3,14 +3,14 @@ import toast from 'react-hot-toast';
 import { 
   Tag, Plus, Search, RefreshCw, Edit, Trash2, Check, Copy, 
   AlertTriangle, Calendar, CheckCircle2, X, Package, Percent,
-  TrendingUp, Clock, AlertCircle, ExternalLink, Power
+  TrendingUp, Clock, AlertCircle, ExternalLink, Power, MessageSquare, ShoppingBag
 } from 'lucide-react';
 import { formatPrice } from '../../utils/formatPrice';
 
 export interface PromoCode {
   id: number;
   code: string;
-  product_id: number;
+  product_id?: number | null;
   discount_percent: number;
   usage_limit: number;
   used_count: number;
@@ -48,11 +48,19 @@ export default function PromoCodesAdmin() {
   const [isSaving, setIsSaving] = useState(false);
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
 
-  // Form state
+  // WhatsApp Share Modal state
+  const [shareWhatsAppPromo, setShareWhatsAppPromo] = useState<PromoCode | null>(null);
+  const [sharePhone, setSharePhone] = useState('');
+  const [shareCustomerName, setShareCustomerName] = useState('');
+  const [shareLang, setShareLang] = useState<'fr' | 'ar'>('fr');
+  const [shareCopied, setShareCopied] = useState(false);
+
+  // Form state - default starting discount is 5% with 3%, 5%, 10% options
   const [formData, setFormData] = useState({
     code: '',
+    scope: 'all' as 'all' | 'product',
     product_id: '',
-    discount_percent: 10,
+    discount_percent: 5,
     usage_limit: 50,
     expires_at: '',
     has_expiry: false,
@@ -138,8 +146,9 @@ export default function PromoCodesAdmin() {
     setProductResults([]);
     setFormData({
       code: '',
+      scope: 'all',
       product_id: '',
-      discount_percent: 10,
+      discount_percent: 5,
       usage_limit: 50,
       expires_at: '',
       has_expiry: false,
@@ -150,15 +159,20 @@ export default function PromoCodesAdmin() {
 
   const handleOpenEditModal = (promo: PromoCode) => {
     setEditingPromo(promo);
-    setSelectedProduct({
-      id: promo.product_id,
-      name: promo.product_name || `Produit #${promo.product_id}`,
-      sku: promo.product_sku,
-      price: Number(promo.product_price) || 0,
-      promo_price: promo.product_promo_price ? Number(promo.product_promo_price) : null,
-      stock: promo.product_stock || 0,
-      image: promo.product_image
-    });
+    const hasProduct = Boolean(promo.product_id);
+    if (hasProduct && promo.product_id) {
+      setSelectedProduct({
+        id: promo.product_id,
+        name: promo.product_name || `Produit #${promo.product_id}`,
+        sku: promo.product_sku,
+        price: Number(promo.product_price) || 0,
+        promo_price: promo.product_promo_price ? Number(promo.product_promo_price) : null,
+        stock: promo.product_stock || 0,
+        image: promo.product_image
+      });
+    } else {
+      setSelectedProduct(null);
+    }
     setProductSearch('');
     setProductResults([]);
 
@@ -170,7 +184,8 @@ export default function PromoCodesAdmin() {
 
     setFormData({
       code: promo.code,
-      product_id: String(promo.product_id),
+      scope: hasProduct ? 'product' : 'all',
+      product_id: promo.product_id ? String(promo.product_id) : '',
       discount_percent: promo.discount_percent,
       usage_limit: promo.usage_limit,
       expires_at: formattedDate,
@@ -186,7 +201,7 @@ export default function PromoCodesAdmin() {
       toast.error('Le code promo est obligatoire');
       return;
     }
-    if (!formData.product_id) {
+    if (formData.scope === 'product' && !formData.product_id) {
       toast.error('Veuillez sélectionner un produit du catalogue');
       return;
     }
@@ -203,7 +218,7 @@ export default function PromoCodesAdmin() {
     try {
       const payload = {
         code: formData.code.trim().toUpperCase(),
-        product_id: parseInt(formData.product_id, 10),
+        product_id: formData.scope === 'product' && formData.product_id ? parseInt(formData.product_id, 10) : null,
         discount_percent: Number(formData.discount_percent),
         usage_limit: Number(formData.usage_limit),
         expires_at: formData.has_expiry && formData.expires_at ? new Date(formData.expires_at).toISOString() : null,
@@ -493,32 +508,41 @@ export default function PromoCodesAdmin() {
 
                       {/* Product */}
                       <td className="py-3.5 px-4 max-w-xs">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-lg bg-gray-100 border border-gray-200 overflow-hidden shrink-0 flex items-center justify-center">
-                            {promo.product_image ? (
-                              <img 
-                                src={promo.product_image} 
-                                alt={promo.product_name || 'Produit'} 
-                                className="w-full h-full object-cover"
-                              />
-                            ) : (
-                              <Package size={16} className="text-gray-400" />
-                            )}
-                          </div>
-                          <div className="truncate">
-                            <div className="font-semibold text-gray-900 text-xs truncate" title={promo.product_name}>
-                              {promo.product_name || `Produit #${promo.product_id}`}
-                            </div>
-                            <div className="text-[11px] text-gray-500 font-mono flex items-center gap-1.5 mt-0.5">
-                              {promo.product_sku && <span>SKU: {promo.product_sku}</span>}
-                              {promo.product_price && (
-                                <span className="font-semibold text-gray-700">
-                                  {formatPrice(promo.product_promo_price || promo.product_price)}
-                                </span>
+                        {promo.product_id ? (
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-lg bg-gray-100 border border-gray-200 overflow-hidden shrink-0 flex items-center justify-center">
+                              {promo.product_image ? (
+                                <img 
+                                  src={promo.product_image} 
+                                  alt={promo.product_name || 'Produit'} 
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <Package size={16} className="text-gray-400" />
                               )}
                             </div>
+                            <div className="truncate">
+                              <div className="font-semibold text-gray-900 text-xs truncate" title={promo.product_name}>
+                                {promo.product_name || `Produit #${promo.product_id}`}
+                              </div>
+                              <div className="text-[11px] text-gray-500 font-mono flex items-center gap-1.5 mt-0.5">
+                                {promo.product_sku && <span>SKU: {promo.product_sku}</span>}
+                                {promo.product_price && (
+                                  <span className="font-semibold text-gray-700">
+                                    {formatPrice(promo.product_promo_price || promo.product_price)}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
                           </div>
-                        </div>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-bold bg-purple-50 text-purple-700 border border-purple-200">
+                              <ShoppingBag size={13} className="text-purple-600" />
+                              Panier complet (Tous articles)
+                            </span>
+                          </div>
+                        )}
                       </td>
 
                       {/* Discount */}
@@ -593,6 +617,17 @@ export default function PromoCodesAdmin() {
                       <td className="py-3.5 px-4 text-right">
                         <div className="flex items-center justify-end gap-1.5">
                           <button
+                            onClick={() => {
+                              setShareWhatsAppPromo(promo);
+                              setSharePhone('');
+                              setShareCustomerName('');
+                            }}
+                            className="p-1.5 text-emerald-600 hover:text-emerald-800 hover:bg-emerald-50 rounded-lg transition"
+                            title="Partager ce code promo sur WhatsApp"
+                          >
+                            <MessageSquare size={16} />
+                          </button>
+                          <button
                             onClick={() => handleOpenEditModal(promo)}
                             className="p-1.5 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition"
                             title="Modifier ce code"
@@ -659,97 +694,150 @@ export default function PromoCodesAdmin() {
                 </p>
               </div>
 
-              {/* Product Selection */}
+              {/* Scope Selection */}
               <div>
-                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">
-                  Produit associé *
+                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">
+                  Portée de la réduction *
                 </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFormData({ ...formData, scope: 'all', product_id: '' });
+                      setSelectedProduct(null);
+                    }}
+                    className={`p-3 rounded-xl border text-left transition flex items-center gap-2.5 ${
+                      formData.scope === 'all'
+                        ? 'border-orange-500 bg-orange-50/60 text-orange-950 font-bold shadow-2xs'
+                        : 'border-gray-200 bg-white hover:bg-gray-50 text-gray-700'
+                    }`}
+                  >
+                    <div className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${
+                      formData.scope === 'all' ? 'border-orange-600 bg-orange-600 text-white' : 'border-gray-300'
+                    }`}>
+                      {formData.scope === 'all' && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                    </div>
+                    <div>
+                      <div className="text-xs font-bold">Panier entier</div>
+                      <div className="text-[10px] text-gray-500 font-normal">Idéal pour relances clients</div>
+                    </div>
+                  </button>
 
-                {selectedProduct ? (
-                  <div className="bg-orange-50/60 border border-orange-200 rounded-xl p-3 flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-12 h-12 rounded-lg bg-white border border-orange-200 overflow-hidden shrink-0 flex items-center justify-center">
-                        {selectedProduct.image ? (
-                          <img src={selectedProduct.image} alt={selectedProduct.name} className="w-full h-full object-cover" />
-                        ) : (
-                          <Package size={20} className="text-orange-400" />
-                        )}
-                      </div>
-                      <div className="truncate">
-                        <div className="text-xs font-bold text-gray-900 truncate">{selectedProduct.name}</div>
-                        <div className="text-[11px] text-gray-500 font-mono mt-0.5">
-                          Prix : <span className="font-semibold text-orange-600">{formatPrice(selectedProduct.promo_price || selectedProduct.price)}</span>
-                          {selectedProduct.sku && ` • SKU: ${selectedProduct.sku}`}
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, scope: 'product' })}
+                    className={`p-3 rounded-xl border text-left transition flex items-center gap-2.5 ${
+                      formData.scope === 'product'
+                        ? 'border-orange-500 bg-orange-50/60 text-orange-950 font-bold shadow-2xs'
+                        : 'border-gray-200 bg-white hover:bg-gray-50 text-gray-700'
+                    }`}
+                  >
+                    <div className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${
+                      formData.scope === 'product' ? 'border-orange-600 bg-orange-600 text-white' : 'border-gray-300'
+                    }`}>
+                      {formData.scope === 'product' && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                    </div>
+                    <div>
+                      <div className="text-xs font-bold">Article spécifique</div>
+                      <div className="text-[10px] text-gray-500 font-normal">Cibler un seul produit</div>
+                    </div>
+                  </button>
+                </div>
+              </div>
+
+              {/* Product Selection (only if scope is product) */}
+              {formData.scope === 'product' && (
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">
+                    Produit associé *
+                  </label>
+
+                  {selectedProduct ? (
+                    <div className="bg-orange-50/60 border border-orange-200 rounded-xl p-3 flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-12 h-12 rounded-lg bg-white border border-orange-200 overflow-hidden shrink-0 flex items-center justify-center">
+                          {selectedProduct.image ? (
+                            <img src={selectedProduct.image} alt={selectedProduct.name} className="w-full h-full object-cover" />
+                          ) : (
+                            <Package size={20} className="text-orange-400" />
+                          )}
+                        </div>
+                        <div className="truncate">
+                          <div className="text-xs font-bold text-gray-900 truncate">{selectedProduct.name}</div>
+                          <div className="text-[11px] text-gray-500 font-mono mt-0.5">
+                            Prix : <span className="font-semibold text-orange-600">{formatPrice(selectedProduct.promo_price || selectedProduct.price)}</span>
+                            {selectedProduct.sku && ` • SKU: ${selectedProduct.sku}`}
+                          </div>
                         </div>
                       </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedProduct(null);
+                          setFormData({ ...formData, product_id: '' });
+                        }}
+                        className="text-gray-400 hover:text-red-500 p-1.5 rounded-lg hover:bg-white transition shrink-0"
+                        title="Changer de produit"
+                      >
+                        <X size={16} />
+                      </button>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSelectedProduct(null);
-                        setFormData({ ...formData, product_id: '' });
-                      }}
-                      className="text-gray-400 hover:text-red-500 p-1.5 rounded-lg hover:bg-white transition shrink-0"
-                      title="Changer de produit"
-                    >
-                      <X size={16} />
-                    </button>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    <div className="relative">
-                      <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                      <input
-                        type="text"
-                        value={productSearch}
-                        onChange={(e) => setProductSearch(e.target.value)}
-                        placeholder="Rechercher un produit du catalogue (nom, SKU)..."
-                        className="w-full pl-9 pr-3.5 py-2.5 text-sm border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
-                      />
-                    </div>
-
-                    {isSearchingProducts && (
-                      <p className="text-xs text-gray-400 italic">Recherche dans le catalogue...</p>
-                    )}
-
-                    {productResults.length > 0 && (
-                      <div className="max-h-48 overflow-y-auto border border-gray-200 rounded-xl divide-y divide-gray-100 bg-white shadow-xs">
-                        {productResults.map(p => (
-                          <button
-                            type="button"
-                            key={p.id}
-                            onClick={() => {
-                              setSelectedProduct(p);
-                              setFormData({ ...formData, product_id: String(p.id) });
-                              setProductSearch('');
-                              setProductResults([]);
-                            }}
-                            className="w-full p-2.5 flex items-center gap-3 hover:bg-orange-50/60 transition text-left"
-                          >
-                            <div className="w-9 h-9 rounded-md bg-gray-100 border border-gray-200 overflow-hidden shrink-0">
-                              {p.image ? (
-                                <img src={p.image} alt={p.name} className="w-full h-full object-cover" />
-                              ) : (
-                                <Package size={16} className="text-gray-400 m-auto mt-2" />
-                              )}
-                            </div>
-                            <div className="truncate flex-1">
-                              <div className="text-xs font-semibold text-gray-900 truncate">{p.name}</div>
-                              <div className="text-[11px] text-gray-500 font-mono">
-                                {formatPrice(p.promo_price || p.price)} {p.sku && `• ${p.sku}`}
-                              </div>
-                            </div>
-                            <span className="text-xs font-bold text-orange-600 shrink-0">Choisir</span>
-                          </button>
-                        ))}
+                  ) : (
+                    <div className="space-y-2">
+                      <div className="relative">
+                        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                        <input
+                          type="text"
+                          value={productSearch}
+                          onChange={(e) => setProductSearch(e.target.value)}
+                          placeholder="Rechercher un produit du catalogue (nom, SKU)..."
+                          className="w-full pl-9 pr-3.5 py-2.5 text-sm border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
+                        />
                       </div>
-                    )}
-                  </div>
-                )}
-                <p className="text-[11px] text-gray-400 mt-1">
-                  La réduction s'appliquera exclusivement au montant de cet article.
-                </p>
-              </div>
+
+                      {isSearchingProducts && (
+                        <p className="text-xs text-gray-400 italic">Recherche dans le catalogue...</p>
+                      )}
+
+                      {productResults.length > 0 && (
+                        <div className="max-h-48 overflow-y-auto border border-gray-200 rounded-xl divide-y divide-gray-100 bg-white shadow-xs">
+                          {productResults.map(p => (
+                            <button
+                              type="button"
+                              key={p.id}
+                              onClick={() => {
+                                setSelectedProduct(p);
+                                setFormData({ ...formData, product_id: String(p.id) });
+                                setProductSearch('');
+                                setProductResults([]);
+                              }}
+                              className="w-full p-2.5 flex items-center gap-3 hover:bg-orange-50/60 transition text-left"
+                            >
+                              <div className="w-9 h-9 rounded-md bg-gray-100 border border-gray-200 overflow-hidden shrink-0">
+                                {p.image ? (
+                                  <img src={p.image} alt={p.name} className="w-full h-full object-cover" />
+                                ) : (
+                                  <Package size={16} className="text-gray-400 m-auto mt-2" />
+                                )}
+                              </div>
+                              <div className="truncate flex-1">
+                                <div className="text-xs font-semibold text-gray-900 truncate">{p.name}</div>
+                                <div className="text-[11px] text-gray-500 font-mono">
+                                  {formatPrice(p.promo_price || p.price)} {p.sku && `• ${p.sku}`}
+                                </div>
+                              </div>
+                              <span className="text-xs font-bold text-orange-600 shrink-0">Choisir</span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  <p className="text-[11px] text-gray-400 mt-1">
+                    La réduction s'appliquera exclusivement au montant de cet article.
+                  </p>
+                </div>
+              )}
 
               {/* Discount Percentage */}
               <div>
@@ -769,16 +857,16 @@ export default function PromoCodesAdmin() {
                     />
                     <Percent size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
                   </div>
-                  {/* Preset pills */}
-                  <div className="flex items-center gap-1">
-                    {[10, 15, 20, 30, 50].map(pct => (
+                  {/* Preset pills starting from 3% and 5% */}
+                  <div className="flex items-center gap-1 flex-wrap">
+                    {[3, 5, 10, 15, 20, 30, 50].map(pct => (
                       <button
                         key={pct}
                         type="button"
                         onClick={() => setFormData({ ...formData, discount_percent: pct })}
                         className={`px-2.5 py-1.5 text-xs font-semibold rounded-lg border transition ${
                           formData.discount_percent === pct
-                            ? 'bg-orange-500 text-white border-orange-500'
+                            ? 'bg-orange-500 text-white border-orange-500 shadow-xs'
                             : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100'
                         }`}
                       >
@@ -930,6 +1018,191 @@ export default function PromoCodesAdmin() {
                   Supprimer définitivement
                 </button>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+      {/* WhatsApp Promo Share Modal */}
+      {shareWhatsAppPromo && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-lg w-full shadow-2xl border border-gray-100 p-6 animate-fade-in space-y-4">
+            <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
+                  <MessageSquare size={20} />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-gray-900">
+                    Partager le code promo sur WhatsApp
+                  </h3>
+                  <p className="text-xs text-gray-500">
+                    Envoyer le code <span className="font-mono font-bold text-orange-600">{shareWhatsAppPromo.code}</span> (-{shareWhatsAppPromo.discount_percent}%)
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShareWhatsAppPromo(null)}
+                className="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Language & Target */}
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-xs font-bold text-gray-600 uppercase tracking-wider">Langue du message</span>
+              <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-xl text-xs font-bold">
+                <button
+                  type="button"
+                  onClick={() => setShareLang('fr')}
+                  className={`px-3 py-1 rounded-lg transition ${
+                    shareLang === 'fr' ? 'bg-white text-gray-900 shadow-2xs' : 'text-gray-500 hover:text-gray-900'
+                  }`}
+                >
+                  Français
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShareLang('ar')}
+                  className={`px-3 py-1 rounded-lg transition ${
+                    shareLang === 'ar' ? 'bg-white text-gray-900 shadow-2xs' : 'text-gray-500 hover:text-gray-900'
+                  }`}
+                >
+                  الدارجة الجزائرية
+                </button>
+              </div>
+            </div>
+
+            {/* Optional Customer Inputs */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1">
+                  Nom du client (optionnel)
+                </label>
+                <input
+                  type="text"
+                  value={shareCustomerName}
+                  onChange={(e) => setShareCustomerName(e.target.value)}
+                  placeholder="Ex: Mohamed, Amina..."
+                  className="w-full px-3 py-2 text-xs border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1">
+                  Téléphone du client (optionnel)
+                </label>
+                <input
+                  type="tel"
+                  value={sharePhone}
+                  onChange={(e) => setSharePhone(e.target.value)}
+                  placeholder="Ex: 0550 12 34 56"
+                  className="w-full px-3 py-2 text-xs border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 font-mono"
+                />
+              </div>
+            </div>
+
+            {/* Message Preview */}
+            <div>
+              <label className="block text-xs font-bold text-gray-700 mb-1">
+                Aperçu du message WhatsApp prédéfini
+              </label>
+              <div className="bg-emerald-50/50 border border-emerald-200/80 rounded-xl p-3.5 text-xs text-gray-800 whitespace-pre-wrap font-sans leading-relaxed">
+                {shareLang === 'ar' ? (
+                  `سلام عليكم ${shareCustomerName.trim() ? shareCustomerName.trim() + ' ' : ''}! 🎁
+فريق ZORANDO راهو يهديك كود تخفيض استثنائي بـ *${shareWhatsAppPromo.discount_percent}%-* ${shareWhatsAppPromo.product_name ? `على « ${shareWhatsAppPromo.product_name} »` : 'على كامل سلتك'} !
+👉 الكود الترويجي : *${shareWhatsAppPromo.code}*
+
+تقدر تطلب مباشرة وتستفاد من التخفيض عبر هذا الرابط :
+🔗 https://www.zorando.com/cart?promo=${shareWhatsAppPromo.code}
+
+🚚 التوصيل سريع متوفر لـ 58 ولاية مع الدفع عند الاستلام.
+شكراً لثقتكم في ZORANDO !`
+                ) : (
+                  `Bonjour ${shareCustomerName.trim() ? shareCustomerName.trim() + ' ' : ''}! 🎁
+L'équipe ZORANDO vous offre un code promo exceptionnel de -${shareWhatsAppPromo.discount_percent}% ${shareWhatsAppPromo.product_name ? `sur « ${shareWhatsAppPromo.product_name} »` : 'sur l\'ensemble de votre panier'} !
+👉 Votre code promo : *${shareWhatsAppPromo.code}*
+
+Profitez-en dès maintenant en commandant directement via ce lien :
+🔗 https://www.zorando.com/cart?promo=${shareWhatsAppPromo.code}
+
+🚚 Livraison express dans les 58 wilayas et paiement à la livraison.
+Merci pour votre confiance sur ZORANDO !`
+                )}
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex items-center gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  const text = shareLang === 'ar'
+                    ? `سلام عليكم ${shareCustomerName.trim() ? shareCustomerName.trim() + ' ' : ''}! 🎁
+فريق ZORANDO راهو يهديك كود تخفيض استثنائي بـ *${shareWhatsAppPromo.discount_percent}%-* ${shareWhatsAppPromo.product_name ? `على « ${shareWhatsAppPromo.product_name} »` : 'على كامل سلتك'} !
+👉 الكود الترويجي : *${shareWhatsAppPromo.code}*
+
+تقدر تطلب مباشرة وتستفاد من التخفيض عبر هذا الرابط :
+🔗 https://www.zorando.com/cart?promo=${shareWhatsAppPromo.code}
+
+🚚 التوصيل سريع متوفر لـ 58 ولاية مع الدفع عند الاستلام.
+شكراً لثقتكم في ZORANDO !`
+                    : `Bonjour ${shareCustomerName.trim() ? shareCustomerName.trim() + ' ' : ''}! 🎁
+L'équipe ZORANDO vous offre un code promo exceptionnel de -${shareWhatsAppPromo.discount_percent}% ${shareWhatsAppPromo.product_name ? `sur « ${shareWhatsAppPromo.product_name} »` : 'sur l\'ensemble de votre panier'} !
+👉 Votre code promo : *${shareWhatsAppPromo.code}*
+
+Profitez-en dès maintenant en commandant directement via ce lien :
+🔗 https://www.zorando.com/cart?promo=${shareWhatsAppPromo.code}
+
+🚚 Livraison express dans les 58 wilayas et paiement à la livraison.
+Merci pour votre confiance sur ZORANDO !`;
+                  navigator.clipboard.writeText(text);
+                  setShareCopied(true);
+                  toast.success('Message copié !');
+                  setTimeout(() => setShareCopied(false), 2000);
+                }}
+                className="flex-1 py-2.5 px-3 rounded-xl border border-gray-200 hover:bg-gray-50 text-gray-700 font-bold text-xs flex items-center justify-center gap-1.5 transition shadow-2xs"
+              >
+                {shareCopied ? <Check size={14} className="text-emerald-600" /> : <Copy size={14} />}
+                <span>{shareCopied ? 'Copié !' : 'Copier le texte'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  let cleanPhone = sharePhone.replace(/\D/g, '');
+                  if (cleanPhone.startsWith('0')) cleanPhone = '213' + cleanPhone.substring(1);
+                  if (cleanPhone.length === 9) cleanPhone = '213' + cleanPhone;
+
+                  const text = shareLang === 'ar'
+                    ? `سلام عليكم ${shareCustomerName.trim() ? shareCustomerName.trim() + ' ' : ''}! 🎁
+فريق ZORANDO راهو يهديك كود تخفيض استثنائي بـ *${shareWhatsAppPromo.discount_percent}%-* ${shareWhatsAppPromo.product_name ? `على « ${shareWhatsAppPromo.product_name} »` : 'على كامل سلتك'} !
+👉 الكود الترويجي : *${shareWhatsAppPromo.code}*
+
+تقدر تطلب مباشرة وتستفاد من التخفيض عبر هذا الرابط :
+🔗 https://www.zorando.com/cart?promo=${shareWhatsAppPromo.code}
+
+🚚 التوصيل سريع متوفر لـ 58 ولاية مع الدفع عند الاستلام.
+شكراً لثقتكم في ZORANDO !`
+                    : `Bonjour ${shareCustomerName.trim() ? shareCustomerName.trim() + ' ' : ''}! 🎁
+L'équipe ZORANDO vous offre un code promo exceptionnel de -${shareWhatsAppPromo.discount_percent}% ${shareWhatsAppPromo.product_name ? `sur « ${shareWhatsAppPromo.product_name} »` : 'sur l\'ensemble de votre panier'} !
+👉 Votre code promo : *${shareWhatsAppPromo.code}*
+
+Profitez-en dès maintenant en commandant directement via ce lien :
+🔗 https://www.zorando.com/cart?promo=${shareWhatsAppPromo.code}
+
+🚚 Livraison express dans les 58 wilayas et paiement à la livraison.
+Merci pour votre confiance sur ZORANDO !`;
+
+                  const url = cleanPhone
+                    ? `https://wa.me/${cleanPhone}?text=${encodeURIComponent(text)}`
+                    : `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
+                  window.open(url, '_blank', 'noopener,noreferrer');
+                }}
+                className="flex-1 py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-2 transition shadow-md shadow-emerald-600/20"
+              >
+                <MessageSquare size={16} />
+                <span>Ouvrir sur WhatsApp</span>
+              </button>
             </div>
           </div>
         </div>

@@ -865,7 +865,7 @@ export default function Home() {
                   to={`/brands/${brand.slug}`} 
                   className="group relative flex flex-col justify-between w-[145px] sm:w-[175px] md:w-[190px] h-[120px] sm:h-[135px] shrink-0 rounded-2xl bg-white border border-gray-200/90 p-3 transition-all duration-300 hover:border-orange-500 hover:shadow-md hover:-translate-y-0.5 snap-start shadow-[0_2px_10px_rgba(0,0,0,0.06)]"
                 >
-                  <div className="flex-1 w-full flex items-center justify-center p-1 overflow-hidden">
+                  <div className="flex-1 w-full flex items-center justify-center p-1.5 overflow-hidden">
                     {brand.image ? (
                       <img 
                         src={getResizedImageUrl(brand.image, 240)} 
@@ -876,7 +876,7 @@ export default function Home() {
                         height="90"
                         loading="lazy"
                         decoding="async"
-                        className="max-h-[62px] sm:max-h-[72px] w-full max-w-[94%] object-contain group-hover:scale-105 transition-transform duration-300 drop-shadow-2xs" 
+                        className="max-h-[66px] sm:max-h-[76px] w-auto max-w-[94%] object-contain group-hover:scale-105 transition-transform duration-300 drop-shadow-2xs" 
                         referrerPolicy="no-referrer"
                       />
                     ) : (

@@ -130,7 +130,7 @@ const processImage = (table: string, id: number | string, field: string, image: 
     }
   }
   if (table === 'brands') {
-    hash = `${hash}-v4`;
+    hash = `${hash}-v5`;
   }
   const seoPart = slug ? `/${slug}.webp` : '';
   return `/api/images/${table}/${id}/${field}${seoPart}?v=${hash}`;
@@ -176,21 +176,26 @@ const optimizeBrandSvg = (buffer: Buffer, brandId?: string): Buffer => {
   if (id === '24' || (svgStr.includes('viewBox="0 0 750 750"') && svgStr.includes('VTracer'))) {
     // hoco
     svgStr = svgStr.replace(/viewBox=["\x27][^"\x27]+["\x27]/, 'viewBox="34 260 680 226"');
+    svgStr = svgStr.replace(/width=["\x27][^"\x27]+["\x27]/, 'width="680"').replace(/height=["\x27][^"\x27]+["\x27]/, 'height="226"');
   } else if (id === '10' || svgStr.includes('viewBox="0 0 193 193"')) {
     // Sonashi
     svgStr = svgStr.replace(/viewBox=["\x27][^"\x27]+["\x27]/, 'viewBox="8 82 177 29"');
+    svgStr = svgStr.replace(/width=["\x27][^"\x27]+["\x27]/, 'width="177"').replace(/height=["\x27][^"\x27]+["\x27]/, 'height="29"');
     svgStr = svgStr.replace(/<path[^>]*fill:rgb\(100%,100%,100%\)[^>]*\/>/gi, '');
   } else if (id === '25' || (id === '' && svgStr.includes('192.756') && svgStr.includes('#cc2229') && svgStr.includes('M49.548'))) {
     // kenwood
     svgStr = svgStr.replace(/viewBox=["\x27][^"\x27]+["\x27]/, 'viewBox="2 80 188 32"');
+    svgStr = svgStr.replace(/width=["\x27][^"\x27]+["\x27]/, 'width="188"').replace(/height=["\x27][^"\x27]+["\x27]/, 'height="32"');
     svgStr = svgStr.replace(/<path[^>]*fill=["\x27]#fff["\x27][^>]*d=["\x27]M0 0h192\.756v192\.756H0V0z["\x27][^>]*\/>/gi, '');
   } else if (id === '9' || (id === '' && svgStr.includes('192.756') && svgStr.includes('M31.016 96.918'))) {
     // Nespresso
     svgStr = svgStr.replace(/viewBox=["\x27][^"\x27]+["\x27]/, 'viewBox="10 80 173 30"');
+    svgStr = svgStr.replace(/width=["\x27][^"\x27]+["\x27]/, 'width="173"').replace(/height=["\x27][^"\x27]+["\x27]/, 'height="30"');
     svgStr = svgStr.replace(/<path[^>]*fill=["\x27]#fff["\x27][^>]*d=["\x27]M0 0h192\.756v192\.756H0V0z["\x27][^>]*\/>/gi, '');
   } else if (id === '30' || (id === '' && svgStr.includes('192.756') && svgStr.includes('M72.699 100.652'))) {
     // seb
     svgStr = svgStr.replace(/viewBox=["\x27][^"\x27]+["\x27]/, 'viewBox="9 76 178 40"');
+    svgStr = svgStr.replace(/width=["\x27][^"\x27]+["\x27]/, 'width="178"').replace(/height=["\x27][^"\x27]+["\x27]/, 'height="40"');
     svgStr = svgStr.replace(/<path[^>]*fill=["\x27]#fff["\x27][^>]*d=["\x27]M0 0h192\.756v192\.756H0V0z["\x27][^>]*\/>/gi, '');
   }
   // All other brand SVGs (Robuste, Moulinex, LG, PHILIPS, Tefal, BOSCH, etc.) remain 100% untouched
@@ -1581,7 +1586,7 @@ router.post('/promo-codes/validate', async (req, res) => {
         p.image as product_image,
         p.slug as product_slug
       FROM promo_codes pc
-      JOIN products p ON pc.product_id = p.id
+      LEFT JOIN products p ON pc.product_id = p.id
       WHERE UPPER(pc.code) = UPPER(${cleanCode})
     `;
 
@@ -1598,6 +1603,27 @@ router.post('/promo-codes/validate', async (req, res) => {
     }
 
     if (items && Array.isArray(items) && items.length > 0) {
+      if (!promo.product_id) {
+        // Global promo code applicable to the entire cart
+        const cartSubtotal = items.reduce((sum: number, it: any) => {
+          const itemPrice = Number(it.price) || 0;
+          const qty = Number(it.quantity) || 1;
+          return sum + (itemPrice * qty);
+        }, 0);
+        const discount_amount = Math.round((cartSubtotal * Number(promo.discount_percent)) / 100);
+
+        return res.json({
+          valid: true,
+          code: promo.code,
+          product_id: null,
+          product_name: 'Tous les articles du panier',
+          product_image: null,
+          discount_percent: promo.discount_percent,
+          discount_amount,
+          message: `-${promo.discount_percent}% sur l'ensemble de votre panier !`
+        });
+      }
+
       const matchingItem = items.find((it: any) => String(it.product_id || it.id) === String(promo.product_id));
       if (!matchingItem) {
         return res.status(400).json({ 
@@ -1732,16 +1758,22 @@ router.post('/orders', orderLimiter, async (req, res) => {
           throw new Error('Code promo invalide, expiré ou limite d\'utilisation atteinte');
         }
 
-        // Verify promo code applies to one of the ordered items
-        const matchingItem = validatedItems.find(it => String(it.product_id) === String(promo.product_id));
-        if (!matchingItem) {
-          throw new Error('Ce code promo ne s\'applique pas aux produits de votre commande');
-        }
+        if (promo.product_id) {
+          // Verify promo code applies to one of the ordered items
+          const matchingItem = validatedItems.find(it => String(it.product_id) === String(promo.product_id));
+          if (!matchingItem) {
+            throw new Error('Ce code promo ne s\'applique pas aux produits de votre commande');
+          }
 
-        // Discount strictly calculated on the eligible product price (never shipping)
-        const eligibleProductTotal = Number(matchingItem.price) * Number(matchingItem.quantity);
-        discountAmount = Math.round((eligibleProductTotal * Number(promo.discount_percent)) / 100);
-        discountAmount = Math.min(discountAmount, eligibleProductTotal);
+          // Discount strictly calculated on the eligible product price (never shipping)
+          const eligibleProductTotal = Number(matchingItem.price) * Number(matchingItem.quantity);
+          discountAmount = Math.round((eligibleProductTotal * Number(promo.discount_percent)) / 100);
+          discountAmount = Math.min(discountAmount, eligibleProductTotal);
+        } else {
+          // Global cart promo code: discount applies to calculatedTotal
+          discountAmount = Math.round((calculatedTotal * Number(promo.discount_percent)) / 100);
+          discountAmount = Math.min(discountAmount, calculatedTotal);
+        }
         appliedPromoCode = promo.code;
       }
 
@@ -2726,14 +2758,16 @@ router.post('/admin/promo-codes', authenticate, async (req, res) => {
       return res.status(400).json({ error: 'Le code promo doit contenir entre 2 et 50 caractères' });
     }
 
-    const prodId = parseInt(product_id, 10);
-    if (isNaN(prodId)) {
-      return res.status(400).json({ error: 'Veuillez sélectionner un produit valide dans le catalogue' });
-    }
-
-    const [product] = await sql`SELECT id, name FROM products WHERE id = ${prodId}`;
-    if (!product) {
-      return res.status(400).json({ error: 'Le produit sélectionné est introuvable' });
+    let prodId: number | null = null;
+    if (product_id !== undefined && product_id !== null && String(product_id).trim() !== '' && String(product_id).trim() !== 'null') {
+      const parsed = parseInt(product_id, 10);
+      if (!isNaN(parsed) && parsed > 0) {
+        const [product] = await sql`SELECT id, name FROM products WHERE id = ${parsed}`;
+        if (!product) {
+          return res.status(400).json({ error: 'Le produit sélectionné est introuvable' });
+        }
+        prodId = parsed;
+      }
     }
 
     const discount = parseInt(discount_percent, 10);
@@ -2790,9 +2824,16 @@ router.put('/admin/promo-codes/:id', authenticate, async (req, res) => {
 
     let prodId = existing.product_id;
     if (product_id !== undefined) {
-      prodId = parseInt(product_id, 10);
-      const [product] = await sql`SELECT id FROM products WHERE id = ${prodId}`;
-      if (!product) return res.status(400).json({ error: 'Produit introuvable' });
+      if (product_id === null || String(product_id).trim() === '' || String(product_id).trim() === 'null') {
+        prodId = null;
+      } else {
+        const parsed = parseInt(product_id, 10);
+        if (!isNaN(parsed) && parsed > 0) {
+          const [product] = await sql`SELECT id FROM products WHERE id = ${parsed}`;
+          if (!product) return res.status(400).json({ error: 'Produit introuvable' });
+          prodId = parsed;
+        }
+      }
     }
 
     let discount = existing.discount_percent;

@@ -4,6 +4,7 @@ import { getSupabase } from '../../lib/supabase';
 import { toast } from 'react-hot-toast';
 import { LogIn, Mail, Lock, Chrome } from 'lucide-react';
 import SEO from '../../components/SEO';
+import { useCartStore } from '../../store/cartStore';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -11,7 +12,7 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
-  const from = location.state?.from?.pathname || '/account/dashboard';
+  const from = location.state?.from?.pathname || location.state?.from || '/account/dashboard';
   const supabase = getSupabase();
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -28,6 +29,19 @@ export default function Login() {
       });
 
       if (error) throw error;
+
+      // Restore pending cart item if user was prompted to login before adding to cart
+      try {
+        const pendingStr = sessionStorage.getItem('zorando_pending_cart_item');
+        if (pendingStr) {
+          const pending = JSON.parse(pendingStr);
+          if (pending && pending.product) {
+            useCartStore.getState().addItem(pending.product, pending.quantity || 1, pending.selectedVariation);
+            sessionStorage.removeItem('zorando_pending_cart_item');
+            toast.success(`"${pending.product.name}" a été ajouté à votre panier !`);
+          }
+        }
+      } catch (err) {}
 
       toast.success('Bon retour sur Zorando !');
       navigate(from, { replace: true });

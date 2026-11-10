@@ -4317,12 +4317,50 @@ router.post('/cart/sync', async (req, res) => {
       validUserId = user_id;
     }
 
+    // DO NOT store anonymous carts with no registered user or phone/email in database
+    // This satisfies the requirement: anonymous visitors cannot leave uncontactable abandoned carts
+    if (!validUserId && !customer_phone && !customer_email) {
+      return res.json({ success: true, cart_id: null, saved: false, message: 'Panier anonyme sans contact non enregistré' });
+    }
+
+    // Auto-enrich cart with profile data for registered users if fields are missing
+    let resolvedName = customer_name || null;
+    let resolvedPhone = customer_phone || null;
+    let resolvedEmail = customer_email || null;
+    let resolvedWilaya = wilaya || null;
+    let resolvedCommune = commune || null;
+
+    if (validUserId && (!resolvedPhone || !resolvedName)) {
+      try {
+        const [prof] = await sql`SELECT first_name, last_name, phone, email, wilaya, commune FROM profiles WHERE id = ${validUserId} LIMIT 1`;
+        if (prof) {
+          if (!resolvedName && (prof.first_name || prof.last_name)) {
+            resolvedName = `${prof.first_name || ''} ${prof.last_name || ''}`.trim();
+          }
+          if (!resolvedPhone && prof.phone) {
+            resolvedPhone = prof.phone;
+          }
+          if (!resolvedEmail && prof.email) {
+            resolvedEmail = prof.email;
+          }
+          if (!resolvedWilaya && prof.wilaya) {
+            resolvedWilaya = prof.wilaya;
+          }
+          if (!resolvedCommune && prof.commune) {
+            resolvedCommune = prof.commune;
+          }
+        }
+      } catch (e) {
+        console.error('Error fetching profile for cart:', e);
+      }
+    }
+
     if (existing) {
-      const mergedName = customer_name || existing.customer_name || null;
-      const mergedPhone = customer_phone || existing.customer_phone || null;
-      const mergedEmail = customer_email || existing.customer_email || null;
-      const mergedWilaya = wilaya || existing.wilaya || null;
-      const mergedCommune = commune || existing.commune || null;
+      const mergedName = resolvedName || existing.customer_name || null;
+      const mergedPhone = resolvedPhone || existing.customer_phone || null;
+      const mergedEmail = resolvedEmail || existing.customer_email || null;
+      const mergedWilaya = resolvedWilaya || existing.wilaya || null;
+      const mergedCommune = resolvedCommune || existing.commune || null;
       const mergedUserId = validUserId || existing.user_id || null;
 
       await sql`
@@ -4353,8 +4391,8 @@ router.post('/cart/sync', async (req, res) => {
           wilaya, commune, items, total_estimated, item_count, status,
           created_at, updated_at, last_activity_at
         ) VALUES (
-          ${session_id}, ${validUserId}, ${customer_name || null}, ${customer_phone || null}, ${customer_email || null},
-          ${wilaya || null}, ${commune || null}, ${sql.json(safeItems)}, ${totalEstimated}, ${itemCount}, 'active',
+          ${session_id}, ${validUserId}, ${resolvedName || null}, ${resolvedPhone || null}, ${resolvedEmail || null},
+          ${resolvedWilaya || null}, ${resolvedCommune || null}, ${sql.json(safeItems)}, ${totalEstimated}, ${itemCount}, 'active',
           NOW(), NOW(), NOW()
         )
         RETURNING id
@@ -4394,8 +4432,8 @@ router.get('/admin/carts', authenticate, async (req, res) => {
       WHERE item_count > 0 OR status = 'converted'
     `;
 
-    // 3. Build query filters
-    const conditions: any[] = [sql`item_count > 0 OR status = 'converted'`];
+    // 3. Build query filters (Only show contactable carts with user account or phone/email)
+    const conditions: any[] = [sql`(c.item_count > 0 OR c.status = 'converted') AND (c.customer_phone IS NOT NULL OR c.user_id IS NOT NULL OR c.status = 'converted')`];
 
     if (status && status !== 'all') {
       if (status === 'abandoned') {

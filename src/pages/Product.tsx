@@ -13,6 +13,7 @@ import SEO, { getCanonicalUrl } from '../components/SEO';
 import { buildProductSchema, buildBreadcrumbSchema, smartTruncate } from '../lib/schemaUtils';
 import { fetchWithCache } from '../lib/utils';
 import { sendCapiEvent, generateEventId } from '../lib/capi';
+import { AuthRequiredModal } from '../components/AuthRequiredModal';
 
 const COLOR_MAP: Record<string, string> = {
   'noir': '#000000',
@@ -116,6 +117,7 @@ export default function Product() {
   const [isZooming, setIsZooming] = useState(false);
   const addItem = useCartStore(state => state.addItem);
   const { user } = useAuth();
+  const [showAuthModal, setShowAuthModal] = useState(false);
   const navigate = useNavigate();
   const supabase = getSupabase();
 
@@ -422,6 +424,13 @@ export default function Product() {
       optionsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       return;
     }
+
+    // Require authentication so anonymous visitors cannot leave uncontactable carts
+    if (!user) {
+      setShowAuthModal(true);
+      return;
+    }
+
     addItem(product, quantity, selectedVariation);
     
     // Use price from variation if available
@@ -1511,6 +1520,21 @@ export default function Product() {
           />
         </div>
       )}
+
+      {/* Modal d'authentification requise pour panier */}
+      <AuthRequiredModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        product={product ? {
+          id: product.id,
+          name: product.name,
+          price: product.price,
+          promo_price: product.promo_price,
+          image: product.image || (product.images && product.images[0]) || ''
+        } : undefined}
+        quantity={quantity}
+        selectedVariation={selectedVariation}
+      />
     </div>
   );
 }

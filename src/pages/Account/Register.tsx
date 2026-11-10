@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { getSupabase } from '../../lib/supabase';
 import { toast } from 'react-hot-toast';
 import { UserPlus, Mail, Lock, User, Phone, MapPin, Navigation } from 'lucide-react';
 import { useCommunesStore } from '../../store/useCommunesStore';
 import { fetchWithCache } from '../../lib/utils';
 import SEO from '../../components/SEO';
+import { useCartStore } from '../../store/cartStore';
 
 interface Wilaya {
   number: string;
@@ -28,6 +29,7 @@ export default function Register() {
   const { communes: ALGERIA_COMMUNES, fetchCommunes } = useCommunesStore();
 
   const navigate = useNavigate();
+  const location = useLocation();
   const supabase = getSupabase();
 
   useEffect(() => {
@@ -104,8 +106,22 @@ export default function Register() {
         console.warn('Auto sign-in warning:', signInError);
       }
 
+      // Restore pending cart item if user registered after trying to add an item
+      try {
+        const pendingStr = sessionStorage.getItem('zorando_pending_cart_item');
+        if (pendingStr) {
+          const pending = JSON.parse(pendingStr);
+          if (pending && pending.product) {
+            useCartStore.getState().addItem(pending.product, pending.quantity || 1, pending.selectedVariation);
+            sessionStorage.removeItem('zorando_pending_cart_item');
+            toast.success(`"${pending.product.name}" a été ajouté à votre panier !`);
+          }
+        }
+      } catch (err) {}
+
       toast.success('Compte créé avec succès ! Bienvenue chez Zorando.');
-      navigate('/account/dashboard');
+      const from = (location.state as any)?.from?.pathname || (location.state as any)?.from || '/account/dashboard';
+      navigate(from, { replace: true });
     } catch (error: any) {
       console.error("Registration error:", error);
       toast.error(error.message || 'Une erreur est survenue lors de l\'inscription.');

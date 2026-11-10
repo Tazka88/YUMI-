@@ -1,13 +1,16 @@
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { Trash2, ArrowRight, ShoppingBag, Tag, CheckCircle2, X, Loader2 } from 'lucide-react';
+import { Trash2, ArrowRight, ShoppingBag, Tag, CheckCircle2, X, Loader2, User, Lock, UserPlus, LogIn, ShieldCheck } from 'lucide-react';
 import { useCartStore } from '../store/cartStore';
+import { useAuth } from '../lib/AuthContext';
 import React, { useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import { formatPrice, getProductEffectivePrice, isPromoActive, calculateDiscountPercentage } from '../utils/formatPrice';
 import SEO from '../components/SEO';
 
 export default function Cart() {
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const { user } = useAuth();
   const { items, updateQuantity, removeItem, total, appliedPromo, setAppliedPromo, getPromoDiscount, finalTotal } = useCartStore();
   const [promoCodeInput, setPromoCodeInput] = useState('');
   const [isApplyingPromo, setIsApplyingPromo] = useState(false);
@@ -161,7 +164,6 @@ export default function Cart() {
     }
     removeItem(item.cartItemId || item.id);
   };
-  const navigate = useNavigate();
 
   if (items.length === 0) {
     return (
@@ -185,6 +187,44 @@ export default function Cart() {
     <div className="container mx-auto px-4 py-8">
       <SEO title="Panier" description="Votre panier ZORANDO." noindex={true} />
       <h1 className="text-xl md:text-2xl font-bold text-gray-900 mb-4 px-4">Mon Panier ({items.length} articles)</h1>
+
+      {/* Anonymous visitor registration alert */}
+      {!user && (
+        <div className="mb-6 p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-orange-500/10 via-amber-500/10 to-orange-500/10 border border-orange-200/90 shadow-2xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3.5">
+            <div className="w-11 h-11 rounded-2xl bg-[#FF6B00] text-white flex items-center justify-center shrink-0 shadow-md shadow-orange-500/20">
+              <Lock size={20} className="stroke-[2.5]" />
+            </div>
+            <div>
+              <h2 className="font-black text-sm text-gray-900 flex items-center gap-2">
+                <span>Enregistrez votre panier pour ne pas le perdre</span>
+                <span className="text-[10px] font-bold uppercase bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full">Recommandé</span>
+              </h2>
+              <p className="text-xs text-gray-600 mt-0.5">
+                Connectez-vous ou créez votre compte afin de sauvegarder vos articles, valider votre livraison 58 wilayas et profiter de vos réductions.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
+            <Link
+              to="/account/login"
+              state={{ from: { pathname: '/cart' } }}
+              className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl border border-gray-300 hover:border-gray-900 bg-white hover:bg-gray-50 text-gray-800 text-xs font-bold transition shadow-xs"
+            >
+              <LogIn size={14} />
+              <span>Se connecter</span>
+            </Link>
+            <Link
+              to="/account/register"
+              state={{ from: { pathname: '/cart' } }}
+              className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-[#FF6B00] hover:bg-orange-600 text-white text-xs font-black transition shadow-md shadow-orange-500/25"
+            >
+              <UserPlus size={14} />
+              <span>Créer mon compte</span>
+            </Link>
+          </div>
+        </div>
+      )}
 
       <div className="flex flex-col lg:flex-row gap-8">
         {/* Cart Items */}
@@ -365,10 +405,17 @@ export default function Cart() {
             </div>
             
             <button 
-              onClick={() => navigate('/checkout')}
-              className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 px-4 rounded-md flex items-center justify-center gap-2 transition-colors shadow-md"
+              onClick={() => {
+                if (!user) {
+                  toast('Veuillez vous connecter ou créer votre compte pour continuer.', { icon: '🔒' });
+                  navigate('/account/login', { state: { from: { pathname: '/checkout' } } });
+                  return;
+                }
+                navigate('/checkout');
+              }}
+              className="w-full bg-[#FF6B00] hover:bg-orange-600 text-white font-black py-3.5 px-4 rounded-xl flex items-center justify-center gap-2 transition-all shadow-md shadow-orange-500/25 cursor-pointer"
             >
-              Passer la commande
+              <span>Passer la commande</span>
               <ArrowRight size={20} />
             </button>
             

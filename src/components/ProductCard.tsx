@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ShoppingCart, Star, Heart } from 'lucide-react';
 import { useCartStore } from '../store/cartStore';
@@ -7,6 +7,7 @@ import { useAuth } from '../lib/AuthContext';
 import { formatPrice } from '../utils/formatPrice';
 import { isPromoActive } from '../utils/promo';
 import { getResizedImageUrl } from '../lib/utils';
+import { AuthRequiredModal } from './AuthRequiredModal';
 
 interface Product {
   id: number;
@@ -34,6 +35,7 @@ export const ProductCard: React.FC<{ product: Product; priority?: boolean; isFla
   const reviewsCount = product.reviews_count ? Number(product.reviews_count) : 0;
   
   const { user } = useAuth();
+  const [showAuthModal, setShowAuthModal] = useState(false);
   const isFavorite = useWishlistStore((state) => state.isFavorite(product.id));
   const toggleFavorite = useWishlistStore((state) => state.toggleFavorite);
 
@@ -178,9 +180,13 @@ export const ProductCard: React.FC<{ product: Product; priority?: boolean; isFla
               <button 
                 onClick={(e) => {
                   e.preventDefault();
+                  if (!user) {
+                    setShowAuthModal(true);
+                    return;
+                  }
                   navigate('/checkout', { state: { directBuyItem: { ...product, quantity: 1 } } });
                 }}
-                className="w-[85%] sm:w-full mx-auto bg-orange-500 text-white py-1.5 sm:py-2.5 rounded-lg text-[11px] sm:text-sm font-bold shadow hover:shadow-lg hover:bg-orange-600 transition-all duration-200 transform hover:-translate-y-0.5 active:translate-y-0 flex items-center justify-center tracking-wide"
+                className="w-[85%] sm:w-full mx-auto bg-orange-500 text-white py-1.5 sm:py-2.5 rounded-lg text-[11px] sm:text-sm font-bold shadow hover:shadow-lg hover:bg-orange-600 transition-all duration-200 transform hover:-translate-y-0.5 active:translate-y-0 flex items-center justify-center tracking-wide cursor-pointer"
               >
                 Acheter maintenant
               </button>
@@ -188,6 +194,19 @@ export const ProductCard: React.FC<{ product: Product; priority?: boolean; isFla
           </div>
         )}
       </div>
+
+      <AuthRequiredModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        product={{
+          id: product.id,
+          name: product.name,
+          price: product.price,
+          promo_price: product.promo_price,
+          image: product.image
+        }}
+        quantity={1}
+      />
     </div>
   );
 };

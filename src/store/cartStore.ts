@@ -93,6 +93,12 @@ export function triggerCartSync(items: CartItem[], customerInfo?: CustomerCartIn
         }
       }
 
+      // DO NOT sync anonymous carts without a registered user or customer contact info
+      // Ensures abandoned carts in admin only contain contactable registered customers
+      if (!userId && !lastKnownCustomerInfo.phone && !lastKnownCustomerInfo.email) {
+        return;
+      }
+
       await fetch('/api/cart/sync', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

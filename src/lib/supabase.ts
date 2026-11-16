@@ -25,21 +25,59 @@ export const getSupabase = () => {
     if (!supabaseKey && (window as any).__SUPABASE_KEY__) supabaseKey = (window as any).__SUPABASE_KEY__;
   }
 
-  // 3. Check environment variables
-  if (!supabaseUrl) {
-    supabaseUrl = (typeof process !== 'undefined' && (process.env?.SUPABASE_URL || process.env?.VITE_SUPABASE_URL)) 
-      || (import.meta.env && import.meta.env.VITE_SUPABASE_URL) || '';
+  const isInvalidUrl = (u?: string) => {
+    if (!u || typeof u !== 'string') return true;
+    const trimmed = u.trim();
+    return (
+      !trimmed ||
+      trimmed === 'undefined' ||
+      trimmed === 'null' ||
+      trimmed.includes('YOUR_PROJECT_ID') ||
+      trimmed.includes('your-project') ||
+      trimmed.includes('%VITE_')
+    );
+  };
+
+  const isInvalidKey = (k?: string) => {
+    if (!k || typeof k !== 'string') return true;
+    const trimmed = k.trim();
+    return (
+      !trimmed ||
+      trimmed === 'undefined' ||
+      trimmed === 'null' ||
+      trimmed.includes('%VITE_') ||
+      trimmed.toLowerCase().includes('your-service-role') ||
+      trimmed.toLowerCase().includes('your-anon-key') ||
+      trimmed.includes('YOUR_') ||
+      trimmed.startsWith('sb_secret_')
+    );
+  };
+
+  // 3. Check environment variables (pick first non-placeholder candidate)
+  if (isInvalidUrl(supabaseUrl)) {
+    const urlCandidates = [
+      typeof process !== 'undefined' ? process.env?.SUPABASE_URL : undefined,
+      typeof process !== 'undefined' ? process.env?.VITE_SUPABASE_URL : undefined,
+      import.meta.env ? import.meta.env.VITE_SUPABASE_URL : undefined,
+    ];
+    supabaseUrl = urlCandidates.find((c) => !isInvalidUrl(c)) || '';
   }
-  if (!supabaseKey) {
-    supabaseKey = (typeof process !== 'undefined' && (process.env?.SUPABASE_SERVICE_ROLE_KEY || process.env?.SUPABASE_ANON_KEY || process.env?.VITE_SUPABASE_ANON_KEY)) 
-      || (import.meta.env && import.meta.env.VITE_SUPABASE_ANON_KEY) || '';
+
+  if (isInvalidKey(supabaseKey)) {
+    const keyCandidates = [
+      typeof process !== 'undefined' ? process.env?.SUPABASE_SERVICE_ROLE_KEY : undefined,
+      typeof process !== 'undefined' ? process.env?.SUPABASE_ANON_KEY : undefined,
+      typeof process !== 'undefined' ? process.env?.VITE_SUPABASE_ANON_KEY : undefined,
+      import.meta.env ? import.meta.env.VITE_SUPABASE_ANON_KEY : undefined,
+    ];
+    supabaseKey = keyCandidates.find((c) => !isInvalidKey(c)) || '';
   }
 
   // 4. Default fallback to production project if placeholders or empty
-  if (!supabaseUrl || supabaseUrl.includes('YOUR_PROJECT_ID')) {
+  if (isInvalidUrl(supabaseUrl)) {
     supabaseUrl = DEFAULT_SUPABASE_URL;
   }
-  if (!supabaseKey || supabaseKey.startsWith('sb_secret_')) {
+  if (isInvalidKey(supabaseKey)) {
     supabaseKey = DEFAULT_SUPABASE_ANON_KEY;
   }
 

@@ -58,6 +58,7 @@ const Wishlist = lazyWithRetry(() => import('./pages/Account/Wishlist'));
 const Addresses = lazyWithRetry(() => import('./pages/Account/Addresses'));
 const Profile = lazyWithRetry(() => import('./pages/Account/Profile'));
 const Notifications = lazyWithRetry(() => import('./pages/Account/Notifications'));
+const Vouchers = lazyWithRetry(() => import('./pages/Account/Vouchers'));
 const AuthCallback = lazyWithRetry(() => import('./pages/AuthCallback'));
 
 export default function App() {
@@ -102,6 +103,7 @@ export default function App() {
           <Route path="account" element={<ProtectedRoute><AccountLayout><Navigate to="/account/dashboard" replace /></AccountLayout></ProtectedRoute>} />
           <Route path="account/dashboard" element={<ProtectedRoute><AccountLayout><Dashboard /></AccountLayout></ProtectedRoute>} />
           <Route path="account/orders" element={<ProtectedRoute><AccountLayout><Orders /></AccountLayout></ProtectedRoute>} />
+          <Route path="account/vouchers" element={<ProtectedRoute><AccountLayout><Vouchers /></AccountLayout></ProtectedRoute>} />
           <Route path="account/wishlist" element={<ProtectedRoute><AccountLayout><Wishlist /></AccountLayout></ProtectedRoute>} />
           <Route path="account/addresses" element={<ProtectedRoute><AccountLayout><Addresses /></AccountLayout></ProtectedRoute>} />
           <Route path="account/profile" element={<ProtectedRoute><AccountLayout><Profile /></AccountLayout></ProtectedRoute>} />

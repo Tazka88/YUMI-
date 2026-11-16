@@ -1,7 +1,8 @@
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { Trash2, ArrowRight, ShoppingBag, Tag, CheckCircle2, X, Loader2, User, Lock, UserPlus, LogIn, ShieldCheck } from 'lucide-react';
+import { Trash2, ArrowRight, ShoppingBag, Tag, CheckCircle2, X, Loader2, User, Lock, UserPlus, LogIn, ShieldCheck, Ticket, AlertTriangle } from 'lucide-react';
 import { useCartStore } from '../store/cartStore';
 import { useAuth } from '../lib/AuthContext';
+import { getSupabase } from '../lib/supabase';
 import React, { useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import { formatPrice, getProductEffectivePrice, isPromoActive, calculateDiscountPercentage } from '../utils/formatPrice';
@@ -11,12 +12,34 @@ export default function Cart() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { user } = useAuth();
-  const { items, updateQuantity, removeItem, total, appliedPromo, setAppliedPromo, getPromoDiscount, finalTotal } = useCartStore();
+  const {
+    items,
+    updateQuantity,
+    removeItem,
+    total,
+    appliedPromo,
+    setAppliedPromo,
+    getPromoDiscount,
+    appliedVoucher,
+    setAppliedVoucher,
+    getVoucherEligibleSubtotal,
+    getVoucherDiscount,
+    finalTotal,
+  } = useCartStore();
   const [promoCodeInput, setPromoCodeInput] = useState('');
   const [isApplyingPromo, setIsApplyingPromo] = useState(false);
   const [promoError, setPromoError] = useState<string | null>(null);
 
+  const [voucherCodeInput, setVoucherCodeInput] = useState('');
+  const [isApplyingVoucher, setIsApplyingVoucher] = useState(false);
+  const [voucherError, setVoucherError] = useState<string | null>(null);
+  const [myAvailableVouchers, setMyAvailableVouchers] = useState<any[]>([]);
+
+  const productsSubtotal = total();
   const discountAmount = getPromoDiscount();
+  const voucherDiscount = getVoucherDiscount();
+  const voucherEligibleSubtotal = getVoucherEligibleSubtotal();
+  const productsTotalAfterDiscount = Math.max(0, productsSubtotal - discountAmount - voucherDiscount);
 
   const handleApplyPromo = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -71,6 +94,133 @@ export default function Cart() {
     setPromoError(null);
     toast.success('Code promo retiré');
   };
+
+  const getCustomerToken = async (): Promise<string | null> => {
+    const supabase = getSupabase();
+    if (!supabase) return null;
+    const { data } = await supabase.auth.getSession();
+    return data?.session?.access_token || null;
+  };
+
+  const validateAndApplyVoucher = async (rawCode: string, silent = false) => {
+    const cleanCode = rawCode.trim().toUpperCase();
+    if (!cleanCode) {
+      if (!silent) setVoucherError('Veuillez saisir un code de bon d\'achat');
+      return;
+    }
+
+    if (!user) {
+      if (!silent) {
+        toast.error('Connectez-vous à votre compte client pour utiliser un bon d\'achat.');
+        navigate('/account/login', { state: { from: { pathname: `/cart?voucher=${encodeURIComponent(cleanCode)}` } } });
+      }
+      return;
+    }
+
+    setIsApplyingVoucher(true);
+    setVoucherError(null);
+    try {
+      const token = await getCustomerToken();
+      if (!token) {
+        throw new Error('Session expirée. Veuillez vous reconnecter.');
+      }
+
+      const res = await fetch('/api/vouchers/validate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          code: cleanCode,
+          has_promo_code: Boolean(appliedPromo),
+          items: items.map((item) => ({
+            id: item.id,
+            product_id: item.id,
+            price: getProductEffectivePrice(item),
+            quantity: item.quantity,
+          })),
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.valid) {
+        throw new Error(data.error || 'Bon d\'achat non applicable');
+      }
+
+      setAppliedVoucher(data.voucher);
+      setVoucherCodeInput('');
+      setVoucherError(null);
+      try {
+        sessionStorage.removeItem('zorando_pending_voucher_code');
+      } catch (_) {}
+      if (!silent) {
+        toast.success(data.message || `Bon d'achat "${data.voucher.code}" appliqué !`);
+      }
+    } catch (err: any) {
+      if (!silent) {
+        setVoucherError(err.message || 'Bon d\'achat invalide');
+        toast.error(err.message || 'Bon d\'achat invalide');
+      }
+    } finally {
+      setIsApplyingVoucher(false);
+    }
+  };
+
+  const handleApplyVoucherForm = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await validateAndApplyVoucher(voucherCodeInput, false);
+  };
+
+  const handleRemoveVoucher = () => {
+    setAppliedVoucher(null);
+    setVoucherError(null);
+    toast.success('Bon d\'achat retiré');
+  };
+
+  // Fetch logged-in user's available vouchers for quick selection
+  useEffect(() => {
+    if (!user) {
+      setMyAvailableVouchers([]);
+      return;
+    }
+    const fetchUserVouchers = async () => {
+      try {
+        const token = await getCustomerToken();
+        if (!token) return;
+        const res = await fetch('/api/account/vouchers', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          const avail = Array.isArray(data.vouchers)
+            ? data.vouchers.filter((v: any) => v.status === 'available')
+            : [];
+          setMyAvailableVouchers(avail);
+        }
+      } catch (_) {}
+    };
+    fetchUserVouchers();
+  }, [user]);
+
+  // Auto-apply voucher from URL ?voucher=CODE or sessionStorage pending code
+  const urlVoucher = searchParams.get('voucher');
+  const voucherAutoAppliedRef = useRef(false);
+
+  useEffect(() => {
+    if (!user || items.length === 0 || appliedVoucher || voucherAutoAppliedRef.current) return;
+    let candidate = urlVoucher;
+    if (!candidate) {
+      try {
+        candidate = sessionStorage.getItem('zorando_pending_voucher_code');
+      } catch (_) {}
+    }
+    if (candidate) {
+      voucherAutoAppliedRef.current = true;
+      setVoucherCodeInput(candidate);
+      validateAndApplyVoucher(candidate, false);
+    }
+  }, [user, items.length, urlVoucher, appliedVoucher]);
 
   // Automatically apply promo code from URL if provided (e.g., from WhatsApp recovery message ?promo=CODE)
   const urlPromo = searchParams.get('promo') || searchParams.get('code');
@@ -374,18 +524,150 @@ export default function Cart() {
               )}
             </div>
 
+            {/* Voucher ("Bon d'achat") Section */}
+            <div className="mb-5 pb-5 border-b border-gray-100">
+              <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider block mb-2 flex items-center justify-between">
+                <span className="flex items-center gap-1.5">
+                  <Ticket size={14} className="text-[#FF6B00]" />
+                  Bon d'achat ZORANDO
+                </span>
+                {user && myAvailableVouchers.length > 0 && !appliedVoucher && (
+                  <span className="text-[11px] font-bold text-[#FF6B00]">
+                    {myAvailableVouchers.length} disponible{myAvailableVouchers.length > 1 ? 's' : ''}
+                  </span>
+                )}
+              </label>
+
+              {appliedVoucher ? (
+                <div className={`rounded-xl p-3 border ${
+                  voucherDiscount > 0
+                    ? 'bg-orange-50 border-orange-200'
+                    : 'bg-amber-50 border-amber-300'
+                }`}>
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-start gap-2">
+                      {voucherDiscount > 0 ? (
+                        <CheckCircle2 size={16} className="text-[#FF6B00] shrink-0 mt-0.5" />
+                      ) : (
+                        <AlertTriangle size={16} className="text-amber-600 shrink-0 mt-0.5" />
+                      )}
+                      <div>
+                        <div className="text-sm font-bold text-gray-900 flex items-center gap-1.5 flex-wrap">
+                          <span className="font-mono">{appliedVoucher.code}</span>
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-[#FF6B00] text-white font-bold">
+                            -{formatPrice(appliedVoucher.amount)}
+                          </span>
+                        </div>
+                        {voucherDiscount > 0 ? (
+                          <p className="text-xs text-orange-800 mt-0.5">
+                            Déduit du total produits (hors livraison)
+                          </p>
+                        ) : appliedPromo && !appliedVoucher.allow_promo_stacking ? (
+                          <p className="text-xs text-amber-800 mt-0.5 font-medium">
+                            Non cumulable avec le code promo {appliedPromo.code}.
+                          </p>
+                        ) : (
+                          <p className="text-xs text-amber-800 mt-0.5 font-medium">
+                            Minimum {formatPrice(appliedVoucher.minimum_order_amount)} requis : il manque{' '}
+                            <strong>{formatPrice(Math.max(0, Number(appliedVoucher.minimum_order_amount) - voucherEligibleSubtotal))}</strong> de produits éligibles.
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleRemoveVoucher}
+                      className="text-gray-400 hover:text-red-500 p-1 rounded-md transition"
+                      title="Retirer le bon d'achat"
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-2.5">
+                  <form onSubmit={handleApplyVoucherForm} className="space-y-2">
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={voucherCodeInput}
+                        onChange={(e) => {
+                          setVoucherCodeInput(e.target.value.toUpperCase());
+                          if (voucherError) setVoucherError(null);
+                        }}
+                        placeholder="Ex: ZRD-XXXX-XXXX"
+                        className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 font-mono uppercase"
+                      />
+                      <button
+                        type="submit"
+                        disabled={isApplyingVoucher || !voucherCodeInput.trim()}
+                        className="px-4 py-2 bg-[#FF6B00] hover:bg-orange-600 disabled:bg-gray-300 text-white text-sm font-semibold rounded-md transition flex items-center justify-center gap-1.5 shrink-0"
+                      >
+                        {isApplyingVoucher ? <Loader2 size={16} className="animate-spin" /> : 'Utiliser'}
+                      </button>
+                    </div>
+                    {voucherError && (
+                      <p className="text-xs text-red-600 font-medium">{voucherError}</p>
+                    )}
+                  </form>
+
+                  {/* Quick select chips from customer's account */}
+                  {user && myAvailableVouchers.length > 0 && (
+                    <div className="space-y-1.5 pt-1">
+                      <p className="text-[11px] font-semibold text-gray-500">Vos bons disponibles :</p>
+                      <div className="space-y-1.5">
+                        {myAvailableVouchers.slice(0, 3).map((mv) => (
+                          <button
+                            key={mv.id}
+                            type="button"
+                            onClick={() => validateAndApplyVoucher(mv.code, false)}
+                            className="w-full px-3 py-2 rounded-lg border border-orange-200 bg-orange-50/50 hover:bg-orange-100/70 transition flex items-center justify-between text-left"
+                          >
+                            <div>
+                              <span className="font-mono font-bold text-xs text-gray-900">{mv.code}</span>
+                              <span className="block text-[10px] text-gray-500">
+                                Min. {formatPrice(mv.minimum_order_amount)} (hors livraison)
+                              </span>
+                            </div>
+                            <span className="text-xs font-black text-[#FF6B00] shrink-0">
+                              -{formatPrice(mv.amount)}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
             <div className="space-y-3 mb-6">
               <div className="flex justify-between text-gray-600">
-                <span>Sous-total ({items.reduce((acc, item) => acc + item.quantity, 0)} articles)</span>
-                <span className="font-medium">{formatPrice(total())}</span>
+                <span>Sous-total produits ({items.reduce((acc, item) => acc + item.quantity, 0)} articles)</span>
+                <span className="font-medium">{formatPrice(productsSubtotal)}</span>
               </div>
               {appliedPromo && discountAmount > 0 && (
                 <div className="flex justify-between text-emerald-600 font-medium text-sm">
                   <span className="flex items-center gap-1">
                     <Tag size={13} />
-                    Réduction ({appliedPromo.code})
+                    Réduction code promo ({appliedPromo.code})
                   </span>
                   <span>-{formatPrice(discountAmount)}</span>
+                </div>
+              )}
+              {appliedVoucher && voucherDiscount > 0 && (
+                <div className="flex justify-between text-[#FF6B00] font-semibold text-sm">
+                  <span className="flex items-center gap-1">
+                    <Ticket size={13} />
+                    Réduction bon d'achat ({appliedVoucher.code})
+                  </span>
+                  <span>-{formatPrice(voucherDiscount)}</span>
+                </div>
+              )}
+              {(discountAmount > 0 || voucherDiscount > 0) && (
+                <div className="flex justify-between text-gray-800 font-semibold text-sm pt-1 border-t border-dashed border-gray-100">
+                  <span>Total produits après réduction</span>
+                  <span>{formatPrice(productsTotalAfterDiscount)}</span>
                 </div>
               )}
               <div className="flex justify-between text-gray-600">
@@ -396,10 +678,10 @@ export default function Cart() {
             
             <div className="border-t pt-4 mb-6">
               <div className="flex justify-between items-end">
-                <span className="font-bold text-gray-800">Total</span>
+                <span className="font-bold text-gray-800">Total produits</span>
                 <div className="text-right">
                   <span className="text-2xl font-black text-orange-600">{formatPrice(finalTotal())}</span>
-                  <div className="text-xs text-gray-500">TVA incluse</div>
+                  <div className="text-xs text-gray-500">Hors frais de livraison • TVA incluse</div>
                 </div>
               </div>
             </div>

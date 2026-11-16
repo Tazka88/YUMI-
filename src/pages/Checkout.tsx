@@ -8,7 +8,7 @@ import {
   CheckCircle, Truck, MapPin, Phone, User as UserIcon, Navigation, 
   ChevronDown, ChevronUp, Plus, Building2, Lock, Mail, ArrowRight, 
   Edit3, ShieldCheck, Sparkles, AlertCircle, Eye, EyeOff, Check, ShoppingBag,
-  MessageCircle, Tag
+  MessageCircle, Tag, Ticket, X, Loader2
 } from 'lucide-react';
 import { getSupabase } from '../lib/supabase';
 import { formatPrice, getProductEffectivePrice, isPromoActive, calculateDiscountPercentage } from '../utils/formatPrice';
@@ -26,7 +26,7 @@ interface Wilaya {
 }
 
 export default function Checkout() {
-  const { items, total, clearCart, syncCustomerInfo, appliedPromo, getPromoDiscount } = useCartStore();
+  const { items, total, clearCart, syncCustomerInfo, appliedPromo, appliedVoucher, setAppliedVoucher, getPromoDiscount } = useCartStore();
   const { user, profile, loading: authLoading, refreshProfile } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -195,6 +195,34 @@ export default function Checkout() {
   const [discountEmail, setDiscountEmail] = useState('');
   const [showDiscountOffer, setShowDiscountOffer] = useState(true);
 
+  // Voucher input state in checkout recap
+  const [voucherCodeInput, setVoucherCodeInput] = useState('');
+  const [isApplyingVoucher, setIsApplyingVoucher] = useState(false);
+  const [voucherError, setVoucherError] = useState<string | null>(null);
+  const [myAvailableVouchers, setMyAvailableVouchers] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (!user || !supabase) {
+      setMyAvailableVouchers([]);
+      return;
+    }
+    const fetchUserVouchers = async () => {
+      try {
+        const { data } = await supabase.auth.getSession();
+        const token = data?.session?.access_token;
+        if (!token) return;
+        const res = await fetch('/api/account/vouchers', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.ok) {
+          const d = await res.json();
+          setMyAvailableVouchers(Array.isArray(d.vouchers) ? d.vouchers.filter((v: any) => v.status === 'available') : []);
+        }
+      } catch (_) {}
+    };
+    fetchUserVouchers();
+  }, [user, supabase]);
+
   const itemCount = checkoutItems.reduce((acc, item) => acc + item.quantity, 0);
   const isFreeShipping = checkoutTotal >= 10000 && itemCount >= 3;
 
@@ -203,7 +231,71 @@ export default function Checkout() {
     : (isShippingDiscountApplied ? deliveryCost * (1 - shippingSettings.percent / 100) : deliveryCost);
   
   const promoDiscount = directBuyItem ? 0 : getPromoDiscount();
-  const finalTotal = Math.max(0, checkoutTotal - promoDiscount) + effectiveDeliveryCost;
+
+  const voucherExcludedSet = new Set((appliedVoucher?.excluded_product_ids || []).map((id: any) => Number(id)));
+  const voucherEligibleSubtotal = checkoutItems.reduce((sum, it) => {
+    if (voucherExcludedSet.has(Number(it.id))) return sum;
+    return sum + getProductEffectivePrice(it) * it.quantity;
+  }, 0);
+
+  const voucherDiscount = (() => {
+    if (!appliedVoucher) return 0;
+    if (!directBuyItem && appliedPromo && !appliedVoucher.allow_promo_stacking) return 0;
+    if (voucherEligibleSubtotal < (Number(appliedVoucher.minimum_order_amount) || 0)) return 0;
+    const subtotalAfterPromo = Math.max(0, checkoutTotal - promoDiscount);
+    return Math.min(Number(appliedVoucher.amount) || 0, voucherEligibleSubtotal, subtotalAfterPromo);
+  })();
+
+  const productsAfterDiscount = Math.max(0, checkoutTotal - promoDiscount - voucherDiscount);
+  const finalTotal = productsAfterDiscount + effectiveDeliveryCost;
+
+  const handleApplyVoucherCheckout = async (codeToApply: string) => {
+    const clean = codeToApply.trim().toUpperCase();
+    if (!clean) {
+      setVoucherError('Veuillez entrer un code de bon d\'achat');
+      return;
+    }
+    if (!user || !supabase) {
+      setVoucherError('Connectez-vous pour appliquer votre bon d\'achat.');
+      return;
+    }
+    setIsApplyingVoucher(true);
+    setVoucherError(null);
+    try {
+      const { data: sess } = await supabase.auth.getSession();
+      const token = sess?.session?.access_token;
+      if (!token) throw new Error('Session expirée. Veuillez vous reconnecter.');
+
+      const res = await fetch('/api/vouchers/validate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          code: clean,
+          has_promo_code: Boolean(!directBuyItem && appliedPromo),
+          items: checkoutItems.map((it) => ({
+            id: it.id,
+            product_id: it.id,
+            price: getProductEffectivePrice(it),
+            quantity: it.quantity,
+          })),
+        }),
+      });
+      const d = await res.json();
+      if (!res.ok || !d.valid) throw new Error(d.error || 'Bon d\'achat non applicable');
+      setAppliedVoucher(d.voucher);
+      setVoucherCodeInput('');
+      setVoucherError(null);
+      toast.success(d.message || `Bon ${d.voucher.code} appliqué !`);
+    } catch (err: any) {
+      setVoucherError(err.message || 'Erreur application bon d\'achat');
+      toast.error(err.message || 'Bon d\'achat invalide');
+    } finally {
+      setIsApplyingVoucher(false);
+    }
+  };
 
   const handleApplyDiscount = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -556,6 +648,8 @@ export default function Checkout() {
     const selectedOffice = isBureau ? offices.find(o => o.id === Number(officeId) || o.id === officeId) : null;
     const finalAddress = isBureau && selectedOffice ? `Point Relais: ${selectedOffice.name} - ${selectedOffice.address}` : formData.address;
 
+    const activeVoucherCode = appliedVoucher && voucherDiscount > 0 ? appliedVoucher.code : null;
+
     const orderData = {
       customer_name: formData.name,
       customer_email: formData.email || user?.email || '',
@@ -573,6 +667,7 @@ export default function Checkout() {
       customer_user_id: user?.id || null,
       cart_session_id: getOrCreateCartSessionId(),
       promo_code: !directBuyItem && appliedPromo ? appliedPromo.code : null,
+      voucher_code: activeVoucherCode,
       items: checkoutItems.map(item => ({
         product_id: item.id,
         quantity: item.quantity,
@@ -582,9 +677,17 @@ export default function Checkout() {
     };
 
     try {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (supabase) {
+        const { data: sess } = await supabase.auth.getSession();
+        if (sess?.session?.access_token) {
+          headers.Authorization = `Bearer ${sess.session.access_token}`;
+        }
+      }
+
       const res = await fetch('/api/orders', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify(orderData)
       });
 
@@ -594,6 +697,8 @@ export default function Checkout() {
         setOrderSuccess(true);
         if (!directBuyItem) {
           clearCart();
+        } else if (activeVoucherCode) {
+          setAppliedVoucher(null);
         }
         
         // Track Purchase
@@ -786,6 +891,15 @@ export default function Checkout() {
                     Réduction code promo ({appliedPromo.code}) :
                   </span>
                   <span>-{formatPrice(promoDiscount)}</span>
+                </div>
+              )}
+              {appliedVoucher && voucherDiscount > 0 && (
+                <div className="pt-2 flex justify-between text-xs text-[#FF6B00] font-semibold">
+                  <span className="flex items-center gap-1">
+                    <Ticket size={12} />
+                    Réduction bon d'achat ({appliedVoucher.code}) :
+                  </span>
+                  <span>-{formatPrice(voucherDiscount)}</span>
                 </div>
               )}
               <div className="pt-2 flex justify-between text-xs text-gray-500">
@@ -1473,10 +1587,88 @@ export default function Checkout() {
                 })}
               </div>
 
+              {/* Voucher selector / input */}
+              {user && (
+                <div className="border-t pt-4 space-y-2">
+                  <label className="text-[11px] font-bold text-gray-600 uppercase tracking-wider flex items-center gap-1.5">
+                    <Ticket size={13} className="text-[#FF6B00]" />
+                    <span>Bon d'achat ZORANDO</span>
+                  </label>
+                  {appliedVoucher ? (
+                    <div className="p-2.5 rounded-xl bg-orange-50 border border-orange-200 flex items-center justify-between gap-2 text-xs">
+                      <div>
+                        <span className="font-mono font-bold text-gray-900">{appliedVoucher.code}</span>
+                        {voucherDiscount > 0 ? (
+                          <span className="block text-[11px] text-[#FF6B00] font-bold">
+                            -{formatPrice(voucherDiscount)} appliqués
+                          </span>
+                        ) : (
+                          <span className="block text-[11px] text-amber-700">
+                            {appliedPromo && !appliedVoucher.allow_promo_stacking
+                              ? 'Non cumulable avec le code promo'
+                              : `Min. ${formatPrice(appliedVoucher.minimum_order_amount)} requis hors livraison`}
+                          </span>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAppliedVoucher(null);
+                          setVoucherError(null);
+                        }}
+                        className="p-1 text-gray-400 hover:text-red-500"
+                        title="Retirer le bon d'achat"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <div className="flex gap-1.5">
+                        <input
+                          type="text"
+                          value={voucherCodeInput}
+                          onChange={(e) => {
+                            setVoucherCodeInput(e.target.value.toUpperCase());
+                            if (voucherError) setVoucherError(null);
+                          }}
+                          placeholder="Code bon d'achat"
+                          className="flex-1 px-2.5 py-1.5 text-xs border border-gray-300 rounded-lg font-mono uppercase focus:border-[#FF6B00] outline-none"
+                        />
+                        <button
+                          type="button"
+                          disabled={isApplyingVoucher || !voucherCodeInput.trim()}
+                          onClick={() => handleApplyVoucherCheckout(voucherCodeInput)}
+                          className="px-3 py-1.5 bg-[#FF6B00] hover:bg-orange-600 disabled:bg-gray-300 text-white text-xs font-bold rounded-lg transition"
+                        >
+                          {isApplyingVoucher ? <Loader2 size={14} className="animate-spin" /> : 'Appliquer'}
+                        </button>
+                      </div>
+                      {voucherError && <p className="text-[11px] text-red-600 font-medium">{voucherError}</p>}
+                      {myAvailableVouchers.length > 0 && (
+                        <div className="space-y-1">
+                          {myAvailableVouchers.slice(0, 2).map((mv) => (
+                            <button
+                              key={mv.id}
+                              type="button"
+                              onClick={() => handleApplyVoucherCheckout(mv.code)}
+                              className="w-full px-2.5 py-1.5 rounded-lg border border-orange-200 bg-orange-50/50 hover:bg-orange-100/70 flex items-center justify-between text-[11px] transition"
+                            >
+                              <span className="font-mono font-bold text-gray-800">{mv.code}</span>
+                              <span className="font-black text-[#FF6B00]">-{formatPrice(mv.amount)}</span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Pricing breakdown */}
               <div className="border-t pt-4 space-y-2.5 text-sm">
                 <div className="flex justify-between text-gray-600">
-                  <span>Sous-total</span>
+                  <span>Sous-total produits</span>
                   <span className="font-semibold text-gray-900">{formatPrice(checkoutTotal)}</span>
                 </div>
 
@@ -1490,8 +1682,25 @@ export default function Checkout() {
                   </div>
                 )}
 
+                {appliedVoucher && voucherDiscount > 0 && (
+                  <div className="flex justify-between text-[#FF6B00] font-semibold">
+                    <span className="flex items-center gap-1.5">
+                      <Ticket size={13} />
+                      Bon d'achat ({appliedVoucher.code})
+                    </span>
+                    <span className="font-bold">-{formatPrice(voucherDiscount)}</span>
+                  </div>
+                )}
+
+                {(promoDiscount > 0 || voucherDiscount > 0) && (
+                  <div className="flex justify-between text-gray-800 font-semibold text-xs pt-1 border-t border-dashed border-gray-100">
+                    <span>Total produits après réduction</span>
+                    <span>{formatPrice(productsAfterDiscount)}</span>
+                  </div>
+                )}
+
                 <div className="flex justify-between text-gray-600">
-                  <span>Livraison ({deliveryMode === 'bureau' ? 'Point Relais' : 'Domicile'})</span>
+                  <span>Frais de livraison ({deliveryMode === 'bureau' ? 'Point Relais' : 'Domicile'})</span>
                   {isFreeShipping ? (
                     <span className="font-bold text-green-600">Gratuit</span>
                   ) : deliveryCost > 0 ? (
@@ -1511,7 +1720,7 @@ export default function Checkout() {
               {/* Grand Total */}
               <div className="border-t pt-4">
                 <div className="flex justify-between items-baseline">
-                  <span className="font-black text-gray-900 text-base">Total à payer</span>
+                  <span className="font-black text-gray-900 text-base">Total final à payer</span>
                   <div className="text-right">
                     <span className="text-2xl font-black text-orange-600">{formatPrice(finalTotal)}</span>
                     <div className="text-[10px] text-gray-400 font-medium">TVA incluse • Paiement en espèces</div>

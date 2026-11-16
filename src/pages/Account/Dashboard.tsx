@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../lib/AuthContext';
-import { Package, Heart, MapPin, ChevronRight, ShoppingBag } from 'lucide-react';
+import { Package, Heart, MapPin, ChevronRight, ShoppingBag, Ticket } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { formatPrice } from '../../utils/formatPrice';
+import { getSupabase } from '../../lib/supabase';
 
 export default function Dashboard() {
   const { user, profile } = useAuth();
   const [recentOrders, setRecentOrders] = useState<any[]>([]);
   const [orderStats, setOrderStats] = useState({ total: 0, pending: 0, delivered: 0 });
+  const [voucherSummary, setVoucherSummary] = useState({ totalAvailableBalance: 0, availableCount: 0 });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -23,9 +25,21 @@ export default function Dashboard() {
           setRecentOrders(orders.slice(0, 3));
           setOrderStats({
             total: orders.length,
-            pending: orders.filter((o: any) => o.status === 'pending').length,
-            delivered: orders.filter((o: any) => o.status === 'delivered').length
+            pending: orders.filter((o: any) => o.status === 'pending' || o.status === 'nouvelle').length,
+            delivered: orders.filter((o: any) => o.status === 'delivered' || o.status === 'livrée').length
           });
+        }
+
+        const supabase = getSupabase();
+        const { data: sessionData } = (await supabase?.auth.getSession()) || { data: { session: null } };
+        if (sessionData?.session?.access_token) {
+          const vRes = await fetch('/api/account/vouchers', {
+            headers: { Authorization: `Bearer ${sessionData.session.access_token}` },
+          });
+          if (vRes.ok) {
+            const vData = await vRes.json();
+            if (vData.summary) setVoucherSummary(vData.summary);
+          }
         }
       } catch (error) {
         console.error("Error fetching dashboard data:", error);
@@ -111,6 +125,24 @@ export default function Dashboard() {
         <div className="space-y-4">
           <h3 className="text-lg font-bold text-gray-900">Informations & Raccourcis</h3>
           <div className="grid grid-cols-1 gap-3">
+            <div className="bg-gray-950 text-white p-6 rounded-2xl border border-gray-800 relative overflow-hidden group">
+              <div className="relative z-10">
+                <h4 className="font-bold text-orange-400 flex items-center text-sm">
+                  <Ticket className="w-5 h-5 mr-2" /> Mes bons d'achat ZORANDO
+                </h4>
+                <p className="text-xl font-black text-white mt-2">
+                  {voucherSummary.availableCount > 0
+                    ? `${formatPrice(voucherSummary.totalAvailableBalance)} (${voucherSummary.availableCount} disponible${voucherSummary.availableCount > 1 ? 's' : ''})`
+                    : 'Consulter mes bons d\'achat'}
+                </p>
+                <Link to="/account/vouchers" className="mt-3 inline-flex items-center text-xs font-bold text-[#FF6B00] uppercase tracking-wider group-hover:underline">
+                  Gérer mes bons <ChevronRight className="w-3 h-3 ml-1" />
+                </Link>
+              </div>
+              <div className="absolute -bottom-6 -right-6 opacity-10 group-hover:scale-110 transition-transform duration-500">
+                <Ticket className="w-28 h-28 text-[#FF6B00]" />
+              </div>
+            </div>
             <div className="bg-orange-50 p-6 rounded-2xl border border-orange-100 relative overflow-hidden group">
               <div className="relative z-10">
                 <h4 className="font-bold text-orange-900 flex items-center">

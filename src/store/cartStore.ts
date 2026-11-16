@@ -138,9 +138,21 @@ export interface AppliedPromo {
   discount_amount?: number;
 }
 
+export interface AppliedVoucher {
+  id: number;
+  code: string;
+  amount: number;
+  minimum_order_amount: number;
+  allow_promo_stacking: boolean;
+  excluded_product_ids?: number[];
+  expires_at?: string | null;
+  reason?: string | null;
+}
+
 interface CartStore {
   items: CartItem[];
   appliedPromo: AppliedPromo | null;
+  appliedVoucher: AppliedVoucher | null;
   addItem: (product: Product, quantity: number, selectedVariation?: any) => void;
   removeItem: (cartItemId: string | number) => void;
   updateQuantity: (cartItemId: string | number, quantity: number) => void;
@@ -148,7 +160,10 @@ interface CartStore {
   restoreCart: (items: CartItem[]) => void;
   syncCustomerInfo: (info: CustomerCartInfo) => void;
   setAppliedPromo: (promo: AppliedPromo | null) => void;
+  setAppliedVoucher: (voucher: AppliedVoucher | null) => void;
   getPromoDiscount: () => number;
+  getVoucherEligibleSubtotal: () => number;
+  getVoucherDiscount: () => number;
   total: () => number;
   finalTotal: () => number;
 }
@@ -158,8 +173,12 @@ export const useCartStore = create<CartStore>()(
     (set, get) => ({
       items: [],
       appliedPromo: null,
+      appliedVoucher: null,
       setAppliedPromo: (promo) => {
         set({ appliedPromo: promo });
+      },
+      setAppliedVoucher: (voucher) => {
+        set({ appliedVoucher: voucher });
       },
       getPromoDiscount: () => {
         const { appliedPromo, items } = get();
@@ -169,6 +188,24 @@ export const useCartStore = create<CartStore>()(
         const price = getProductEffectivePrice(matchingItem);
         const lineTotal = price * matchingItem.quantity;
         return Math.round((lineTotal * appliedPromo.discount_percent) / 100);
+      },
+      getVoucherEligibleSubtotal: () => {
+        const { appliedVoucher, items } = get();
+        const excludedSet = new Set((appliedVoucher?.excluded_product_ids || []).map((id) => Number(id)));
+        return items.reduce((sum, item) => {
+          if (excludedSet.has(Number(item.id))) return sum;
+          const price = getProductEffectivePrice(item);
+          return sum + price * item.quantity;
+        }, 0);
+      },
+      getVoucherDiscount: () => {
+        const { appliedVoucher, appliedPromo } = get();
+        if (!appliedVoucher) return 0;
+        if (appliedPromo && !appliedVoucher.allow_promo_stacking) return 0;
+        const eligibleSubtotal = get().getVoucherEligibleSubtotal();
+        if (eligibleSubtotal < (Number(appliedVoucher.minimum_order_amount) || 0)) return 0;
+        const subtotalAfterPromo = Math.max(0, get().total() - get().getPromoDiscount());
+        return Math.min(Number(appliedVoucher.amount) || 0, eligibleSubtotal, subtotalAfterPromo);
       },
       addItem: (product, quantity, selectedVariation) => {
         set((state) => {
@@ -196,14 +233,18 @@ export const useCartStore = create<CartStore>()(
           
           // Check if promo product was removed
           let nextPromo = state.appliedPromo;
-          if (nextPromo) {
+          if (nextPromo && nextPromo.product_id) {
             const hasPromoProduct = newItems.some((i) => String(i.id) === String(nextPromo?.product_id));
             if (!hasPromoProduct) {
               nextPromo = null;
             }
           }
           
-          return { items: newItems, appliedPromo: nextPromo };
+          return {
+            items: newItems,
+            appliedPromo: nextPromo,
+            appliedVoucher: newItems.length === 0 ? null : state.appliedVoucher,
+          };
         });
       },
       updateQuantity: (id, quantity) => {
@@ -218,7 +259,7 @@ export const useCartStore = create<CartStore>()(
       clearCart: () => {
         set(() => {
           triggerCartSync([]);
-          return { items: [], appliedPromo: null };
+          return { items: [], appliedPromo: null, appliedVoucher: null };
         });
       },
       restoreCart: (items) => {
@@ -238,8 +279,9 @@ export const useCartStore = create<CartStore>()(
       },
       finalTotal: () => {
         const subtotal = get().total();
-        const discount = get().getPromoDiscount();
-        return Math.max(0, subtotal - discount);
+        const promoDiscount = get().getPromoDiscount();
+        const voucherDiscount = get().getVoucherDiscount();
+        return Math.max(0, subtotal - promoDiscount - voucherDiscount);
       },
     }),
     {

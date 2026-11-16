@@ -9,7 +9,7 @@ import PageSettings from './PageSettings';
 import WilayasSettings from './WilayasSettings';
 import CommunesSettings from './CommunesSettings';
 import OfficesSettings from './OfficesSettings';
-import { FileText, MapPin, Search, LayoutGrid, List, Printer, Download, Truck, Building2, Mail, Navigation, ChevronDown, ChevronRight, LayoutTemplate, FolderTree, Layers, Sparkles, CheckCircle2, HelpCircle, Eye, SlidersHorizontal, Info, Globe, Tag, Network } from 'lucide-react';
+import { FileText, MapPin, Search, LayoutGrid, List, Printer, Download, Truck, Building2, Mail, Navigation, ChevronDown, ChevronRight, LayoutTemplate, FolderTree, Layers, Sparkles, CheckCircle2, HelpCircle, Eye, SlidersHorizontal, Info, Globe, Tag, Network, Ticket } from 'lucide-react';
 import OrderKanban from './OrderKanban';
 import HeroVideoAdmin from './HeroVideoAdmin';
 import BlogAdmin from './BlogAdmin';
@@ -17,6 +17,7 @@ import PushNotificationAdmin from './PushNotificationAdmin';
 import AbandonedCartsAdmin from './AbandonedCartsAdmin';
 import LiveChatAdmin from './LiveChatAdmin';
 import PromoCodesAdmin from './PromoCodesAdmin';
+import VouchersAdmin from './VouchersAdmin';
 
 
 export interface HomeSection {
@@ -1898,6 +1899,13 @@ const handleBulkDelivery = async () => {
               <span className="flex-1 text-left">Codes promo</span>
             </button>
             <button
+              onClick={() => { setActiveTab('vouchers'); setIsMobileNavOpen(false); }}
+              className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition ${activeTab === 'vouchers' ? 'bg-orange-500 text-white font-semibold shadow-md shadow-orange-500/20' : 'text-gray-400 hover:bg-gray-800 hover:text-white'}`}
+            >
+              <Ticket size={18} />
+              <span className="flex-1 text-left">Bons d'achat</span>
+            </button>
+            <button
               onClick={() => { setActiveTab('live-chat'); setIsMobileNavOpen(false); }}
               className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition ${activeTab === 'live-chat' ? 'bg-orange-500 text-white font-semibold shadow-md shadow-orange-500/20' : 'text-gray-400 hover:bg-gray-800 hover:text-white'}`}
             >
@@ -2120,6 +2128,13 @@ const handleBulkDelivery = async () => {
               <span className="flex-1 text-left">Codes promo</span>
             </button>
             <button 
+              onClick={() => setActiveTab('vouchers')}
+              className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition ${activeTab === 'vouchers' ? 'bg-orange-500 text-white font-semibold shadow-md shadow-orange-500/20' : 'text-gray-400 hover:bg-gray-800 hover:text-white'}`}
+            >
+              <Ticket size={18} />
+              <span className="flex-1 text-left">Bons d'achat</span>
+            </button>
+            <button 
               onClick={() => setActiveTab('live-chat')}
               className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition ${activeTab === 'live-chat' ? 'bg-orange-500 text-white font-semibold shadow-md shadow-orange-500/20' : 'text-gray-400 hover:bg-gray-800 hover:text-white'}`}
             >
@@ -2333,6 +2348,8 @@ const handleBulkDelivery = async () => {
                 ? "Pages d'Information & Légales"
                 : activeTab === 'footer'
                 ? "Configuration du Footer"
+                : activeTab === 'vouchers'
+                ? "Gestion des bons d'achat"
                 : activeTab === 'account'
                 ? "Compte Administrateur"
                 : activeTab}
@@ -2543,6 +2560,12 @@ const handleBulkDelivery = async () => {
                               <div className="text-[11px] font-semibold text-emerald-600 flex items-center gap-1 mt-0.5" title={`Code: ${order.promo_code}`}>
                                 <Tag size={10} />
                                 <span>{order.promo_code} (-{formatPrice(order.discount_amount || 0)})</span>
+                              </div>
+                            )}
+                            {order.voucher_code && (
+                              <div className="text-[11px] font-semibold text-[#FF6B00] flex items-center gap-1 mt-0.5" title={`Bon d'achat: ${order.voucher_code}`}>
+                                <Ticket size={10} />
+                                <span>{order.voucher_code} (-{formatPrice(order.voucher_discount_amount || 0)})</span>
                               </div>
                             )}
                           </td>
@@ -2843,6 +2866,12 @@ const handleBulkDelivery = async () => {
                               <div className="text-[11px] font-semibold text-emerald-600 flex items-center gap-1 mt-0.5" title={`Code: ${order.promo_code}`}>
                                 <Tag size={10} />
                                 <span>{order.promo_code} (-{formatPrice(order.discount_amount || 0)})</span>
+                              </div>
+                            )}
+                            {order.voucher_code && (
+                              <div className="text-[11px] font-semibold text-[#FF6B00] flex items-center gap-1 mt-0.5" title={`Bon d'achat: ${order.voucher_code}`}>
+                                <Ticket size={10} />
+                                <span>{order.voucher_code} (-{formatPrice(order.voucher_discount_amount || 0)})</span>
                               </div>
                             )}
                           </td>
@@ -4697,6 +4726,9 @@ const handleBulkDelivery = async () => {
         )}
         {activeTab === 'promo-codes' && (
           <PromoCodesAdmin />
+        )}
+        {activeTab === 'vouchers' && (
+          <VouchersAdmin />
         )}
 
       </main>

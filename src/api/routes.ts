@@ -13,6 +13,13 @@ import capiRoutes from './capi.js';
 import ecomdzRoutes, { fetchEcomdzStopdesks } from './ecomdz.js';
 import { getPushDashboardData, broadcastPushCampaign } from '../lib/push.js';
 import { invalidateProductCache } from '../lib/cacheInvalidation.js';
+import voucherRouter, {
+  verifySupabaseCustomerToken,
+  reserveVoucherInOrderTransaction,
+  linkReservedVoucherToOrder,
+  handleOrderStatusVoucherLifecycle,
+  releaseVoucherOnOrderDelete,
+} from './vouchers.js';
 
 // Ensure profiles table has commune column
 
@@ -59,7 +66,9 @@ router.use((req, res, next) => {
     const isPrivate = req.path.startsWith('/admin') || 
                       req.path.startsWith('/orders') || 
                       req.path.startsWith('/user') || 
-                      req.path.startsWith('/cart');
+                      req.path.startsWith('/cart') ||
+                      req.path.startsWith('/account') ||
+                      req.path.startsWith('/vouchers');
                       
     const hasAuthCookie = req.headers.cookie && req.headers.cookie.match(/session|token|auth|user/i);
 
@@ -108,6 +117,9 @@ router.get(['/images/products/:id/image', '/images/products/:id/image/:filename'
 
 // Mount Ecom-DZ routes
 router.use('/ecomdz', ecomdzRoutes);
+
+// Mount Customer Vouchers & Notifications routes
+router.use('/', voucherRouter);
 
 
 // Helper to process images to avoid Vercel 4.5MB payload limit
@@ -1532,6 +1544,10 @@ router.get('/orders/user/:userId', async (req, res) => {
         o.customer_email,
         o.customer_phone,
         o.note,
+        o.promo_code,
+        o.discount_amount,
+        o.voucher_code,
+        o.voucher_discount_amount,
         (
           SELECT JSON_AGG(JSON_BUILD_OBJECT(
             'id', oi.id,
@@ -1663,10 +1679,18 @@ router.post('/promo-codes/validate', async (req, res) => {
 });
 
 router.post('/orders', orderLimiter, async (req, res) => {
-  const { customer_name, customer_email, customer_phone, wilaya, commune, address, note, items, delivery_cost: clientDeliveryCost, customer_user_id, stop_desk, office_id, delivery_company, office_name, cart_session_id, promo_code } = req.body;
+  const { customer_name, customer_email, customer_phone, wilaya, commune, address, note, items, delivery_cost: clientDeliveryCost, customer_user_id, stop_desk, office_id, delivery_company, office_name, cart_session_id, promo_code, voucher_code } = req.body;
   
   if (!items || !Array.isArray(items) || items.length === 0) {
     return res.status(400).json({ error: 'La commande doit contenir au moins un article' });
+  }
+
+  let authenticatedCustomer: { id: string; email?: string } | null = null;
+  if (voucher_code && typeof voucher_code === 'string' && voucher_code.trim()) {
+    authenticatedCustomer = await verifySupabaseCustomerToken(req);
+    if (!authenticatedCustomer) {
+      return res.status(401).json({ error: 'Vous devez être connecté à votre compte client pour utiliser un bon d\'achat.' });
+    }
   }
 
   try {
@@ -1737,6 +1761,9 @@ router.post('/orders', orderLimiter, async (req, res) => {
 
     let discountAmount = 0;
     let appliedPromoCode: string | null = null;
+    let voucherDiscountAmount = 0;
+    let appliedVoucherCode: string | null = null;
+    let appliedVoucherId: number | null = null;
 
     const orderData = await sql.begin(async (sql: any) => {
       // Atomic Promo Code validation and consumption
@@ -1777,17 +1804,46 @@ router.post('/orders', orderLimiter, async (req, res) => {
         appliedPromoCode = promo.code;
       }
 
-      // Final total: items subtotal minus discount plus intact delivery cost
-      const finalOrderTotal = Math.max(0, calculatedTotal - discountAmount) + delivery_cost;
+      // Atomic Voucher validation & temporary reservation during order lifecycle
+      let reservedVoucherObj: any = null;
+      if (voucher_code && typeof voucher_code === 'string' && voucher_code.trim()) {
+        const resVoucher = await reserveVoucherInOrderTransaction(sql, {
+          voucherCode: voucher_code,
+          authenticatedCustomerId: authenticatedCustomer?.id || null,
+          validatedItems,
+          calculatedTotal,
+          promoDiscount: discountAmount,
+          hasPromoCodeApplied: Boolean(appliedPromoCode),
+        });
+        reservedVoucherObj = resVoucher.voucher;
+        voucherDiscountAmount = resVoucher.voucherDiscount;
+        appliedVoucherCode = reservedVoucherObj.code;
+        appliedVoucherId = reservedVoucherObj.id;
+      }
+
+      // Final total: items subtotal minus promo & voucher discounts plus intact delivery cost (delivery never discounted)
+      const finalOrderTotal = Math.max(0, calculatedTotal - discountAmount - voucherDiscountAmount) + delivery_cost;
+      const effectiveCustomerUserId = authenticatedCustomer?.id || customer_user_id || null;
 
       const [order] = await sql`
-        INSERT INTO orders (customer_name, customer_email, customer_phone, wilaya, commune, address, note, total_amount, delivery_cost, customer_user_id, stop_desk, office_id, delivery_company, office_name, promo_code, discount_amount)
-        VALUES (${customer_name || ''}, ${customer_email || null}, ${customer_phone || ''}, ${wilaya || ''}, ${commune || ''}, ${address || ''}, ${note || null}, ${finalOrderTotal}, ${delivery_cost}, ${customer_user_id || null}, ${stop_desk ? true : false}, ${office_id || null}, ${delivery_company || 'ecomdz'}, ${office_name || null}, ${appliedPromoCode}, ${discountAmount})
+        INSERT INTO orders (customer_name, customer_email, customer_phone, wilaya, commune, address, note, total_amount, delivery_cost, customer_user_id, stop_desk, office_id, delivery_company, office_name, promo_code, discount_amount, voucher_id, voucher_code, voucher_discount_amount)
+        VALUES (${customer_name || ''}, ${customer_email || null}, ${customer_phone || ''}, ${wilaya || ''}, ${commune || ''}, ${address || ''}, ${note || null}, ${finalOrderTotal}, ${delivery_cost}, ${effectiveCustomerUserId}, ${stop_desk ? true : false}, ${office_id || null}, ${delivery_company || 'ecomdz'}, ${office_name || null}, ${appliedPromoCode}, ${discountAmount}, ${appliedVoucherId}, ${appliedVoucherCode}, ${voucherDiscountAmount})
         RETURNING id
       `;
       
       const generatedOrderId = `CMD-${1000 + order.id}`;
       await sql`UPDATE orders SET order_id = ${generatedOrderId} WHERE id = ${order.id}`;
+
+      if (reservedVoucherObj && authenticatedCustomer?.id) {
+        await linkReservedVoucherToOrder(sql, {
+          voucherId: reservedVoucherObj.id,
+          customerUserId: authenticatedCustomer.id,
+          orderId: order.id,
+          orderRef: generatedOrderId,
+          voucherAmount: Number(reservedVoucherObj.amount),
+          voucherDiscount: voucherDiscountAmount,
+        });
+      }
 
       // Convert associated cart if applicable
       if (cart_session_id || customer_user_id) {
@@ -1890,7 +1946,13 @@ router.post('/orders', orderLimiter, async (req, res) => {
       sendOrderConfirmationEmail(orderData.order_id, customer_name, customer_email, calculatedTotal);
     }
     
-    res.status(201).json({ id: orderData.id, order_id: orderData.order_id, message: 'Order created successfully' });
+    res.status(201).json({
+      id: orderData.id,
+      order_id: orderData.order_id,
+      voucher_code: appliedVoucherCode,
+      voucher_discount_amount: voucherDiscountAmount,
+      message: 'Order created successfully'
+    });
   } catch (err: any) {
     res.status(400).json({ error: err.message || 'Failed to create order' });
   }
@@ -2576,7 +2638,7 @@ router.get('/admin/orders', authenticate, async (req, res) => {
     const [totalCount] = await sql`SELECT COUNT(*) as count FROM orders o ${whereClause}`;
 
     const orders = await sql`
-      SELECT o.id, o.order_id, o.created_at, o.status, o.total_amount, o.delivery_cost, o.address, o.wilaya, o.commune, o.office_id, o.office_name, o.delivery_company, o.stop_desk, o.customer_name, o.customer_email, o.customer_phone, o.note, o.customer_user_id, o.promo_code, o.discount_amount,
+      SELECT o.id, o.order_id, o.created_at, o.status, o.total_amount, o.delivery_cost, o.address, o.wilaya, o.commune, o.office_id, o.office_name, o.delivery_company, o.stop_desk, o.customer_name, o.customer_email, o.customer_phone, o.note, o.customer_user_id, o.promo_code, o.discount_amount, o.voucher_code, o.voucher_discount_amount,
       (SELECT JSON_AGG(JSON_BUILD_OBJECT('id', oi.id, 'product_id', oi.product_id, 'quantity', oi.quantity, 'price', oi.price, 'variation', oi.variation, 'status', oi.status, 'product_name', p.name, 'product_image', CASE WHEN p.image LIKE 'data:image/%' THEN '/api/images/products/' || p.id || '/image/product.webp' ELSE p.image END))
        FROM order_items oi 
        LEFT JOIN products p ON oi.product_id = p.id 
@@ -2617,14 +2679,24 @@ router.get('/admin/orders/:id', authenticate, async (req, res) => {
   }
 });
 
-router.put('/admin/orders/:id/status', authenticate, async (req, res) => {
+router.put('/admin/orders/:id/status', authenticate, async (req: any, res) => {
   const { status } = req.body;
   if (!status) return res.status(400).json({ error: 'Status is required' });
   try {
-    const [order] = await sql`
-      UPDATE orders SET status = ${status} WHERE id = ${req.params.id}
-      RETURNING order_id, customer_name, customer_email
-    `;
+    const order = await sql.begin(async (txSql: any) => {
+      const [updatedOrder] = await txSql`
+        UPDATE orders SET status = ${status} WHERE id = ${req.params.id}
+        RETURNING id, order_id, customer_name, customer_email
+      `;
+      if (updatedOrder) {
+        await handleOrderStatusVoucherLifecycle(txSql, {
+          orderId: updatedOrder.id,
+          newStatus: status,
+          adminActor: req.user?.username || req.user?.email || 'admin',
+        });
+      }
+      return updatedOrder;
+    });
     
     if (order && order.customer_email) {
       sendOrderStatusEmail(order.order_id, order.customer_name, order.customer_email, status);
@@ -2698,11 +2770,15 @@ router.put('/admin/orders/:orderId/items/:itemId/status', authenticate, async (r
   }
 });
 
-router.delete('/admin/orders/:id', authenticate, async (req, res) => {
+router.delete('/admin/orders/:id', authenticate, async (req: any, res) => {
   try {
-    await sql.begin(async (sql: any) => {
-      await sql`DELETE FROM order_items WHERE order_id = ${req.params.id}`;
-      await sql`DELETE FROM orders WHERE id = ${req.params.id}`;
+    await sql.begin(async (txSql: any) => {
+      await releaseVoucherOnOrderDelete(txSql, {
+        orderId: req.params.id,
+        adminActor: req.user?.username || req.user?.email || 'admin',
+      });
+      await txSql`DELETE FROM order_items WHERE order_id = ${req.params.id}`;
+      await txSql`DELETE FROM orders WHERE id = ${req.params.id}`;
     });
     res.json({ message: 'Order deleted' });
   } catch (err) {

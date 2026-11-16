@@ -1,6 +1,7 @@
-import React from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../lib/AuthContext';
+import { getSupabase } from '../../lib/supabase';
 import { 
   User, 
   Package, 
@@ -8,8 +9,8 @@ import {
   MapPin, 
   LogOut, 
   LayoutDashboard,
-  Settings,
-  Bell
+  Bell,
+  Ticket
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import SEO from '../../components/SEO';
@@ -17,6 +18,40 @@ import SEO from '../../components/SEO';
 export default function AccountLayout({ children }: { children: React.ReactNode }) {
   const { user, profile, signOut: handleSignOut } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const [availableVouchersCount, setAvailableVouchersCount] = useState(0);
+  const [unreadNotificationsCount, setUnreadNotificationsCount] = useState(0);
+
+  useEffect(() => {
+    if (!user) return;
+    let active = true;
+    const loadCounts = async () => {
+      try {
+        const supabase = getSupabase();
+        const { data } = (await supabase?.auth.getSession()) || { data: { session: null } };
+        const token = data?.session?.access_token;
+        if (!token) return;
+
+        const [vRes, nRes] = await Promise.all([
+          fetch('/api/account/vouchers', { headers: { Authorization: `Bearer ${token}` } }),
+          fetch('/api/account/notifications', { headers: { Authorization: `Bearer ${token}` } }),
+        ]);
+
+        if (active && vRes.ok) {
+          const vData = await vRes.json();
+          setAvailableVouchersCount(Number(vData?.summary?.availableCount) || 0);
+        }
+        if (active && nRes.ok) {
+          const nData = await nRes.json();
+          setUnreadNotificationsCount(Number(nData?.unreadCount) || 0);
+        }
+      } catch (_) {}
+    };
+    loadCounts();
+    return () => {
+      active = false;
+    };
+  }, [user, location.pathname]);
 
   const handleLogout = async () => {
     try {
@@ -33,10 +68,11 @@ export default function AccountLayout({ children }: { children: React.ReactNode 
   const navItems = [
     { name: 'Tableau de bord', path: '/account/dashboard', icon: LayoutDashboard },
     { name: 'Mes Commandes', path: '/account/orders', icon: Package },
+    { name: "Mes bons d'achat", path: '/account/vouchers', icon: Ticket, badge: availableVouchersCount },
     { name: 'Ma Liste d\'envies', path: '/account/wishlist', icon: Heart },
     { name: 'Mes Adresses', path: '/account/addresses', icon: MapPin },
     { name: 'Mon Profil', path: '/account/profile', icon: User },
-    { name: 'Notifications', path: '/account/notifications', icon: Bell },
+    { name: 'Notifications', path: '/account/notifications', icon: Bell, badge: unreadNotificationsCount },
   ];
 
   return (
@@ -70,8 +106,13 @@ export default function AccountLayout({ children }: { children: React.ReactNode 
                       }`
                     }
                   >
-                    <item.icon className={`w-5 h-5 mr-3 ${item.name === 'Mes Commandes' ? 'text-blue-500' : ''}`} />
-                    {item.name}
+                    <item.icon className={`w-5 h-5 mr-3 ${item.name === 'Mes Commandes' ? 'text-blue-500' : item.path === '/account/vouchers' ? 'text-[#FF6B00]' : ''}`} />
+                    <span className="flex-1">{item.name}</span>
+                    {typeof item.badge === 'number' && item.badge > 0 && (
+                      <span className="bg-[#FF6B00] text-white text-[11px] font-black px-2 py-0.5 rounded-full">
+                        {item.badge}
+                      </span>
+                    )}
                   </NavLink>
                 ))}
                 <button

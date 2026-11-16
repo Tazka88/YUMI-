@@ -336,6 +336,18 @@ export default function Orders() {
 
             {/* Financial Summary */}
             <div className="bg-gradient-to-br from-orange-50/60 to-amber-50/30 p-5 rounded-2xl border border-orange-100 space-y-2">
+              {selectedOrder.promo_code && Number(selectedOrder.discount_amount) > 0 && (
+                <div className="flex justify-between text-xs text-emerald-700">
+                  <span>Code promo ({selectedOrder.promo_code})</span>
+                  <span className="font-bold">-{formatPrice(selectedOrder.discount_amount)}</span>
+                </div>
+              )}
+              {selectedOrder.voucher_code && Number(selectedOrder.voucher_discount_amount) > 0 && (
+                <div className="flex justify-between text-xs text-[#FF6B00]">
+                  <span>Bon d'achat ({selectedOrder.voucher_code})</span>
+                  <span className="font-bold">-{formatPrice(selectedOrder.voucher_discount_amount)}</span>
+                </div>
+              )}
               <div className="flex justify-between text-xs text-gray-600">
                 <span>Frais de livraison ({selectedOrder.stop_desk ? 'Point Relais' : 'À domicile'})</span>
                 <span className="font-bold text-gray-800">

@@ -406,3 +406,144 @@ export const sendOrderStatusEmail = async (orderId: string, customerName: string
     await logEmail(orderId, customerEmail, subject, 'error', error.message);
   }
 };
+
+const escapeEmailHtml = (input: string) =>
+  String(input || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+
+export const getEmailConfigStatus = async () => {
+  const apiKey = await getApiKey();
+  const fromEmail = await getFromEmail();
+  return {
+    configured: Boolean(apiKey),
+    fromEmail,
+  };
+};
+
+export interface SendCustomerEmailParams {
+  to: string;
+  customerName?: string;
+  subject: string;
+  message: string;
+  voucherCode?: string;
+  voucherAmount?: number;
+  voucherMinCart?: number;
+  voucherExpiresAt?: string | null;
+}
+
+export interface SendCustomerEmailResult {
+  success: boolean;
+  id?: string;
+  error?: string;
+}
+
+export const sendCustomerCustomEmail = async (params: SendCustomerEmailParams): Promise<SendCustomerEmailResult> => {
+  const to = (params.to || '').trim();
+  const subject = (params.subject || '').trim();
+  const rawMessage = (params.message || '').trim();
+
+  if (!to || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) {
+    return { success: false, error: 'Adresse email destinataire invalide.' };
+  }
+  if (!subject) {
+    return { success: false, error: "L'objet de l'email est obligatoire." };
+  }
+  if (!rawMessage) {
+    return { success: false, error: 'Le message de l\'email est obligatoire.' };
+  }
+
+  const apiKey = await getApiKey();
+  if (!apiKey) {
+    const errMsg = "Clé API Resend manquante. Configurez votre clé Resend dans Paramètres > Compte (ou RESEND_API_KEY) pour envoyer des emails automatiquement.";
+    await logEmail(null, to, subject, 'error', errMsg);
+    return { success: false, error: errMsg };
+  }
+
+  const safeName = escapeEmailHtml(params.customerName?.trim() || 'Cher client');
+  const safeMessageHtml = escapeEmailHtml(rawMessage).replace(/\r?\n/g, '<br/>');
+
+  let voucherBlock = '';
+  if (params.voucherCode && params.voucherAmount) {
+    const formattedAmount = `${Math.round(Number(params.voucherAmount)).toLocaleString('fr-FR')} DA`;
+    const minCartVal = Number(params.voucherMinCart || 0);
+    const minCartLine = minCartVal > 0
+      ? `<p style="margin: 6px 0 0; font-size: 13px; color: #52525b;">Valable dès <strong>${Math.round(minCartVal).toLocaleString('fr-FR')} DA</strong> d'achats (hors livraison).</p>`
+      : `<p style="margin: 6px 0 0; font-size: 13px; color: #52525b;">Utilisable immédiatement sur vos achats (hors livraison).</p>`;
+    const expLine = params.voucherExpiresAt
+      ? `<p style="margin: 4px 0 0; font-size: 12px; color: #71717a;">Date d'expiration : ${new Date(params.voucherExpiresAt).toLocaleDateString('fr-FR')}</p>`
+      : '';
+
+    voucherBlock = `
+      <div style="margin: 24px 0; padding: 20px; background-color: #fff7ed; border: 1px solid #fed7aa; border-radius: 10px; text-align: center;">
+        <p style="margin: 0; font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: #c2410c; font-weight: 700;">Votre Bon d'Achat ZORANDO</p>
+        <p style="margin: 8px 0; font-size: 28px; font-weight: 800; color: #ea580c;">-${formattedAmount}</p>
+        <div style="display: inline-block; padding: 8px 18px; background-color: #ffffff; border: 1px dashed #fb923c; border-radius: 6px; font-family: monospace; font-size: 18px; font-weight: 700; color: #18181b; letter-spacing: 1px;">
+          ${escapeEmailHtml(params.voucherCode)}
+        </div>
+        ${minCartLine}
+        ${expLine}
+        <div style="margin-top: 16px;">
+          <a href="https://www.zorando.com/account/vouchers" style="display: inline-block; padding: 10px 22px; background-color: #ff6b00; color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: 700; font-size: 14px;">
+            Voir mon bon dans mon espace client
+          </a>
+        </div>
+      </div>
+    `;
+  }
+
+  try {
+    const resend = new Resend(apiKey);
+    const fromEmail = await getFromEmail();
+
+    const { data, error } = await resend.emails.send({
+      from: fromEmail,
+      to,
+      subject,
+      html: `
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; color: #18181b; background-color: #ffffff;">
+          <div style="text-align: center; padding: 24px 0 16px; border-bottom: 1px solid #f4f4f5;">
+            <span style="font-size: 26px; font-weight: 900; letter-spacing: -0.02em; color: #ff6b00;">ZORANDO</span>
+          </div>
+          <div style="padding: 28px 24px; background-color: #fafafa; border: 1px solid #e4e4e7; border-radius: 12px; margin-top: 20px;">
+            <p style="margin: 0 0 14px; font-size: 16px; font-weight: 600;">Bonjour ${safeName},</p>
+            <div style="font-size: 15px; line-height: 1.65; color: #27272a;">
+              ${safeMessageHtml}
+            </div>
+            ${voucherBlock}
+            <p style="margin: 24px 0 0; font-size: 13px; color: #71717a;">
+              À très bientôt sur <a href="https://www.zorando.com" style="color: #ff6b00; text-decoration: none; font-weight: 600;">www.zorando.com</a>
+            </p>
+          </div>
+          <div style="text-align: center; padding: 18px 0; font-size: 12px; color: #a1a1aa;">
+            © ${new Date().getFullYear()} ZORANDO Algérie. Tous droits réservés.
+          </div>
+        </div>
+      `,
+    });
+
+    if (error) {
+      let errorMsg = typeof error === 'string' ? error : JSON.stringify(error);
+      if (errorMsg.includes('422') || errorMsg.includes('validation_error')) {
+        if (fromEmail.includes('onboarding@resend.dev')) {
+          errorMsg = "Erreur 422 : L'expéditeur 'onboarding@resend.dev' ne permet pas d'envoyer aux clients. Configurez votre domaine dans Paramètres > Compte.";
+        } else {
+          errorMsg = `Erreur 422 : L'adresse d'expédition '${fromEmail}' n'est pas validée sur Resend.`;
+        }
+      }
+      await logEmail(null, to, subject, 'error', errorMsg);
+      return { success: false, error: errorMsg };
+    }
+
+    await logEmail(null, to, subject, 'success');
+    return { success: true, id: data?.id };
+  } catch (err: any) {
+    const errMsg = err?.message || "Erreur lors de l'envoi de l'email";
+    await logEmail(null, to, subject, 'error', errMsg);
+    return { success: false, error: errMsg };
+  }
+};
+

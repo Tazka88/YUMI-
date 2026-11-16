@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { sql, isDbConnectionError } from '../db/setup.js';
 import { getSupabase } from '../lib/supabase.js';
-import { sendOrderConfirmationEmail, sendOrderStatusEmail, sendAdminNotificationEmail, sendContactEmail } from '../lib/email.js';
+import { sendOrderConfirmationEmail, sendOrderStatusEmail, sendAdminNotificationEmail, sendContactEmail, sendCustomerCustomEmail, getEmailConfigStatus } from '../lib/email.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import multer from 'multer';
@@ -2559,46 +2559,322 @@ router.post('/subscribers', async (req, res) => {
   }
 });
 
+router.get('/admin/emails/config', authenticate, async (_req, res) => {
+  try {
+    const status = await getEmailConfigStatus();
+    res.json(status);
+  } catch (err) {
+    console.error('Failed to check email config:', err);
+    res.status(500).json({ error: 'Impossible de vérifier la configuration email' });
+  }
+});
+
 router.get('/admin/emails', authenticate, async (req, res) => {
   try {
-    const { page = '1', limit = '50' } = req.query;
-    const pageNum = parseInt(page as string) || 1;
-    const limitNum = parseInt(limit as string) || 50;
+    const {
+      page = '1',
+      limit = '50',
+      segment = 'all',
+      search = '',
+      all = 'false',
+    } = req.query;
+
+    const pageNum = Math.max(1, parseInt(page as string, 10) || 1);
+    const limitNum = Math.min(200, Math.max(1, parseInt(limit as string, 10) || 50));
     const offset = (pageNum - 1) * limitNum;
+    const exportAll = all === 'true';
+    const cleanSearch = String(search || '').trim();
+    const cleanSegment = String(segment || 'all').trim();
 
-    // We can compute the full list in a subquery and select from it with offset
-    const query = sql`
-      FROM (
-        SELECT DISTINCT ON (LOWER(email)) 
-          email, name, phone, source, created_at 
-        FROM (
-          SELECT customer_email as email, customer_name as name, customer_phone as phone, 'Commande' as source, created_at 
-          FROM orders 
-          WHERE customer_email IS NOT NULL AND customer_email != ''
-          UNION ALL
-          SELECT email, name, phone, source, created_at 
-          FROM subscribers
-          UNION ALL
-          SELECT email, CONCAT(first_name, ' ', last_name) as name, phone, 'Compte Client' as source, created_at 
-          FROM profiles
-          WHERE email IS NOT NULL AND email != ''
-        ) combined
-        ORDER BY LOWER(email), created_at DESC
-      ) distinct_emails
+    let segmentCondition = sql`TRUE`;
+    if (cleanSegment === 'registered') {
+      segmentCondition = sql`is_registered = true`;
+    } else if (cleanSegment === 'orders' || cleanSegment === 'Commande') {
+      segmentCondition = sql`orders_count > 0`;
+    } else if (cleanSegment === 'discount_offer') {
+      segmentCondition = sql`subscriber_source = 'discount_offer'`;
+    } else if (cleanSegment === 'Newsletter') {
+      segmentCondition = sql`subscriber_source = 'Newsletter'`;
+    } else if (cleanSegment === 'with_phone') {
+      segmentCondition = sql`phone != ''`;
+    } else if (cleanSegment === 'with_voucher') {
+      segmentCondition = sql`active_vouchers_count > 0`;
+    } else if (cleanSegment === 'Compte Client') {
+      segmentCondition = sql`is_registered = true`;
+    }
+
+    let searchCondition = sql`TRUE`;
+    if (cleanSearch) {
+      const pattern = `%${cleanSearch}%`;
+      searchCondition = sql`(
+        email ILIKE ${pattern}
+        OR name ILIKE ${pattern}
+        OR phone ILIKE ${pattern}
+        OR wilaya ILIKE ${pattern}
+        OR commune ILIKE ${pattern}
+        OR COALESCE(latest_voucher_code, '') ILIKE ${pattern}
+      )`;
+    }
+
+    const baseCtes = sql`
+      WITH reg_users AS (
+        SELECT DISTINCT ON (LOWER(TRIM(u.email)))
+          u.id::text AS user_id,
+          LOWER(TRIM(u.email)) AS email_key,
+          TRIM(u.email) AS email,
+          u.created_at AS registered_at,
+          u.last_sign_in_at,
+          CASE
+            WHEN COALESCE(u.raw_app_meta_data->>'provider', '') = 'google'
+              OR COALESCE(u.raw_user_meta_data->>'iss', '') LIKE '%google%' THEN 'google'
+            ELSE 'email'
+          END AS auth_provider,
+          NULLIF(TRIM(CONCAT_WS(' ', NULLIF(TRIM(p.first_name), ''), NULLIF(TRIM(p.last_name), ''))), '') AS profile_name,
+          NULLIF(TRIM(COALESCE(
+            NULLIF(TRIM(u.raw_user_meta_data->>'full_name'), ''),
+            NULLIF(TRIM(u.raw_user_meta_data->>'name'), ''),
+            NULLIF(TRIM(CONCAT_WS(' ', NULLIF(TRIM(u.raw_user_meta_data->>'first_name'), ''), NULLIF(TRIM(u.raw_user_meta_data->>'last_name'), ''))), '')
+          )), '') AS meta_name,
+          NULLIF(TRIM(COALESCE(NULLIF(TRIM(p.phone), ''), NULLIF(TRIM(u.raw_user_meta_data->>'phone'), ''))), '') AS profile_phone,
+          NULLIF(TRIM(p.wilaya), '') AS profile_wilaya,
+          NULLIF(TRIM(p.commune), '') AS profile_commune
+        FROM auth.users u
+        LEFT JOIN profiles p ON p.id = u.id
+        WHERE u.email IS NOT NULL AND TRIM(u.email) != ''
+        ORDER BY LOWER(TRIM(u.email)), u.created_at DESC
+      ),
+      order_agg AS (
+        SELECT
+          LOWER(TRIM(COALESCE(NULLIF(TRIM(u.email), ''), o.customer_email))) AS email_key,
+          MAX(TRIM(COALESCE(NULLIF(TRIM(u.email), ''), o.customer_email))) AS order_email,
+          COUNT(*)::int AS orders_count,
+          COALESCE(SUM(o.total_amount) FILTER (WHERE o.status != 'annulée'), 0)::float8 AS total_spent,
+          MAX(o.created_at) AS last_order_at,
+          (ARRAY_AGG(NULLIF(TRIM(o.customer_name), '') ORDER BY o.created_at DESC) FILTER (WHERE NULLIF(TRIM(o.customer_name), '') IS NOT NULL))[1] AS latest_order_name,
+          (ARRAY_AGG(NULLIF(TRIM(o.customer_phone), '') ORDER BY o.created_at DESC) FILTER (WHERE NULLIF(TRIM(o.customer_phone), '') IS NOT NULL))[1] AS latest_order_phone,
+          (ARRAY_AGG(NULLIF(TRIM(o.wilaya), '') ORDER BY o.created_at DESC) FILTER (WHERE NULLIF(TRIM(o.wilaya), '') IS NOT NULL))[1] AS latest_order_wilaya,
+          (ARRAY_AGG(NULLIF(TRIM(o.commune), '') ORDER BY o.created_at DESC) FILTER (WHERE NULLIF(TRIM(o.commune), '') IS NOT NULL))[1] AS latest_order_commune
+        FROM orders o
+        LEFT JOIN auth.users u ON o.customer_user_id IS NOT NULL AND o.customer_user_id != '' AND o.customer_user_id = u.id::text
+        WHERE (o.customer_email IS NOT NULL AND TRIM(o.customer_email) != '') OR (u.email IS NOT NULL AND TRIM(u.email) != '')
+        GROUP BY 1
+      ),
+      sub_agg AS (
+        SELECT DISTINCT ON (LOWER(TRIM(email)))
+          LOWER(TRIM(email)) AS email_key,
+          TRIM(email) AS email,
+          NULLIF(TRIM(name), '') AS sub_name,
+          NULLIF(TRIM(phone), '') AS sub_phone,
+          source AS subscriber_source,
+          created_at AS subscribed_at
+        FROM subscribers
+        WHERE email IS NOT NULL AND TRIM(email) != ''
+        ORDER BY LOWER(TRIM(email)),
+          CASE WHEN source = 'discount_offer' THEN 1 WHEN source = 'Newsletter' THEN 2 ELSE 3 END ASC,
+          created_at DESC
+      ),
+      voucher_agg AS (
+        SELECT
+          v.user_id::text AS user_id,
+          COUNT(*) FILTER (WHERE v.status = 'available' AND (v.expires_at IS NULL OR v.expires_at > NOW()))::int AS active_vouchers_count,
+          COALESCE(SUM(v.amount) FILTER (WHERE v.status = 'available' AND (v.expires_at IS NULL OR v.expires_at > NOW())), 0)::float8 AS active_vouchers_balance,
+          COUNT(*)::int AS total_vouchers_count,
+          (ARRAY_AGG(v.code ORDER BY v.created_at DESC) FILTER (WHERE v.status = 'available' AND (v.expires_at IS NULL OR v.expires_at > NOW())))[1] AS latest_voucher_code,
+          (ARRAY_AGG(v.amount::float8 ORDER BY v.created_at DESC) FILTER (WHERE v.status = 'available' AND (v.expires_at IS NULL OR v.expires_at > NOW())))[1] AS latest_voucher_amount,
+          (ARRAY_AGG(v.minimum_order_amount::float8 ORDER BY v.created_at DESC) FILTER (WHERE v.status = 'available' AND (v.expires_at IS NULL OR v.expires_at > NOW())))[1] AS latest_voucher_min_cart,
+          (ARRAY_AGG(v.expires_at ORDER BY v.created_at DESC) FILTER (WHERE v.status = 'available' AND (v.expires_at IS NULL OR v.expires_at > NOW())))[1] AS latest_voucher_expires_at
+        FROM vouchers v
+        GROUP BY v.user_id
+      ),
+      all_keys AS (
+        SELECT email_key FROM reg_users
+        UNION
+        SELECT email_key FROM order_agg
+        UNION
+        SELECT email_key FROM sub_agg
+      ),
+      unified AS (
+        SELECT
+          ak.email_key,
+          COALESCE(ru.email, oa.order_email, sa.email, ak.email_key) AS email,
+          COALESCE(ru.profile_name, ru.meta_name, oa.latest_order_name, sa.sub_name, '') AS name,
+          COALESCE(ru.profile_phone, oa.latest_order_phone, sa.sub_phone, '') AS phone,
+          COALESCE(ru.profile_wilaya, oa.latest_order_wilaya, '') AS wilaya,
+          COALESCE(ru.profile_commune, oa.latest_order_commune, '') AS commune,
+          (ru.user_id IS NOT NULL) AS is_registered,
+          ru.user_id,
+          ru.auth_provider,
+          ru.registered_at,
+          ru.last_sign_in_at,
+          COALESCE(oa.orders_count, 0)::int AS orders_count,
+          COALESCE(oa.total_spent, 0)::float8 AS total_spent,
+          oa.last_order_at,
+          (sa.email_key IS NOT NULL) AS is_subscriber,
+          sa.subscriber_source,
+          sa.subscribed_at,
+          COALESCE(va.active_vouchers_count, 0)::int AS active_vouchers_count,
+          COALESCE(va.active_vouchers_balance, 0)::float8 AS active_vouchers_balance,
+          COALESCE(va.total_vouchers_count, 0)::int AS total_vouchers_count,
+          va.latest_voucher_code,
+          va.latest_voucher_amount,
+          va.latest_voucher_min_cart,
+          va.latest_voucher_expires_at,
+          CASE
+            WHEN ru.user_id IS NOT NULL THEN 'Compte Client'
+            WHEN COALESCE(oa.orders_count, 0) > 0 THEN 'Commande'
+            ELSE COALESCE(sa.subscriber_source, 'Newsletter')
+          END AS source,
+          COALESCE(ru.registered_at, oa.last_order_at, sa.subscribed_at) AS created_at
+        FROM all_keys ak
+        LEFT JOIN reg_users ru ON ru.email_key = ak.email_key
+        LEFT JOIN order_agg oa ON oa.email_key = ak.email_key
+        LEFT JOIN sub_agg sa ON sa.email_key = ak.email_key
+        LEFT JOIN voucher_agg va ON va.user_id = ru.user_id
+      )
     `;
-    
-    const [{count}] = await sql`SELECT COUNT(*) as count ${query}`;
 
-    const emails = await sql`
-      SELECT * ${query}
-      ORDER BY created_at DESC
-      LIMIT ${limitNum} OFFSET ${offset}
+    const [stats] = await sql`
+      ${baseCtes}
+      SELECT
+        COUNT(*)::int AS total_contacts,
+        COUNT(*) FILTER (WHERE is_registered = true)::int AS registered_count,
+        COUNT(*) FILTER (WHERE orders_count > 0)::int AS buyers_count,
+        COUNT(*) FILTER (WHERE subscriber_source = 'discount_offer')::int AS discount_offer_count,
+        COUNT(*) FILTER (WHERE subscriber_source = 'Newsletter')::int AS newsletter_count,
+        COUNT(*) FILTER (WHERE phone != '')::int AS with_phone_count,
+        COUNT(*) FILTER (WHERE active_vouchers_count > 0)::int AS with_active_voucher_count
+      FROM unified
     `;
 
-    res.json({ emails, totalCount: Number(count) });
+    const [{ count }] = await sql`
+      ${baseCtes}
+      SELECT COUNT(*)::int AS count
+      FROM unified
+      WHERE ${segmentCondition} AND ${searchCondition}
+    `;
+
+    const emails = exportAll
+      ? await sql`
+          ${baseCtes}
+          SELECT *
+          FROM unified
+          WHERE ${segmentCondition} AND ${searchCondition}
+          ORDER BY created_at DESC NULLS LAST
+          LIMIT 5000
+        `
+      : await sql`
+          ${baseCtes}
+          SELECT *
+          FROM unified
+          WHERE ${segmentCondition} AND ${searchCondition}
+          ORDER BY created_at DESC NULLS LAST
+          LIMIT ${limitNum} OFFSET ${offset}
+        `;
+
+    const totalCount = Number(count || 0);
+    const totalPages = Math.max(1, Math.ceil(totalCount / limitNum));
+
+    res.json({
+      emails,
+      totalCount,
+      page: pageNum,
+      limit: limitNum,
+      totalPages,
+      stats: {
+        total_contacts: Number(stats?.total_contacts || 0),
+        registered_count: Number(stats?.registered_count || 0),
+        buyers_count: Number(stats?.buyers_count || 0),
+        discount_offer_count: Number(stats?.discount_offer_count || 0),
+        newsletter_count: Number(stats?.newsletter_count || 0),
+        with_phone_count: Number(stats?.with_phone_count || 0),
+        with_active_voucher_count: Number(stats?.with_active_voucher_count || 0),
+      },
+    });
   } catch (err) {
     console.error('Failed to fetch emails:', err);
     res.status(500).json({ error: 'Failed to fetch emails' });
+  }
+});
+
+router.post('/admin/emails/send', authenticate, async (req, res) => {
+  try {
+    const { recipients, to, customerName, subject, message, voucherCode, voucherAmount, voucherMinCart, voucherExpiresAt } = req.body || {};
+
+    const targets: Array<{
+      email: string;
+      name?: string;
+      voucherCode?: string;
+      voucherAmount?: number;
+      voucherMinCart?: number;
+      voucherExpiresAt?: string | null;
+    }> = Array.isArray(recipients) && recipients.length > 0
+      ? recipients.map((r: any) => ({
+          email: String(r?.email || '').trim(),
+          name: r?.name ? String(r.name).trim() : undefined,
+          voucherCode: r?.voucherCode ? String(r.voucherCode).trim() : voucherCode,
+          voucherAmount: r?.voucherAmount ? Number(r.voucherAmount) : voucherAmount ? Number(voucherAmount) : undefined,
+          voucherMinCart: r?.voucherMinCart !== undefined ? Number(r.voucherMinCart) : voucherMinCart !== undefined ? Number(voucherMinCart) : undefined,
+          voucherExpiresAt: r?.voucherExpiresAt !== undefined ? r.voucherExpiresAt : voucherExpiresAt,
+        }))
+      : to
+        ? [{
+            email: String(to).trim(),
+            name: customerName ? String(customerName).trim() : undefined,
+            voucherCode,
+            voucherAmount: voucherAmount ? Number(voucherAmount) : undefined,
+            voucherMinCart: voucherMinCart !== undefined ? Number(voucherMinCart) : undefined,
+            voucherExpiresAt,
+          }]
+        : [];
+
+    if (targets.length === 0) {
+      return res.status(400).json({ error: 'Aucun destinataire spécifié.' });
+    }
+    if (targets.length > 50) {
+      return res.status(400).json({ error: 'Maximum 50 destinataires par envoi groupé.' });
+    }
+    if (!subject || !String(subject).trim()) {
+      return res.status(400).json({ error: "L'objet de l'email est obligatoire." });
+    }
+    if (!message || !String(message).trim()) {
+      return res.status(400).json({ error: 'Le contenu du message est obligatoire.' });
+    }
+
+    const results: Array<{ email: string; success: boolean; id?: string; error?: string }> = [];
+    for (const target of targets) {
+      const sendRes = await sendCustomerCustomEmail({
+        to: target.email,
+        customerName: target.name,
+        subject: String(subject).trim(),
+        message: String(message).trim(),
+        voucherCode: target.voucherCode,
+        voucherAmount: target.voucherAmount,
+        voucherMinCart: target.voucherMinCart,
+        voucherExpiresAt: target.voucherExpiresAt,
+      });
+      results.push({ email: target.email, ...sendRes });
+    }
+
+    const sentCount = results.filter((r) => r.success).length;
+    const failedCount = results.length - sentCount;
+
+    if (sentCount === 0) {
+      return res.status(400).json({
+        error: results[0]?.error || "Aucun email n'a pu être envoyé.",
+        sentCount,
+        failedCount,
+        results,
+      });
+    }
+
+    res.json({
+      sentCount,
+      failedCount,
+      results,
+    });
+  } catch (err: any) {
+    console.error('Failed to send admin customer email:', err);
+    res.status(500).json({ error: err?.message || "Erreur serveur lors de l'envoi de l'email." });
   }
 });
 

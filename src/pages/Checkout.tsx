@@ -26,7 +26,7 @@ interface Wilaya {
 }
 
 export default function Checkout() {
-  const { items, total, clearCart, syncCustomerInfo, appliedPromo, appliedVoucher, setAppliedVoucher, getPromoDiscount } = useCartStore();
+  const { items, total, clearCart, syncCustomerInfo, appliedPromo, setAppliedPromo, appliedVoucher, setAppliedVoucher } = useCartStore();
   const { user, profile, loading: authLoading, refreshProfile } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -195,6 +195,11 @@ export default function Checkout() {
   const [discountEmail, setDiscountEmail] = useState('');
   const [showDiscountOffer, setShowDiscountOffer] = useState(true);
 
+  // Promo code state in checkout recap
+  const [promoCodeInput, setPromoCodeInput] = useState('');
+  const [isApplyingPromo, setIsApplyingPromo] = useState(false);
+  const [promoError, setPromoError] = useState<string | null>(null);
+
   // Voucher input state in checkout recap
   const [voucherCodeInput, setVoucherCodeInput] = useState('');
   const [isApplyingVoucher, setIsApplyingVoucher] = useState(false);
@@ -230,7 +235,20 @@ export default function Checkout() {
     ? 0 
     : (isShippingDiscountApplied ? deliveryCost * (1 - shippingSettings.percent / 100) : deliveryCost);
   
-  const promoDiscount = directBuyItem ? 0 : getPromoDiscount();
+  const promoDiscount = (() => {
+    if (!appliedPromo || checkoutItems.length === 0) return 0;
+    if (!appliedPromo.product_id) {
+      const discount = Math.round((checkoutTotal * Number(appliedPromo.discount_percent)) / 100);
+      return Math.min(discount, checkoutTotal);
+    }
+    const matchingItems = checkoutItems.filter((it) => String(it.id) === String(appliedPromo.product_id));
+    if (matchingItems.length === 0) return 0;
+    const eligibleTotal = matchingItems.reduce((sum, it) => sum + getProductEffectivePrice(it) * it.quantity, 0);
+    const discount = Math.round((eligibleTotal * Number(appliedPromo.discount_percent)) / 100);
+    return Math.min(discount, eligibleTotal);
+  })();
+
+  const hasActivePromo = Boolean(appliedPromo && promoDiscount > 0);
 
   const voucherExcludedSet = new Set((appliedVoucher?.excluded_product_ids || []).map((id: any) => Number(id)));
   const voucherEligibleSubtotal = checkoutItems.reduce((sum, it) => {
@@ -240,7 +258,7 @@ export default function Checkout() {
 
   const voucherDiscount = (() => {
     if (!appliedVoucher) return 0;
-    if (!directBuyItem && appliedPromo && !appliedVoucher.allow_promo_stacking) return 0;
+    if (hasActivePromo && !appliedVoucher.allow_promo_stacking) return 0;
     if (voucherEligibleSubtotal < (Number(appliedVoucher.minimum_order_amount) || 0)) return 0;
     const subtotalAfterPromo = Math.max(0, checkoutTotal - promoDiscount);
     return Math.min(Number(appliedVoucher.amount) || 0, voucherEligibleSubtotal, subtotalAfterPromo);
@@ -248,6 +266,49 @@ export default function Checkout() {
 
   const productsAfterDiscount = Math.max(0, checkoutTotal - promoDiscount - voucherDiscount);
   const finalTotal = productsAfterDiscount + effectiveDeliveryCost;
+
+  const handleApplyPromoCheckout = async (codeToApply: string) => {
+    const clean = codeToApply.trim().toUpperCase();
+    if (!clean) {
+      setPromoError('Veuillez saisir un code promo');
+      return;
+    }
+    setIsApplyingPromo(true);
+    setPromoError(null);
+    try {
+      const res = await fetch('/api/promo-codes/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          code: clean,
+          items: checkoutItems.map((it) => ({
+            id: it.id,
+            product_id: it.id,
+            price: getProductEffectivePrice(it),
+            quantity: it.quantity,
+          })),
+        }),
+      });
+      const d = await res.json();
+      if (!res.ok || !d.valid) throw new Error(d.error || 'Code promo invalide');
+      setAppliedPromo({
+        code: d.code,
+        product_id: d.product_id,
+        product_name: d.product_name,
+        product_image: d.product_image,
+        discount_percent: d.discount_percent,
+        discount_amount: d.discount_amount,
+      });
+      setPromoCodeInput('');
+      setPromoError(null);
+      toast.success(d.message || `Code promo ${d.code} appliqué !`);
+    } catch (err: any) {
+      setPromoError(err.message || 'Code promo invalide');
+      toast.error(err.message || 'Code promo invalide');
+    } finally {
+      setIsApplyingPromo(false);
+    }
+  };
 
   const handleApplyVoucherCheckout = async (codeToApply: string) => {
     const clean = codeToApply.trim().toUpperCase();
@@ -274,7 +335,7 @@ export default function Checkout() {
         },
         body: JSON.stringify({
           code: clean,
-          has_promo_code: Boolean(!directBuyItem && appliedPromo),
+          has_promo_code: hasActivePromo,
           items: checkoutItems.map((it) => ({
             id: it.id,
             product_id: it.id,
@@ -648,6 +709,7 @@ export default function Checkout() {
     const selectedOffice = isBureau ? offices.find(o => o.id === Number(officeId) || o.id === officeId) : null;
     const finalAddress = isBureau && selectedOffice ? `Point Relais: ${selectedOffice.name} - ${selectedOffice.address}` : formData.address;
 
+    const activePromoCode = hasActivePromo && appliedPromo ? appliedPromo.code : null;
     const activeVoucherCode = appliedVoucher && voucherDiscount > 0 ? appliedVoucher.code : null;
 
     const orderData = {
@@ -666,7 +728,7 @@ export default function Checkout() {
       delivery_company: deliveryMode === 'bureau' && selectedOffice ? selectedOffice.company : 'ecomdz',
       customer_user_id: user?.id || null,
       cart_session_id: getOrCreateCartSessionId(),
-      promo_code: !directBuyItem && appliedPromo ? appliedPromo.code : null,
+      promo_code: activePromoCode,
       voucher_code: activeVoucherCode,
       items: checkoutItems.map(item => ({
         product_id: item.id,
@@ -697,8 +759,9 @@ export default function Checkout() {
         setOrderSuccess(true);
         if (!directBuyItem) {
           clearCart();
-        } else if (activeVoucherCode) {
-          setAppliedVoucher(null);
+        } else {
+          if (activePromoCode) setAppliedPromo(null);
+          if (activeVoucherCode) setAppliedVoucher(null);
         }
         
         // Track Purchase
@@ -884,7 +947,7 @@ export default function Checkout() {
                   <span className="font-semibold">{formatPrice(getProductEffectivePrice(item) * item.quantity)}</span>
                 </div>
               ))}
-              {!directBuyItem && appliedPromo && promoDiscount > 0 && (
+              {hasActivePromo && appliedPromo && (
                 <div className="pt-2 flex justify-between text-xs text-emerald-600 font-semibold">
                   <span className="flex items-center gap-1">
                     <Tag size={12} />
@@ -1587,6 +1650,69 @@ export default function Checkout() {
                 })}
               </div>
 
+              {/* Promo code input / status */}
+              <div className="border-t pt-4 space-y-2">
+                <label className="text-[11px] font-bold text-gray-600 uppercase tracking-wider flex items-center gap-1.5">
+                  <Tag size={13} className="text-emerald-600" />
+                  <span>Code promo</span>
+                </label>
+                {appliedPromo ? (
+                  <div className={`p-2.5 rounded-xl border flex items-center justify-between gap-2 text-xs ${
+                    promoDiscount > 0 ? 'bg-emerald-50 border-emerald-200' : 'bg-amber-50 border-amber-200'
+                  }`}>
+                    <div>
+                      <span className="font-mono font-bold text-gray-900">
+                        {appliedPromo.code} (-{appliedPromo.discount_percent}%)
+                      </span>
+                      {promoDiscount > 0 ? (
+                        <span className="block text-[11px] text-emerald-700 font-bold">
+                          -{formatPrice(promoDiscount)} appliqués
+                        </span>
+                      ) : (
+                        <span className="block text-[11px] text-amber-700">
+                          Non applicable à l'article sélectionné
+                        </span>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAppliedPromo(null);
+                        setPromoError(null);
+                      }}
+                      className="p-1 text-gray-400 hover:text-red-500"
+                      title="Retirer le code promo"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-1.5">
+                    <div className="flex gap-1.5">
+                      <input
+                        type="text"
+                        value={promoCodeInput}
+                        onChange={(e) => {
+                          setPromoCodeInput(e.target.value.toUpperCase());
+                          if (promoError) setPromoError(null);
+                        }}
+                        placeholder="Ex: PANIER10-XXXX"
+                        className="flex-1 px-2.5 py-1.5 text-xs border border-gray-300 rounded-lg font-mono uppercase focus:border-emerald-500 outline-none"
+                      />
+                      <button
+                        type="button"
+                        disabled={isApplyingPromo || !promoCodeInput.trim()}
+                        onClick={() => handleApplyPromoCheckout(promoCodeInput)}
+                        className="px-3 py-1.5 bg-gray-900 hover:bg-emerald-600 disabled:bg-gray-300 text-white text-xs font-bold rounded-lg transition"
+                      >
+                        {isApplyingPromo ? <Loader2 size={14} className="animate-spin" /> : 'Appliquer'}
+                      </button>
+                    </div>
+                    {promoError && <p className="text-[11px] text-red-600 font-medium">{promoError}</p>}
+                  </div>
+                )}
+              </div>
+
               {/* Voucher selector / input */}
               {user && (
                 <div className="border-t pt-4 space-y-2">
@@ -1604,7 +1730,7 @@ export default function Checkout() {
                           </span>
                         ) : (
                           <span className="block text-[11px] text-amber-700">
-                            {appliedPromo && !appliedVoucher.allow_promo_stacking
+                            {hasActivePromo && !appliedVoucher.allow_promo_stacking
                               ? 'Non cumulable avec le code promo'
                               : `Min. ${formatPrice(appliedVoucher.minimum_order_amount)} requis hors livraison`}
                           </span>
@@ -1672,7 +1798,7 @@ export default function Checkout() {
                   <span className="font-semibold text-gray-900">{formatPrice(checkoutTotal)}</span>
                 </div>
 
-                {!directBuyItem && appliedPromo && promoDiscount > 0 && (
+                {hasActivePromo && appliedPromo && (
                   <div className="flex justify-between text-emerald-600 font-medium">
                     <span className="flex items-center gap-1.5">
                       <Tag size={13} />

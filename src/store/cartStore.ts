@@ -131,7 +131,7 @@ export function triggerCartSync(items: CartItem[], customerInfo?: CustomerCartIn
 
 export interface AppliedPromo {
   code: string;
-  product_id: number;
+  product_id: number | null;
   product_name: string;
   product_image?: string;
   discount_percent: number;
@@ -182,12 +182,22 @@ export const useCartStore = create<CartStore>()(
       },
       getPromoDiscount: () => {
         const { appliedPromo, items } = get();
-        if (!appliedPromo) return 0;
-        const matchingItem = items.find((i) => String(i.id) === String(appliedPromo.product_id));
-        if (!matchingItem) return 0;
-        const price = getProductEffectivePrice(matchingItem);
-        const lineTotal = price * matchingItem.quantity;
-        return Math.round((lineTotal * appliedPromo.discount_percent) / 100);
+        if (!appliedPromo || items.length === 0) return 0;
+
+        if (!appliedPromo.product_id) {
+          const cartSubtotal = get().total();
+          const discount = Math.round((cartSubtotal * Number(appliedPromo.discount_percent)) / 100);
+          return Math.min(discount, cartSubtotal);
+        }
+
+        const matchingItems = items.filter((i) => String(i.id) === String(appliedPromo.product_id));
+        if (matchingItems.length === 0) return 0;
+        const eligibleTotal = matchingItems.reduce((sum, item) => {
+          const price = getProductEffectivePrice(item);
+          return sum + price * item.quantity;
+        }, 0);
+        const discount = Math.round((eligibleTotal * Number(appliedPromo.discount_percent)) / 100);
+        return Math.min(discount, eligibleTotal);
       },
       getVoucherEligibleSubtotal: () => {
         const { appliedVoucher, items } = get();
@@ -231,9 +241,11 @@ export const useCartStore = create<CartStore>()(
           const newItems = state.items.filter((i) => i.cartItemId !== id && i.id.toString() !== id.toString());
           triggerCartSync(newItems);
           
-          // Check if promo product was removed
+          // Check if promo product was removed or cart is now empty
           let nextPromo = state.appliedPromo;
-          if (nextPromo && nextPromo.product_id) {
+          if (newItems.length === 0) {
+            nextPromo = null;
+          } else if (nextPromo && nextPromo.product_id) {
             const hasPromoProduct = newItems.some((i) => String(i.id) === String(nextPromo?.product_id));
             if (!hasPromoProduct) {
               nextPromo = null;

@@ -1640,17 +1640,22 @@ router.post('/promo-codes/validate', async (req, res) => {
         });
       }
 
-      const matchingItem = items.find((it: any) => String(it.product_id || it.id) === String(promo.product_id));
-      if (!matchingItem) {
+      const matchingItems = items.filter((it: any) => String(it.product_id || it.id) === String(promo.product_id));
+      if (matchingItems.length === 0) {
         return res.status(400).json({ 
           error: `Ce code promo est uniquement valable pour l'article : "${promo.product_name}". Ajoutez-le à votre panier pour en profiter !` 
         });
       }
 
-      const itemPrice = Number(matchingItem.price) || Number(promo.product_promo_price) || Number(promo.product_price);
-      const qty = Number(matchingItem.quantity) || 1;
-      const eligibleLineTotal = itemPrice * qty;
-      const discount_amount = Math.round((eligibleLineTotal * Number(promo.discount_percent)) / 100);
+      const eligibleLineTotal = matchingItems.reduce((sum: number, matchingItem: any) => {
+        const itemPrice = Number(matchingItem.price) || Number(promo.product_promo_price) || Number(promo.product_price);
+        const qty = Number(matchingItem.quantity) || 1;
+        return sum + (itemPrice * qty);
+      }, 0);
+      const discount_amount = Math.min(
+        Math.round((eligibleLineTotal * Number(promo.discount_percent)) / 100),
+        eligibleLineTotal
+      );
 
       return res.json({
         valid: true,
@@ -1786,14 +1791,14 @@ router.post('/orders', orderLimiter, async (req, res) => {
         }
 
         if (promo.product_id) {
-          // Verify promo code applies to one of the ordered items
-          const matchingItem = validatedItems.find(it => String(it.product_id) === String(promo.product_id));
-          if (!matchingItem) {
+          // Verify promo code applies to one or more ordered items
+          const matchingItems = validatedItems.filter(it => String(it.product_id) === String(promo.product_id));
+          if (matchingItems.length === 0) {
             throw new Error('Ce code promo ne s\'applique pas aux produits de votre commande');
           }
 
-          // Discount strictly calculated on the eligible product price (never shipping)
-          const eligibleProductTotal = Number(matchingItem.price) * Number(matchingItem.quantity);
+          // Discount strictly calculated on eligible product price (never shipping)
+          const eligibleProductTotal = matchingItems.reduce((sum, it) => sum + Number(it.price) * Number(it.quantity), 0);
           discountAmount = Math.round((eligibleProductTotal * Number(promo.discount_percent)) / 100);
           discountAmount = Math.min(discountAmount, eligibleProductTotal);
         } else {
@@ -1949,6 +1954,8 @@ router.post('/orders', orderLimiter, async (req, res) => {
     res.status(201).json({
       id: orderData.id,
       order_id: orderData.order_id,
+      promo_code: appliedPromoCode,
+      discount_amount: discountAmount,
       voucher_code: appliedVoucherCode,
       voucher_discount_amount: voucherDiscountAmount,
       message: 'Order created successfully'

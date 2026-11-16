@@ -227,44 +227,72 @@ export default function Cart() {
   const promoAppliedFromUrlRef = useRef(false);
 
   useEffect(() => {
-    if (urlPromo && !appliedPromo && items.length > 0 && !promoAppliedFromUrlRef.current) {
-      promoAppliedFromUrlRef.current = true;
-      const autoApply = async () => {
-        setIsApplyingPromo(true);
-        try {
-          const res = await fetch('/api/promo-codes/validate', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              code: urlPromo.trim(),
-              items: items.map(item => ({
-                id: item.id,
-                product_id: item.id,
-                price: getProductEffectivePrice(item),
-                quantity: item.quantity
-              }))
-            })
-          });
-          const data = await res.json();
-          if (res.ok && data.valid) {
-            setAppliedPromo({
-              code: data.code,
-              product_id: data.product_id,
-              product_name: data.product_name,
-              product_image: data.product_image,
-              discount_percent: data.discount_percent,
-              discount_amount: data.discount_amount
-            });
-            toast.success(data.message || `Code promo "${data.code}" appliqué avec succès !`);
-          }
-        } catch (_) {
-          // Silent fallback if invalid
-        } finally {
-          setIsApplyingPromo(false);
-        }
-      };
-      autoApply();
+    if (urlPromo && urlPromo.trim()) {
+      try {
+        sessionStorage.setItem('zorando_pending_promo_code', urlPromo.trim().toUpperCase());
+      } catch (_) {}
     }
+  }, [urlPromo]);
+
+  useEffect(() => {
+    if (items.length === 0 || promoAppliedFromUrlRef.current) return;
+    let candidate = urlPromo?.trim() || '';
+    if (!candidate && !appliedPromo) {
+      try {
+        candidate = sessionStorage.getItem('zorando_pending_promo_code') || '';
+      } catch (_) {}
+    }
+    if (!candidate) return;
+    if (appliedPromo && appliedPromo.code.toUpperCase() === candidate.toUpperCase()) {
+      try {
+        sessionStorage.removeItem('zorando_pending_promo_code');
+      } catch (_) {}
+      return;
+    }
+
+    promoAppliedFromUrlRef.current = true;
+    const autoApply = async () => {
+      setIsApplyingPromo(true);
+      setPromoError(null);
+      try {
+        const res = await fetch('/api/promo-codes/validate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            code: candidate,
+            items: items.map(item => ({
+              id: item.id,
+              product_id: item.id,
+              price: getProductEffectivePrice(item),
+              quantity: item.quantity
+            }))
+          })
+        });
+        const data = await res.json();
+        try {
+          sessionStorage.removeItem('zorando_pending_promo_code');
+        } catch (_) {}
+        if (res.ok && data.valid) {
+          setAppliedPromo({
+            code: data.code,
+            product_id: data.product_id,
+            product_name: data.product_name,
+            product_image: data.product_image,
+            discount_percent: data.discount_percent,
+            discount_amount: data.discount_amount
+          });
+          toast.success(data.message || `Code promo "${data.code}" appliqué avec succès !`);
+        } else if (data?.error) {
+          setPromoError(data.error);
+          toast.error(data.error);
+        }
+      } catch (_) {
+        // Network error fallback
+      } finally {
+        setIsApplyingPromo(false);
+      }
+    };
+    autoApply();
   }, [urlPromo, items.length, appliedPromo]);
   
   const viewCartTrackedRef = useRef(false);
@@ -471,14 +499,19 @@ export default function Cart() {
                     <div className="flex items-start gap-2">
                       <CheckCircle2 size={16} className="text-emerald-600 shrink-0 mt-0.5" />
                       <div>
-                        <div className="text-sm font-bold text-emerald-900 flex items-center gap-1.5">
+                        <div className="text-sm font-bold text-emerald-900 flex items-center gap-1.5 flex-wrap">
                           <span>{appliedPromo.code}</span>
                           <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-200 text-emerald-800 font-semibold">
                             -{appliedPromo.discount_percent}%
                           </span>
+                          {discountAmount > 0 && (
+                            <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-600 text-white font-bold">
+                              -{formatPrice(discountAmount)}
+                            </span>
+                          )}
                         </div>
                         <p className="text-xs text-emerald-700 mt-0.5">
-                          Appliqué sur : <span className="font-medium">{appliedPromo.product_name}</span>
+                          Appliqué sur : <span className="font-medium">{appliedPromo.product_name || 'Tous les articles du panier'}</span>
                         </p>
                       </div>
                     </div>

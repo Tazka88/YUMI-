@@ -17,10 +17,11 @@ class ErrorBoundary extends Component<Props, State> {
   };
 
   public static getDerivedStateFromError(error: Error): State {
-    const isChunkError = /Failed to fetch dynamically imported module|error loading dynamically imported module|Loading chunk/i.test(
-      error?.message || ''
-    );
-    if (isChunkError && typeof window !== 'undefined' && !sessionStorage.getItem('chunk_reloaded_boundary')) {
+    const msg = error?.message || '';
+    const isChunkOrHookMismatch =
+      /Failed to fetch dynamically imported module|error loading dynamically imported module|Loading chunk/i.test(msg) ||
+      /Cannot read properties of null \(reading '(?:useContext|useState|useEffect|useRef|useMemo|useCallback)'\)|Invalid hook call/i.test(msg);
+    if (isChunkOrHookMismatch && typeof window !== 'undefined' && !sessionStorage.getItem('chunk_reloaded_boundary')) {
       sessionStorage.setItem('chunk_reloaded_boundary', '1');
       window.location.reload();
     }

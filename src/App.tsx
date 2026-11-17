@@ -66,6 +66,7 @@ export default function App() {
     // Smooth entry after hydration and clear chunk retry flag
     try {
       sessionStorage.removeItem('chunk_reloaded_once');
+      sessionStorage.removeItem('chunk_reloaded_boundary');
     } catch (_) {}
     document.getElementById('root')?.classList.add('app-ready');
   }, []);

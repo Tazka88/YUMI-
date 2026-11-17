@@ -1225,8 +1225,10 @@ ${JSON.stringify(graphSchema)}
       res.header('X-Robots-Tag', 'all');
       res.header('Content-Type', 'text/html; charset=utf-8');
       
-      // Add Vercel Edge Cache Control for Public HTML (if not already set specifically by route)
-      if (!res.getHeader('Cache-Control')) {
+      // In dev mode (Vite middleware active), never cache HTML so stale Vite dep hashes cannot linger
+      if (vite) {
+        res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+      } else if (!res.getHeader('Cache-Control')) {
         if (req.method === 'GET' && (!req.headers.cookie || !req.headers.cookie.match(/session|token|auth|user/i))) {
           res.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate=300');
         } else {

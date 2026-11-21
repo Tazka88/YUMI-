@@ -1758,10 +1758,21 @@ router.post('/orders', orderLimiter, async (req, res) => {
       validatedItems.push({ ...item, price: actualPrice, quantity, variation: item.variation || null });
     }
 
-    // Apply free shipping rule: subtotal >= 10000 AND itemCount >= 3
+    // Apply free shipping rule: subtotal >= 25000 AND itemCount >= 3
     let delivery_cost = typeof clientDeliveryCost === 'number' && clientDeliveryCost >= 0 ? clientDeliveryCost : 600;
-    if (calculatedTotal >= 10000 && itemCount >= 3) {
+    const qualifiesFreeShipping = calculatedTotal >= 25000 && itemCount >= 3;
+    if (qualifiesFreeShipping) {
       delivery_cost = 0;
+    } else if (delivery_cost === 0 && wilaya) {
+      const [wRow] = await sql`SELECT delivery_cost, stop_desk_cost FROM wilayas WHERE LOWER(name) = LOWER(${String(wilaya).trim()}) LIMIT 1`;
+      if (wRow) {
+        const tariff = stop_desk ? Number(wRow.stop_desk_cost || 0) : Number(wRow.delivery_cost || 0);
+        if (tariff > 0) {
+          delivery_cost = tariff;
+        }
+      } else if (!stop_desk) {
+        delivery_cost = 600;
+      }
     }
 
     let discountAmount = 0;

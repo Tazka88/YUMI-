@@ -229,7 +229,7 @@ export default function Checkout() {
   }, [user, supabase]);
 
   const itemCount = checkoutItems.reduce((acc, item) => acc + item.quantity, 0);
-  const isFreeShipping = checkoutTotal >= 10000 && itemCount >= 3;
+  const isFreeShipping = checkoutTotal >= 25000 && itemCount >= 3;
 
   const effectiveDeliveryCost = isFreeShipping 
     ? 0 

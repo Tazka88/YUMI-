@@ -5893,7 +5893,7 @@ const handleBulkDelivery = async () => {
                         type="button"
                         onClick={() => {
                           if (!brandForm.seo_title) setBrandForm(f => ({...f, seo_title: `${f.name} | ZORANDO - Boutique en ligne Algérie`}));
-                          if (!brandForm.seo_description) setBrandForm(f => ({...f, seo_description: `Découvrez tous les produits ${f.name} disponibles chez ZORANDO. Livraison gratuite à partir de 10 000 DA en Algérie.`}));
+                          if (!brandForm.seo_description) setBrandForm(f => ({...f, seo_description: `Découvrez tous les produits ${f.name} disponibles chez ZORANDO. Livraison gratuite à partir de 25 000 DA en Algérie.`}));
                           if (!brandForm.h1_title) setBrandForm(f => ({...f, h1_title: f.name}));
                         }}
                         className="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 px-2 py-1 rounded"

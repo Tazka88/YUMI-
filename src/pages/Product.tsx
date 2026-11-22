@@ -158,20 +158,6 @@ export default function Product() {
       const init = getInitialProduct();
       if (init) {
         setProduct(init);
-        if (typeof window !== 'undefined') {
-          (window as any).__CURRENT_PRODUCT__ = {
-            id: Number(init.id),
-            productId: Number(init.id),
-            name: init.name,
-            productName: init.name,
-            url: `/product/${init.slug || slug}`,
-            productUrl: `/product/${init.slug || slug}`,
-            image: init.image || '',
-            productImage: init.image || '',
-            price: init.price,
-            stock: init.stock
-          };
-        }
         const mainImg = init.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(init.name)}&background=random&size=800`;
         setSelectedImage(mainImg);
         setSelectedMedia({ type: 'image', url: mainImg, alt_text: init.main_image_alt || init.name });
@@ -198,30 +184,6 @@ export default function Product() {
            data.variations = [];
         }
         setProduct(data);
-        if (typeof window !== 'undefined') {
-          (window as any).__CURRENT_PRODUCT__ = {
-            id: Number(data.id),
-            productId: Number(data.id),
-            name: data.name,
-            productName: data.name,
-            url: `/product/${data.slug}`,
-            productUrl: `/product/${data.slug}`,
-            image: data.image || '',
-            productImage: data.image || '',
-            price: data.price,
-            stock: data.stock
-          };
-          window.dispatchEvent(new CustomEvent('product-page-active', {
-            detail: {
-              productId: Number(data.id),
-              productName: data.name,
-              productUrl: `/product/${data.slug}`,
-              productImage: data.image || '',
-              price: data.price,
-              stock: data.stock
-            }
-          }));
-        }
         const mainImage = data.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(data.name)}&background=random&size=800`;
         setSelectedImage(prev => prev || mainImage);
         setSelectedMedia(prev => prev.url ? prev : {type: 'image', url: mainImage, alt_text: data.main_image_alt || data.name});
@@ -498,24 +460,13 @@ export default function Product() {
     navigate('/checkout', { state: { directBuyItem: { ...product, quantity, selectedVariation, cartItemId: `${product.id}` + (selectedVariation ? `-${selectedVariation.id}` : '') } } });
   };
 
-  const handleOpenProductChat = () => {
-    if (!product) return;
-    const canonicalUrl = typeof window !== 'undefined' ? `${window.location.origin}/product/${product.slug}` : `/product/${product.slug}`;
-    const mainImage = (product.image && product.image.startsWith('/')) 
-      ? `https://www.zorando.com${product.image}` 
-      : (product.image || (product.images && product.images[0]) || '');
-
-    window.dispatchEvent(new CustomEvent('open-product-chat', {
-      detail: {
-        productId: product.id,
-        productName: product.name,
-        productUrl: canonicalUrl,
-        productImage: mainImage,
-        price: product.price,
-        stock: product.stock
-      }
-    }));
-  };
+  const whatsappNumber = (() => {
+    const raw = String(settings?.whatsapp_number || settings?.contact_phone || '213781955925');
+    let digits = raw.replace(/\D/g, '');
+    if (digits.startsWith('00213')) digits = digits.slice(2);
+    else if (digits.startsWith('0') && digits.length === 10) digits = `213${digits.slice(1)}`;
+    return digits || '213781955925';
+  })();
 
   const toggleWishlist = async () => {
     if (!product) return;
@@ -576,6 +527,8 @@ export default function Product() {
     : '0.0';
 
   const cleanUrl = getCanonicalUrl();
+  const whatsappQuestionText = `Bonjour ZORANDO, j'ai une question concernant le produit : ${product.name} (${formatPrice(activePriceForDisplay)}) - ${cleanUrl}`;
+  const whatsappQuestionHref = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(whatsappQuestionText)}`;
 
   const productSchema = buildProductSchema(product, reviews, cleanUrl, 'https://www.zorando.com');
 
@@ -1054,7 +1007,7 @@ export default function Product() {
                     </button>
                   </div>
 
-                  {/* Actions secondaires : Téléphone et Chat */}
+                  {/* Actions secondaires : Téléphone et WhatsApp */}
                   <div className="flex items-center gap-2 sm:gap-3">
                     <a 
                       href={`tel:${settings?.contact_phone?.replace(/\s/g, '') || ''}`}
@@ -1063,14 +1016,15 @@ export default function Product() {
                       <PhoneCall size={15} className="text-[#FF6B00]" />
                       <span>Commander par téléphone</span>
                     </a>
-                    <button
-                      type="button"
-                      onClick={handleOpenProductChat}
-                      className="flex-1 py-2.5 px-3 rounded-xl border border-gray-200 hover:border-orange-300 hover:bg-orange-50/50 text-gray-700 hover:text-orange-600 font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-2xs cursor-pointer"
+                    <a
+                      href={whatsappQuestionHref}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex-1 py-2.5 px-3 rounded-xl border border-emerald-200 bg-emerald-50/50 hover:border-emerald-400 hover:bg-emerald-50 text-emerald-800 hover:text-emerald-900 font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-2xs"
                     >
-                      <MessageCircle size={15} className="text-[#FF6B00]" />
+                      <MessageCircle size={15} className="text-[#25D366]" />
                       <span>Poser une question</span>
-                    </button>
+                    </a>
                   </div>
 
                   {/* C. RÉASSURANCE ET CONFIANCE (4 piliers élégants) */}
@@ -1535,6 +1489,17 @@ export default function Product() {
         quantity={quantity}
         selectedVariation={selectedVariation}
       />
+      {/* Bouton flottant WhatsApp : Poser une question */}
+      <a
+        href={whatsappQuestionHref}
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label="Poser une question sur WhatsApp"
+        className="fixed bottom-[calc(86px+env(safe-area-inset-bottom,0px))] right-3.5 z-40 sm:bottom-6 sm:right-6 sm:w-auto sm:h-auto sm:px-4 sm:py-3.5 w-12 h-12 flex items-center justify-center gap-2.5 bg-[#25D366] hover:bg-[#1ebe5d] text-white rounded-full shadow-2xl transition-all duration-300 hover:scale-105 border-2 border-white/30"
+      >
+        <MessageCircle className="w-5 h-5 sm:w-6 sm:h-6" />
+        <span className="font-bold text-sm tracking-wide hidden sm:inline">Poser une question</span>
+      </a>
     </div>
   );
 }

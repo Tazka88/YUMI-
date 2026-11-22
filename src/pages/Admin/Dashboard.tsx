@@ -2,7 +2,7 @@ import toast from 'react-hot-toast';
 import React, { useState, useEffect } from 'react';
 import useSWR from 'swr';
 import { useNavigate } from 'react-router-dom';
-import { LayoutDashboard, ShoppingBag, Users, Settings, LogOut, TrendingUp, AlertCircle, Package, Plus, Edit, Trash2, X, Image as ImageIcon, Upload, User, Bell, Menu, MessageCircle, Video } from 'lucide-react';
+import { LayoutDashboard, ShoppingBag, Users, Settings, LogOut, TrendingUp, AlertCircle, Package, Plus, Edit, Trash2, X, Image as ImageIcon, Upload, User, Bell, Menu, Video } from 'lucide-react';
 import { formatPrice } from '../../utils/formatPrice';
 import FooterSettings from './FooterSettings';
 import PageSettings from './PageSettings';
@@ -15,7 +15,6 @@ import HeroVideoAdmin from './HeroVideoAdmin';
 import BlogAdmin from './BlogAdmin';
 import PushNotificationAdmin from './PushNotificationAdmin';
 import AbandonedCartsAdmin from './AbandonedCartsAdmin';
-import LiveChatAdmin from './LiveChatAdmin';
 import PromoCodesAdmin from './PromoCodesAdmin';
 import VouchersAdmin from './VouchersAdmin';
 import CustomerEmailsAdmin from './CustomerEmailsAdmin';
@@ -151,27 +150,6 @@ export default function AdminDashboard() {
   const [modalFilters, setModalFilters] = useState({ category_id: '', brand_id: '', max_price: '' });
   const [modalProducts, setModalProducts] = useState<any[]>([]);
   const [loadingModalProducts, setLoadingModalProducts] = useState(false);
-  const [chatUnreadCount, setChatUnreadCount] = useState<number>(0);
-
-  useEffect(() => {
-    const fetchChatUnread = async () => {
-      try {
-        const token = localStorage.getItem('adminToken');
-        if (!token) return;
-        const res = await fetch(`/api/admin/chat/conversations?filter=unanswered&_t=${Date.now()}`, {
-          headers: { 'Authorization': `Bearer ${token}` },
-          cache: 'no-store'
-        });
-        if (res.ok) {
-          const data = await res.json();
-          setChatUnreadCount(data.stats?.unansweredCount || 0);
-        }
-      } catch {}
-    };
-    fetchChatUnread();
-    const timer = setInterval(fetchChatUnread, 20000);
-    return () => clearInterval(timer);
-  }, [activeTab]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -1864,18 +1842,6 @@ const handleBulkDelivery = async () => {
               <span className="flex-1 text-left">Bons d'achat</span>
             </button>
             <button
-              onClick={() => { setActiveTab('live-chat'); setIsMobileNavOpen(false); }}
-              className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition ${activeTab === 'live-chat' ? 'bg-orange-500 text-white font-semibold shadow-md shadow-orange-500/20' : 'text-gray-400 hover:bg-gray-800 hover:text-white'}`}
-            >
-              <MessageCircle size={18} />
-              <span className="flex-1 text-left">Chat en direct</span>
-              {chatUnreadCount > 0 && (
-                <span className="bg-red-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full animate-pulse shadow-xs">
-                  {chatUnreadCount}
-                </span>
-              )}
-            </button>
-            <button
               onClick={() => { setActiveTab('push-notifications'); setIsMobileNavOpen(false); }}
               className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition ${activeTab === 'push-notifications' ? 'bg-orange-500 text-white font-semibold shadow-md shadow-orange-500/20' : 'text-gray-400 hover:bg-gray-800 hover:text-white'}`}
             >
@@ -2091,18 +2057,6 @@ const handleBulkDelivery = async () => {
             >
               <Ticket size={18} />
               <span className="flex-1 text-left">Bons d'achat</span>
-            </button>
-            <button 
-              onClick={() => setActiveTab('live-chat')}
-              className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition ${activeTab === 'live-chat' ? 'bg-orange-500 text-white font-semibold shadow-md shadow-orange-500/20' : 'text-gray-400 hover:bg-gray-800 hover:text-white'}`}
-            >
-              <MessageCircle size={18} />
-              <span className="flex-1 text-left">Chat en direct</span>
-              {chatUnreadCount > 0 && (
-                <span className="bg-red-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full animate-pulse shadow-xs">
-                  {chatUnreadCount}
-                </span>
-              )}
             </button>
             <button 
               onClick={() => setActiveTab('push-notifications')}
@@ -4577,9 +4531,6 @@ const handleBulkDelivery = async () => {
         )}
         {activeTab === 'abandoned-carts' && (
           <AbandonedCartsAdmin />
-        )}
-        {activeTab === 'live-chat' && (
-          <LiveChatAdmin />
         )}
         {activeTab === 'promo-codes' && (
           <PromoCodesAdmin />

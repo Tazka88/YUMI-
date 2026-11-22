@@ -6,7 +6,6 @@ import React, { useState, useEffect } from 'react';
 import { fetchWithCache } from '../lib/utils';
 import TopBar from './TopBar';
 import AppDownloadModal from './AppDownloadModal';
-import LiveChatWidget from './LiveChatWidget';
 import { toast } from 'react-hot-toast';
 
 const categoryEmojis: Record<string, string> = {
@@ -839,7 +838,6 @@ export default function Layout() {
       </div>
     </footer>
     <AppDownloadModal />
-    <LiveChatWidget />
     </div>
   );
 }

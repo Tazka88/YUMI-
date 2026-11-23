@@ -224,15 +224,30 @@ const serveImageData = async (req: any, res: any, imageData: string, targetWidth
     return res.send(cached.buffer);
   }
 
+  const isUnsupportedForSharp = (buf: Buffer, extName: string): boolean => {
+    const cleanExt = extName.split(';')[0].trim().toLowerCase();
+    if (['svg+xml', 'svg', 'avif', 'heic', 'heif', 'gif', 'x-icon', 'vnd.microsoft.icon'].includes(cleanExt)) {
+      return true;
+    }
+    // Detect ISOBMFF containers (AVIF / HEIC / HEIF) by ftyp box even if MIME/extension is misleading
+    if (buf.length >= 12 && buf.subarray(4, 8).toString('ascii') === 'ftyp') {
+      const brand = buf.subarray(8, 12).toString('ascii').toLowerCase();
+      if (['avif', 'avis', 'heic', 'heix', 'hevc', 'hevx', 'mif1', 'msf1'].includes(brand)) {
+        return true;
+      }
+    }
+    return false;
+  };
+
   let processWithSharp = async (inputBuffer: Buffer, originalExt: string) => {
     let outputBuffer = inputBuffer;
-    let ext = originalExt;
-    
-    // Only process raster bitmaps with Sharp (never SVGs)
-    if (ext !== 'svg+xml') {
+    let ext = originalExt.split(';')[0].trim().toLowerCase() || 'jpeg';
+
+    // Only process supported raster bitmaps with Sharp (never SVGs, AVIF/HEIC, GIFs, ICOs)
+    if (!isUnsupportedForSharp(inputBuffer, ext)) {
       try {
         const sharpModule = (await import('sharp')).default;
-        let s = sharpModule(inputBuffer);
+        let s = sharpModule(inputBuffer, { failOn: 'none' });
         if (isBrand) {
           s = s.trim();
         }
@@ -252,8 +267,9 @@ const serveImageData = async (req: any, res: any, imageData: string, targetWidth
           }
         }
         outputBuffer = await s.toBuffer();
-      } catch (e) {
-        console.warn('Sharp processing failed:', e);
+      } catch (_e) {
+        // Fallback silently to original image bytes when libvips cannot decode/transform the source
+        outputBuffer = inputBuffer;
       }
     }
     return { buffer: outputBuffer, ext };
@@ -265,7 +281,7 @@ const serveImageData = async (req: any, res: any, imageData: string, targetWidth
     const extEnd = imageData.indexOf(';', extStart);
     
     if (commaIndex !== -1 && extEnd !== -1) {
-      let ext = imageData.substring(extStart, extEnd);
+      let ext = imageData.substring(extStart, extEnd).trim().toLowerCase();
       const base64Data = imageData.substring(commaIndex + 1);
       let buffer = Buffer.from(base64Data, 'base64');
       
@@ -304,8 +320,9 @@ const serveImageData = async (req: any, res: any, imageData: string, targetWidth
       if (resp.ok) {
         const arrayBuffer = await resp.arrayBuffer();
         let buffer = Buffer.from(arrayBuffer);
-        let contentType = resp.headers.get('content-type') || 'image/webp';
-        let ext = contentType.split('/')[1] || 'jpeg';
+        const rawContentType = (resp.headers.get('content-type') || 'image/webp').split(';')[0].trim().toLowerCase();
+        let contentType = rawContentType.startsWith('image/') ? rawContentType : 'image/webp';
+        let ext = contentType.split('/')[1] || 'webp';
         
         // If SVG: serve natively as vector image with fast viewBox adjustment if padded
         if (ext === 'svg+xml' || contentType.includes('svg') || imageData.includes('.svg')) {
@@ -321,7 +338,7 @@ const serveImageData = async (req: any, res: any, imageData: string, targetWidth
           return res.send(buffer);
         }
 
-        // Bitmaps: Trim and optimize with Sharp
+        // Bitmaps: Trim and optimize with Sharp (automatically skipped for AVIF/HEIC/GIF/ICO)
         const processed = await processWithSharp(buffer, ext);
         buffer = processed.buffer;
         ext = processed.ext;
@@ -2216,17 +2233,17 @@ router.post('/reviews/upload', upload.single('image') as any, async (req, res) =
     let contentType = req.file.mimetype;
     let ext = req.file.originalname.split('.').pop() || 'bin';
 
-    if (req.file.mimetype !== 'image/svg+xml' && !req.file.mimetype.startsWith('video/')) {
+    if (!['image/svg+xml', 'image/avif', 'image/heic', 'image/heif', 'image/gif'].includes(req.file.mimetype) && !req.file.mimetype.startsWith('video/')) {
       try {
         const sharp = (await import('sharp')).default;
-        buffer = await sharp(req.file.buffer)
+        buffer = await sharp(req.file.buffer, { failOn: 'none' })
           .resize({ width: 800, height: 800, fit: 'inside', withoutEnlargement: true })
           .webp({ quality: 80 })
           .toBuffer();
         contentType = 'image/webp';
         ext = 'webp';
-      } catch (sharpError) {
-        console.warn('Sharp compression failed, using original file:', sharpError);
+      } catch (_sharpError) {
+        // Use original uploaded file if Sharp cannot decode this format
       }
     }
 
@@ -2289,17 +2306,17 @@ router.post('/admin/upload', authenticate, (req: any, res: any, next: any) => {
 
     const isVideo = file.mimetype.startsWith('video/') || ['mp4', 'webm', 'mov', 'avi', 'm4v', 'mkv', '3gp'].includes(ext);
 
-    if (!isVideo && file.mimetype !== 'image/svg+xml') {
+    if (!isVideo && !['image/svg+xml', 'image/avif', 'image/heic', 'image/heif', 'image/gif'].includes(file.mimetype) && !['avif', 'heic', 'heif', 'gif', 'svg'].includes(ext)) {
       try {
         const sharp = (await import('sharp')).default;
-        buffer = await sharp(file.buffer)
+        buffer = await sharp(file.buffer, { failOn: 'none' })
           .resize({ width: 1200, height: 1200, fit: 'inside', withoutEnlargement: true })
           .webp({ quality: 80 })
           .toBuffer();
         contentType = 'image/webp';
         ext = 'webp';
-      } catch (sharpError) {
-        console.warn('Sharp compression failed, using original file:', sharpError);
+      } catch (_sharpError) {
+        // Use original uploaded file if Sharp cannot decode this format
       }
     } else if (isVideo) {
       if (contentType === 'application/octet-stream' || !contentType.startsWith('video/')) {
@@ -4563,17 +4580,17 @@ async function processBase64ImagesInHtml(html) {
       let contentType = `image/${imageType}`;
       let ext = imageType === 'jpeg' ? 'jpg' : imageType;
       
-      if (imageType !== 'svg+xml') {
+      if (!['svg+xml', 'avif', 'heic', 'heif', 'gif'].includes(imageType.toLowerCase())) {
         try {
           const sharp = (await import('sharp')).default;
-          buffer = await sharp(buffer)
+          buffer = await sharp(buffer, { failOn: 'none' })
             .resize({ width: 1200, height: 1200, fit: 'inside', withoutEnlargement: true })
             .webp({ quality: 80 })
             .toBuffer();
           contentType = 'image/webp';
           ext = 'webp';
-        } catch (sharpError) {
-          console.warn('Sharp compression failed for inline image, using original:', sharpError);
+        } catch (_sharpError) {
+          // Use original inline image if Sharp cannot decode this format
         }
       }
       

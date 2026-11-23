@@ -89,9 +89,13 @@ const SubCategoryCard: React.FC<{
   const cleanName = item.name.replace(/^[\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF]\s*/g, '').trim();
   const subtitle = SUBCATEGORY_SUBTITLES[item.slug] || (parentName ? `Univers ${parentName}` : "Découvrez la sélection");
 
-  const rawImage = item.image && typeof item.image === 'string' && (item.image.startsWith('http') || item.image.startsWith('/api/'))
+  const explicitImage = item.image && typeof item.image === 'string' && (item.image.startsWith('http') || item.image.startsWith('/api/'))
     ? item.image
-    : (SUBCATEGORY_FALLBACK_IMAGES[item.slug] || item.image || '');
+    : '';
+  const mappedFallback = SUBCATEGORY_FALLBACK_IMAGES[item.slug] || '';
+  const productFallback = !explicitImage && !mappedFallback && item.fallback_image ? item.fallback_image : '';
+  const rawImage = explicitImage || mappedFallback || productFallback || item.image || '';
+  const isProductFallback = Boolean(productFallback);
 
   const imageUrl = rawImage && rawImage.startsWith('/api/images/')
     ? `${rawImage}${rawImage.includes('?') ? '&' : '?'}w=800`
@@ -100,16 +104,20 @@ const SubCategoryCard: React.FC<{
   return (
     <Link
       to={`/category/${item.slug}?${queryParam}=true`}
-      className="group relative rounded-2xl overflow-hidden border border-gray-100 shadow-[0_2px_10px_rgba(0,0,0,0.06)] hover:shadow-xl hover:border-[#FF6B00]/70 transition-all duration-300 block select-none bg-neutral-900 active:scale-[0.99] aspect-[16/9] sm:aspect-[4/3] lg:aspect-[16/11]"
+      className={`group relative rounded-2xl overflow-hidden border border-gray-100 shadow-[0_2px_10px_rgba(0,0,0,0.06)] hover:shadow-xl hover:border-[#FF6B00]/70 transition-all duration-300 block select-none active:scale-[0.99] aspect-[16/9] sm:aspect-[4/3] lg:aspect-[16/11] ${isProductFallback ? 'bg-white' : 'bg-neutral-900'}`}
     >
-      {/* Background Image with lazy loading and object-cover */}
+      {/* Background Image with lazy loading */}
       {imageUrl ? (
         <img
           src={imageUrl}
           alt={cleanName}
           loading="lazy"
           decoding="async"
-          className="absolute inset-0 w-full h-full object-cover object-center transition-transform duration-500 ease-out group-hover:scale-105"
+          className={
+            isProductFallback
+              ? 'absolute inset-0 w-full h-full object-contain object-center p-4 pb-16 transition-transform duration-500 ease-out group-hover:scale-105'
+              : 'absolute inset-0 w-full h-full object-cover object-center transition-transform duration-500 ease-out group-hover:scale-105'
+          }
         />
       ) : (
         <div className="absolute inset-0 bg-gradient-to-br from-neutral-900 via-neutral-800 to-orange-950 flex items-center justify-center">
@@ -118,7 +126,7 @@ const SubCategoryCard: React.FC<{
       )}
 
       {/* Atmospheric Contrast Dark Gradient Overlay (high performance, no backdrop filter) */}
-      <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent group-hover:via-black/30 transition-colors duration-300 pointer-events-none" />
+      <div className={`absolute inset-0 bg-gradient-to-t ${isProductFallback ? 'from-black/85 via-black/30 to-transparent' : 'from-black/90 via-black/40 to-transparent group-hover:via-black/30'} transition-colors duration-300 pointer-events-none`} />
 
       {/* Top Floating Badge */}
       <div className="absolute top-3 left-3 sm:top-4 sm:left-4 z-10 flex items-center gap-2 pointer-events-none">

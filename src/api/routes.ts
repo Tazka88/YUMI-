@@ -1157,18 +1157,73 @@ router.get('/categories', async (req, res) => {
     if (cached) return res.json(cached);
 
     res.setHeader('Cache-Control', 'max-age=0, s-maxage=60, stale-while-revalidate=300');
-    const categories = await sql`SELECT ${sql.unsafe(CATEGORIES_COLS)} FROM categories`;
-    const subcategories = await sql`SELECT ${sql.unsafe(SUBCAT_COLS)} FROM subcategories`;
-    const sub_subcategories = await sql`SELECT ${sql.unsafe(SUB_SUBCAT_COLS)} FROM sub_subcategories`;
-    const sub_sub_subcategories = await sql`SELECT ${sql.unsafe(SUB_SUB_SUBCAT_COLS)} FROM sub_sub_subcategories`;
+    const [categories, subcategories, sub_subcategories, sub_sub_subcategories, subFallbacks, subSubFallbacks, subSubSubFallbacks] = await Promise.all([
+      sql`SELECT ${sql.unsafe(CATEGORIES_COLS)} FROM categories`,
+      sql`SELECT ${sql.unsafe(SUBCAT_COLS)} FROM subcategories`,
+      sql`SELECT ${sql.unsafe(SUB_SUBCAT_COLS)} FROM sub_subcategories`,
+      sql`SELECT ${sql.unsafe(SUB_SUB_SUBCAT_COLS)} FROM sub_sub_subcategories`,
+      sql`
+        SELECT DISTINCT ON (target_subcat_id) target_subcat_id, id, image
+        FROM (
+          SELECT COALESCE(p.subcategory_id, ss.subcategory_id) as target_subcat_id,
+                 p.id, p.image, p.is_best_seller, p.is_popular, p.sales_count
+          FROM products p
+          LEFT JOIN sub_subcategories ss ON p.sub_subcategory_id = ss.id
+          WHERE p.is_active = true AND p.image IS NOT NULL AND p.image != ''
+            AND (p.subcategory_id IS NOT NULL OR ss.subcategory_id IS NOT NULL)
+        ) subq
+        ORDER BY target_subcat_id, is_best_seller DESC, is_popular DESC, COALESCE(sales_count, 0) DESC, id ASC
+      `.catch(() => []),
+      sql`
+        SELECT DISTINCT ON (target_sub_subcat_id) target_sub_subcat_id, id, image
+        FROM (
+          SELECT COALESCE(p.sub_subcategory_id, sss.sub_subcategory_id) as target_sub_subcat_id,
+                 p.id, p.image, p.is_best_seller, p.is_popular, p.sales_count
+          FROM products p
+          LEFT JOIN sub_sub_subcategories sss ON p.sub_sub_subcategory_id = sss.id
+          WHERE p.is_active = true AND p.image IS NOT NULL AND p.image != ''
+            AND (p.sub_subcategory_id IS NOT NULL OR sss.sub_subcategory_id IS NOT NULL)
+        ) subq
+        ORDER BY target_sub_subcat_id, is_best_seller DESC, is_popular DESC, COALESCE(sales_count, 0) DESC, id ASC
+      `.catch(() => []),
+      sql`
+        SELECT DISTINCT ON (sub_sub_subcategory_id) sub_sub_subcategory_id, id, image
+        FROM products
+        WHERE is_active = true AND sub_sub_subcategory_id IS NOT NULL AND image IS NOT NULL AND image != ''
+        ORDER BY sub_sub_subcategory_id, is_best_seller DESC, is_popular DESC, COALESCE(sales_count, 0) DESC, id ASC
+      `.catch(() => [])
+    ]);
+
+    const subFallbackMap = new Map<string, string>();
+    (subFallbacks as any[]).forEach((r: any) => {
+      const processed = processImage('products', r.id, 'image', r.image);
+      if (processed) subFallbackMap.set(String(r.target_subcat_id), processed);
+    });
+
+    const subSubFallbackMap = new Map<string, string>();
+    (subSubFallbacks as any[]).forEach((r: any) => {
+      const processed = processImage('products', r.id, 'image', r.image);
+      if (processed) subSubFallbackMap.set(String(r.target_sub_subcat_id), processed);
+    });
+
+    const subSubSubFallbackMap = new Map<string, string>();
+    (subSubSubFallbacks as any[]).forEach((r: any) => {
+      const processed = processImage('products', r.id, 'image', r.image);
+      if (processed) subSubSubFallbackMap.set(String(r.sub_sub_subcategory_id), processed);
+    });
     
     const categoriesWithSubcats = categories.map((cat: any) => ({
       ...cat,
       subcategories: subcategories.filter((sub: any) => sub.category_id?.toString() === cat.id?.toString()).map((sub: any) => ({
         ...sub,
+        fallback_image: subFallbackMap.get(String(sub.id)) || null,
         sub_subcategories: sub_subcategories.filter((ss: any) => ss.subcategory_id?.toString() === sub.id?.toString()).map((ss: any) => ({
           ...ss,
-          sub_sub_subcategories: sub_sub_subcategories.filter((sss: any) => sss.sub_subcategory_id?.toString() === ss.id?.toString())
+          fallback_image: subSubFallbackMap.get(String(ss.id)) || null,
+          sub_sub_subcategories: sub_sub_subcategories.filter((sss: any) => sss.sub_subcategory_id?.toString() === ss.id?.toString()).map((sss: any) => ({
+            ...sss,
+            fallback_image: subSubSubFallbackMap.get(String(sss.id)) || null
+          }))
         }))
       }))
     }));
@@ -1213,9 +1268,23 @@ router.get('/sub_sub_subcategories', async (req, res) => {
 
   res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=60, stale-while-revalidate=300');
   try {
-    const list = await sql`SELECT ${sql.unsafe(SUB_SUB_SUBCAT_COLS)} FROM sub_sub_subcategories`;
+    const [list, fallbacks] = await Promise.all([
+      sql`SELECT ${sql.unsafe(SUB_SUB_SUBCAT_COLS)} FROM sub_sub_subcategories`,
+      sql`
+        SELECT DISTINCT ON (sub_sub_subcategory_id) sub_sub_subcategory_id, id, image
+        FROM products
+        WHERE is_active = true AND sub_sub_subcategory_id IS NOT NULL AND image IS NOT NULL AND image != ''
+        ORDER BY sub_sub_subcategory_id, is_best_seller DESC, is_popular DESC, COALESCE(sales_count, 0) DESC, id ASC
+      `.catch(() => [])
+    ]);
+    const fallbackMap = new Map<string, string>();
+    (fallbacks as any[]).forEach((r: any) => {
+      const processed = processImage('products', r.id, 'image', r.image);
+      if (processed) fallbackMap.set(String(r.sub_sub_subcategory_id), processed);
+    });
     list.forEach((item: any) => {
       item.image = processImage('sub_sub_subcategories', item.id, 'image', item.image);
+      item.fallback_image = fallbackMap.get(String(item.id)) || null;
     });
     setCache(cacheKey, list, 60);
     res.json(list);
@@ -3953,6 +4022,8 @@ router.post('/admin/subcategories', authenticate, async (req, res) => {
   const { category_id, name, slug, image } = req.body;
   try {
     const [info] = await sql`INSERT INTO subcategories (category_id, name, slug, image) VALUES (${category_id || null}, ${name || ''}, ${slug || ''}, ${image || null}) RETURNING id`;
+    clearCache('categories_all');
+    clearCache('subcategories_all');
     res.status(201).json({ id: info.id, message: 'Subcategory created' });
   } catch (err) {
     res.status(500).json({ error: 'Failed to create subcategory' });
@@ -3967,6 +4038,8 @@ router.put('/admin/subcategories/:id', authenticate, async (req, res) => {
     } else {
       await sql`UPDATE subcategories SET category_id = ${category_id || null}, name = ${name || ''}, slug = ${slug || ''}, image = ${image || null} WHERE id = ${req.params.id}`;
     }
+    clearCache('categories_all');
+    clearCache('subcategories_all');
     res.json({ message: 'Subcategory updated' });
   } catch (err) {
     res.status(500).json({ error: 'Failed to update subcategory' });
@@ -3979,6 +4052,8 @@ router.delete('/admin/subcategories/:id', authenticate, async (req, res) => {
       await sql`UPDATE products SET subcategory_id = NULL WHERE subcategory_id = ${req.params.id}`;
       await sql`DELETE FROM subcategories WHERE id = ${req.params.id}`;
     });
+    clearCache('categories_all');
+    clearCache('subcategories_all');
     res.json({ message: 'Subcategory deleted' });
   } catch (err) {
     res.status(500).json({ error: 'Failed to delete subcategory' });
@@ -3990,6 +4065,7 @@ router.post('/admin/sub_subcategories', authenticate, async (req, res) => {
   const { subcategory_id, name, slug, image } = req.body;
   try {
     const [info] = await sql`INSERT INTO sub_subcategories (subcategory_id, name, slug, image) VALUES (${subcategory_id || null}, ${name || ''}, ${slug || ''}, ${image || null}) RETURNING id`;
+    clearCache('categories_all');
     res.status(201).json({ id: info.id, message: 'Sub-subcategory created' });
   } catch (err: any) {
     console.error('Error creating sub-subcategory:', err);
@@ -4005,6 +4081,7 @@ router.put('/admin/sub_subcategories/:id', authenticate, async (req, res) => {
     } else {
       await sql`UPDATE sub_subcategories SET subcategory_id = ${subcategory_id || null}, name = ${name || ''}, slug = ${slug || ''}, image = ${image || null} WHERE id = ${req.params.id}`;
     }
+    clearCache('categories_all');
     res.json({ message: 'Sub-subcategory updated' });
   } catch (err) {
     res.status(500).json({ error: 'Failed to update sub-subcategory' });
@@ -4017,6 +4094,7 @@ router.delete('/admin/sub_subcategories/:id', authenticate, async (req, res) => 
       await sql`UPDATE products SET sub_subcategory_id = NULL WHERE sub_subcategory_id = ${req.params.id}`;
       await sql`DELETE FROM sub_subcategories WHERE id = ${req.params.id}`;
     });
+    clearCache('categories_all');
     res.json({ message: 'Sub-subcategory deleted' });
   } catch (err) {
     res.status(500).json({ error: 'Failed to delete sub-subcategory' });
@@ -4032,6 +4110,8 @@ router.post('/admin/sub_sub_subcategories', authenticate, async (req, res) => {
       VALUES (${sub_subcategory_id || null}, ${name || ''}, ${slug || ''}, ${image || null}) 
       RETURNING id
     `;
+    clearCache('categories_all');
+    clearCache('sub_sub_subcategories_all');
     res.status(201).json({ id: info.id, message: 'Catégorie de niveau 4 créée' });
   } catch (err: any) {
     console.error('Error creating level 4 category:', err);
@@ -4055,6 +4135,8 @@ router.put('/admin/sub_sub_subcategories/:id', authenticate, async (req, res) =>
         WHERE id = ${req.params.id}
       `;
     }
+    clearCache('categories_all');
+    clearCache('sub_sub_subcategories_all');
     res.json({ message: 'Catégorie de niveau 4 modifiée' });
   } catch (err: any) {
     console.error('Error updating level 4 category:', err);
@@ -4068,6 +4150,8 @@ router.delete('/admin/sub_sub_subcategories/:id', authenticate, async (req, res)
       await sql`UPDATE products SET sub_sub_subcategory_id = NULL WHERE sub_sub_subcategory_id = ${req.params.id}`;
       await sql`DELETE FROM sub_sub_subcategories WHERE id = ${req.params.id}`;
     });
+    clearCache('categories_all');
+    clearCache('sub_sub_subcategories_all');
     res.json({ message: 'Catégorie de niveau 4 supprimée' });
   } catch (err) {
     console.error('Error deleting level 4 category:', err);

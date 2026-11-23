@@ -3564,7 +3564,7 @@ const handleBulkDelivery = async () => {
                             <tr key={ss.id} className="hover:bg-orange-50/20 transition-colors">
                               <td className="px-6 py-4">
                                 <div className="w-12 h-12 rounded-xl bg-gray-50 border border-gray-200/80 overflow-hidden shrink-0 shadow-2xs flex items-center justify-center">
-                                  <img src={ss.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(ss.name)}&background=random&size=50`} alt={ss.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                                  <img src={ss.image || ss.fallback_image || `https://ui-avatars.com/api/?name=${encodeURIComponent(ss.name)}&background=random&size=50`} alt={ss.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                                 </div>
                               </td>
                               <td className="px-6 py-4">

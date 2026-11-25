@@ -79,10 +79,31 @@ export default function AdminDashboard() {
     const token = localStorage.getItem('adminToken');
     if (!token) throw new Error('No token');
     const res = await fetch(url, {
-      headers: { 'Authorization': `Bearer ${token}` }
+      headers: { 'Authorization': `Bearer ${token}` },
+      cache: 'no-store'
     });
     if (!res.ok) throw new Error('API Error');
     return res.json();
+  };
+
+  const refreshCategories = async () => {
+    try {
+      const token = localStorage.getItem('adminToken');
+      const res = await fetch(`/api/categories?_t=${Date.now()}`, {
+        headers: token ? { 'Authorization': `Bearer ${token}` } : undefined,
+        cache: 'no-store'
+      });
+      if (!res.ok) return [];
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        setCategories(data);
+        setRefreshToggle(prev => prev + 1);
+        return data;
+      }
+    } catch (err) {
+      console.error('Failed to refresh categories:', err);
+    }
+    return [];
   };
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [expandedOrderId, setExpandedOrderId] = useState<number | null>(null);
@@ -315,8 +336,8 @@ export default function AdminDashboard() {
   const { data: swrOrders } = useSWR(activeTab === 'orders' ? `/api/admin/orders?${spOrders.toString()}&_rt=${refreshToggle}` : null, swrFetcher);
   const { data: swrProducts } = useSWR(activeTab === 'products' ? `/api/admin/products?${spProducts.toString()}&_rt=${refreshToggle}` : null, swrFetcher);
   const { data: swrEmailLogs } = useSWR(activeTab === 'email-logs' ? `/api/admin/email-logs?${spOthers.toString()}&_rt=${refreshToggle}` : null, swrFetcher);
-  const { data: swrCategories } = useSWR(['products', 'categories', 'sections'].includes(activeTab) ? `/api/categories?_rt=${refreshToggle}` : null, swrFetcher);
-  const { data: swrBrands } = useSWR(['products', 'brands', 'sections'].includes(activeTab) ? `/api/brands?_rt=${refreshToggle}` : null, swrFetcher);
+  const { data: swrCategories } = useSWR(`/api/categories?_rt=${refreshToggle}`, swrFetcher);
+  const { data: swrBrands } = useSWR(`/api/brands?_rt=${refreshToggle}`, swrFetcher);
   const { data: swrSettings } = useSWR(['settings', 'account'].includes(activeTab) ? `/api/admin/settings?_rt=${refreshToggle}` : null, swrFetcher);
 
   useEffect(() => {
@@ -351,6 +372,12 @@ export default function AdminDashboard() {
   useEffect(() => {
     if (swrCategories && Array.isArray(swrCategories)) setCategories(swrCategories);
   }, [swrCategories]);
+
+  useEffect(() => {
+    if (isModalOpen && !editingProduct && !productForm.category_id && categories.length > 0) {
+      setProductForm(prev => prev.category_id ? prev : { ...prev, category_id: String(categories[0].id) });
+    }
+  }, [isModalOpen, editingProduct, productForm.category_id, categories]);
 
   useEffect(() => {
     if (swrBrands && Array.isArray(swrBrands)) setBrands(swrBrands);
@@ -1017,12 +1044,15 @@ const handleBulkDelivery = async () => {
   };
 
   const openModal = async (product: any = null) => {
+    const availableCategories = categories.length > 0 ? categories : await refreshCategories();
+
     if (product) {
       const toastId = toast.loading('Chargement des détails...');
       try {
         const token = localStorage.getItem('adminToken');
         const res = await fetch(`/api/admin/products/${product.id}`, {
-          headers: { 'Authorization': `Bearer ${token}` }
+          headers: { 'Authorization': `Bearer ${token}` },
+          cache: 'no-store'
         });
         if (!res.ok) throw new Error('Erreur');
         const fullProduct = await res.json();
@@ -1054,8 +1084,52 @@ const handleBulkDelivery = async () => {
           return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
         };
 
+        let resolvedCategoryId = fullProduct.category_id != null ? String(fullProduct.category_id) : '';
+        let resolvedSubcategoryId = fullProduct.subcategory_id != null ? String(fullProduct.subcategory_id) : '';
+        let resolvedSubSubcategoryId = fullProduct.sub_subcategory_id != null ? String(fullProduct.sub_subcategory_id) : '';
+        const resolvedSubSubSubcategoryId = fullProduct.sub_sub_subcategory_id != null ? String(fullProduct.sub_sub_subcategory_id) : '';
+
+        if (resolvedSubSubSubcategoryId && (!resolvedSubSubcategoryId || !resolvedSubcategoryId || !resolvedCategoryId)) {
+          for (const c of availableCategories) {
+            for (const s of c.subcategories || []) {
+              for (const ss of s.sub_subcategories || []) {
+                if ((ss.sub_sub_subcategories || []).some((sss: any) => String(sss.id) === resolvedSubSubSubcategoryId)) {
+                  if (!resolvedSubSubcategoryId) resolvedSubSubcategoryId = String(ss.id);
+                  if (!resolvedSubcategoryId) resolvedSubcategoryId = String(s.id);
+                  if (!resolvedCategoryId) resolvedCategoryId = String(c.id);
+                }
+              }
+            }
+          }
+        }
+
+        if (resolvedSubSubcategoryId && (!resolvedSubcategoryId || !resolvedCategoryId)) {
+          for (const c of availableCategories) {
+            for (const s of c.subcategories || []) {
+              if ((s.sub_subcategories || []).some((ss: any) => String(ss.id) === resolvedSubSubcategoryId)) {
+                if (!resolvedSubcategoryId) resolvedSubcategoryId = String(s.id);
+                if (!resolvedCategoryId) resolvedCategoryId = String(c.id);
+              }
+            }
+          }
+        }
+
+        if (resolvedSubcategoryId && !resolvedCategoryId) {
+          for (const c of availableCategories) {
+            if ((c.subcategories || []).some((s: any) => String(s.id) === resolvedSubcategoryId)) {
+              resolvedCategoryId = String(c.id);
+            }
+          }
+        }
+
         setProductForm({
-          name: fullProduct.name, slug: fullProduct.slug, sku: fullProduct.sku || '', category_id: fullProduct.category_id, subcategory_id: fullProduct.subcategory_id || '', sub_subcategory_id: fullProduct.sub_subcategory_id || '', sub_sub_subcategory_id: fullProduct.sub_sub_subcategory_id || '', brand_id: fullProduct.brand_id || '', brand_name: fullProduct.brand_name || '',
+          name: fullProduct.name, slug: fullProduct.slug, sku: fullProduct.sku || '',
+          category_id: resolvedCategoryId,
+          subcategory_id: resolvedSubcategoryId,
+          sub_subcategory_id: resolvedSubSubcategoryId,
+          sub_sub_subcategory_id: resolvedSubSubSubcategoryId,
+          brand_id: fullProduct.brand_id != null ? String(fullProduct.brand_id) : '',
+          brand_name: fullProduct.brand_name || '',
           price: fullProduct.price, 
           promo_price: (fullProduct.promo_price !== null && fullProduct.promo_price !== undefined) ? fullProduct.promo_price : '', 
           promo_price_start_date: toDatetimeLocal(fullProduct.promo_price_start_date), 
@@ -1082,7 +1156,9 @@ const handleBulkDelivery = async () => {
     } else {
       setEditingProduct(null);
       setProductForm({
-        name: '', slug: '', sku: '', category_id: categories[0]?.id || '', subcategory_id: '', sub_subcategory_id: '', sub_sub_subcategory_id: '', brand_id: '', brand_name: '', price: '', promo_price: '', promo_price_start_date: '', promo_price_end_date: '', stock: '', weight: '', description: '', image: '', video_url: '',
+        name: '', slug: '', sku: '',
+        category_id: availableCategories[0]?.id != null ? String(availableCategories[0].id) : '',
+        subcategory_id: '', sub_subcategory_id: '', sub_sub_subcategory_id: '', brand_id: '', brand_name: '', price: '', promo_price: '', promo_price_start_date: '', promo_price_end_date: '', stock: '', weight: '', description: '', image: '', video_url: '',
         is_popular: false, is_best_seller: false, is_new: false, is_recommended: false, is_fast_delivery: false, is_active: true, images: [], variations: [], features: '', key_points: '',
         faq_q1: '', faq_a1: '', faq_q2: '', faq_a2: '', seo_title: '', seo_description: '', seo_keywords: '', main_image_alt: ''
       });
@@ -1182,6 +1258,10 @@ const handleBulkDelivery = async () => {
       toast.error('Le slug est requis');
       return;
     }
+    if (!productForm.category_id) {
+      toast.error('La catégorie est requise');
+      return;
+    }
     if (!productForm.price) {
       toast.error('Le prix est requis');
       return;
@@ -1217,8 +1297,10 @@ const handleBulkDelivery = async () => {
 
     const payload = {
       ...productForm,
+      category_id: productForm.category_id || null,
       subcategory_id: productForm.subcategory_id || null,
       sub_subcategory_id: productForm.sub_subcategory_id || null,
+      sub_sub_subcategory_id: productForm.sub_sub_subcategory_id || null,
       brand_id: productForm.brand_id || null,
       price: parseFloat(productForm.price.toString().replace(',', '.')),
       promo_price: (productForm.promo_price !== '' && productForm.promo_price !== null) ? parseFloat(productForm.promo_price.toString().replace(',', '.')) : null,
@@ -1314,10 +1396,7 @@ const handleBulkDelivery = async () => {
 
       toast.success(editingSubcategory ? 'Sous-catégorie modifiée avec succès' : 'Sous-catégorie créée avec succès');
       setIsSubcategoryModalOpen(false);
-      fetch('/api/categories')
-        .then(res => res.json())
-        .then(data => { if (Array.isArray(data)) setCategories(data); })
-        .catch(console.error);
+      await refreshCategories();
     } catch (err) {
       console.error(err);
       toast.error('Erreur de connexion au serveur');
@@ -1359,10 +1438,7 @@ const handleBulkDelivery = async () => {
 
       toast.success(editingSubSubcategory ? 'Sous-sous-catégorie modifiée avec succès' : 'Sous-sous-catégorie créée avec succès');
       setIsSubSubcategoryModalOpen(false);
-      fetch('/api/categories')
-        .then(res => res.json())
-        .then(data => { if (Array.isArray(data)) setCategories(data); })
-        .catch(console.error);
+      await refreshCategories();
     } catch (err) {
       console.error(err);
       toast.error('Erreur de connexion au serveur');
@@ -1380,10 +1456,7 @@ const handleBulkDelivery = async () => {
             method: 'DELETE',
             headers: { 'Authorization': `Bearer ${token}` }
           });
-          fetch('/api/categories')
-            .then(res => res.json())
-            .then(data => { if (Array.isArray(data)) setCategories(data); })
-            .catch(console.error);
+          await refreshCategories();
           setConfirmModal({ ...confirmModal, isOpen: false });
         } catch (err) {
           console.error(err);
@@ -1403,10 +1476,7 @@ const handleBulkDelivery = async () => {
             method: 'DELETE',
             headers: { 'Authorization': `Bearer ${token}` }
           });
-          fetch('/api/categories')
-            .then(res => res.json())
-            .then(data => { if (Array.isArray(data)) setCategories(data); })
-            .catch(console.error);
+          await refreshCategories();
           setConfirmModal({ ...confirmModal, isOpen: false });
         } catch (err) {
           console.error(err);
@@ -1449,10 +1519,7 @@ const handleBulkDelivery = async () => {
 
       toast.success(editingSubSubSubcategory ? 'Catégorie Niveau 4 modifiée avec succès' : 'Catégorie Niveau 4 créée avec succès');
       setIsSubSubSubcategoryModalOpen(false);
-      fetch('/api/categories')
-        .then(res => res.json())
-        .then(data => { if (Array.isArray(data)) setCategories(data); })
-        .catch(console.error);
+      await refreshCategories();
     } catch (err) {
       console.error(err);
       toast.error('Erreur de connexion au serveur');
@@ -1476,10 +1543,7 @@ const handleBulkDelivery = async () => {
             return;
           }
           toast.success('Catégorie Niveau 4 supprimée');
-          fetch('/api/categories')
-            .then(res => res.json())
-            .then(data => { if (Array.isArray(data)) setCategories(data); })
-            .catch(console.error);
+          await refreshCategories();
           setConfirmModal({ ...confirmModal, isOpen: false });
         } catch (err) {
           console.error(err);
@@ -1519,10 +1583,7 @@ const handleBulkDelivery = async () => {
 
       toast.success(editingCategory ? 'Catégorie modifiée avec succès' : 'Catégorie créée avec succès');
       setIsCategoryModalOpen(false);
-      fetch('/api/categories')
-        .then(res => res.json())
-        .then(data => { if (Array.isArray(data)) setCategories(data); })
-        .catch(console.error);
+      await refreshCategories();
     } catch (err) {
       console.error(err);
       toast.error('Erreur de connexion au serveur');
@@ -1540,10 +1601,7 @@ const handleBulkDelivery = async () => {
             method: 'DELETE',
             headers: { 'Authorization': `Bearer ${token}` }
           });
-          fetch('/api/categories')
-            .then(res => res.json())
-            .then(data => { if (Array.isArray(data)) setCategories(data); })
-            .catch(console.error);
+          await refreshCategories();
           setConfirmModal({ ...confirmModal, isOpen: false });
         } catch (err) {
           console.error(err);
@@ -4630,69 +4688,84 @@ const handleBulkDelivery = async () => {
                     <span>Classification &amp; Marque</span>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
-                        Catégorie <span className="text-orange-600">*</span>
-                      </label>
-                      <select 
-                        required
-                        className="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 bg-white text-sm transition shadow-2xs" 
-                        value={productForm.category_id} 
-                        onChange={e => setProductForm({...productForm, category_id: e.target.value, subcategory_id: '', sub_subcategory_id: '', sub_sub_subcategory_id: ''})}
-                      >
-                        <option value="" disabled>Sélectionner une catégorie</option>
-                        {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
-                        Sous-catégorie
-                      </label>
-                      <select 
-                        className="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 bg-white text-sm transition shadow-2xs" 
-                        value={productForm.subcategory_id} 
-                        onChange={e => setProductForm({...productForm, subcategory_id: e.target.value, sub_subcategory_id: '', sub_sub_subcategory_id: ''})}
-                      >
-                        <option value="">Aucune (Optionnelle)</option>
-                        {categories.find(c => c.id.toString() === productForm.category_id.toString())?.subcategories?.map((s: any) => (
-                          <option key={s.id} value={s.id}>{s.name}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
-                        Sous-sous-catégorie (Niveau 3)
-                      </label>
-                      <select 
-                        className="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 bg-white text-sm transition shadow-2xs" 
-                        value={productForm.sub_subcategory_id} 
-                        onChange={e => setProductForm({...productForm, sub_subcategory_id: e.target.value, sub_sub_subcategory_id: ''})}
-                      >
-                        <option value="">Aucune (Optionnelle)</option>
-                        {categories.find(c => c.id.toString() === productForm.category_id.toString())?.subcategories?.find((s: any) => s.id.toString() === productForm.subcategory_id.toString())?.sub_subcategories?.map((ss: any) => (
-                          <option key={ss.id} value={ss.id}>{ss.name}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
-                        Sous-catégorie Niveau 4 (Optionnelle)
-                      </label>
-                      <select 
-                        className="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 bg-white text-sm transition shadow-2xs" 
-                        value={productForm.sub_sub_subcategory_id} 
-                        onChange={e => setProductForm({...productForm, sub_sub_subcategory_id: e.target.value})}
-                      >
-                        <option value="">Aucune (Optionnelle)</option>
-                        {categories
-                          .find(c => c.id.toString() === productForm.category_id.toString())
-                          ?.subcategories?.find((s: any) => s.id.toString() === productForm.subcategory_id.toString())
-                          ?.sub_subcategories?.find((ss: any) => ss.id.toString() === productForm.sub_subcategory_id.toString())
-                          ?.sub_sub_subcategories?.map((sss: any) => (
-                            <option key={sss.id} value={sss.id}>{sss.name}</option>
-                        ))}
-                      </select>
-                    </div>
+                    {(() => {
+                      const catIdStr = productForm.category_id != null ? String(productForm.category_id) : '';
+                      const subIdStr = productForm.subcategory_id != null ? String(productForm.subcategory_id) : '';
+                      const subSubIdStr = productForm.sub_subcategory_id != null ? String(productForm.sub_subcategory_id) : '';
+                      const subSubSubIdStr = productForm.sub_sub_subcategory_id != null ? String(productForm.sub_sub_subcategory_id) : '';
+                      const selectedCat = categories.find(c => String(c.id) === catIdStr);
+                      const availableSubs = selectedCat?.subcategories || [];
+                      const selectedSub = availableSubs.find((s: any) => String(s.id) === subIdStr);
+                      const availableSubSubs = selectedSub?.sub_subcategories || [];
+                      const selectedSubSub = availableSubSubs.find((ss: any) => String(ss.id) === subSubIdStr);
+                      const availableSubSubSubs = selectedSubSub?.sub_sub_subcategories || [];
+
+                      return (
+                        <>
+                          <div>
+                            <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
+                              Catégorie <span className="text-orange-600">*</span>
+                            </label>
+                            <select 
+                              required
+                              className="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 bg-white text-sm transition shadow-2xs" 
+                              value={catIdStr} 
+                              onChange={e => setProductForm({...productForm, category_id: e.target.value, subcategory_id: '', sub_subcategory_id: '', sub_sub_subcategory_id: ''})}
+                            >
+                              <option value="" disabled>
+                                {categories.length === 0 ? 'Chargement des catégories...' : 'Sélectionner une catégorie'}
+                              </option>
+                              {categories.map(c => <option key={c.id} value={String(c.id)}>{c.name}</option>)}
+                            </select>
+                          </div>
+                          <div>
+                            <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
+                              Sous-catégorie
+                            </label>
+                            <select 
+                              className="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 bg-white text-sm transition shadow-2xs" 
+                              value={subIdStr} 
+                              onChange={e => setProductForm({...productForm, subcategory_id: e.target.value, sub_subcategory_id: '', sub_sub_subcategory_id: ''})}
+                            >
+                              <option value="">Aucune (Optionnelle)</option>
+                              {availableSubs.map((s: any) => (
+                                <option key={s.id} value={String(s.id)}>{s.name}</option>
+                              ))}
+                            </select>
+                          </div>
+                          <div>
+                            <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
+                              Sous-sous-catégorie (Niveau 3)
+                            </label>
+                            <select 
+                              className="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 bg-white text-sm transition shadow-2xs" 
+                              value={subSubIdStr} 
+                              onChange={e => setProductForm({...productForm, sub_subcategory_id: e.target.value, sub_sub_subcategory_id: ''})}
+                            >
+                              <option value="">Aucune (Optionnelle)</option>
+                              {availableSubSubs.map((ss: any) => (
+                                <option key={ss.id} value={String(ss.id)}>{ss.name}</option>
+                              ))}
+                            </select>
+                          </div>
+                          <div>
+                            <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
+                              Sous-catégorie Niveau 4 (Optionnelle)
+                            </label>
+                            <select 
+                              className="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 bg-white text-sm transition shadow-2xs" 
+                              value={subSubSubIdStr} 
+                              onChange={e => setProductForm({...productForm, sub_sub_subcategory_id: e.target.value})}
+                            >
+                              <option value="">Aucune (Optionnelle)</option>
+                              {availableSubSubSubs.map((sss: any) => (
+                                <option key={sss.id} value={String(sss.id)}>{sss.name}</option>
+                              ))}
+                            </select>
+                          </div>
+                        </>
+                      );
+                    })()}
                     <div>
                       <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
                         Marque

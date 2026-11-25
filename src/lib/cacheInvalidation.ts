@@ -27,6 +27,9 @@ export async function invalidateProductCache(details: InvalidationDetails) {
     await sql`UPDATE products SET updated_at = NOW() WHERE id = ${productId}`;
 
     // 2. Vider le cache mémoire de l'API Node / Express
+    clearCache('products_');
+    clearCache('categories_all');
+    clearCache('sub_sub_subcategories_all');
     clearCache('/products');
     clearCache('/api/products');
     if (resolvedSlug) {

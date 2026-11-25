@@ -62,12 +62,16 @@ router.use((req, res, next) => {
                       req.path.startsWith('/vouchers');
                       
     const hasAuthCookie = req.headers.cookie && req.headers.cookie.match(/session|token|auth|user/i);
+    const hasAuthHeader = Boolean(req.headers.authorization && req.headers.authorization.startsWith('Bearer '));
+    const hasCacheBust = Boolean(req.query._rt || req.query._t || req.query.nocache);
 
-    if (!isPrivate && !hasAuthCookie) {
+    if (!isPrivate && !hasAuthCookie && !hasAuthHeader && !hasCacheBust) {
       // Very aggressive CDN cache for unauthenticated public requests
       res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=60, stale-while-revalidate=300');
       res.setHeader('Vercel-CDN-Cache-Control', 'max-age=60');
       res.setHeader('CDN-Cache-Control', 'max-age=60');
+    } else if (hasAuthHeader || hasCacheBust) {
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
     }
   } else if (req.path.startsWith('/admin/')) {
     // Bust global memory cache on any admin mutation
@@ -1169,16 +1173,21 @@ router.get('/brands/:slug', async (req, res) => {
 
 router.get('/categories', async (req, res) => {
   try {
+    const bypassCache = Boolean(req.headers.authorization || req.query._rt || req.query._t || req.query.nocache);
     const cacheKey = 'categories_all';
-    const cached = getCache(cacheKey);
-    if (cached) return res.json(cached);
+    if (!bypassCache) {
+      const cached = getCache(cacheKey);
+      if (cached) return res.json(cached);
+      res.setHeader('Cache-Control', 'max-age=0, s-maxage=60, stale-while-revalidate=300');
+    } else {
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+    }
 
-    res.setHeader('Cache-Control', 'max-age=0, s-maxage=60, stale-while-revalidate=300');
     const [categories, subcategories, sub_subcategories, sub_sub_subcategories, subFallbacks, subSubFallbacks, subSubSubFallbacks] = await Promise.all([
-      sql`SELECT ${sql.unsafe(CATEGORIES_COLS)} FROM categories`,
-      sql`SELECT ${sql.unsafe(SUBCAT_COLS)} FROM subcategories`,
-      sql`SELECT ${sql.unsafe(SUB_SUBCAT_COLS)} FROM sub_subcategories`,
-      sql`SELECT ${sql.unsafe(SUB_SUB_SUBCAT_COLS)} FROM sub_sub_subcategories`,
+      sql`SELECT ${sql.unsafe(CATEGORIES_COLS)} FROM categories ORDER BY id ASC`,
+      sql`SELECT ${sql.unsafe(SUBCAT_COLS)} FROM subcategories ORDER BY id ASC`,
+      sql`SELECT ${sql.unsafe(SUB_SUBCAT_COLS)} FROM sub_subcategories ORDER BY id ASC`,
+      sql`SELECT ${sql.unsafe(SUB_SUB_SUBCAT_COLS)} FROM sub_sub_subcategories ORDER BY id ASC`,
       sql`
         SELECT DISTINCT ON (target_subcat_id) target_subcat_id, id, image
         FROM (
@@ -1279,14 +1288,18 @@ router.get('/categories', async (req, res) => {
 });
 
 router.get('/sub_sub_subcategories', async (req, res) => {
+  const bypassCache = Boolean(req.headers.authorization || req.query._rt || req.query._t || req.query.nocache);
   const cacheKey = 'sub_sub_subcategories_all';
-  const cached = getCache(cacheKey);
-  if (cached) return res.json(cached);
-
-  res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=60, stale-while-revalidate=300');
+  if (!bypassCache) {
+    const cached = getCache(cacheKey);
+    if (cached) return res.json(cached);
+    res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=60, stale-while-revalidate=300');
+  } else {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+  }
   try {
     const [list, fallbacks] = await Promise.all([
-      sql`SELECT ${sql.unsafe(SUB_SUB_SUBCAT_COLS)} FROM sub_sub_subcategories`,
+      sql`SELECT ${sql.unsafe(SUB_SUB_SUBCAT_COLS)} FROM sub_sub_subcategories ORDER BY id ASC`,
       sql`
         SELECT DISTINCT ON (sub_sub_subcategory_id) sub_sub_subcategory_id, id, image
         FROM products
@@ -1312,13 +1325,17 @@ router.get('/sub_sub_subcategories', async (req, res) => {
 });
 
 router.get('/subcategories', async (req, res) => {
+  const bypassCache = Boolean(req.headers.authorization || req.query._rt || req.query._t || req.query.nocache);
   const cacheKey = 'subcategories_all';
-  const cached = getCache(cacheKey);
-  if (cached) return res.json(cached);
-
-  res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=60, stale-while-revalidate=300');
+  if (!bypassCache) {
+    const cached = getCache(cacheKey);
+    if (cached) return res.json(cached);
+    res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=60, stale-while-revalidate=300');
+  } else {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+  }
   try {
-    const subcategories = await sql`SELECT ${sql.unsafe(SUBCAT_COLS)} FROM subcategories`;
+    const subcategories = await sql`SELECT ${sql.unsafe(SUBCAT_COLS)} FROM subcategories ORDER BY id ASC`;
     
     subcategories.forEach((s: any) => {
       s.image = processImage('subcategories', s.id, 'image', s.image);
@@ -3785,10 +3802,10 @@ function generateSlug(str: string): string {
 }
 
 router.post('/admin/products', authenticate, async (req, res) => {
-  const { category_id, subcategory_id, sub_subcategory_id, sub_sub_subcategory_id, brand_id, brand_name, name, description, price, promo_price, stock, image, main_image_alt, video_url, is_popular, is_best_seller, is_new, is_recommended, is_fast_delivery, weight, is_active, images, features, key_points, faq_q1, faq_a1, faq_q2, faq_a2, variations, seo_title, seo_description, seo_keywords, promo_price_start_date, promo_price_end_date } = req.body;
+  const { category_id, subcategory_id, sub_subcategory_id, sub_sub_subcategory_id, brand_id, brand_name, name, slug, description, price, promo_price, stock, image, main_image_alt, video_url, is_popular, is_best_seller, is_new, is_recommended, is_fast_delivery, weight, is_active, images, features, key_points, faq_q1, faq_a1, faq_q2, faq_a2, variations, seo_title, seo_description, seo_keywords, promo_price_start_date, promo_price_end_date } = req.body;
   
   try {
-    const generatedSlug = generateSlug(name);
+    const generatedSlug = (slug && String(slug).trim()) ? generateSlug(String(slug)) : generateSlug(name);
     
     const productId = await sql.begin(async (sql: any) => {
       const [info] = await sql`
@@ -3810,6 +3827,12 @@ router.post('/admin/products', authenticate, async (req, res) => {
         }
       }
       return info.id;
+    });
+    clearCache();
+    await invalidateProductCache({
+      productId,
+      slug: generatedSlug,
+      reason: 'product_update'
     });
     res.status(201).json({ id: productId, message: 'Product created' });
   } catch (err) {
@@ -3906,6 +3929,7 @@ router.put('/admin/products/:id', authenticate, async (req, res) => {
       });
     }
 
+    clearCache();
     res.json({ message: 'Product updated and cache invalidated' });
   } catch (err) {
     console.error('Failed to update product:', err);
@@ -3933,6 +3957,7 @@ router.delete('/admin/products/:id', authenticate, async (req, res) => {
       await sql`DELETE FROM product_images WHERE product_id = ${req.params.id}`;
       await sql`DELETE FROM products WHERE id = ${req.params.id}`;
     });
+    clearCache();
     res.json({ message: 'Product deleted' });
   } catch (err) {
     res.status(500).json({ error: 'Failed to delete product' });

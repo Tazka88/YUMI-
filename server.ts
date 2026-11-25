@@ -4,7 +4,7 @@ import helmet from 'helmet';
 import apiRoutes from './src/api/routes.js';
 import path from 'path';
 import fs from 'fs';
-import { sql } from './src/db/setup.js';
+import { sql, safeSsrQuery } from './src/db/setup.js';
 import { categorySEOData } from './src/utils/seoData.js';
 import { formatSeoTitle } from './src/utils/seoTitle.js';
 import { buildProductSchema, buildBreadcrumbSchema, buildBlogSchema } from './src/lib/schemaUtils.js';
@@ -354,6 +354,7 @@ app.get('*', async (req, res, next) => {
     let headHtml = `<link rel="canonical" href="${baseUrl}${req.path}" />\n<link rel="preload" as="font" href="https://fonts.gstatic.com/s/roboto/v30/KFOmCnqEu92Fr1Mu4mxK.woff2" type="font/woff2" crossorigin="anonymous">`;
     let seoHtml = '';
     let isNotFound = false;
+    let isPrivateRoute = false;
     let ogImage = `${baseUrl}/og-image-fb.jpg`;
     let ogUrl = `${baseUrl}${req.path}`;
 
@@ -361,10 +362,13 @@ app.get('*', async (req, res, next) => {
       title = 'ZORANDO - Boutique en ligne en Algérie';
       description = 'Découvrez ZORANDO, votre boutique en ligne de confiance en Algérie. Achetez des produits de qualité au meilleur prix. Livraison 58 wilayas.';
       try {
-        const categories = await sql`SELECT name, slug FROM categories ORDER BY name ASC`;
-        const brands = await sql`SELECT name, slug FROM brands ORDER BY name ASC`;
+        const [categories, brands, heroRows] = await Promise.all([
+          safeSsrQuery(sql`SELECT name, slug FROM categories ORDER BY name ASC`, [] as any[], 2500),
+          safeSsrQuery(sql`SELECT name, slug FROM brands ORDER BY name ASC`, [] as any[], 2500),
+          safeSsrQuery(sql`SELECT image_url FROM slider_images WHERE is_active = true AND category_id IS NULL ORDER BY position ASC, id ASC LIMIT 1`, [] as any[], 2500)
+        ]);
         let desktopImage = '';
-        const [hero] = await sql`SELECT image_url FROM slider_images WHERE is_active = true AND category_id IS NULL ORDER BY position ASC, id ASC LIMIT 1`;
+        const hero = heroRows?.[0];
         if (hero && hero.image_url) {
           desktopImage = hero.image_url.startsWith('/') ? `${baseUrl}${hero.image_url}` : `${baseUrl}/${hero.image_url}`;
           ogImage = desktopImage;
@@ -387,7 +391,7 @@ app.get('*', async (req, res, next) => {
     } else if (req.path === '/brands') {
       title = 'Toutes nos marques | Zorando';
       try {
-        const brands = await sql`SELECT name, slug FROM brands ORDER BY name ASC`;
+        const brands = await safeSsrQuery(sql`SELECT name, slug FROM brands ORDER BY name ASC`, [] as any[], 2500);
         seoHtml = `
           <div id="seo-static-content" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 prose prose-sm max-w-none text-gray-700">
             <h1>${title}</h1>
@@ -400,7 +404,7 @@ app.get('*', async (req, res, next) => {
       title = 'Toutes nos catégories | Zorando';
       description = 'Découvrez l\'ensemble des catégories de produits disponibles sur ZORANDO en Algérie.';
       try {
-        const categories = await sql`SELECT name, slug FROM categories ORDER BY name ASC`;
+        const categories = await safeSsrQuery(sql`SELECT name, slug FROM categories ORDER BY name ASC`, [] as any[], 2500);
         seoHtml = `
           <div id="seo-static-content" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 prose prose-sm max-w-none text-gray-700">
             <h1>${title}</h1>
@@ -1141,6 +1145,26 @@ ${JSON.stringify(graphSchema)}
           <div>${trackContent}</div>
         </div>
       `;
+    } else if (
+      req.path === '/admin-7xK9pL2q' ||
+      req.path.startsWith('/admin-7xK9pL2q/') ||
+      req.path === '/admin' ||
+      req.path.startsWith('/admin/') ||
+      req.path === '/cart' ||
+      req.path === '/checkout' ||
+      req.path === '/account' ||
+      req.path.startsWith('/account/') ||
+      req.path.startsWith('/auth/')
+    ) {
+      isPrivateRoute = true;
+      title = req.path.startsWith('/admin')
+        ? 'Administration | Zorando'
+        : req.path === '/cart'
+          ? 'Panier | Zorando'
+          : req.path === '/checkout'
+            ? 'Validation de commande | Zorando'
+            : 'Mon Compte | Zorando';
+      description = 'Espace privé Zorando.';
     } else {
       // Dynamic fallback for any other custom page from the 'pages' table (cgv, faq, contact, privacy, etc.)
       const pageSlug = req.path.replace(/^\//, '').split('/')[0];
@@ -1199,7 +1223,7 @@ ${JSON.stringify(graphSchema)}
       <meta data-rh="true" name="twitter:description" content="${description}" />
       <meta data-rh="true" name="twitter:image" content="${ogImage}" />
     
-      <meta data-rh="true" name="robots" content="${isNotFound ? 'noindex, follow' : 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1'}" />`;
+      <meta data-rh="true" name="robots" content="${isPrivateRoute ? 'noindex, nofollow' : isNotFound ? 'noindex, follow' : 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1'}" />`;
     
     let finalHtml = template.replace('<!--seo-injection-->', globalNav);
     finalHtml = finalHtml.replace('<div id="root"></div>', `<div id="root">${seoHtml || ''}</div>`);
@@ -1221,6 +1245,11 @@ ${JSON.stringify(graphSchema)}
       res.header('X-Robots-Tag', 'noindex, follow');
       res.setHeader('Cache-Control', 'no-cache');
       res.status(404).send(finalHtml);
+    } else if (isPrivateRoute) {
+      res.header('X-Robots-Tag', 'noindex, nofollow');
+      res.header('Content-Type', 'text/html; charset=utf-8');
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+      res.status(200).send(finalHtml);
     } else {
       res.header('X-Robots-Tag', 'all');
       res.header('Content-Type', 'text/html; charset=utf-8');

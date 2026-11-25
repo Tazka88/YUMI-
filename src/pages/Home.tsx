@@ -539,6 +539,8 @@ export default function Home() {
   const [activeTheme, setActiveTheme] = useState<string>("normal");
   const [themeImages, setThemeImages] = useState<Record<string, any>>({});
   const [categories, setCategories] = useState<any[]>([]);
+  const [loadingCategories, setLoadingCategories] = useState(true);
+  const [categoriesError, setCategoriesError] = useState(false);
   const [brands, setBrands] = useState<any[]>([]);
   const [loadingBrands, setLoadingBrands] = useState(true);
   const [popularProducts, setPopularProducts] = useState<Product[]>([]);
@@ -635,7 +637,37 @@ export default function Home() {
         } catch (e) {}
       }
     }).catch(handleFetchError);
-    fetchWithCache('/api/categories', { signal, priority: 'high' } as any).then(data => { if (Array.isArray(data)) setCategories(data); }).catch(handleFetchError);
+
+    const loadCategories = async (forceFresh = false) => {
+      setLoadingCategories(true);
+      setCategoriesError(false);
+      try {
+        const data = forceFresh
+          ? await fetch(`/api/categories?_t=${Date.now()}`, { signal }).then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
+          : await fetchWithCache('/api/categories', { signal, priority: 'high', retries: 2 } as any);
+        if (Array.isArray(data) && data.length > 0) {
+          setCategories(data);
+          setLoadingCategories(false);
+          return;
+        }
+        // Fallback direct fetch if cached or initial response was unexpectedly empty
+        const fallbackData = await fetch('/api/categories', { signal }).then(r => r.ok ? r.json() : []);
+        if (Array.isArray(fallbackData) && fallbackData.length > 0) {
+          setCategories(fallbackData);
+          setLoadingCategories(false);
+          return;
+        }
+        setCategoriesError(true);
+        setLoadingCategories(false);
+      } catch (err: any) {
+        if (err?.name === 'AbortError') return;
+        handleFetchError(err);
+        setCategoriesError(true);
+        setLoadingCategories(false);
+      }
+    };
+
+    loadCategories(false);
     fetchWithCache('/api/brands', { signal }).then(data => { if (Array.isArray(data)) setBrands(data); setLoadingBrands(false); }).catch(err => { handleFetchError(err); setLoadingBrands(false); });
     
     Promise.all([
@@ -796,11 +828,43 @@ export default function Home() {
         </div>
         
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 px-1 sm:px-0">
-          {categories.length === 0 ? (
+          {loadingCategories && categories.length === 0 ? (
             // Skeleton loader for categories
             [...Array(6)].map((_, i) => (
               <div key={i} className="rounded-2xl bg-gray-100 animate-pulse aspect-[16/9] sm:aspect-[4/3] lg:aspect-[16/11]"></div>
             ))
+          ) : categories.length === 0 ? (
+            <div className="col-span-full bg-white rounded-2xl border border-gray-100 p-8 text-center shadow-xs">
+              <p className="text-gray-600 font-medium mb-4">
+                {categoriesError ? 'Impossible de charger les catégories pour le moment.' : 'Aucune catégorie disponible.'}
+              </p>
+              <div className="flex flex-wrap items-center justify-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setLoadingCategories(true);
+                    setCategoriesError(false);
+                    fetch(`/api/categories?_t=${Date.now()}`)
+                      .then(r => { if (!r.ok) throw new Error('HTTP error'); return r.json(); })
+                      .then(data => {
+                        if (Array.isArray(data) && data.length > 0) setCategories(data);
+                        else setCategoriesError(true);
+                      })
+                      .catch(() => setCategoriesError(true))
+                      .finally(() => setLoadingCategories(false));
+                  }}
+                  className="px-5 py-2.5 rounded-xl bg-[#FF6B00] text-white font-bold text-sm hover:bg-orange-600 transition-colors"
+                >
+                  Réessayer
+                </button>
+                <Link
+                  to="/category/all"
+                  className="px-5 py-2.5 rounded-xl border border-gray-200 text-gray-800 font-bold text-sm hover:bg-gray-50 transition-colors"
+                >
+                  Voir tout le catalogue
+                </Link>
+              </div>
+            </div>
           ) : (
             categories.map((cat, index) => (
               <MasonryCategoryCard key={cat.id} cat={cat} index={index} />

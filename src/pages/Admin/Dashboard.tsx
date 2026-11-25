@@ -77,12 +77,30 @@ export default function AdminDashboard() {
   // SWR Fetcher
   const swrFetcher = async (url: string) => {
     const token = localStorage.getItem('adminToken');
-    if (!token) throw new Error('No token');
+    if (!token) {
+      const err: any = new Error('No token');
+      err.status = 401;
+      throw err;
+    }
     const res = await fetch(url, {
       headers: { 'Authorization': `Bearer ${token}` },
       cache: 'no-store'
     });
-    if (!res.ok) throw new Error('API Error');
+    if (!res.ok) {
+      const err: any = new Error(`API Error (${res.status})`);
+      err.status = res.status;
+      throw err;
+    }
+    return res.json();
+  };
+
+  const publicSwrFetcher = async (url: string) => {
+    const res = await fetch(url);
+    if (!res.ok) {
+      const err: any = new Error(`API Error (${res.status})`);
+      err.status = res.status;
+      throw err;
+    }
     return res.json();
   };
 
@@ -336,12 +354,24 @@ export default function AdminDashboard() {
   const { data: swrOrders } = useSWR(activeTab === 'orders' ? `/api/admin/orders?${spOrders.toString()}&_rt=${refreshToggle}` : null, swrFetcher);
   const { data: swrProducts } = useSWR(activeTab === 'products' ? `/api/admin/products?${spProducts.toString()}&_rt=${refreshToggle}` : null, swrFetcher);
   const { data: swrEmailLogs } = useSWR(activeTab === 'email-logs' ? `/api/admin/email-logs?${spOthers.toString()}&_rt=${refreshToggle}` : null, swrFetcher);
-  const { data: swrCategories } = useSWR(`/api/categories?_rt=${refreshToggle}`, swrFetcher);
-  const { data: swrBrands } = useSWR(`/api/brands?_rt=${refreshToggle}`, swrFetcher);
+  const { data: swrCategories } = useSWR(
+    refreshToggle > 0 ? `/api/categories?_t=${refreshToggle}` : '/api/categories',
+    refreshToggle > 0 ? swrFetcher : publicSwrFetcher
+  );
+  const { data: swrBrands } = useSWR(
+    refreshToggle > 0 ? `/api/brands?_t=${refreshToggle}` : '/api/brands',
+    refreshToggle > 0 ? swrFetcher : publicSwrFetcher
+  );
   const { data: swrSettings } = useSWR(['settings', 'account'].includes(activeTab) ? `/api/admin/settings?_rt=${refreshToggle}` : null, swrFetcher);
 
   useEffect(() => {
-    if (statsError) navigate('/admin-7xK9pL2q/login');
+    if (!statsError) return;
+    const status = (statsError as any)?.status;
+    if (status === 401 || status === 403 || statsError.message === 'No token') {
+      navigate('/admin-7xK9pL2q/login');
+    } else {
+      toast.error('Connexion serveur temporairement lente. Veuillez patienter ou rafraîchir.');
+    }
   }, [statsError, navigate]);
 
   useEffect(() => {

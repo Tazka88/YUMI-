@@ -36,11 +36,11 @@ let connectionString = resolveConnectionString(process.env.DATABASE_URL);
 
 export const sql = globalForPostgres.sql ?? postgres(connectionString, {
   ssl: connectionString.includes('localhost') || connectionString.includes('127.0.0.1') ? false : 'require',
-  max: isServerless ? 5 : 10, // Prevent Supabase pooler exhaustion
-  idle_timeout: isServerless ? 15 : 30, // Proactively close idle sockets
-  connect_timeout: 15, // Headroom for Supabase pooler TLS handshake & cold start
+  max: isServerless ? 6 : 10, // Prevent Supabase pooler exhaustion while avoiding queuing
+  idle_timeout: isServerless ? 10 : 30, // Proactively close idle sockets
+  connect_timeout: isServerless ? 6 : 10, // Fail fast on stale serverless sockets instead of hanging 15s
   prepare: false, // Required for PgBouncer / Supavisor transaction mode
-  max_lifetime: 60 * 5, // Recycle connections every 5 minutes
+  max_lifetime: isServerless ? 60 : 60 * 5, // Recycle serverless connections frequently
   backoff: (attempts) => Math.min(0.2 * Math.pow(2, attempts), 2),
   connection: {
     application_name: 'zorando_app'

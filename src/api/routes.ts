@@ -51,6 +51,22 @@ export const clearCache = (prefix?: string) => {
   }
 };
 
+const isExplicitCacheBust = (req: any) =>
+  Boolean(
+    req.query._t ||
+    req.query.nocache === '1' ||
+    req.query.nocache === 'true' ||
+    (req.query._rt !== undefined && Number(req.query._rt) > 0) ||
+    req.headers['x-bypass-cache']
+  );
+
+const isPublicCatalogGetPath = (pathStr: string) =>
+  pathStr === '/categories' ||
+  pathStr === '/subcategories' ||
+  pathStr === '/sub_sub_subcategories' ||
+  pathStr === '/brands' ||
+  pathStr.startsWith('/brands/');
+
 // Cache Control Middleware for Public Data (Vercel CDN)
 router.use((req, res, next) => {
   if (req.method === 'GET') {
@@ -61,16 +77,17 @@ router.use((req, res, next) => {
                       req.path.startsWith('/account') ||
                       req.path.startsWith('/vouchers');
                       
-    const hasAuthCookie = req.headers.cookie && req.headers.cookie.match(/session|token|auth|user/i);
+    const hasAuthCookie = Boolean(req.headers.cookie && req.headers.cookie.match(/session|token|auth|user/i));
     const hasAuthHeader = Boolean(req.headers.authorization && req.headers.authorization.startsWith('Bearer '));
-    const hasCacheBust = Boolean(req.query._rt || req.query._t || req.query.nocache);
+    const hasCacheBust = isExplicitCacheBust(req);
+    const isPublicCatalog = isPublicCatalogGetPath(req.path);
 
-    if (!isPrivate && !hasAuthCookie && !hasAuthHeader && !hasCacheBust) {
-      // Very aggressive CDN cache for unauthenticated public requests
+    if (!isPrivate && !hasCacheBust && (isPublicCatalog || (!hasAuthCookie && !hasAuthHeader))) {
+      // Very aggressive CDN cache for public catalog requests
       res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=60, stale-while-revalidate=300');
       res.setHeader('Vercel-CDN-Cache-Control', 'max-age=60');
       res.setHeader('CDN-Cache-Control', 'max-age=60');
-    } else if (hasAuthHeader || hasCacheBust) {
+    } else if (hasCacheBust || isPrivate || hasAuthHeader) {
       res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
     }
   } else if (req.path.startsWith('/admin/')) {
@@ -1171,69 +1188,143 @@ router.get('/brands/:slug', async (req, res) => {
   }
 });
 
+const parseJsonArray = (val: any): any[] => {
+  if (Array.isArray(val)) return val;
+  if (typeof val === 'string') {
+    try {
+      const parsed = JSON.parse(val);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+  return [];
+};
+
+let LAST_GOOD_CATEGORIES: any[] | null = null;
+
 router.get('/categories', async (req, res) => {
+  const bypassCache = isExplicitCacheBust(req);
+  const cacheKey = 'categories_all';
   try {
-    const bypassCache = Boolean(req.headers.authorization || req.query._rt || req.query._t || req.query.nocache);
-    const cacheKey = 'categories_all';
     if (!bypassCache) {
       const cached = getCache(cacheKey);
-      if (cached) return res.json(cached);
-      res.setHeader('Cache-Control', 'max-age=0, s-maxage=60, stale-while-revalidate=300');
+      if (Array.isArray(cached) && cached.length > 0) {
+        res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=60, stale-while-revalidate=300');
+        return res.json(cached);
+      }
+      res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=60, stale-while-revalidate=300');
     } else {
       res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
     }
 
-    const [categories, subcategories, sub_subcategories, sub_sub_subcategories, subFallbacks, subSubFallbacks, subSubSubFallbacks] = await Promise.all([
-      sql`SELECT ${sql.unsafe(CATEGORIES_COLS)} FROM categories ORDER BY id ASC`,
-      sql`SELECT ${sql.unsafe(SUBCAT_COLS)} FROM subcategories ORDER BY id ASC`,
-      sql`SELECT ${sql.unsafe(SUB_SUBCAT_COLS)} FROM sub_subcategories ORDER BY id ASC`,
-      sql`SELECT ${sql.unsafe(SUB_SUB_SUBCAT_COLS)} FROM sub_sub_subcategories ORDER BY id ASC`,
-      sql`
-        SELECT DISTINCT ON (target_subcat_id) target_subcat_id, id, image
-        FROM (
-          SELECT COALESCE(p.subcategory_id, ss.subcategory_id) as target_subcat_id,
-                 p.id, p.image, p.is_best_seller, p.is_popular, p.sales_count
-          FROM products p
-          LEFT JOIN sub_subcategories ss ON p.sub_subcategory_id = ss.id
-          WHERE p.is_active = true AND p.image IS NOT NULL AND p.image != ''
-            AND (p.subcategory_id IS NOT NULL OR ss.subcategory_id IS NOT NULL)
-        ) subq
-        ORDER BY target_subcat_id, is_best_seller DESC, is_popular DESC, COALESCE(sales_count, 0) DESC, id ASC
-      `.catch(() => []),
-      sql`
-        SELECT DISTINCT ON (target_sub_subcat_id) target_sub_subcat_id, id, image
-        FROM (
-          SELECT COALESCE(p.sub_subcategory_id, sss.sub_subcategory_id) as target_sub_subcat_id,
-                 p.id, p.image, p.is_best_seller, p.is_popular, p.sales_count
-          FROM products p
-          LEFT JOIN sub_sub_subcategories sss ON p.sub_sub_subcategory_id = sss.id
-          WHERE p.is_active = true AND p.image IS NOT NULL AND p.image != ''
-            AND (p.sub_subcategory_id IS NOT NULL OR sss.sub_subcategory_id IS NOT NULL)
-        ) subq
-        ORDER BY target_sub_subcat_id, is_best_seller DESC, is_popular DESC, COALESCE(sales_count, 0) DESC, id ASC
-      `.catch(() => []),
-      sql`
-        SELECT DISTINCT ON (sub_sub_subcategory_id) sub_sub_subcategory_id, id, image
-        FROM products
-        WHERE is_active = true AND sub_sub_subcategory_id IS NOT NULL AND image IS NOT NULL AND image != ''
-        ORDER BY sub_sub_subcategory_id, is_best_seller DESC, is_popular DESC, COALESCE(sales_count, 0) DESC, id ASC
-      `.catch(() => [])
-    ]);
+    const fetchCategoryTree = async () => {
+      const [row] = await sql`
+        WITH cats AS (
+          SELECT COALESCE(json_agg(row_to_json(t)), '[]'::json) AS data
+          FROM (SELECT ${sql.unsafe(CATEGORIES_COLS)} FROM categories ORDER BY id ASC) t
+        ),
+        subcats AS (
+          SELECT COALESCE(json_agg(row_to_json(t)), '[]'::json) AS data
+          FROM (SELECT ${sql.unsafe(SUBCAT_COLS)} FROM subcategories ORDER BY id ASC) t
+        ),
+        subsubcats AS (
+          SELECT COALESCE(json_agg(row_to_json(t)), '[]'::json) AS data
+          FROM (SELECT ${sql.unsafe(SUB_SUBCAT_COLS)} FROM sub_subcategories ORDER BY id ASC) t
+        ),
+        subsubsubcats AS (
+          SELECT COALESCE(json_agg(row_to_json(t)), '[]'::json) AS data
+          FROM (SELECT ${sql.unsafe(SUB_SUB_SUBCAT_COLS)} FROM sub_sub_subcategories ORDER BY id ASC) t
+        ),
+        sub_fb AS (
+          SELECT COALESCE(json_agg(row_to_json(t)), '[]'::json) AS data
+          FROM (
+            SELECT DISTINCT ON (target_subcat_id) target_subcat_id, id, image
+            FROM (
+              SELECT COALESCE(p.subcategory_id, ss.subcategory_id) AS target_subcat_id,
+                     p.id,
+                     CASE WHEN p.image LIKE 'data:image/%' THEN 'data:image/trimmed;' || right(p.image, 24) ELSE p.image END AS image,
+                     p.is_best_seller, p.is_popular, p.sales_count
+              FROM products p
+              LEFT JOIN sub_subcategories ss ON p.sub_subcategory_id = ss.id
+              WHERE p.is_active = true AND p.image IS NOT NULL AND p.image != ''
+                AND (p.subcategory_id IS NOT NULL OR ss.subcategory_id IS NOT NULL)
+            ) subq
+            ORDER BY target_subcat_id, is_best_seller DESC, is_popular DESC, COALESCE(sales_count, 0) DESC, id ASC
+          ) t
+        ),
+        subsub_fb AS (
+          SELECT COALESCE(json_agg(row_to_json(t)), '[]'::json) AS data
+          FROM (
+            SELECT DISTINCT ON (target_sub_subcat_id) target_sub_subcat_id, id, image
+            FROM (
+              SELECT COALESCE(p.sub_subcategory_id, sss.sub_subcategory_id) AS target_sub_subcat_id,
+                     p.id,
+                     CASE WHEN p.image LIKE 'data:image/%' THEN 'data:image/trimmed;' || right(p.image, 24) ELSE p.image END AS image,
+                     p.is_best_seller, p.is_popular, p.sales_count
+              FROM products p
+              LEFT JOIN sub_sub_subcategories sss ON p.sub_sub_subcategory_id = sss.id
+              WHERE p.is_active = true AND p.image IS NOT NULL AND p.image != ''
+                AND (p.sub_subcategory_id IS NOT NULL OR sss.sub_subcategory_id IS NOT NULL)
+            ) subq
+            ORDER BY target_sub_subcat_id, is_best_seller DESC, is_popular DESC, COALESCE(sales_count, 0) DESC, id ASC
+          ) t
+        ),
+        subsubsub_fb AS (
+          SELECT COALESCE(json_agg(row_to_json(t)), '[]'::json) AS data
+          FROM (
+            SELECT DISTINCT ON (sub_sub_subcategory_id) sub_sub_subcategory_id, id,
+                   CASE WHEN image LIKE 'data:image/%' THEN 'data:image/trimmed;' || right(image, 24) ELSE image END AS image
+            FROM products
+            WHERE is_active = true AND sub_sub_subcategory_id IS NOT NULL AND image IS NOT NULL AND image != ''
+            ORDER BY sub_sub_subcategory_id, is_best_seller DESC, is_popular DESC, COALESCE(sales_count, 0) DESC, id ASC
+          ) t
+        )
+        SELECT
+          (SELECT data FROM cats) AS categories,
+          (SELECT data FROM subcats) AS subcategories,
+          (SELECT data FROM subsubcats) AS sub_subcategories,
+          (SELECT data FROM subsubsubcats) AS sub_sub_subcategories,
+          (SELECT data FROM sub_fb) AS sub_fallbacks,
+          (SELECT data FROM subsub_fb) AS sub_sub_fallbacks,
+          (SELECT data FROM subsubsub_fb) AS sub_sub_sub_fallbacks
+      `;
+      return row;
+    };
+
+    let row: any;
+    try {
+      row = await fetchCategoryTree();
+    } catch (firstErr) {
+      if (isDbConnectionError(firstErr)) {
+        row = await fetchCategoryTree();
+      } else {
+        throw firstErr;
+      }
+    }
+
+    const categories = parseJsonArray(row?.categories);
+    const subcategories = parseJsonArray(row?.subcategories);
+    const sub_subcategories = parseJsonArray(row?.sub_subcategories);
+    const sub_sub_subcategories = parseJsonArray(row?.sub_sub_subcategories);
+    const subFallbacks = parseJsonArray(row?.sub_fallbacks);
+    const subSubFallbacks = parseJsonArray(row?.sub_sub_fallbacks);
+    const subSubSubFallbacks = parseJsonArray(row?.sub_sub_sub_fallbacks);
 
     const subFallbackMap = new Map<string, string>();
-    (subFallbacks as any[]).forEach((r: any) => {
+    subFallbacks.forEach((r: any) => {
       const processed = processImage('products', r.id, 'image', r.image);
       if (processed) subFallbackMap.set(String(r.target_subcat_id), processed);
     });
 
     const subSubFallbackMap = new Map<string, string>();
-    (subSubFallbacks as any[]).forEach((r: any) => {
+    subSubFallbacks.forEach((r: any) => {
       const processed = processImage('products', r.id, 'image', r.image);
       if (processed) subSubFallbackMap.set(String(r.target_sub_subcat_id), processed);
     });
 
     const subSubSubFallbackMap = new Map<string, string>();
-    (subSubSubFallbacks as any[]).forEach((r: any) => {
+    subSubSubFallbacks.forEach((r: any) => {
       const processed = processImage('products', r.id, 'image', r.image);
       if (processed) subSubSubFallbackMap.set(String(r.sub_sub_subcategory_id), processed);
     });
@@ -1277,38 +1368,55 @@ router.get('/categories', async (req, res) => {
       }
     });
     
-    // Using s-maxage set at start of request
-    setCache(cacheKey, categoriesWithSubcats, 60);
+    if (categoriesWithSubcats.length > 0) {
+      LAST_GOOD_CATEGORIES = categoriesWithSubcats;
+      setCache(cacheKey, categoriesWithSubcats, 60);
+    }
     res.json(categoriesWithSubcats);
 
   } catch (err: any) {
     console.error('Failed to fetch categories:', err);
-    res.status(500).json({ error: 'Failed to fetch categories', details: err.message, stack: err.stack });
+    if (!bypassCache && LAST_GOOD_CATEGORIES && LAST_GOOD_CATEGORIES.length > 0) {
+      res.setHeader('Cache-Control', 'no-store');
+      return res.json(LAST_GOOD_CATEGORIES);
+    }
+    res.setHeader('Cache-Control', 'no-store');
+    res.status(500).json({ error: 'Failed to fetch categories', details: err.message });
   }
 });
 
 router.get('/sub_sub_subcategories', async (req, res) => {
-  const bypassCache = Boolean(req.headers.authorization || req.query._rt || req.query._t || req.query.nocache);
+  const bypassCache = isExplicitCacheBust(req);
   const cacheKey = 'sub_sub_subcategories_all';
   if (!bypassCache) {
     const cached = getCache(cacheKey);
-    if (cached) return res.json(cached);
+    if (Array.isArray(cached) && cached.length > 0) return res.json(cached);
     res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=60, stale-while-revalidate=300');
   } else {
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
   }
   try {
-    const [list, fallbacks] = await Promise.all([
-      sql`SELECT ${sql.unsafe(SUB_SUB_SUBCAT_COLS)} FROM sub_sub_subcategories ORDER BY id ASC`,
-      sql`
-        SELECT DISTINCT ON (sub_sub_subcategory_id) sub_sub_subcategory_id, id, image
-        FROM products
-        WHERE is_active = true AND sub_sub_subcategory_id IS NOT NULL AND image IS NOT NULL AND image != ''
-        ORDER BY sub_sub_subcategory_id, is_best_seller DESC, is_popular DESC, COALESCE(sales_count, 0) DESC, id ASC
-      `.catch(() => [])
-    ]);
+    const [row] = await sql`
+      WITH lvl4 AS (
+        SELECT COALESCE(json_agg(row_to_json(t)), '[]'::json) AS data
+        FROM (SELECT ${sql.unsafe(SUB_SUB_SUBCAT_COLS)} FROM sub_sub_subcategories ORDER BY id ASC) t
+      ),
+      fb AS (
+        SELECT COALESCE(json_agg(row_to_json(t)), '[]'::json) AS data
+        FROM (
+          SELECT DISTINCT ON (sub_sub_subcategory_id) sub_sub_subcategory_id, id,
+                 CASE WHEN image LIKE 'data:image/%' THEN 'data:image/trimmed;' || right(image, 24) ELSE image END AS image
+          FROM products
+          WHERE is_active = true AND sub_sub_subcategory_id IS NOT NULL AND image IS NOT NULL AND image != ''
+          ORDER BY sub_sub_subcategory_id, is_best_seller DESC, is_popular DESC, COALESCE(sales_count, 0) DESC, id ASC
+        ) t
+      )
+      SELECT (SELECT data FROM lvl4) AS list, (SELECT data FROM fb) AS fallbacks
+    `;
+    const list = parseJsonArray(row?.list);
+    const fallbacks = parseJsonArray(row?.fallbacks);
     const fallbackMap = new Map<string, string>();
-    (fallbacks as any[]).forEach((r: any) => {
+    fallbacks.forEach((r: any) => {
       const processed = processImage('products', r.id, 'image', r.image);
       if (processed) fallbackMap.set(String(r.sub_sub_subcategory_id), processed);
     });
@@ -1316,20 +1424,23 @@ router.get('/sub_sub_subcategories', async (req, res) => {
       item.image = processImage('sub_sub_subcategories', item.id, 'image', item.image);
       item.fallback_image = fallbackMap.get(String(item.id)) || null;
     });
-    setCache(cacheKey, list, 60);
+    if (list.length > 0) {
+      setCache(cacheKey, list, 60);
+    }
     res.json(list);
   } catch (err: any) {
     console.error('Failed to fetch sub_sub_subcategories:', err);
+    res.setHeader('Cache-Control', 'no-store');
     res.status(500).json({ error: 'Failed to fetch level 4 categories' });
   }
 });
 
 router.get('/subcategories', async (req, res) => {
-  const bypassCache = Boolean(req.headers.authorization || req.query._rt || req.query._t || req.query.nocache);
+  const bypassCache = isExplicitCacheBust(req);
   const cacheKey = 'subcategories_all';
   if (!bypassCache) {
     const cached = getCache(cacheKey);
-    if (cached) return res.json(cached);
+    if (Array.isArray(cached) && cached.length > 0) return res.json(cached);
     res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=60, stale-while-revalidate=300');
   } else {
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
@@ -1340,10 +1451,13 @@ router.get('/subcategories', async (req, res) => {
     subcategories.forEach((s: any) => {
       s.image = processImage('subcategories', s.id, 'image', s.image);
     });
-    setCache(cacheKey, subcategories, 60);
+    if (subcategories.length > 0) {
+      setCache(cacheKey, subcategories, 60);
+    }
     res.json(subcategories);
 
   } catch (err) {
+    res.setHeader('Cache-Control', 'no-store');
     res.status(500).json({ error: 'Failed to fetch subcategories' });
   }
 });

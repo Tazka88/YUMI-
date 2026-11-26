@@ -16,10 +16,17 @@ export default defineConfig({
     'import.meta.env.VITE_SUPABASE_ANON_KEY': JSON.stringify(process.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV2dmJoYWxneWZmYWdzZXNtdmh1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4Nzc2MDMsImV4cCI6MjA4OTQ1MzYwM30.gL5FtiWtgIDLWXQJZnWbaOK9XY4voUQrfFLf5EaA2v4'),
   },
   resolve: {
+    alias: [
+      { find: /^react$/, replacement: path.resolve(process.cwd(), 'node_modules/react') },
+      { find: /^react-dom$/, replacement: path.resolve(process.cwd(), 'node_modules/react-dom') },
+      { find: /^react-router$/, replacement: path.resolve(process.cwd(), 'node_modules/react-router') },
+      { find: /^react-router-dom$/, replacement: path.resolve(process.cwd(), 'node_modules/react-router-dom') },
+    ],
     dedupe: ['react', 'react-dom', 'react-router', 'react-router-dom', 'zustand', 'react-helmet-async', 'lucide-react', 'swr'],
   },
   optimizeDeps: {
-    holdUntilCrawlEnd: true,
+    entries: ['index.html', 'src/**/*.{ts,tsx}'],
+    holdUntilCrawlEnd: false,
     include: [
       'react',
       'react/jsx-runtime',

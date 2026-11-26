@@ -20,6 +20,7 @@ process.on('uncaughtException', (err: any) => {
 
 const app = express();
 let vite: any = null;
+const DEV_BOOT_ID = Date.now().toString(36);
 
 app.set('trust proxy', 1);
 
@@ -305,6 +306,12 @@ const escapeHtml = (str: any): string => {
       return res.redirect(301, newUrl + qs);
     }
     next();
+  });
+
+  // Dev server boot version endpoint (prevents stale lazy chunks after dev server restart)
+  app.get('/__dev_boot', (_req, res) => {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+    res.json({ bootId: vite ? DEV_BOOT_ID : null });
   });
 
   // Vite dev middleware or production static files before SPA wildcard handler
@@ -1234,7 +1241,8 @@ ${JSON.stringify(graphSchema)}
     finalHtml = finalHtml.replace(/<meta\s+property="og:title"\s+content="[^"]*"\s*\/?>/gi, '');
     finalHtml = finalHtml.replace(/<meta\s+property="og:description"\s+content="[^"]*"\s*\/?>/gi, '');
 
-    finalHtml = finalHtml.replace('<!--head-injection-->', headHtml + seoTags);
+    const devBootMeta = vite ? `\n      <meta name="dev-boot-id" content="${DEV_BOOT_ID}" />` : '';
+    finalHtml = finalHtml.replace('<!--head-injection-->', headHtml + seoTags + devBootMeta);
 
     const sUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '';
     const sKey = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || '';

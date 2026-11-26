@@ -3,10 +3,51 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
 import { Toaster } from 'react-hot-toast';
 import Layout from './components/Layout';
+let lastBootCheckAt = 0;
+let pendingBootCheck: Promise<boolean> | null = null;
+
+async function ensureDevBootMatches(): Promise<boolean> {
+  if (!import.meta.env.DEV || typeof window === 'undefined' || typeof document === 'undefined') {
+    return true;
+  }
+  const clientBootId = document.querySelector('meta[name="dev-boot-id"]')?.getAttribute('content');
+  if (!clientBootId) return true;
+  if (performance.now() < 2000 || Date.now() - lastBootCheckAt < 2500) return true;
+  if (pendingBootCheck) return pendingBootCheck;
+
+  pendingBootCheck = (async () => {
+    try {
+      const res = await fetch('/__dev_boot', { cache: 'no-store' });
+      if (!res.ok) return true;
+      const data = await res.json();
+      lastBootCheckAt = Date.now();
+      if (data?.bootId && data.bootId !== clientBootId) {
+        const reloadKey = `dev_boot_reloaded_${data.bootId}`;
+        if (!sessionStorage.getItem(reloadKey)) {
+          sessionStorage.setItem(reloadKey, '1');
+          window.location.reload();
+          return false;
+        }
+      }
+    } catch {
+      // Ignore transient offline/network error
+    } finally {
+      pendingBootCheck = null;
+    }
+    return true;
+  })();
+
+  return pendingBootCheck;
+}
+
 function lazyWithRetry<T extends React.ComponentType<any>>(
   factory: () => Promise<{ default: T }>
 ) {
   return React.lazy(async () => {
+    const bootOk = await ensureDevBootMatches();
+    if (!bootOk) {
+      return new Promise<{ default: T }>(() => {});
+    }
     try {
       return await factory();
     } catch (error) {

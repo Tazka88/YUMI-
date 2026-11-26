@@ -16,12 +16,16 @@ class ErrorBoundary extends Component<Props, State> {
     error: null
   };
 
-  public static getDerivedStateFromError(error: Error): State {
+  private static isChunkOrHookMismatchError(error: Error | null | undefined): boolean {
     const msg = error?.message || '';
-    const isChunkOrHookMismatch =
+    return (
       /Failed to fetch dynamically imported module|error loading dynamically imported module|Loading chunk/i.test(msg) ||
-      /Cannot read properties of null \(reading '(?:useContext|useState|useEffect|useRef|useMemo|useCallback)'\)|Invalid hook call/i.test(msg);
-    if (isChunkOrHookMismatch && typeof window !== 'undefined' && !sessionStorage.getItem('chunk_reloaded_boundary')) {
+      /Cannot read properties of null \(reading '(?:useContext|useState|useEffect|useRef|useMemo|useCallback)'\)|Invalid hook call/i.test(msg)
+    );
+  }
+
+  public static getDerivedStateFromError(error: Error): State {
+    if (ErrorBoundary.isChunkOrHookMismatchError(error) && typeof window !== 'undefined' && !sessionStorage.getItem('chunk_reloaded_boundary')) {
       sessionStorage.setItem('chunk_reloaded_boundary', '1');
       window.location.reload();
     }
@@ -29,6 +33,10 @@ class ErrorBoundary extends Component<Props, State> {
   }
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    if (ErrorBoundary.isChunkOrHookMismatchError(error)) {
+      console.warn('Recovering from stale module bundle mismatch:', error.message);
+      return;
+    }
     console.error('Uncaught error:', error, errorInfo);
   }
 
